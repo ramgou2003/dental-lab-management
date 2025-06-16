@@ -74,36 +74,40 @@ export function LabPage() {
   };
 
   const handleDesignStateChange = async (orderId: string, newState: 'not-started' | 'in-progress' | 'hold' | 'completed') => {
-    setDesignStates(prev => ({ ...prev, [orderId]: newState }));
+    // Map the design state to lab script status
+    const statusMap = {
+      'not-started': 'pending',
+      'in-progress': 'in-progress',
+      'hold': 'hold',
+      'completed': 'completed'
+    };
 
-    // If completed, also update the lab script status
-    if (newState === 'completed') {
-      try {
-        await updateLabScript(orderId, { status: 'completed' });
-        toast.success("Design completed and status updated!");
-        // Exit edit mode when completing
-        setEditingStatus(prev => ({
-          ...prev,
-          [orderId]: false
-        }));
-      } catch (error) {
-        toast.error("Failed to update status");
-      }
-    }
+    const newStatus = statusMap[newState];
 
-    // If changing from completed to hold, update the lab script status
-    if (newState === 'hold') {
-      try {
-        await updateLabScript(orderId, { status: 'hold' });
-        toast.success("Status updated to hold!");
-        // Exit edit mode when updating status
-        setEditingStatus(prev => ({
-          ...prev,
-          [orderId]: false
-        }));
-      } catch (error) {
-        toast.error("Failed to update status");
-      }
+    try {
+      await updateLabScript(orderId, { status: newStatus });
+
+      // Update local design state
+      setDesignStates(prev => ({ ...prev, [orderId]: newState }));
+
+      // Exit edit mode when updating status
+      setEditingStatus(prev => ({
+        ...prev,
+        [orderId]: false
+      }));
+
+      // Show appropriate success message
+      const messages = {
+        'in-progress': 'Design started!',
+        'hold': 'Status updated to hold!',
+        'completed': 'Design completed and status updated!',
+        'not-started': 'Status reset to pending!'
+      };
+
+      toast.success(messages[newState] || 'Status updated!');
+    } catch (error) {
+      console.error('Error updating lab script status:', error);
+      toast.error("Failed to update status");
     }
   };
 
@@ -115,11 +119,11 @@ export function LabPage() {
   };
 
   const renderActionButtons = (orderId: string, originalScript: LabScript | undefined) => {
-    const designState = designStates[orderId] || 'not-started';
-    const isCompleted = originalScript?.status === 'completed';
+    const currentStatus = originalScript?.status;
     const isEditingStatus = editingStatus[orderId] || false;
 
-    if (isCompleted && !isEditingStatus) {
+    // If lab script is completed, show edit button or hold/complete when editing
+    if (currentStatus === 'completed' && !isEditingStatus) {
       return (
         <div className="flex gap-1">
           <Button
@@ -135,7 +139,7 @@ export function LabPage() {
       );
     }
 
-    if (isCompleted && isEditingStatus) {
+    if (currentStatus === 'completed' && isEditingStatus) {
       return (
         <div className="flex gap-1">
           <Button
@@ -160,8 +164,9 @@ export function LabPage() {
       );
     }
 
-    switch (designState) {
-      case 'not-started':
+    // Use actual lab script status instead of local designState
+    switch (currentStatus) {
+      case 'pending':
         return (
           <div className="flex gap-1">
             <Button
@@ -211,6 +216,15 @@ export function LabPage() {
               title="Resume Design"
             >
               <RotateCcw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleDesignStateChange(orderId, 'completed')}
+              className="h-8 w-8 p-0"
+              title="Complete"
+            >
+              <CheckCircle className="h-4 w-4" />
             </Button>
           </div>
         );

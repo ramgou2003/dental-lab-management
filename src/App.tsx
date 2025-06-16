@@ -10,6 +10,7 @@ import { PatientsPage } from "./pages/PatientsPage";
 import { PatientProfilePage } from "./pages/PatientProfilePage";
 import { LabPage } from "./pages/LabPage";
 import { ReportCardsPage } from "./pages/ReportCardsPage";
+import { ApplianceDeliveryPage } from "./pages/ApplianceDeliveryPage";
 import { ManufacturingPage } from "./pages/ManufacturingPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="patients/:patientId" element={<PatientProfilePage />} />
             <Route path="lab" element={<LabPage />} />
             <Route path="report-cards" element={<ReportCardsPage />} />
+            <Route path="appliance-delivery" element={<ApplianceDeliveryPage />} />
             <Route path="manufacturing" element={<ManufacturingPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="profile" element={<ProfilePage />} />

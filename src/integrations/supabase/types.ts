@@ -9,6 +9,80 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      lab_report_cards: {
+        Row: {
+          id: string
+          lab_script_id: string | null
+          patient_name: string
+          arch_type: string
+          upper_appliance_type: string | null
+          lower_appliance_type: string | null
+          screw: string
+          shade: string
+          implant_on_upper: string | null
+          implant_on_lower: string | null
+          tooth_library_upper: string | null
+          tooth_library_lower: string | null
+          upper_appliance_number: string | null
+          lower_appliance_number: string | null
+          notes_and_remarks: string
+          status: string
+          submitted_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          lab_script_id?: string | null
+          patient_name: string
+          arch_type: string
+          upper_appliance_type?: string | null
+          lower_appliance_type?: string | null
+          screw: string
+          shade: string
+          implant_on_upper?: string | null
+          implant_on_lower?: string | null
+          tooth_library_upper?: string | null
+          tooth_library_lower?: string | null
+          upper_appliance_number?: string | null
+          lower_appliance_number?: string | null
+          notes_and_remarks: string
+          status?: string
+          submitted_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          lab_script_id?: string | null
+          patient_name?: string
+          arch_type?: string
+          upper_appliance_type?: string | null
+          lower_appliance_type?: string | null
+          screw?: string
+          shade?: string
+          implant_on_upper?: string | null
+          implant_on_lower?: string | null
+          tooth_library_upper?: string | null
+          tooth_library_lower?: string | null
+          upper_appliance_number?: string | null
+          lower_appliance_number?: string | null
+          notes_and_remarks?: string
+          status?: string
+          submitted_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_report_cards_lab_script_id_fkey"
+            columns: ["lab_script_id"]
+            isOneToOne: false
+            referencedRelation: "lab_scripts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       lab_scripts: {
         Row: {
           id: string

@@ -48,28 +48,8 @@ export function useReportCards() {
 
       if (error) {
         console.error('Error fetching report cards:', error);
-        // Use fallback data when there's an error
-        const fallbackReportCards: ReportCard[] = [
-          {
-            id: 'RC-001',
-            lab_script_id: 'LAB-002',
-            patient_name: 'Michael Chen',
-            lab_report_status: 'pending',
-            clinical_report_status: 'pending',
-            created_at: '2024-01-18T16:00:00Z',
-            updated_at: '2024-01-18T16:00:00Z',
-            lab_script: {
-              arch_type: 'dual',
-              upper_appliance_type: 'printed-tryin',
-              lower_appliance_type: 'crown',
-              screw_type: 'Rosen',
-              notes: 'Patient has metal allergies'
-            }
-          }
-        ];
-
-        setReportCards(fallbackReportCards);
-        setError(null);
+        setError(error.message);
+        setReportCards([]);
         setLoading(false);
         return;
       }

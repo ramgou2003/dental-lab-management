@@ -13,6 +13,7 @@ const Layout = () => {
     if (path.startsWith("/patients")) return "patients";
     if (path === "/lab") return "lab";
     if (path === "/report-cards") return "report-cards";
+    if (path === "/appliance-delivery") return "appliance-delivery";
     if (path === "/manufacturing") return "manufacturing";
     if (path === "/settings") return "settings";
     if (path === "/profile") return "profile";

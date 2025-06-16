@@ -1,4 +1,4 @@
-import { House, Users, FlaskConical, FileText, Factory, Settings, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { House, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
@@ -33,6 +33,11 @@ const navigation = [
     href: "/manufacturing",
     section: "manufacturing",
     icon: Factory
+  }, {
+    name: "Appliance Delivery",
+    href: "/appliance-delivery",
+    section: "appliance-delivery",
+    icon: Package
   }, {
     name: "Settings",
     href: "/settings",

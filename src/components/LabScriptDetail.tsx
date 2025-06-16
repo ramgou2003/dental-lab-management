@@ -39,22 +39,6 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate }: LabScrip
       { id: 9, value: 'denture', label: 'Denture' },
       { id: 10, value: 'retainer', label: 'Retainer' }
     ],
-    screw_type: [
-      { id: 19, value: 'dc_screw', label: 'DC Screw' },
-      { id: 20, value: 'rosen', label: 'Rosen' },
-      { id: 21, value: 'rosen_wave_t5', label: 'Rosen Wave T5' },
-      { id: 22, value: 'powerball', label: 'Powerball' },
-      { id: 23, value: 'dess', label: 'Dess' },
-      { id: 24, value: 'sin_prh30', label: 'SIN PRH30' },
-      { id: 25, value: 'neodent', label: 'Neodent' },
-      { id: 26, value: 'other', label: 'Other' }
-    ],
-    vdo_details: [
-      { id: 27, value: 'open_4mm_without', label: 'Open up to 4mm without calling Doctor' },
-      { id: 28, value: 'open_4mm_with', label: 'Open up to 4mm with calling Doctor' },
-      { id: 29, value: 'open_based_requirement', label: 'Open VDO based on requirement' },
-      { id: 30, value: 'no_changes', label: 'No changes required in VDO' }
-    ],
     treatment_type: [
       { id: 11, value: 'orthodontic', label: 'Orthodontic' },
       { id: 12, value: 'restorative', label: 'Restorative' },

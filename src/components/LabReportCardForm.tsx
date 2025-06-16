@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Save, User, FlaskConical } from "lucide-react";
 import type { ReportCard } from "@/hooks/useReportCards";
+import { useLabReportCards } from "@/hooks/useLabReportCards";
 
 interface LabReportCardFormProps {
   reportCard: ReportCard;
@@ -15,6 +16,8 @@ interface LabReportCardFormProps {
 }
 
 export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportCardFormProps) {
+  const { addLabReportCard, getLabReportCardByLabScriptId } = useLabReportCards();
+  const [existingLabReport, setExistingLabReport] = useState<any>(null);
   const [formData, setFormData] = useState({
     // Synced fields (read-only)
     patient_name: reportCard.patient_name,
@@ -24,7 +27,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
 
     // Editable fields
     screw: reportCard.lab_script?.screw_type || '',
-    shade: reportCard.lab_script?.notes || '',
+    shade: 'A2', // Default shade
 
     // New fields
     implant_on_upper: '',
@@ -35,6 +38,34 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     lower_appliance_number: '',
     notes_and_remarks: ''
   });
+
+  // Load existing lab report card if it exists
+  useEffect(() => {
+    const loadExistingReport = async () => {
+      if (reportCard.lab_script_id) {
+        const existing = await getLabReportCardByLabScriptId(reportCard.lab_script_id);
+        if (existing) {
+          setExistingLabReport(existing);
+          setFormData({
+            patient_name: existing.patient_name,
+            arch_type: existing.arch_type,
+            upper_appliance_type: existing.upper_appliance_type || '',
+            lower_appliance_type: existing.lower_appliance_type || '',
+            screw: existing.screw,
+            shade: existing.shade,
+            implant_on_upper: existing.implant_on_upper || '',
+            implant_on_lower: existing.implant_on_lower || '',
+            tooth_library_upper: existing.tooth_library_upper || '',
+            tooth_library_lower: existing.tooth_library_lower || '',
+            upper_appliance_number: existing.upper_appliance_number || '',
+            lower_appliance_number: existing.lower_appliance_number || '',
+            notes_and_remarks: existing.notes_and_remarks
+          });
+        }
+      }
+    };
+    loadExistingReport();
+  }, [reportCard.lab_script_id, getLabReportCardByLabScriptId]);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
 
@@ -53,7 +84,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validation for required fields
@@ -115,7 +146,20 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
       return;
     }
 
-    onSubmit(formData);
+    // Submit the form data
+    try {
+      if (existingLabReport) {
+        // Update existing lab report card
+        onSubmit(formData);
+      } else {
+        // Create new lab report card and let the parent handle the workflow
+        await addLabReportCard(formData, reportCard.lab_script_id);
+        onSubmit(formData);
+      }
+    } catch (error) {
+      console.error('Error submitting lab report card:', error);
+      // Error is already handled by the addLabReportCard function with toast
+    }
   };
 
   // Dropdown options

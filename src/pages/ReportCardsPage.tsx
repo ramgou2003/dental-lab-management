@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ParticleButton } from "@/components/ui/particle-button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
+import { ViewLabReportCard } from "@/components/ViewLabReportCard";
 import { useReportCards } from "@/hooks/useReportCards";
 import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
@@ -13,6 +14,7 @@ export function ReportCardsPage() {
   const [activeFilter, setActiveFilter] = useState("all-report-cards");
   const [showNewReportForm, setShowNewReportForm] = useState(false);
   const [showLabReportForm, setShowLabReportForm] = useState(false);
+  const [showViewLabReport, setShowViewLabReport] = useState(false);
   const [selectedReportCard, setSelectedReportCard] = useState<ReportCard | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { reportCards, loading, updateLabReportStatus, updateClinicalReportStatus } = useReportCards();
@@ -26,21 +28,33 @@ export function ReportCardsPage() {
     setShowLabReportForm(true);
   };
 
+  const handleViewLabReport = (reportCard: ReportCard) => {
+    setSelectedReportCard(reportCard);
+    setShowViewLabReport(true);
+  };
+
   const handleLabReportSubmit = async (formData: any) => {
     if (!selectedReportCard) return;
 
     try {
+      // The lab report card is already created by the form, now update the report card status
       await updateLabReportStatus(selectedReportCard.id, 'completed', formData);
       toast.success('Lab report card completed successfully!');
       setShowLabReportForm(false);
       setSelectedReportCard(null);
     } catch (error) {
+      console.error('Error completing lab report card:', error);
       toast.error('Failed to complete lab report card');
     }
   };
 
   const handleLabReportCancel = () => {
     setShowLabReportForm(false);
+    setSelectedReportCard(null);
+  };
+
+  const handleViewLabReportClose = () => {
+    setShowViewLabReport(false);
     setSelectedReportCard(null);
   };
 
@@ -263,10 +277,7 @@ export function ReportCardsPage() {
                             {card.lab_report_status === 'completed' ? (
                               <Button
                                 className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                onClick={() => {
-                                  // TODO: Implement view lab report functionality
-                                  toast.info('View lab report functionality coming soon!');
-                                }}
+                                onClick={() => handleViewLabReport(card)}
                               >
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Lab Report
@@ -345,6 +356,18 @@ export function ReportCardsPage() {
               reportCard={selectedReportCard}
               onSubmit={handleLabReportSubmit}
               onCancel={handleLabReportCancel}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* View Lab Report Card Dialog */}
+      {selectedReportCard && (
+        <Dialog open={showViewLabReport} onOpenChange={setShowViewLabReport}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <ViewLabReportCard
+              reportCard={selectedReportCard}
+              onClose={handleViewLabReportClose}
             />
           </DialogContent>
         </Dialog>

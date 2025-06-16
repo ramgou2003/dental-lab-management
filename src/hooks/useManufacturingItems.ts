@@ -1,0 +1,181 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+export interface ManufacturingItem {
+  id: string;
+  lab_report_card_id: string;
+  lab_script_id: string;
+  patient_name: string;
+  upper_appliance_type: string | null;
+  lower_appliance_type: string | null;
+  shade: string;
+  arch_type: string;
+  upper_appliance_number: string | null;
+  lower_appliance_number: string | null;
+  status: 'pending-design' | 'in-production' | 'quality-check' | 'completed';
+  created_at: string;
+  updated_at: string;
+}
+
+export function useManufacturingItems() {
+  const [manufacturingItems, setManufacturingItems] = useState<ManufacturingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const fetchManufacturingItems = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase
+        .from('manufacturing_items')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching manufacturing items:', error);
+        setError(error.message);
+        toast({
+          title: "Error",
+          description: "Failed to load manufacturing items",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setManufacturingItems(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+      setError('An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateManufacturingItemStatus = async (itemId: string, newStatus: ManufacturingItem['status']) => {
+    try {
+      const { error } = await supabase
+        .from('manufacturing_items')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error updating manufacturing item status:', error);
+        throw error;
+      }
+
+      // Update local state
+      setManufacturingItems(prev => 
+        prev.map(item => 
+          item.id === itemId 
+            ? { ...item, status: newStatus, updated_at: new Date().toISOString() }
+            : item
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: `Manufacturing status updated to ${newStatus.replace('-', ' ')}`,
+      });
+    } catch (error) {
+      console.error('Error updating manufacturing item status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update manufacturing status",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const deleteManufacturingItem = async (itemId: string) => {
+    try {
+      const { error } = await supabase
+        .from('manufacturing_items')
+        .delete()
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error deleting manufacturing item:', error);
+        throw error;
+      }
+
+      // Update local state
+      setManufacturingItems(prev => prev.filter(item => item.id !== itemId));
+
+      toast({
+        title: "Success",
+        description: "Manufacturing item deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting manufacturing item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete manufacturing item",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const getManufacturingItemByLabReportId = async (labReportCardId: string): Promise<ManufacturingItem | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('manufacturing_items')
+        .select('*')
+        .eq('lab_report_card_id', labReportCardId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+        console.error('Error fetching manufacturing item:', error);
+        throw error;
+      }
+
+      return data || null;
+    } catch (error) {
+      console.error('Error:', error);
+      return null;
+    }
+  };
+
+  // Set up real-time subscription for manufacturing items
+  useEffect(() => {
+    fetchManufacturingItems();
+
+    // Subscribe to real-time changes
+    const subscription = supabase
+      .channel('manufacturing_items_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'manufacturing_items'
+        },
+        (payload) => {
+          console.log('Manufacturing items change received:', payload);
+          fetchManufacturingItems(); // Refetch data when changes occur
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  return {
+    manufacturingItems,
+    loading,
+    error,
+    fetchManufacturingItems,
+    updateManufacturingItemStatus,
+    deleteManufacturingItem,
+    getManufacturingItemByLabReportId
+  };
+}
