@@ -1,7 +1,16 @@
-# Welcome to your Lovable project
+# Dental Lab Management System
 
-## Project info
+A comprehensive dental lab management system with patient management, lab scripts, manufacturing queue, and report cards. Built with React, TypeScript, Tailwind CSS, and Supabase.
 
+## Features
+- 🦷 Patient Management System
+- 🧪 Lab Scripts with AI Enhancement (OpenRouter API)
+- 🏭 Manufacturing Queue
+- 📋 Report Cards Workflow
+- 📱 PWA Support
+- 🎨 Modern UI with Tailwind CSS
+
+## Live Demo
 **URL**: https://lovable.dev/projects/16772bfd-c8fb-472f-b5cc-02d70c79c043
 
 ## How can I edit this code?
