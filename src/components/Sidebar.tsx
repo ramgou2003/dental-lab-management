@@ -1,6 +1,7 @@
 import { House, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { useDeviceType } from "@/hooks/use-mobile";
 
 interface SidebarProps {
   activeSection: string;
@@ -51,6 +52,7 @@ export function Sidebar({
   onToggleCollapse
 }: SidebarProps) {
   const navigate = useNavigate();
+  const deviceType = useDeviceType();
 
   const handleLogout = () => {
     console.log("Logging out...");
@@ -59,7 +61,29 @@ export function Sidebar({
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
-  return <div className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-10 shadow-sm ${collapsed ? 'w-16' : 'w-72'}`}>
+
+  // Tablet-specific sizing
+  const getSidebarWidth = () => {
+    if (deviceType === 'tablet') {
+      return collapsed ? 'w-14' : 'w-64';
+    }
+    return collapsed ? 'w-16' : 'w-72';
+  };
+
+  const getNavItemClasses = () => {
+    if (deviceType === 'tablet') {
+      return 'tablet-nav-item h-12';
+    }
+    return 'px-3 py-4 h-14';
+  };
+
+  const getNavSpacing = () => {
+    if (deviceType === 'tablet') {
+      return 'tablet-nav-compact space-y-1';
+    }
+    return 'p-4 px-[9px] space-y-2';
+  };
+  return <div className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-10 shadow-sm ${getSidebarWidth()}`}>
       {/* Header - Clinic Logo */}
       <div className="border-b border-gray-200 py-1.5 px-[4px]">
         <button
@@ -111,14 +135,22 @@ export function Sidebar({
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 p-4 px-[9px] space-y-2">
+      <nav className={`flex-1 ${getNavSpacing()}`}>
         {navigation.map(item => {
         const isActive = activeSection === item.section;
         return <div key={item.section} className="relative">
-            <button onClick={() => navigate(item.href)} className={cn("flex items-center justify-start w-full text-left px-3 py-4 rounded-lg transition-colors duration-200 relative h-14", isActive ? "bg-indigo-50 text-indigo-700 border border-indigo-200" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900")} title={collapsed ? item.name : undefined}>
-              {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-indigo-600 rounded-r-full" />}
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+            <button
+              onClick={() => navigate(item.href)}
+              className={cn(
+                "flex items-center justify-start w-full text-left rounded-lg transition-colors duration-200 relative touch-target",
+                getNavItemClasses(),
+                isActive ? "bg-indigo-50 text-indigo-700 border border-indigo-200" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              )}
+              title={collapsed ? item.name : undefined}
+            >
+              {isActive && <div className={`absolute left-0 w-1 bg-indigo-600 rounded-r-full ${deviceType === 'tablet' ? 'top-1.5 bottom-1.5' : 'top-2 bottom-2'}`} />}
+              <item.icon className={`flex-shrink-0 ${deviceType === 'tablet' ? 'h-4 w-4' : 'h-5 w-5'}`} />
+              <span className={`ml-3 font-medium transition-all duration-300 ${deviceType === 'tablet' ? 'tablet-text-sm' : 'text-sm'} ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
                 {item.name}
               </span>
             </button>
