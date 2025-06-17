@@ -111,12 +111,12 @@ export function Sidebar({
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2 px-[9px]">
+      <nav className="flex-1 p-4 px-[9px] space-y-2">
         {navigation.map(item => {
         const isActive = activeSection === item.section;
         return <div key={item.section} className="relative">
-            <button onClick={() => navigate(item.href)} className={cn("flex items-center w-full text-left px-3 py-4 rounded-lg transition-all duration-200 relative", isActive ? "bg-indigo-50 text-indigo-700 border border-indigo-200" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900")} title={collapsed ? item.name : undefined}>
-              {isActive && <div className="absolute left-0 top-1 bottom-1 w-1 bg-indigo-600 rounded-r-full" />}
+            <button onClick={() => navigate(item.href)} className={cn("flex items-center justify-start w-full text-left px-3 py-4 rounded-lg transition-colors duration-200 relative h-14", isActive ? "bg-indigo-50 text-indigo-700 border border-indigo-200" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900")} title={collapsed ? item.name : undefined}>
+              {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-indigo-600 rounded-r-full" />}
               <item.icon className="h-5 w-5 flex-shrink-0" />
               <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
                 {item.name}
