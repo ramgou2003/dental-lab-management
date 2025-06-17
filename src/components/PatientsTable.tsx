@@ -83,9 +83,9 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
 
     // Map tab IDs to status values
     const statusMap: { [key: string]: string } = {
-      "not-started": "Not started",
-      "in-progress": "In progress",
-      "completed": "Completed",
+      "not-started": "Treatment not started",
+      "in-progress": "Treatment in progress",
+      "completed": "Treatment completed",
       "deceased": "Patient deceased"
     };
 
@@ -94,11 +94,11 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
 
   const getStatusButtonColor = (status: string) => {
     switch (status) {
-      case "Not started":
+      case "Treatment not started":
         return "bg-yellow-200 text-yellow-900 hover:bg-yellow-300";
-      case "In progress":
+      case "Treatment in progress":
         return "bg-blue-200 text-blue-900 hover:bg-blue-300";
-      case "Completed":
+      case "Treatment completed":
         return "bg-green-200 text-green-900 hover:bg-green-300";
       case "Patient deceased":
         return "bg-gray-200 text-gray-900 hover:bg-gray-300";
@@ -126,14 +126,14 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
   return (
     <div className="flex flex-col h-full">
       {/* Table Header - Fixed */}
-      <div className="bg-slate-50 border-b border-slate-200 px-3 md:px-2 py-3 md:py-2 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-        <div className="grid grid-cols-12 gap-4 md:gap-3 text-sm md:text-xs font-medium text-slate-900 h-6 md:h-5">
-          <div className="col-span-3 text-left border-r border-gray-300 pr-4 md:pr-3 flex items-center">Patient Name</div>
-          <div className="col-span-2 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Phone</div>
-          <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Gender</div>
-          <div className="col-span-3 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Treatment Type</div>
-          <div className="col-span-2 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Status</div>
-          <div className="col-span-1 text-center flex items-center justify-center pr-2">Actions</div>
+      <div className="bg-slate-50 border-b border-slate-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
+        <div className="grid grid-cols-6 gap-4 text-sm font-medium text-slate-900 h-6">
+          <div className="text-left border-r border-gray-300 pr-4 flex items-center">Patient Name</div>
+          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Phone</div>
+          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Gender</div>
+          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Treatment Type</div>
+          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
+          <div className="text-center flex items-center justify-center pr-2">Actions</div>
         </div>
       </div>
 
@@ -146,33 +146,33 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
             </div>
           ) : (
             filteredPatients.map((patient) => (
-              <div key={patient.id} className="grid grid-cols-12 gap-4 md:gap-3 px-3 md:px-2 py-4 md:py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center h-16 md:h-14">
+              <div key={patient.id} className="grid grid-cols-6 gap-4 px-3 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center h-16">
                 {/* Patient Name */}
-                <div className="col-span-3 border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center">
-                  <div className="flex items-center gap-3 md:gap-2">
-                    <Avatar className="h-10 w-10 md:h-8 md:w-8">
+                <div className="border-r border-gray-300 pr-4 h-full flex items-center">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
                       <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
-                      <AvatarFallback className="bg-indigo-600 text-white font-semibold text-sm md:text-xs">
+                      <AvatarFallback className="bg-indigo-600 text-white font-semibold">
                         {getInitials(patient.first_name, patient.last_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-slate-900 text-sm md:text-xs font-medium truncate">{patient.full_name}</span>
+                    <span className="text-slate-900 text-sm font-medium truncate">{patient.full_name}</span>
                   </div>
                 </div>
 
                 {/* Phone */}
-                <div className="col-span-2 text-slate-600 text-sm md:text-xs text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center truncate">{patient.phone || '-'}</div>
+                <div className="text-slate-600 text-sm text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center truncate">{patient.phone || '-'}</div>
 
                 {/* Gender */}
-                <div className="col-span-1 text-slate-600 text-sm md:text-xs text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center capitalize truncate">{patient.gender || '-'}</div>
+                <div className="text-slate-600 text-sm text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center capitalize truncate">{patient.gender || '-'}</div>
 
                 {/* Treatment Type */}
-                <div className="col-span-3 text-slate-600 text-sm md:text-xs text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center truncate">{patient.treatment_type || '-'}</div>
+                <div className="text-slate-600 text-sm text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center truncate">{patient.treatment_type || '-'}</div>
 
                 {/* Status */}
-                <div className="col-span-2 border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
+                <div className="border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                   <Button
-                    className={`${getStatusButtonColor(patient.status)} rounded-full px-4 md:px-3 h-8 md:h-7 text-sm md:text-xs font-medium`}
+                    className={`${getStatusButtonColor(patient.status)} rounded-full px-4 h-8 text-sm font-medium`}
                     variant="secondary"
                   >
                     {patient.status}
@@ -180,16 +180,15 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                 </div>
 
                 {/* Actions */}
-                <div className="col-span-1 h-full flex items-center justify-center pr-2">
+                <div className="h-full flex items-center justify-center pr-2">
                   <Button
                     onClick={() => onViewProfile?.(patient.id)}
                     variant="outline"
                     size="sm"
-                    className="flex items-center gap-2 md:gap-1 h-8 md:h-7 px-3 md:px-2 text-sm md:text-xs"
+                    className="flex items-center gap-2"
                   >
-                    <Eye className="h-4 w-4 md:h-3 md:w-3" />
-                    <span className="hidden sm:inline">View Profile</span>
-                    <span className="sm:hidden">View</span>
+                    <Eye className="h-4 w-4" />
+                    View Profile
                   </Button>
                 </div>
               </div>

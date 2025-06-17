@@ -471,13 +471,13 @@ export function PatientProfilePage() {
                   ) : labScripts.length > 0 ? (
                     <div className="flex flex-col h-full">
                       {/* Table Header - Fixed */}
-                      <div className="bg-gray-50 border-b border-gray-200 px-3 md:px-2 py-3 md:py-2 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-                        <div className="grid grid-cols-8 gap-4 md:gap-3 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 md:h-5">
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Requested Date</div>
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Arch Type</div>
-                          <div className="col-span-3 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Appliance Type</div>
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Due Date</div>
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Status</div>
+                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
+                        <div className="grid grid-cols-8 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
+                          <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
                           <div className="col-span-1 text-right flex items-center justify-end pr-2">Actions</div>
                         </div>
                       </div>
@@ -493,47 +493,41 @@ export function PatientProfilePage() {
                           };
 
                           return (
-                            <div key={script.id} className="grid grid-cols-8 gap-4 md:gap-3 px-3 md:px-2 py-4 md:py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center h-16 md:h-14">
+                            <div key={script.id} className="grid grid-cols-8 gap-4 px-3 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center h-16">
                               {/* Requested Date */}
-                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                                 <p className="text-gray-600 text-xs">
                                   {script.requested_date ? new Date(script.requested_date).toLocaleDateString() : 'No date'}
                                 </p>
                               </div>
 
                               {/* Arch Type */}
-                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
-                                <span className={`inline-flex px-2 md:px-1 py-1 rounded-full text-xs font-medium ${
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                                   script.arch_type === 'dual' ? 'bg-purple-100 text-purple-700' :
                                   script.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
                                   'bg-green-100 text-green-700'
                                 }`}>
-                                  <span className="hidden sm:inline">
-                                    {script.arch_type === 'dual' ? 'Dual Arch' :
-                                     script.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}
-                                  </span>
-                                  <span className="sm:hidden">
-                                    {script.arch_type === 'dual' ? 'Dual' :
-                                     script.arch_type === 'upper' ? 'Upper' : 'Lower'}
-                                  </span>
+                                  {script.arch_type === 'dual' ? 'Dual Arch' :
+                                   script.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}
                                 </span>
                               </div>
 
                               {/* Appliance Type */}
-                              <div className="col-span-3 text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
+                              <div className="col-span-3 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                                 <p className="text-gray-600 text-xs">{getApplianceDisplay()}</p>
                               </div>
 
                               {/* Due Date */}
-                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                                 <p className="text-gray-600 text-xs">
                                   {script.due_date ? new Date(script.due_date).toLocaleDateString() : 'No due date'}
                                 </p>
                               </div>
 
                               {/* Status */}
-                              <div className="col-span-1 border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
-                                <span className={`inline-flex px-2 md:px-1 py-1 rounded-full text-xs font-medium ${
+                              <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                                   script.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                                   script.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
                                   script.status === 'delayed' ? 'bg-red-100 text-red-700' :
@@ -559,10 +553,10 @@ export function PatientProfilePage() {
                                           variant="outline"
                                           size="sm"
                                           onClick={() => handleEditStatus(script.id)}
-                                          className="h-8 w-8 md:h-7 md:w-7 p-0"
+                                          className="h-8 w-8 p-0"
                                           title="Edit Status"
                                         >
-                                          <Edit className="h-4 w-4 md:h-3 md:w-3" />
+                                          <Edit className="h-4 w-4" />
                                         </Button>
                                       </>
                                     );
@@ -575,19 +569,19 @@ export function PatientProfilePage() {
                                           variant="outline"
                                           size="sm"
                                           onClick={() => handleDesignStateChange(script.id, 'hold')}
-                                          className="h-8 w-8 md:h-7 md:w-7 p-0"
+                                          className="h-8 w-8 p-0"
                                           title="Hold"
                                         >
-                                          <Square className="h-4 w-4 md:h-3 md:w-3" />
+                                          <Square className="h-4 w-4" />
                                         </Button>
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={() => handleDesignStateChange(script.id, 'completed')}
-                                          className="h-8 w-8 md:h-7 md:w-7 p-0"
+                                          className="h-8 w-8 p-0"
                                           title="Complete"
                                         >
-                                          <CheckCircle className="h-4 w-4 md:h-3 md:w-3" />
+                                          <CheckCircle className="h-4 w-4" />
                                         </Button>
                                       </>
                                     );
@@ -601,10 +595,10 @@ export function PatientProfilePage() {
                                           variant="outline"
                                           size="sm"
                                           onClick={() => handleDesignStateChange(script.id, 'in-progress')}
-                                          className="h-8 w-8 md:h-7 md:w-7 p-0"
+                                          className="h-8 w-8 p-0"
                                           title="Start Design"
                                         >
-                                          <Play className="h-4 w-4 md:h-3 md:w-3" />
+                                          <Play className="h-4 w-4" />
                                         </Button>
                                       );
 
@@ -615,19 +609,19 @@ export function PatientProfilePage() {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleDesignStateChange(script.id, 'hold')}
-                                            className="h-8 w-8 md:h-7 md:w-7 p-0"
+                                            className="h-8 w-8 p-0"
                                             title="Hold"
                                           >
-                                            <Square className="h-4 w-4 md:h-3 md:w-3" />
+                                            <Square className="h-4 w-4" />
                                           </Button>
                                           <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleDesignStateChange(script.id, 'completed')}
-                                            className="h-8 w-8 md:h-7 md:w-7 p-0"
+                                            className="h-8 w-8 p-0"
                                             title="Complete"
                                           >
-                                            <CheckCircle className="h-4 w-4 md:h-3 md:w-3" />
+                                            <CheckCircle className="h-4 w-4" />
                                           </Button>
                                         </>
                                       );
@@ -639,19 +633,19 @@ export function PatientProfilePage() {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleDesignStateChange(script.id, 'in-progress')}
-                                            className="h-8 w-8 md:h-7 md:w-7 p-0"
+                                            className="h-8 w-8 p-0"
                                             title="Resume Design"
                                           >
-                                            <RotateCcw className="h-4 w-4 md:h-3 md:w-3" />
+                                            <RotateCcw className="h-4 w-4" />
                                           </Button>
                                           <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleDesignStateChange(script.id, 'completed')}
-                                            className="h-8 w-8 md:h-7 md:w-7 p-0"
+                                            className="h-8 w-8 p-0"
                                             title="Complete"
                                           >
-                                            <CheckCircle className="h-4 w-4 md:h-3 md:w-3" />
+                                            <CheckCircle className="h-4 w-4" />
                                           </Button>
                                         </>
                                       );
@@ -663,11 +657,11 @@ export function PatientProfilePage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 w-8 md:h-7 md:w-7 p-0"
+                                  className="h-8 w-8 p-0"
                                   onClick={() => handleViewLabScript(script)}
                                   title="View Details"
                                 >
-                                  <Eye className="h-4 w-4 md:h-3 md:w-3" />
+                                  <Eye className="h-4 w-4" />
                                 </Button>
                                 </div>
                               </div>

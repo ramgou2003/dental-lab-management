@@ -5,14 +5,23 @@ import { Sidebar } from "@/components/Sidebar";
 const Layout = () => {
   // Initialize sidebar state from localStorage or default to false (expanded)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem('sidebar-collapsed');
-    return saved ? JSON.parse(saved) : false;
+    try {
+      const saved = localStorage.getItem('sidebar-collapsed');
+      return saved ? JSON.parse(saved) : false;
+    } catch (error) {
+      console.warn('Failed to load sidebar state from localStorage:', error);
+      return false;
+    }
   });
   const location = useLocation();
 
   // Save sidebar state to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('sidebar-collapsed', JSON.stringify(sidebarCollapsed));
+    try {
+      localStorage.setItem('sidebar-collapsed', JSON.stringify(sidebarCollapsed));
+    } catch (error) {
+      console.warn('Failed to save sidebar state to localStorage:', error);
+    }
   }, [sidebarCollapsed]);
 
   // Extract the current section from the pathname
@@ -36,7 +45,7 @@ const Layout = () => {
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-      <main className={`flex-1 bg-white overflow-auto transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-56'}`}>
+      <main className={`flex-1 bg-white overflow-auto transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-48'}`}>
         <Outlet />
       </main>
     </div>
