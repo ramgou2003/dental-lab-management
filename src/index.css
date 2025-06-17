@@ -171,3 +171,136 @@ input[type="date"]::-moz-calendar-picker-indicator {
 .scrollbar-enhanced {
   overflow-y: scroll !important;
 }
+
+/* Tablet-specific global scaling - 90% zoom effect */
+@media (min-width: 768px) and (max-width: 1279px) {
+  /* Global scaling for tablet devices */
+  html {
+    font-size: 90%; /* Scale down base font size by 10% */
+  }
+
+  /* Apply zoom effect to the entire application */
+  body {
+    zoom: 0.9;
+    -webkit-transform: scale(0.9);
+    -webkit-transform-origin: 0 0;
+    -moz-transform: scale(0.9);
+    -moz-transform-origin: 0 0;
+    transform: scale(0.9);
+    transform-origin: 0 0;
+    width: 111.11%; /* Compensate for 90% scale */
+    height: 111.11%;
+  }
+
+  /* Ensure root container fills properly */
+  #root {
+    width: 100%;
+    height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scale down all text elements */
+  h1, h2, h3, h4, h5, h6 {
+    font-size: 0.9em;
+  }
+
+  /* Compact buttons */
+  button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
+  }
+
+  /* Compact form inputs */
+  input, select, textarea {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.85rem;
+    height: auto;
+    min-height: 2rem;
+  }
+
+  /* Compact table elements */
+  table {
+    font-size: 0.85rem;
+  }
+
+  td, th {
+    padding: 0.4rem 0.6rem;
+  }
+
+  /* Scale down icons */
+  svg {
+    width: 0.9em;
+    height: 0.9em;
+  }
+
+  /* Compact cards and containers */
+  .card, [class*="card"] {
+    padding: 0.8rem;
+  }
+
+  /* Compact navigation */
+  nav {
+    font-size: 0.85rem;
+  }
+
+  nav button, nav a {
+    padding: 0.4rem 0.7rem;
+  }
+
+  /* Scale down avatars */
+  .avatar, [class*="avatar"] {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  /* Compact spacing */
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+
+  .space-y-4 > * + * {
+    margin-top: 0.75rem;
+  }
+
+  .gap-4 {
+    gap: 0.75rem;
+  }
+
+  .gap-6 {
+    gap: 1rem;
+  }
+
+  /* Adjust modal and dialog sizes */
+  .dialog-content, .modal-content, [role="dialog"] {
+    max-width: 95vw;
+    max-height: 95vh;
+    padding: 1rem;
+  }
+
+  /* Compact sidebar for tablets */
+  .tablet-container .sidebar {
+    width: 14rem; /* Reduced from 18rem */
+  }
+
+  .tablet-container .sidebar.collapsed {
+    width: 3.5rem; /* Reduced from 4rem */
+  }
+
+  /* Override specific Tailwind classes for tablet scaling */
+  .tablet-container .w-72 {
+    width: 14rem !important; /* Override w-72 (18rem) to 14rem */
+  }
+
+  .tablet-container .w-16 {
+    width: 3.5rem !important; /* Override w-16 (4rem) to 3.5rem */
+  }
+
+  .tablet-container .ml-72 {
+    margin-left: 14rem !important; /* Override ml-72 */
+  }
+
+  .tablet-container .ml-16 {
+    margin-left: 3.5rem !important; /* Override ml-16 */
+  }
+}
