@@ -30,16 +30,6 @@ const Layout = () => {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
       <main className={`flex-1 bg-white overflow-auto transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-72'}`}>
-        {/* Tablet Scaling Indicator */}
-        {deviceType === 'tablet' && (
-          <div className="bg-blue-100 border-b border-blue-200 px-4 py-2 text-center">
-            <div className="flex items-center justify-center gap-2 text-blue-700 text-sm font-medium">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <span>Tablet Mode Active - 90% Scaled Interface</span>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            </div>
-          </div>
-        )}
         <Outlet />
       </main>
     </div>
