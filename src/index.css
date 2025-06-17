@@ -2,6 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tablet-specific optimizations */
+@layer utilities {
+  /* Tablet-specific spacing */
+  .tablet-compact {
+    @apply tablet:p-2 tablet:m-1;
+  }
+
+  .tablet-text-sm {
+    @apply tablet:text-sm;
+  }
+
+  .tablet-icon-sm {
+    @apply tablet:h-4 tablet:w-4;
+  }
+
+  .tablet-icon-xs {
+    @apply tablet:h-3 tablet:w-3;
+  }
+
+  /* Tablet-specific layouts */
+  .tablet-grid-compact {
+    @apply tablet:gap-2;
+  }
+
+  .tablet-card-compact {
+    @apply tablet:p-3 tablet:rounded-lg;
+  }
+
+  .tablet-header-compact {
+    @apply tablet:py-2 tablet:px-4;
+  }
+
+  /* Tablet table optimizations */
+  .tablet-table-compact {
+    @apply tablet:text-sm;
+  }
+
+  .tablet-table-row {
+    @apply tablet:h-12 tablet:py-2;
+  }
+
+  /* Tablet sidebar optimizations */
+  .tablet-sidebar-compact {
+    @apply tablet:w-12;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
