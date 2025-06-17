@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import tablet-specific optimizations */
-@import './styles/tablet.css';
-
 @layer base {
   :root {
     --background: 0 0% 100%;

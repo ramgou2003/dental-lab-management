@@ -10,7 +10,6 @@ import { PhoneInput } from "./PhoneInput";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useDeviceType } from "@/hooks/use-mobile";
 
 interface NewPatientFormProps {
   onSubmit: (patientData: any) => void;
@@ -42,29 +41,6 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const deviceType = useDeviceType();
-
-  // Get responsive classes based on device type
-  const getFormClasses = () => {
-    if (deviceType === 'tablet') return 'tablet-compact space-y-4';
-    return 'space-y-6';
-  };
-
-  const getGridClasses = () => {
-    if (deviceType === 'tablet') return 'grid grid-cols-2 tablet-gap-3';
-    return 'grid grid-cols-2 gap-4';
-  };
-
-  const getInputClasses = (hasError: boolean) => {
-    const baseClasses = hasError ? "border-red-500 focus-visible:ring-red-500" : "";
-    if (deviceType === 'tablet') return `${baseClasses} tablet-input-sm`;
-    return baseClasses;
-  };
-
-  const getButtonClasses = () => {
-    if (deviceType === 'tablet') return 'tablet-btn-sm';
-    return '';
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,39 +128,39 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
   };
 
   return (
-    <Card className={`w-full max-w-2xl mx-auto ${deviceType === 'tablet' ? 'tablet-card-compact' : ''}`}>
-      <CardHeader className={deviceType === 'tablet' ? 'tablet-compact' : ''}>
-        <CardTitle className={deviceType === 'tablet' ? 'tablet-text-sm' : ''}>Add New Patient</CardTitle>
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle>Add New Patient</CardTitle>
       </CardHeader>
-      <CardContent className={deviceType === 'tablet' ? 'tablet-compact' : ''}>
-        <form onSubmit={handleSubmit} className={getFormClasses()}>
-          <div className={getGridClasses()}>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="firstName" className={`${errors.firstName ? "text-red-500" : ""} ${deviceType === 'tablet' ? 'tablet-text-sm' : ''}`}>
+              <Label htmlFor="firstName" className={errors.firstName ? "text-red-500" : ""}>
                 First Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="firstName"
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
-                className={getInputClasses(errors.firstName)}
+                className={errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
             </div>
             <div>
-              <Label htmlFor="lastName" className={`${errors.lastName ? "text-red-500" : ""} ${deviceType === 'tablet' ? 'tablet-text-sm' : ''}`}>
+              <Label htmlFor="lastName" className={errors.lastName ? "text-red-500" : ""}>
                 Last Name <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="lastName"
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
-                className={getInputClasses(errors.lastName)}
+                className={errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="dateOfBirth" className={`${errors.dateOfBirth ? "text-red-500" : ""} ${deviceType === 'tablet' ? 'tablet-text-sm' : ''}`}>
+            <Label htmlFor="dateOfBirth" className={errors.dateOfBirth ? "text-red-500" : ""}>
               Date of Birth <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -192,7 +168,7 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
               type="date"
               value={formData.dateOfBirth}
               onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-              className={getInputClasses(errors.dateOfBirth)}
+              className={errors.dateOfBirth ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
           </div>
 
@@ -202,9 +178,9 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
           />
 
           <div>
-            <Label htmlFor="treatmentType" className={deviceType === 'tablet' ? 'tablet-text-sm' : ''}>Treatment Type</Label>
+            <Label htmlFor="treatmentType">Treatment Type</Label>
             <Select value={formData.treatmentType} onValueChange={(value) => handleInputChange('treatmentType', value)}>
-              <SelectTrigger className={deviceType === 'tablet' ? 'tablet-input-sm' : ''}>
+              <SelectTrigger>
                 <SelectValue placeholder="Select treatment type" />
               </SelectTrigger>
               <SelectContent>
@@ -222,33 +198,31 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
             </Select>
           </div>
 
-          <div className={getGridClasses()}>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="lastVisit" className={deviceType === 'tablet' ? 'tablet-text-sm' : ''}>Last Visit</Label>
+              <Label htmlFor="lastVisit">Last Visit</Label>
               <Input
                 id="lastVisit"
                 type="date"
                 value={formData.lastVisit}
                 onChange={(e) => handleInputChange('lastVisit', e.target.value)}
-                className={deviceType === 'tablet' ? 'tablet-input-sm' : ''}
               />
             </div>
             <div>
-              <Label htmlFor="nextAppointment" className={deviceType === 'tablet' ? 'tablet-text-sm' : ''}>Next Appointment</Label>
+              <Label htmlFor="nextAppointment">Next Appointment</Label>
               <Input
                 id="nextAppointment"
                 type="date"
                 value={formData.nextAppointment}
                 onChange={(e) => handleInputChange('nextAppointment', e.target.value)}
-                className={deviceType === 'tablet' ? 'tablet-input-sm' : ''}
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="status" className={deviceType === 'tablet' ? 'tablet-text-sm' : ''}>Status</Label>
+            <Label htmlFor="status">Status</Label>
             <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-              <SelectTrigger className={deviceType === 'tablet' ? 'tablet-input-sm' : ''}>
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -269,28 +243,28 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
           />
 
           <div>
-            <Label className={`font-medium ${deviceType === 'tablet' ? 'tablet-text-sm' : 'text-base'}`}>Gender</Label>
+            <Label className="text-base font-medium">Gender</Label>
             <RadioGroup
               value={formData.gender}
               onValueChange={(value) => handleInputChange('gender', value)}
-              className={`flex mt-2 ${deviceType === 'tablet' ? 'tablet-gap-3' : 'gap-6'}`}
+              className="flex gap-6 mt-2"
             >
-              <div className="flex items-center space-x-2 touch-target">
+              <div className="flex items-center space-x-2">
                 <RadioGroupItem value="male" id="male" />
-                <Label htmlFor="male" className={deviceType === 'tablet' ? 'tablet-text-sm' : ''}>Male</Label>
+                <Label htmlFor="male">Male</Label>
               </div>
-              <div className="flex items-center space-x-2 touch-target">
+              <div className="flex items-center space-x-2">
                 <RadioGroupItem value="female" id="female" />
-                <Label htmlFor="female" className={deviceType === 'tablet' ? 'tablet-text-sm' : ''}>Female</Label>
+                <Label htmlFor="female">Female</Label>
               </div>
             </RadioGroup>
           </div>
 
-          <div className={`flex pt-4 ${deviceType === 'tablet' ? 'tablet-gap-3' : 'gap-4'}`}>
-            <Button type="submit" className={`flex-1 ${getButtonClasses()}`} disabled={isSubmitting}>
+          <div className="flex gap-4 pt-4">
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
               {isSubmitting ? "Adding Patient..." : "Add Patient"}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel} className={`flex-1 ${getButtonClasses()}`} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1" disabled={isSubmitting}>
               Cancel
             </Button>
           </div>

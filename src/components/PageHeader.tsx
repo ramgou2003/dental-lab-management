@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LucideIcon } from "lucide-react";
-import { useDeviceType } from "@/hooks/use-mobile";
 
 interface PageHeaderProps {
   title: string;
@@ -28,29 +27,12 @@ export function PageHeader({
   secondaryAction,
   search
 }: PageHeaderProps) {
-  const deviceType = useDeviceType();
-
-  const getHeaderClasses = () => {
-    if (deviceType === 'tablet') return 'tablet-header-compact';
-    return 'px-6 py-3.5';
-  };
-
-  const getTitleClasses = () => {
-    if (deviceType === 'tablet') return 'tablet-header-title font-bold text-gray-900';
-    return 'text-2xl font-bold text-gray-900';
-  };
-
-  const getGapClasses = () => {
-    if (deviceType === 'tablet') return 'tablet-gap-2';
-    return 'gap-3';
-  };
-
-  return <div className={`flex items-center justify-between ${getHeaderClasses()}`}>
+  return <div className="flex items-center justify-between px-6 py-3.5">
       <div>
-        <h1 className={getTitleClasses()}>{title}</h1>
-        {description && <p className={`text-gray-600 mt-1 ${deviceType === 'tablet' ? 'tablet-text-sm' : ''}`}>{description}</p>}
+        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+        {description && <p className="text-gray-600 mt-1">{description}</p>}
       </div>
-      <div className={`flex items-center ${getGapClasses()}`}>
+      <div className="flex items-center gap-3">
         {search && (
           <div className="relative">
             <Input
@@ -58,9 +40,7 @@ export function PageHeader({
               placeholder={search.placeholder}
               value={search.value}
               onChange={(e) => search.onChange(e.target.value)}
-              className={`pl-10 pr-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                deviceType === 'tablet' ? 'tablet-input-sm w-48' : 'w-64 py-2'
-              }`}
+              className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,20 +53,15 @@ export function PageHeader({
           <Button
             variant="outline"
             onClick={secondaryAction.onClick}
-            className={`flex items-center ${secondaryAction.label ? (deviceType === 'tablet' ? 'tablet-gap-2' : 'gap-2') : ''} ${deviceType === 'tablet' ? 'tablet-btn-sm' : ''}`}
-            size={deviceType === 'tablet' ? 'sm' : (secondaryAction.label ? "default" : "icon")}
+            className={`flex items-center ${secondaryAction.label ? 'gap-2' : ''}`}
+            size={secondaryAction.label ? "default" : "icon"}
           >
             {secondaryAction.icon && <secondaryAction.icon className="h-4 w-4" />}
             {secondaryAction.label && secondaryAction.label}
           </Button>
         )}
         {action && (
-          <Button
-            onClick={action.onClick}
-            className={`bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors duration-200 ${
-              deviceType === 'tablet' ? 'tablet-btn-sm px-4' : 'px-6 py-2'
-            }`}
-          >
+          <Button onClick={action.onClick} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200">
             {action.label}
           </Button>
         )}

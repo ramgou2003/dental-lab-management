@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Eye } from "lucide-react";
-import { useDeviceType } from "@/hooks/use-mobile";
 
 interface Patient {
   id: string;
@@ -39,7 +38,6 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const deviceType = useDeviceType();
 
   useEffect(() => {
     fetchPatients();
@@ -125,48 +123,35 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
     );
   }
 
-  // Define responsive grid columns based on device type
-  const getGridCols = () => {
-    if (deviceType === 'mobile') return 'grid-cols-3';
-    if (deviceType === 'tablet') return 'grid-cols-6';
-    return 'grid-cols-8';
-  };
-
-  const getHeaderClasses = () => {
-    const baseClasses = "bg-slate-50 border-b border-slate-200 flex-shrink-0";
-    if (deviceType === 'tablet') return `${baseClasses} tablet-compact tablet-text-sm`;
-    return `${baseClasses} px-4 py-3`;
-  };
-
   return (
     <div className="flex flex-col h-full">
       {/* Table Header - Fixed */}
-      <div className={getHeaderClasses()}>
-        <div className={`grid ${getGridCols()} gap-2 tablet:gap-3 lg:gap-4 text-sm font-medium text-slate-900`}>
+      <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0">
+        <div className="grid grid-cols-8 gap-4 text-sm font-medium text-slate-900">
           <div className="text-left">Patient Name</div>
-          {deviceType !== 'mobile' && <div className="text-left">Phone</div>}
-          {deviceType === 'desktop' && <div className="text-left">Gender</div>}
+          <div className="text-left">Phone</div>
+          <div className="text-left">Gender</div>
           <div className="text-left">Treatment Type</div>
-          {deviceType !== 'mobile' && <div className="text-left">Last Visit</div>}
-          {deviceType === 'desktop' && <div className="text-left">Next Appointment</div>}
+          <div className="text-left">Last Visit</div>
+          <div className="text-left">Next Appointment</div>
           <div className="text-left">Status</div>
           <div className="text-center">Actions</div>
         </div>
       </div>
 
       {/* Table Body - Scrollable */}
-      <div className={`flex-1 overflow-y-scroll ${deviceType === 'tablet' ? 'tablet-scrollbar' : 'scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced'}`}>
+      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
         <div className="bg-white">
           {filteredPatients.length === 0 ? (
-            <div className={`text-center text-slate-500 ${deviceType === 'tablet' ? 'tablet-compact py-6' : 'px-4 py-8'}`}>
+            <div className="px-4 py-8 text-center text-slate-500">
               {patients.length === 0 ? "No patients found. Add your first patient!" : "No patients match your search criteria."}
             </div>
           ) : (
             filteredPatients.map((patient) => (
-              <div key={patient.id} className={`grid ${getGridCols()} gap-2 tablet:gap-3 lg:gap-4 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center ${deviceType === 'tablet' ? 'tablet-compact tablet-text-sm' : 'px-4 py-4'}`}>
+              <div key={patient.id} className="grid grid-cols-8 gap-4 px-4 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center">
                 {/* Patient Name */}
-                <div className="flex items-center gap-2 tablet:gap-3">
-                  <Avatar className={deviceType === 'tablet' ? 'tablet-avatar-sm' : 'h-10 w-10'}>
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
                     <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
                     <AvatarFallback className="bg-indigo-600 text-white font-semibold">
                       {getInitials(patient.first_name, patient.last_name)}
@@ -175,33 +160,25 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                   <span className="text-slate-900 text-sm font-medium truncate">{patient.full_name}</span>
                 </div>
 
-                {/* Phone - Hidden on mobile */}
-                {deviceType !== 'mobile' && (
-                  <div className="text-slate-600 text-sm truncate">{patient.phone || '-'}</div>
-                )}
+                {/* Phone */}
+                <div className="text-slate-600 text-sm truncate">{patient.phone || '-'}</div>
 
-                {/* Gender - Desktop only */}
-                {deviceType === 'desktop' && (
-                  <div className="text-slate-600 text-sm capitalize truncate">{patient.gender || '-'}</div>
-                )}
+                {/* Gender */}
+                <div className="text-slate-600 text-sm capitalize truncate">{patient.gender || '-'}</div>
 
                 {/* Treatment Type */}
                 <div className="text-slate-600 text-sm truncate">{patient.treatment_type || '-'}</div>
 
-                {/* Last Visit - Hidden on mobile */}
-                {deviceType !== 'mobile' && (
-                  <div className="text-slate-600 text-sm truncate">{patient.last_visit || '-'}</div>
-                )}
+                {/* Last Visit */}
+                <div className="text-slate-600 text-sm truncate">{patient.last_visit || '-'}</div>
 
-                {/* Next Appointment - Desktop only */}
-                {deviceType === 'desktop' && (
-                  <div className="text-slate-600 text-sm truncate">{patient.next_appointment || '-'}</div>
-                )}
+                {/* Next Appointment */}
+                <div className="text-slate-600 text-sm truncate">{patient.next_appointment || '-'}</div>
 
                 {/* Status */}
                 <div>
                   <Button
-                    className={`${getStatusButtonColor(patient.status)} rounded-full text-sm font-medium w-full ${deviceType === 'tablet' ? 'tablet-btn-xs px-2 h-7' : 'px-4 h-8'}`}
+                    className={`${getStatusButtonColor(patient.status)} rounded-full px-4 h-8 text-sm font-medium w-full`}
                     variant="secondary"
                   >
                     {patient.status}
@@ -214,10 +191,10 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                     onClick={() => onViewProfile?.(patient.id)}
                     variant="outline"
                     size="sm"
-                    className={`flex items-center ${deviceType === 'tablet' ? 'tablet-btn-sm gap-1' : 'gap-2'}`}
+                    className="flex items-center gap-2"
                   >
                     <Eye className="h-4 w-4" />
-                    {deviceType !== 'mobile' && 'View Profile'}
+                    View Profile
                   </Button>
                 </div>
               </div>
