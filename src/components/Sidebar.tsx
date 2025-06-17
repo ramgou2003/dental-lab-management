@@ -59,7 +59,7 @@ export function Sidebar({
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
-  return <div className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-10 shadow-sm ${collapsed ? 'w-16' : 'w-72'}`}>
+  return <div className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-10 shadow-sm ${collapsed ? 'w-16' : 'w-56'}`}>
       {/* Header - Clinic Logo */}
       <div className="border-b border-gray-200 py-1.5 px-[4px]">
         <button
@@ -72,7 +72,7 @@ export function Sidebar({
             <img
               src="/logo-wide.png"
               alt="Clinic Logo"
-              className={`h-14 max-w-[240px] object-contain object-left transition-all duration-300 ${
+              className={`h-14 max-w-[160px] object-contain object-left transition-all duration-300 ${
                 collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
               }`}
               onError={(e) => {
