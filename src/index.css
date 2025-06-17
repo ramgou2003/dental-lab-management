@@ -128,3 +128,46 @@ input[type="date"]::-moz-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.6;
 }
+
+/* Custom scrollbar styling for enhanced appearance */
+.scrollbar-enhanced {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.scrollbar-enhanced::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scrollbar-enhanced::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+  margin: 4px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.scrollbar-enhanced::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  border: 2px solid #f1f5f9;
+  background-clip: content-box;
+}
+
+.scrollbar-enhanced::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+  border-color: #f1f5f9;
+}
+
+.scrollbar-enhanced::-webkit-scrollbar-thumb:active {
+  background: #2563eb;
+}
+
+/* Force scrollbar to always be visible */
+.scrollbar-enhanced::-webkit-scrollbar-thumb {
+  min-height: 20px;
+}
+
+.scrollbar-enhanced {
+  overflow-y: scroll !important;
+}

@@ -45,19 +45,28 @@ export function PatientsPage() {
           }}
         />
       </div>
-      <div className="flex-1 p-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-100">
-            <SearchBar 
+      <div className="flex-1 p-4">
+        {/* Search Bar */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4">
+          <div className="p-4">
+            <SearchBar
               placeholder="Search patients by name, ID, or phone number"
               value={searchTerm}
               onChange={setSearchTerm}
             />
           </div>
-          <PatientTabs 
+        </div>
+
+        {/* Patient Tabs */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4">
+          <PatientTabs
             activeTab={activeTab}
             onTabChange={setActiveTab}
           />
+        </div>
+
+        {/* Patients Table - Extended to viewport height */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
           <PatientsTable
             searchTerm={searchTerm}
             activeTab={activeTab}

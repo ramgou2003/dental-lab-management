@@ -124,71 +124,83 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
   }
 
   return (
-    <div className="px-4 py-3">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-4 py-3 text-left text-slate-900 text-sm font-medium">Patient Name</th>
-              <th className="px-4 py-3 text-left text-slate-900 text-sm font-medium">Phone</th>
-              <th className="px-4 py-3 text-left text-slate-900 text-sm font-medium">Gender</th>
-              <th className="px-4 py-3 text-left text-slate-900 text-sm font-medium">Treatment Type</th>
-              <th className="px-4 py-3 text-left text-slate-900 text-sm font-medium">Last Visit</th>
-              <th className="px-4 py-3 text-left text-slate-900 text-sm font-medium">Next Appointment</th>
-              <th className="px-4 py-3 text-left text-slate-900 text-sm font-medium">Status</th>
-              <th className="px-4 py-3 text-center text-slate-900 text-sm font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredPatients.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
-                  {patients.length === 0 ? "No patients found. Add your first patient!" : "No patients match your search criteria."}
-                </td>
-              </tr>
-            ) : (
-              filteredPatients.map((patient) => (
-                <tr key={patient.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
-                        <AvatarFallback className="bg-indigo-600 text-white font-semibold">
-                          {getInitials(patient.first_name, patient.last_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-slate-900 text-sm font-medium">{patient.full_name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-slate-600 text-sm">{patient.phone || '-'}</td>
-                  <td className="px-4 py-4 text-slate-600 text-sm capitalize">{patient.gender || '-'}</td>
-                  <td className="px-4 py-4 text-slate-600 text-sm">{patient.treatment_type || '-'}</td>
-                  <td className="px-4 py-4 text-slate-600 text-sm">{patient.last_visit || '-'}</td>
-                  <td className="px-4 py-4 text-slate-600 text-sm">{patient.next_appointment || '-'}</td>
-                  <td className="px-4 py-4">
-                    <Button
-                      className={`${getStatusButtonColor(patient.status)} rounded-full px-4 h-8 text-sm font-medium w-full`}
-                      variant="secondary"
-                    >
-                      {patient.status}
-                    </Button>
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    <Button
-                      onClick={() => onViewProfile?.(patient.id)}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      View Profile
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+    <div className="flex flex-col h-full">
+      {/* Table Header - Fixed */}
+      <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0">
+        <div className="grid grid-cols-8 gap-4 text-sm font-medium text-slate-900">
+          <div className="text-left">Patient Name</div>
+          <div className="text-left">Phone</div>
+          <div className="text-left">Gender</div>
+          <div className="text-left">Treatment Type</div>
+          <div className="text-left">Last Visit</div>
+          <div className="text-left">Next Appointment</div>
+          <div className="text-left">Status</div>
+          <div className="text-center">Actions</div>
+        </div>
+      </div>
+
+      {/* Table Body - Scrollable */}
+      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+        <div className="bg-white">
+          {filteredPatients.length === 0 ? (
+            <div className="px-4 py-8 text-center text-slate-500">
+              {patients.length === 0 ? "No patients found. Add your first patient!" : "No patients match your search criteria."}
+            </div>
+          ) : (
+            filteredPatients.map((patient) => (
+              <div key={patient.id} className="grid grid-cols-8 gap-4 px-4 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center">
+                {/* Patient Name */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
+                    <AvatarFallback className="bg-indigo-600 text-white font-semibold">
+                      {getInitials(patient.first_name, patient.last_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-slate-900 text-sm font-medium truncate">{patient.full_name}</span>
+                </div>
+
+                {/* Phone */}
+                <div className="text-slate-600 text-sm truncate">{patient.phone || '-'}</div>
+
+                {/* Gender */}
+                <div className="text-slate-600 text-sm capitalize truncate">{patient.gender || '-'}</div>
+
+                {/* Treatment Type */}
+                <div className="text-slate-600 text-sm truncate">{patient.treatment_type || '-'}</div>
+
+                {/* Last Visit */}
+                <div className="text-slate-600 text-sm truncate">{patient.last_visit || '-'}</div>
+
+                {/* Next Appointment */}
+                <div className="text-slate-600 text-sm truncate">{patient.next_appointment || '-'}</div>
+
+                {/* Status */}
+                <div>
+                  <Button
+                    className={`${getStatusButtonColor(patient.status)} rounded-full px-4 h-8 text-sm font-medium w-full`}
+                    variant="secondary"
+                  >
+                    {patient.status}
+                  </Button>
+                </div>
+
+                {/* Actions */}
+                <div className="text-center">
+                  <Button
+                    onClick={() => onViewProfile?.(patient.id)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View Profile
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

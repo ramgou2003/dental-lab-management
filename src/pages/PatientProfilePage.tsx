@@ -8,6 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { EditPatientForm } from "@/components/EditPatientForm";
+import { LabScriptDetail } from "@/components/LabScriptDetail";
+import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
+import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
+import { LabScript } from "@/hooks/useLabScripts";
+import { ManufacturingItem } from "@/hooks/useManufacturingItems";
 import {
   User,
   Phone,
@@ -21,7 +28,14 @@ import {
   ArrowLeft,
   Edit,
   Clock,
-  Activity
+  Activity,
+  Eye,
+  CheckCircle,
+  AlertCircle,
+  Calendar,
+  Play,
+  Square,
+  RotateCcw
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +45,14 @@ export function PatientProfilePage() {
   const navigate = useNavigate();
   const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showLabScriptDetail, setShowLabScriptDetail] = useState(false);
+  const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
+  const [editingStatus, setEditingStatus] = useState<Record<string, boolean>>({});
+
+  // Fetch patient-specific lab scripts and manufacturing items
+  const { labScripts, loading: labScriptsLoading, updateLabScript } = usePatientLabScripts(patientId);
+  const { manufacturingItems, loading: manufacturingLoading, updateManufacturingItemStatus } = usePatientManufacturingItems(patientId);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -88,6 +110,73 @@ export function PatientProfilePage() {
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
+  };
+
+  const handleEditProfile = () => {
+    setShowEditForm(true);
+  };
+
+  const handleEditSubmit = (updatedPatientData: any) => {
+    setPatient(updatedPatientData);
+    setShowEditForm(false);
+  };
+
+  const handleEditCancel = () => {
+    setShowEditForm(false);
+  };
+
+  const handleViewLabScript = (labScript: LabScript) => {
+    setSelectedLabScript(labScript);
+    setShowLabScriptDetail(true);
+  };
+
+  const handleLabScriptDetailClose = () => {
+    setShowLabScriptDetail(false);
+    setSelectedLabScript(null);
+  };
+
+  const handleLabScriptUpdate = async (id: string, updates: Partial<LabScript>) => {
+    await updateLabScript(id, updates);
+  };
+
+  const handleDesignStateChange = async (orderId: string, newState: 'not-started' | 'in-progress' | 'hold' | 'completed') => {
+    // Map the design state to lab script status
+    const statusMap = {
+      'not-started': 'pending',
+      'in-progress': 'in-progress',
+      'hold': 'hold',
+      'completed': 'completed'
+    };
+
+    const newStatus = statusMap[newState];
+
+    try {
+      await updateLabScript(orderId, { status: newStatus });
+
+      // Exit edit mode when updating status
+      setEditingStatus(prev => ({
+        ...prev,
+        [orderId]: false
+      }));
+
+    } catch (error) {
+      console.error('Error updating lab script status:', error);
+    }
+  };
+
+  const handleEditStatus = (orderId: string) => {
+    setEditingStatus(prev => ({
+      ...prev,
+      [orderId]: !prev[orderId]
+    }));
+  };
+
+  const handleManufacturingStatusChange = async (itemId: string, newStatus: 'pending-printing' | 'in-production' | 'quality-check' | 'completed') => {
+    try {
+      await updateManufacturingItemStatus(itemId, newStatus);
+    } catch (error) {
+      console.error('Failed to update manufacturing status:', error);
+    }
   };
 
   const formatAddress = (patient: any) => {
@@ -182,7 +271,12 @@ export function PatientProfilePage() {
                   >
                     {patient.status}
                   </Badge>
-                  <Button variant="secondary" size="sm" className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={handleEditProfile}
+                  >
                     <Edit className="h-4 w-4" />
                     Edit Profile
                   </Button>
@@ -357,7 +451,7 @@ export function PatientProfilePage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <FlaskConical className="h-5 w-5 text-indigo-600" />
-                      Lab Scripts & Results
+                      Lab Scripts & Results ({labScripts.length})
                     </CardTitle>
                     <Button className="flex items-center gap-2">
                       <FlaskConical className="h-4 w-4" />
@@ -365,12 +459,231 @@ export function PatientProfilePage() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <FlaskConical className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Lab Scripts Available</h3>
-                    <p className="text-gray-500">Add lab orders and results to track patient diagnostics.</p>
-                  </div>
+                <CardContent className="flex-1 overflow-hidden p-0">
+                  {labScriptsLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <FlaskConical className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading lab scripts...</h3>
+                        <p className="text-gray-500">Please wait while we fetch lab scripts.</p>
+                      </div>
+                    </div>
+                  ) : labScripts.length > 0 ? (
+                    <div className="flex flex-col h-full">
+                      {/* Table Header - Fixed */}
+                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0 pr-6">
+                        <div className="grid grid-cols-9 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
+                          <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Actions</div>
+                          <div className="col-span-1 text-center flex items-center justify-center">Preview</div>
+                        </div>
+                      </div>
+
+                      {/* Table Body - Scrollable */}
+                      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                        {labScripts.map((script) => {
+                          // Format appliance type display
+                          const getApplianceDisplay = () => {
+                            const upper = script.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
+                            const lower = script.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
+                            return `${upper} | ${lower}`;
+                          };
+
+                          return (
+                            <div key={script.id} className="grid grid-cols-9 gap-4 px-3 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center h-16">
+                              {/* Requested Date */}
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <p className="text-gray-600 text-xs">
+                                  {script.requested_date ? new Date(script.requested_date).toLocaleDateString() : 'No date'}
+                                </p>
+                              </div>
+
+                              {/* Arch Type */}
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                  script.arch_type === 'dual' ? 'bg-purple-100 text-purple-700' :
+                                  script.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-green-100 text-green-700'
+                                }`}>
+                                  {script.arch_type === 'dual' ? 'Dual Arch' :
+                                   script.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}
+                                </span>
+                              </div>
+
+                              {/* Appliance Type */}
+                              <div className="col-span-3 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <p className="text-gray-600 text-xs">{getApplianceDisplay()}</p>
+                              </div>
+
+                              {/* Due Date */}
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <p className="text-gray-600 text-xs">
+                                  {script.due_date ? new Date(script.due_date).toLocaleDateString() : 'No due date'}
+                                </p>
+                              </div>
+
+                              {/* Status */}
+                              <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                  script.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                  script.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                                  script.status === 'delayed' ? 'bg-red-100 text-red-700' :
+                                  script.status === 'hold' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {script.status}
+                                </span>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                {(() => {
+                                  const currentStatus = script.status;
+                                  const isEditingStatus = editingStatus[script.id] || false;
+
+                                  // If lab script is completed, show edit button or hold/complete when editing
+                                  if (currentStatus === 'completed' && !isEditingStatus) {
+                                    return (
+                                      <div className="flex gap-1">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleEditStatus(script.id)}
+                                          className="h-8 w-8 p-0"
+                                          title="Edit Status"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    );
+                                  }
+
+                                  if (currentStatus === 'completed' && isEditingStatus) {
+                                    return (
+                                      <div className="flex gap-1">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleDesignStateChange(script.id, 'hold')}
+                                          className="h-8 w-8 p-0"
+                                          title="Hold"
+                                        >
+                                          <Square className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleDesignStateChange(script.id, 'completed')}
+                                          className="h-8 w-8 p-0"
+                                          title="Complete"
+                                        >
+                                          <CheckCircle className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    );
+                                  }
+
+                                  // Use actual lab script status
+                                  switch (currentStatus) {
+                                    case 'pending':
+                                      return (
+                                        <div className="flex gap-1">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDesignStateChange(script.id, 'in-progress')}
+                                            className="h-8 w-8 p-0"
+                                            title="Start Design"
+                                          >
+                                            <Play className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      );
+
+                                    case 'in-progress':
+                                      return (
+                                        <div className="flex gap-1">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDesignStateChange(script.id, 'hold')}
+                                            className="h-8 w-8 p-0"
+                                            title="Hold"
+                                          >
+                                            <Square className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDesignStateChange(script.id, 'completed')}
+                                            className="h-8 w-8 p-0"
+                                            title="Complete"
+                                          >
+                                            <CheckCircle className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      );
+
+                                    case 'hold':
+                                      return (
+                                        <div className="flex gap-1">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDesignStateChange(script.id, 'in-progress')}
+                                            className="h-8 w-8 p-0"
+                                            title="Resume Design"
+                                          >
+                                            <RotateCcw className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDesignStateChange(script.id, 'completed')}
+                                            className="h-8 w-8 p-0"
+                                            title="Complete"
+                                          >
+                                            <CheckCircle className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      );
+
+                                    default:
+                                      return null;
+                                  }
+                                })()}
+                              </div>
+
+                              {/* Preview */}
+                              <div className="col-span-1 h-full flex items-center justify-center">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => handleViewLabScript(script)}
+                                  title="View Details"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <FlaskConical className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Lab Scripts Available</h3>
+                        <p className="text-gray-500">Create lab scripts to track patient treatment progress.</p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -381,7 +694,7 @@ export function PatientProfilePage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Factory className="h-5 w-5 text-indigo-600" />
-                      Manufacturing Orders
+                      Manufacturing Orders ({manufacturingItems.length})
                     </CardTitle>
                     <Button className="flex items-center gap-2">
                       <Factory className="h-4 w-4" />
@@ -389,12 +702,174 @@ export function PatientProfilePage() {
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <Factory className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Manufacturing Orders</h3>
-                    <p className="text-gray-500">Create orders for dental appliances and prosthetics.</p>
-                  </div>
+                <CardContent className="flex-1 overflow-hidden p-0">
+                  {manufacturingLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Factory className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading manufacturing orders...</h3>
+                        <p className="text-gray-500">Please wait while we fetch manufacturing data.</p>
+                      </div>
+                    </div>
+                  ) : manufacturingItems.length > 0 ? (
+                    <div className="flex flex-col h-full">
+                      {/* Table Header - Fixed */}
+                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0 pr-6">
+                        <div className="grid grid-cols-8 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Created Date</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
+                          <div className="col-span-2 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Shade</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Actions</div>
+                          <div className="col-span-1 text-center flex items-center justify-center">Preview</div>
+                        </div>
+                      </div>
+
+                      {/* Table Body - Scrollable */}
+                      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                        {manufacturingItems.map((item) => {
+                          // Format appliance type display
+                          const getApplianceDisplay = () => {
+                            const upper = item.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
+                            const lower = item.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
+                            return `${upper} | ${lower}`;
+                          };
+
+                          // Render action buttons based on status
+                          const renderActionButtons = () => {
+                            switch (item.status) {
+                              case 'pending-printing':
+                                return (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 text-xs border-blue-600 text-blue-600 hover:bg-blue-50"
+                                    onClick={() => handleManufacturingStatusChange(item.id, 'in-production')}
+                                  >
+                                    <Play className="h-3 w-3 mr-1" />
+                                    Start
+                                  </Button>
+                                );
+                              case 'in-production':
+                                return (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 text-xs border-purple-600 text-purple-600 hover:bg-purple-50"
+                                    onClick={() => handleManufacturingStatusChange(item.id, 'quality-check')}
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    QC
+                                  </Button>
+                                );
+                              case 'quality-check':
+                                return (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 text-xs border-green-600 text-green-600 hover:bg-green-50"
+                                    onClick={() => handleManufacturingStatusChange(item.id, 'completed')}
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Done
+                                  </Button>
+                                );
+                              case 'completed':
+                                return (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3 text-xs"
+                                    disabled
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Complete
+                                  </Button>
+                                );
+                              default:
+                                return null;
+                            }
+                          };
+
+                          return (
+                            <div key={item.id} className="grid grid-cols-8 gap-4 px-3 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center h-16">
+                              {/* Created Date */}
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <p className="text-gray-600 text-xs">
+                                  {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'No date'}
+                                </p>
+                              </div>
+
+                              {/* Arch Type */}
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                  item.arch_type === 'dual' ? 'bg-purple-100 text-purple-700' :
+                                  item.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-green-100 text-green-700'
+                                }`}>
+                                  {item.arch_type === 'dual' ? 'Dual Arch' :
+                                   item.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}
+                                </span>
+                              </div>
+
+                              {/* Appliance Type */}
+                              <div className="col-span-2 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <p className="text-gray-600 text-xs">{getApplianceDisplay()}</p>
+                              </div>
+
+                              {/* Shade */}
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <span className="inline-flex px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+                                  {item.shade}
+                                </span>
+                              </div>
+
+                              {/* Status */}
+                              <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                  item.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                  item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
+                                  item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {item.status === 'pending-printing' ? 'New Script' :
+                                   item.status === 'in-production' ? 'Printing' :
+                                   item.status === 'quality-check' ? 'Inspection' :
+                                   'Completed'}
+                                </span>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                {renderActionButtons()}
+                              </div>
+
+                              {/* Preview */}
+                              <div className="col-span-1 h-full flex items-center justify-center">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  title="View Details"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Factory className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Manufacturing Orders</h3>
+                        <p className="text-gray-500">Create orders for dental appliances and prosthetics.</p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -426,6 +901,27 @@ export function PatientProfilePage() {
           </Tabs>
         </div>
       </div>
+
+      {/* Edit Patient Dialog */}
+      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {patient && (
+            <EditPatientForm
+              patient={patient}
+              onSubmit={handleEditSubmit}
+              onCancel={handleEditCancel}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lab Script Detail Dialog */}
+      <LabScriptDetail
+        open={showLabScriptDetail}
+        onClose={handleLabScriptDetailClose}
+        labScript={selectedLabScript}
+        onUpdate={handleLabScriptUpdate}
+      />
     </div>
   );
 }

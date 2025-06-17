@@ -368,7 +368,7 @@ export function LabPage() {
         </div>
 
         {/* Lab Scripts Table - Extended to viewport height */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 250px)' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 250px)', minHeight: '500px' }}>
           {loading ? (
             <div className="text-center py-12">
               <FlaskConical className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
@@ -376,23 +376,23 @@ export function LabPage() {
               <p className="text-gray-500">Please wait while we fetch your lab scripts.</p>
             </div>
           ) : filteredOrders.length > 0 ? (
-            <div className="flex-1 overflow-hidden">
-              {/* Table Header */}
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-3">
-                <div className="grid grid-cols-11 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  <div className="col-span-2">Patient Name</div>
-                  <div className="col-span-1 text-center">Arch Type</div>
-                  <div className="col-span-3 text-center">Appliance Type</div>
-                  <div className="col-span-1 text-center">Requested Date</div>
-                  <div className="col-span-1 text-center">Due Date</div>
-                  <div className="col-span-1 text-center">Status</div>
-                  <div className="col-span-1 text-center">Actions</div>
-                  <div className="col-span-1 text-center">Preview</div>
+            <>
+              {/* Table Header - Fixed */}
+              <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0 pr-6">
+                <div className="grid grid-cols-11 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
+                  <div className="col-span-2 border-r border-gray-300 pr-4 flex items-center">Patient Name</div>
+                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
+                  <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
+                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
+                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
+                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
+                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Actions</div>
+                  <div className="col-span-1 text-center flex items-center justify-center">Preview</div>
                 </div>
               </div>
 
-              {/* Table Body */}
-              <div className="flex-1 overflow-y-auto">
+              {/* Table Body - Scrollable */}
+              <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
                 {filteredOrders.map((order) => {
                   const originalScript = labScripts.find(script => script.id === order.id);
 
@@ -404,10 +404,10 @@ export function LabPage() {
                   };
 
                   return (
-                    <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200">
-                      <div className="grid grid-cols-11 gap-4 px-6 py-4 text-sm items-center">
+                    <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 h-16">
+                      <div className="grid grid-cols-11 gap-4 px-3 py-4 text-sm items-center h-full">
                         {/* Patient */}
-                        <div className="col-span-2">
+                        <div className="col-span-2 border-r border-gray-300 pr-4 h-full flex items-center">
                           <div className="flex items-center space-x-3">
                             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
                               <FlaskConical className="h-4 w-4 text-white" />
@@ -419,7 +419,7 @@ export function LabPage() {
                         </div>
 
                         {/* Arch */}
-                        <div className="col-span-1 flex justify-center">
+                        <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                           <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${
                             order.archType === 'upper' ? 'bg-blue-100 text-blue-700' :
                             order.archType === 'lower' ? 'bg-green-100 text-green-700' :
@@ -433,22 +433,22 @@ export function LabPage() {
                         </div>
 
                         {/* Appliance Type */}
-                        <div className="col-span-3 text-center">
+                        <div className="col-span-3 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                           <p className="text-gray-900 font-medium text-xs leading-tight">{getApplianceDisplay()}</p>
                         </div>
 
                         {/* Requested Date */}
-                        <div className="col-span-1 text-center">
+                        <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                           <p className="text-gray-600 text-xs">{order.requestedDate}</p>
                         </div>
 
                         {/* Due Date */}
-                        <div className="col-span-1 text-center">
+                        <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                           <p className="text-gray-600 text-xs">{order.dueDate}</p>
                         </div>
 
                         {/* Status */}
-                        <div className="col-span-1 flex justify-center">
+                        <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                           <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                             order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                             order.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
@@ -461,12 +461,12 @@ export function LabPage() {
                         </div>
 
                         {/* Actions */}
-                        <div className="col-span-1 flex justify-center">
+                        <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                           {renderActionButtons(order.id, originalScript)}
                         </div>
 
                         {/* Preview */}
-                        <div className="col-span-1 flex justify-center">
+                        <div className="col-span-1 h-full flex items-center justify-center">
                           <Button
                             variant="outline"
                             size="sm"
@@ -482,7 +482,7 @@ export function LabPage() {
                   );
                 })}
               </div>
-            </div>
+            </>
           ) : (
             <div className="text-center py-12">
               <FlaskConical className="h-12 w-12 text-gray-300 mx-auto mb-4" />
