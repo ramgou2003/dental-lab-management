@@ -1,6 +1,7 @@
-import { House, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { House, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, Monitor, Tablet, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { useDeviceType } from "@/hooks/use-mobile";
 
 interface SidebarProps {
   activeSection: string;
@@ -51,6 +52,7 @@ export function Sidebar({
   onToggleCollapse
 }: SidebarProps) {
   const navigate = useNavigate();
+  const deviceType = useDeviceType();
 
   const handleLogout = () => {
     console.log("Logging out...");
@@ -59,6 +61,22 @@ export function Sidebar({
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
+
+  // Get device icon and info
+  const getDeviceInfo = () => {
+    switch (deviceType) {
+      case 'mobile':
+        return { icon: Smartphone, label: 'Mobile', color: 'text-green-600' };
+      case 'tablet':
+        return { icon: Tablet, label: 'Tablet (90% Scaled)', color: 'text-blue-600' };
+      case 'desktop':
+        return { icon: Monitor, label: 'Desktop', color: 'text-gray-600' };
+      default:
+        return { icon: Monitor, label: 'Unknown', color: 'text-gray-600' };
+    }
+  };
+
+  const deviceInfo = getDeviceInfo();
   return <div className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-10 shadow-sm ${collapsed ? 'w-16' : 'w-72'}`}>
       {/* Header - Clinic Logo */}
       <div className="border-b border-gray-200 py-1.5 px-[4px]">
@@ -128,6 +146,23 @@ export function Sidebar({
       
       {/* Footer */}
       <div className="p-4 border-t border-gray-100 space-y-1 px-[11px]">
+        {/* Device Detection Indicator */}
+        <div className={`flex items-center w-full px-3 py-2 rounded-lg border transition-all duration-200 ${
+          deviceType === 'tablet'
+            ? 'bg-blue-50 border-blue-200 shadow-sm'
+            : 'bg-gray-50 border-gray-200'
+        }`} title={`Device: ${deviceInfo.label}`}>
+          <deviceInfo.icon className={`h-4 w-4 flex-shrink-0 ${deviceInfo.color}`} />
+          <span className={`ml-3 font-medium text-xs transition-all duration-300 ${deviceInfo.color} ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+            {deviceInfo.label}
+          </span>
+          {deviceType === 'tablet' && !collapsed && (
+            <div className="ml-auto">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            </div>
+          )}
+        </div>
+
         <button onClick={onToggleCollapse} className="flex items-center w-full text-left px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200" title={collapsed ? "Expand" : "Collapse"}>
           {collapsed ? <ChevronRight className="h-5 w-5 flex-shrink-0" /> : <ChevronLeft className="h-5 w-5 flex-shrink-0" />}
           <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
