@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
+import { useZoomLevel } from "@/hooks/use-mobile";
 
 const Layout = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
+  const { zoomLevel } = useZoomLevel();
 
   // Extract the current section from the pathname
   const getCurrentSection = () => {
@@ -22,8 +24,8 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen flex w-full bg-gray-50">
-      <Sidebar 
-        activeSection={getCurrentSection()} 
+      <Sidebar
+        activeSection={getCurrentSection()}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />

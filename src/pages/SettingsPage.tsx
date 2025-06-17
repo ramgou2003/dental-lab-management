@@ -1,12 +1,16 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { Settings, User, Bell, Shield, Database, Palette, Clock } from "lucide-react";
+import { Settings, User, Bell, Shield, Database, Palette, Clock, Monitor, ZoomIn, ZoomOut } from "lucide-react";
+import { useDeviceType, useZoomLevel } from "@/hooks/use-mobile";
 
 export function SettingsPage() {
-  const [activeSection, setActiveSection] = useState("clinic");
+  const [activeSection, setActiveSection] = useState("display");
+  const deviceType = useDeviceType();
+  const { zoomLevel, updateZoomLevel } = useZoomLevel();
 
   const settingSections = [
+    { id: "display", label: "Display & Zoom", icon: Monitor },
     { id: "clinic", label: "Clinic Profile", icon: User },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
@@ -17,6 +21,89 @@ export function SettingsPage() {
 
   const renderSettingContent = () => {
     switch (activeSection) {
+      case "display":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Display & Zoom Settings</h3>
+
+              {/* Current Device Info */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
+                <div className="flex items-center gap-3">
+                  <Monitor className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <h4 className="font-medium text-blue-900">Device: {deviceType.charAt(0).toUpperCase() + deviceType.slice(1)}</h4>
+                    <p className="text-sm text-blue-700">Current view: {zoomLevel === 100 ? 'Desktop View' : 'Tablet View'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-3">View Mode</label>
+                  <p className="text-sm text-slate-600 mb-6">
+                    Choose between desktop and tablet view modes. Tablet mode makes UI elements smaller to fit more content on your screen.
+                  </p>
+
+                  {/* View Mode Selection */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <button
+                      onClick={() => updateZoomLevel(100)}
+                      className={`p-6 rounded-lg border-2 transition-all text-left ${
+                        zoomLevel === 100
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <Monitor className="h-6 w-6 text-slate-600" />
+                        <h4 className="font-semibold text-slate-900">Desktop View</h4>
+                      </div>
+                      <p className="text-sm text-slate-600">
+                        Standard size elements, recommended for desktop computers and large screens.
+                      </p>
+                      <div className="mt-2 text-xs text-slate-500">100% Scale</div>
+                    </button>
+
+                    <button
+                      onClick={() => updateZoomLevel(90)}
+                      className={`p-6 rounded-lg border-2 transition-all text-left ${
+                        zoomLevel === 90
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="h-6 w-6 bg-slate-600 rounded flex items-center justify-center">
+                          <div className="h-4 w-3 bg-white rounded-sm"></div>
+                        </div>
+                        <h4 className="font-semibold text-slate-900">Tablet View</h4>
+                      </div>
+                      <p className="text-sm text-slate-600">
+                        Compact elements perfect for tablets. Shows more content while keeping everything readable.
+                      </p>
+                      <div className="mt-2 text-xs text-slate-500">90% Scale</div>
+                    </button>
+                  </div>
+
+                  {/* Current Selection Info */}
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <h4 className="font-medium text-emerald-900 mb-2">
+                      ✓ Current Mode: {zoomLevel === 100 ? 'Desktop View' : 'Tablet View'}
+                    </h4>
+                    <p className="text-sm text-emerald-800">
+                      {zoomLevel === 100
+                        ? 'Using standard desktop sizing for optimal desktop experience.'
+                        : 'Using compact tablet sizing to show more content on your screen.'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       case "clinic":
         return (
           <div className="space-y-6">
