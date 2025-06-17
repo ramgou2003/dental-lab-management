@@ -471,15 +471,14 @@ export function PatientProfilePage() {
                   ) : labScripts.length > 0 ? (
                     <div className="flex flex-col h-full">
                       {/* Table Header - Fixed */}
-                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0 pr-6">
-                        <div className="grid grid-cols-9 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
+                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
+                        <div className="grid grid-cols-8 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
                           <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Actions</div>
-                          <div className="col-span-1 text-center flex items-center justify-center">Preview</div>
+                          <div className="col-span-1 text-right flex items-center justify-end pr-2">Actions</div>
                         </div>
                       </div>
 
@@ -494,7 +493,7 @@ export function PatientProfilePage() {
                           };
 
                           return (
-                            <div key={script.id} className="grid grid-cols-9 gap-4 px-3 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center h-16">
+                            <div key={script.id} className="grid grid-cols-8 gap-4 px-3 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center h-16">
                               {/* Requested Date */}
                               <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                                 <p className="text-gray-600 text-xs">
@@ -540,7 +539,8 @@ export function PatientProfilePage() {
                               </div>
 
                               {/* Actions */}
-                              <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                              <div className="col-span-1 h-full flex items-center justify-end pr-2">
+                                <div className="flex gap-1">
                                 {(() => {
                                   const currentStatus = script.status;
                                   const isEditingStatus = editingStatus[script.id] || false;
@@ -548,7 +548,7 @@ export function PatientProfilePage() {
                                   // If lab script is completed, show edit button or hold/complete when editing
                                   if (currentStatus === 'completed' && !isEditingStatus) {
                                     return (
-                                      <div className="flex gap-1">
+                                      <>
                                         <Button
                                           variant="outline"
                                           size="sm"
@@ -558,13 +558,13 @@ export function PatientProfilePage() {
                                         >
                                           <Edit className="h-4 w-4" />
                                         </Button>
-                                      </div>
+                                      </>
                                     );
                                   }
 
                                   if (currentStatus === 'completed' && isEditingStatus) {
                                     return (
-                                      <div className="flex gap-1">
+                                      <>
                                         <Button
                                           variant="outline"
                                           size="sm"
@@ -583,7 +583,7 @@ export function PatientProfilePage() {
                                         >
                                           <CheckCircle className="h-4 w-4" />
                                         </Button>
-                                      </div>
+                                      </>
                                     );
                                   }
 
@@ -591,22 +591,20 @@ export function PatientProfilePage() {
                                   switch (currentStatus) {
                                     case 'pending':
                                       return (
-                                        <div className="flex gap-1">
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDesignStateChange(script.id, 'in-progress')}
-                                            className="h-8 w-8 p-0"
-                                            title="Start Design"
-                                          >
-                                            <Play className="h-4 w-4" />
-                                          </Button>
-                                        </div>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleDesignStateChange(script.id, 'in-progress')}
+                                          className="h-8 w-8 p-0"
+                                          title="Start Design"
+                                        >
+                                          <Play className="h-4 w-4" />
+                                        </Button>
                                       );
 
                                     case 'in-progress':
                                       return (
-                                        <div className="flex gap-1">
+                                        <>
                                           <Button
                                             variant="outline"
                                             size="sm"
@@ -625,12 +623,12 @@ export function PatientProfilePage() {
                                           >
                                             <CheckCircle className="h-4 w-4" />
                                           </Button>
-                                        </div>
+                                        </>
                                       );
 
                                     case 'hold':
                                       return (
-                                        <div className="flex gap-1">
+                                        <>
                                           <Button
                                             variant="outline"
                                             size="sm"
@@ -649,17 +647,13 @@ export function PatientProfilePage() {
                                           >
                                             <CheckCircle className="h-4 w-4" />
                                           </Button>
-                                        </div>
+                                        </>
                                       );
 
                                     default:
                                       return null;
                                   }
                                 })()}
-                              </div>
-
-                              {/* Preview */}
-                              <div className="col-span-1 h-full flex items-center justify-center">
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -669,6 +663,7 @@ export function PatientProfilePage() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -714,7 +709,7 @@ export function PatientProfilePage() {
                   ) : manufacturingItems.length > 0 ? (
                     <div className="flex flex-col h-full">
                       {/* Table Header - Fixed */}
-                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0 pr-6">
+                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
                         <div className="grid grid-cols-8 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Created Date</div>
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
@@ -722,7 +717,7 @@ export function PatientProfilePage() {
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Shade</div>
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Actions</div>
-                          <div className="col-span-1 text-center flex items-center justify-center">Preview</div>
+                          <div className="col-span-1 text-center flex items-center justify-center pr-2">Preview</div>
                         </div>
                       </div>
 
@@ -846,7 +841,7 @@ export function PatientProfilePage() {
                               </div>
 
                               {/* Preview */}
-                              <div className="col-span-1 h-full flex items-center justify-center">
+                              <div className="col-span-1 h-full flex items-center justify-center pr-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
