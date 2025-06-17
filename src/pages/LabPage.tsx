@@ -375,10 +375,10 @@ export function LabPage() {
             <>
               {/* Table Header - Fixed */}
               <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-                <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
-                  <div className="col-span-3 border-r border-gray-300 pr-4 flex items-center">Patient Name</div>
+                <div className="grid grid-cols-10 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
+                  <div className="col-span-2 border-r border-gray-300 pr-4 flex items-center">Patient Name</div>
                   <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
-                  <div className="col-span-4 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
+                  <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
                   <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
                   <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
                   <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
@@ -400,9 +400,9 @@ export function LabPage() {
 
                   return (
                     <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 h-16">
-                      <div className="grid grid-cols-12 gap-4 px-3 py-4 text-sm items-center h-full">
+                      <div className="grid grid-cols-10 gap-4 px-3 py-4 text-sm items-center h-full">
                         {/* Patient */}
-                        <div className="col-span-3 border-r border-gray-300 pr-4 h-full flex items-center">
+                        <div className="col-span-2 border-r border-gray-300 pr-4 h-full flex items-center">
                           <div className="flex items-center space-x-3">
                             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
                               <FlaskConical className="h-4 w-4 text-white" />
@@ -428,7 +428,7 @@ export function LabPage() {
                         </div>
 
                         {/* Appliance Type */}
-                        <div className="col-span-4 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                        <div className="col-span-3 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                           <p className="text-gray-900 font-medium text-xs leading-tight">{getApplianceDisplay()}</p>
                         </div>
 
