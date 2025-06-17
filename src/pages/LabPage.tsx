@@ -129,10 +129,10 @@ export function LabPage() {
           variant="outline"
           size="sm"
           onClick={() => handleEditStatus(orderId)}
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 md:h-7 md:w-7 p-0"
           title="Edit Status"
         >
-          <Edit className="h-4 w-4" />
+          <Edit className="h-4 w-4 md:h-3 md:w-3" />
         </Button>
       );
     }
@@ -144,19 +144,19 @@ export function LabPage() {
             variant="outline"
             size="sm"
             onClick={() => handleDesignStateChange(orderId, 'hold')}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 md:h-7 md:w-7 p-0"
             title="Hold"
           >
-            <Square className="h-4 w-4" />
+            <Square className="h-4 w-4 md:h-3 md:w-3" />
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleDesignStateChange(orderId, 'completed')}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 md:h-7 md:w-7 p-0"
             title="Complete"
           >
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className="h-4 w-4 md:h-3 md:w-3" />
           </Button>
         </>
       );
@@ -170,10 +170,10 @@ export function LabPage() {
             variant="outline"
             size="sm"
             onClick={() => handleDesignStateChange(orderId, 'in-progress')}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 md:h-7 md:w-7 p-0"
             title="Start Design"
           >
-            <Play className="h-4 w-4" />
+            <Play className="h-4 w-4 md:h-3 md:w-3" />
           </Button>
         );
 
@@ -184,19 +184,19 @@ export function LabPage() {
               variant="outline"
               size="sm"
               onClick={() => handleDesignStateChange(orderId, 'hold')}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 md:h-7 md:w-7 p-0"
               title="Hold"
             >
-              <Square className="h-4 w-4" />
+              <Square className="h-4 w-4 md:h-3 md:w-3" />
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleDesignStateChange(orderId, 'completed')}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 md:h-7 md:w-7 p-0"
               title="Complete"
             >
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4 md:h-3 md:w-3" />
             </Button>
           </>
         );
@@ -208,19 +208,19 @@ export function LabPage() {
               variant="outline"
               size="sm"
               onClick={() => handleDesignStateChange(orderId, 'in-progress')}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 md:h-7 md:w-7 p-0"
               title="Resume Design"
             >
-              <RotateCcw className="h-4 w-4" />
+              <RotateCcw className="h-4 w-4 md:h-3 md:w-3" />
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleDesignStateChange(orderId, 'completed')}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 md:h-7 md:w-7 p-0"
               title="Complete"
             >
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4 md:h-3 md:w-3" />
             </Button>
           </>
         );
@@ -329,7 +329,7 @@ export function LabPage() {
             <button
               key={index}
               onClick={() => setActiveFilter(stat.filter)}
-              className={`h-20 sm:h-22 lg:h-24 p-2 sm:p-3 lg:p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${
+              className={`h-20 sm:h-22 md:h-18 lg:h-24 p-2 sm:p-3 md:p-2 lg:p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${
                 activeFilter === stat.filter
                   ? 'border-indigo-300 bg-indigo-50 shadow-md border-b-4 border-b-indigo-500'
                   : 'border-gray-200 bg-white hover:border-gray-300'
@@ -338,19 +338,19 @@ export function LabPage() {
               <div className="flex flex-col h-full justify-between">
                 {/* Icon and Number at the top */}
                 <div className="flex items-center justify-between">
-                  <p className={`text-base sm:text-lg lg:text-xl font-bold leading-none ${
+                  <p className={`text-base sm:text-lg md:text-base lg:text-xl font-bold leading-none ${
                     activeFilter === stat.filter ? 'text-indigo-900' : 'text-gray-900'
                   }`}>
                     {stat.value}
                   </p>
-                  <div className={`p-1 sm:p-1 lg:p-2 rounded-lg flex-shrink-0 ${stat.color}`}>
-                    <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-white" />
+                  <div className={`p-1 sm:p-1 md:p-1 lg:p-2 rounded-lg flex-shrink-0 ${stat.color}`}>
+                    <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 md:h-3 md:w-3 lg:h-5 lg:w-5 text-white" />
                   </div>
                 </div>
 
                 {/* Title at the bottom */}
                 <div className="w-full text-center">
-                  <p className={`text-xs sm:text-sm lg:text-sm font-semibold leading-tight ${
+                  <p className={`text-xs sm:text-sm md:text-xs lg:text-sm font-semibold leading-tight ${
                     activeFilter === stat.filter
                       ? 'text-indigo-700'
                       : 'text-gray-600'
@@ -374,14 +374,14 @@ export function LabPage() {
           ) : filteredOrders.length > 0 ? (
             <>
               {/* Table Header - Fixed */}
-              <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-                <div className="grid grid-cols-10 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
-                  <div className="col-span-2 border-r border-gray-300 pr-4 flex items-center">Patient Name</div>
-                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
-                  <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
-                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
-                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
-                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
+              <div className="bg-gray-50 border-b border-gray-200 px-3 md:px-2 py-3 md:py-2 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
+                <div className="grid grid-cols-10 gap-4 md:gap-3 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 md:h-5">
+                  <div className="col-span-2 border-r border-gray-300 pr-4 md:pr-3 flex items-center">Patient Name</div>
+                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Arch Type</div>
+                  <div className="col-span-3 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Appliance Type</div>
+                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Requested Date</div>
+                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Due Date</div>
+                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 flex items-center justify-center">Status</div>
                   <div className="col-span-1 text-right flex items-center justify-end pr-2">Actions</div>
                 </div>
               </div>
@@ -399,52 +399,60 @@ export function LabPage() {
                   };
 
                   return (
-                    <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 h-16">
-                      <div className="grid grid-cols-10 gap-4 px-3 py-4 text-sm items-center h-full">
+                    <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 h-16 md:h-14">
+                      <div className="grid grid-cols-10 gap-4 md:gap-3 px-3 md:px-2 py-4 md:py-3 text-sm md:text-xs items-center h-full">
                         {/* Patient */}
-                        <div className="col-span-2 border-r border-gray-300 pr-4 h-full flex items-center">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <FlaskConical className="h-4 w-4 text-white" />
+                        <div className="col-span-2 border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center">
+                          <div className="flex items-center space-x-3 md:space-x-2">
+                            <div className="w-8 h-8 md:w-6 md:h-6 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <FlaskConical className="h-4 w-4 md:h-3 md:w-3 text-white" />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-gray-900 font-medium truncate">{order.patient}</p>
+                              <p className="text-gray-900 font-medium truncate text-sm md:text-xs">{order.patient}</p>
                             </div>
                           </div>
                         </div>
 
                         {/* Arch */}
-                        <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                          <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${
+                        <div className="col-span-1 border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
+                          <span className={`inline-flex px-2 md:px-1 py-1 rounded-md text-xs font-medium ${
                             order.archType === 'upper' ? 'bg-blue-100 text-blue-700' :
                             order.archType === 'lower' ? 'bg-green-100 text-green-700' :
                             'bg-purple-100 text-purple-700'
                           }`}>
-                            {order.archType === 'upper' ? 'Upper Arch' :
-                             order.archType === 'lower' ? 'Lower Arch' :
-                             order.archType === 'dual' ? 'Dual Arch' :
-                             order.archType?.charAt(0).toUpperCase() + order.archType?.slice(1)}
+                            <span className="hidden sm:inline">
+                              {order.archType === 'upper' ? 'Upper Arch' :
+                               order.archType === 'lower' ? 'Lower Arch' :
+                               order.archType === 'dual' ? 'Dual Arch' :
+                               order.archType?.charAt(0).toUpperCase() + order.archType?.slice(1)}
+                            </span>
+                            <span className="sm:hidden">
+                              {order.archType === 'upper' ? 'Upper' :
+                               order.archType === 'lower' ? 'Lower' :
+                               order.archType === 'dual' ? 'Dual' :
+                               order.archType?.charAt(0).toUpperCase() + order.archType?.slice(1)}
+                            </span>
                           </span>
                         </div>
 
                         {/* Appliance Type */}
-                        <div className="col-span-3 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                        <div className="col-span-3 text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
                           <p className="text-gray-900 font-medium text-xs leading-tight">{getApplianceDisplay()}</p>
                         </div>
 
                         {/* Requested Date */}
-                        <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                        <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
                           <p className="text-gray-600 text-xs">{order.requestedDate}</p>
                         </div>
 
                         {/* Due Date */}
-                        <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                        <div className="col-span-1 text-center border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
                           <p className="text-gray-600 text-xs">{order.dueDate}</p>
                         </div>
 
                         {/* Status */}
-                        <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        <div className="col-span-1 border-r border-gray-300 pr-4 md:pr-3 h-full flex items-center justify-center">
+                          <span className={`inline-flex px-2 md:px-1 py-1 rounded-full text-xs font-medium ${
                             order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                             order.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
                             order.status === 'delayed' ? 'bg-red-100 text-red-700' :
@@ -463,10 +471,10 @@ export function LabPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => originalScript && handleViewLabScript(originalScript)}
-                              className="h-8 w-8 p-0"
+                              className="h-8 w-8 md:h-7 md:w-7 p-0"
                               title="View Details"
                             >
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-4 w-4 md:h-3 md:w-3" />
                             </Button>
                           </div>
                         </div>
