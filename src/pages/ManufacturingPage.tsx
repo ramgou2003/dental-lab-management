@@ -18,7 +18,7 @@ export function ManufacturingPage() {
     setShowNewManufacturingForm(true);
   };
 
-  const handleStatusChange = async (itemId: string, newStatus: 'pending-design' | 'in-production' | 'quality-check' | 'completed') => {
+  const handleStatusChange = async (itemId: string, newStatus: 'pending-printing' | 'in-production' | 'quality-check' | 'completed') => {
     try {
       await updateManufacturingItemStatus(itemId, newStatus);
       toast.success(`Status updated to ${newStatus.replace('-', ' ')}`);
@@ -31,7 +31,7 @@ export function ManufacturingPage() {
   const getManufacturingCount = (status: string) => {
     if (status === "all-cam-scripts") return manufacturingItems.length;
     if (status === "new-script") {
-      return manufacturingItems.filter(item => item.status === 'pending-design').length;
+      return manufacturingItems.filter(item => item.status === 'pending-printing').length;
     }
     if (status === "printing") {
       return manufacturingItems.filter(item => item.status === 'in-production').length;
@@ -41,7 +41,7 @@ export function ManufacturingPage() {
     }
     if (status === "incomplete") {
       return manufacturingItems.filter(item =>
-        item.status === 'pending-design' ||
+        item.status === 'pending-printing' ||
         item.status === 'in-production' ||
         item.status === 'quality-check'
       ).length;
@@ -107,13 +107,13 @@ export function ManufacturingPage() {
     // Filter based on active filter
     let statusMatch = true;
     if (activeFilter === "new-script") {
-      statusMatch = item.status === 'pending-design';
+      statusMatch = item.status === 'pending-printing';
     } else if (activeFilter === "printing") {
       statusMatch = item.status === 'in-production';
     } else if (activeFilter === "inspection") {
       statusMatch = item.status === 'quality-check';
     } else if (activeFilter === "incomplete") {
-      statusMatch = item.status === 'pending-design' ||
+      statusMatch = item.status === 'pending-printing' ||
                    item.status === 'in-production' ||
                    item.status === 'quality-check';
     } else if (activeFilter === "completed") {
@@ -207,7 +207,7 @@ export function ManufacturingPage() {
                     // Render action buttons based on status
                     const renderActionButtons = () => {
                       switch (item.status) {
-                        case 'pending-design':
+                        case 'pending-printing':
                           return (
                             <ParticleButton
                               className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
@@ -316,7 +316,7 @@ export function ManufacturingPage() {
                                   item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
                                   'bg-amber-100 text-amber-700'
                                 }`}>
-                                  {item.status === 'pending-design' ? 'New Script' :
+                                  {item.status === 'pending-printing' ? 'New Script' :
                                    item.status === 'in-production' ? 'Printing' :
                                    item.status === 'quality-check' ? 'Inspection' :
                                    item.status === 'completed' ? 'Completed' :

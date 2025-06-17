@@ -5,7 +5,7 @@ import { ParticleButton } from "@/components/ui/particle-button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { AppointmentScheduler } from "@/components/AppointmentScheduler";
 import { useDeliveryItems } from "@/hooks/useDeliveryItems";
-import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Package, Truck, MapPin, Calendar as CalendarIcon } from "lucide-react";
+import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Package, Truck, MapPin, Calendar as CalendarIcon, Settings, Palette } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import type { DeliveryItem } from "@/hooks/useDeliveryItems";
 
@@ -22,54 +22,17 @@ export function ApplianceDeliveryPage() {
     setShowNewDeliveryForm(true);
   };
 
-  const handleFillLabReport = (reportCard: ReportCard) => {
-    setSelectedReportCard(reportCard);
-    setShowLabReportForm(true);
-  };
-
-  const handleViewLabReport = (reportCard: ReportCard) => {
-    setSelectedReportCard(reportCard);
-    setShowViewLabReport(true);
-  };
-
-  const handleLabReportSubmit = async (formData: any) => {
-    if (!selectedReportCard) return;
-
-    try {
-      await updateLabReportStatus(selectedReportCard.id, 'completed', formData);
-      toast.success('Lab report card completed successfully!');
-      setShowLabReportForm(false);
-      setSelectedReportCard(null);
-    } catch (error) {
-      toast.error('Failed to complete lab report card');
-    }
-  };
-
-  const handleLabReportCancel = () => {
-    setShowLabReportForm(false);
-    setSelectedReportCard(null);
-  };
-
-  const handleViewLabReportClose = () => {
-    setShowViewLabReport(false);
-    setSelectedReportCard(null);
-  };
-
-  const handleClinicalReportComplete = async (reportCardId: string) => {
-    try {
-      await updateClinicalReportStatus(reportCardId, 'completed');
-      toast.success('Clinical report card completed successfully!');
-    } catch (error) {
-      toast.error('Failed to complete clinical report card');
-    }
+  const handleViewDeliveryDetails = (deliveryItem: DeliveryItem) => {
+    setSelectedDeliveryItem(deliveryItem);
+    setShowDeliveryDetails(true);
   };
 
   // Insertion appointment handlers
   const handleUpdateInsertionStatus = async (deliveryItem: DeliveryItem, newStatus: DeliveryItem['delivery_status']) => {
     try {
       await updateDeliveryStatus(deliveryItem.id, newStatus);
-      const statusText = newStatus === 'in-transit' ? 'scheduled' :
-                        newStatus === 'delivered' ? 'inserted' :
+      const statusText = newStatus === 'patient-scheduled' ? 'scheduled' :
+                        newStatus === 'inserted' ? 'inserted' :
                         newStatus.replace('-', ' ');
       toast.success(`Appointment status updated to ${statusText}`);
     } catch (error) {
@@ -90,7 +53,7 @@ export function ApplianceDeliveryPage() {
     if (!selectedDeliveryItem) return;
 
     try {
-      await updateDeliveryStatus(selectedDeliveryItem.id, 'in-transit', {
+      await updateDeliveryStatus(selectedDeliveryItem.id, 'patient-scheduled', {
         scheduled_delivery_date: appointmentData.date,
         scheduled_delivery_time: appointmentData.time,
         delivery_notes: appointmentData.notes || 'Appointment scheduled for appliance insertion.'
@@ -109,7 +72,7 @@ export function ApplianceDeliveryPage() {
   };
 
   const handleCompleteDelivery = async (deliveryItem: DeliveryItem) => {
-    await handleUpdateInsertionStatus(deliveryItem, 'delivered');
+    await handleUpdateInsertionStatus(deliveryItem, 'inserted');
   };
 
   // Helper function to format time from 24-hour to 12-hour format
@@ -128,13 +91,13 @@ export function ApplianceDeliveryPage() {
       return deliveryItems.filter(item => item.delivery_status === 'ready-for-delivery').length;
     }
     if (status === "scheduled") {
-      return deliveryItems.filter(item => item.delivery_status === 'in-transit').length;
+      return deliveryItems.filter(item => item.delivery_status === 'patient-scheduled').length;
     }
     if (status === "unscheduled") {
       return deliveryItems.filter(item => item.delivery_status === 'ready-for-delivery' && !item.scheduled_delivery_date).length;
     }
     if (status === "inserted") {
-      return deliveryItems.filter(item => item.delivery_status === 'delivered').length;
+      return deliveryItems.filter(item => item.delivery_status === 'inserted').length;
     }
     if (status === "pending") {
       // Items that need scheduling or are ready but not yet scheduled
@@ -203,11 +166,11 @@ export function ApplianceDeliveryPage() {
     if (activeFilter === "ready-to-insert") {
       statusMatch = item.delivery_status === 'ready-for-delivery';
     } else if (activeFilter === "scheduled") {
-      statusMatch = item.delivery_status === 'in-transit';
+      statusMatch = item.delivery_status === 'patient-scheduled';
     } else if (activeFilter === "unscheduled") {
       statusMatch = item.delivery_status === 'ready-for-delivery' && !item.scheduled_delivery_date;
     } else if (activeFilter === "inserted") {
-      statusMatch = item.delivery_status === 'delivered';
+      statusMatch = item.delivery_status === 'inserted';
     } else if (activeFilter === "pending") {
       statusMatch = item.delivery_status === 'ready-for-delivery' ||
                    (item.delivery_status === 'in-transit' && !item.scheduled_delivery_date);
@@ -307,14 +270,14 @@ export function ApplianceDeliveryPage() {
                             color: 'border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50',
                             onClick: () => handleStartDelivery(item)
                           };
-                        case 'in-transit':
+                        case 'patient-scheduled':
                           return {
                             text: 'Mark Inserted',
                             icon: CheckCircle,
                             color: 'border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50',
                             onClick: () => handleCompleteDelivery(item)
                           };
-                        case 'delivered':
+                        case 'inserted':
                           return {
                             text: 'Inserted',
                             icon: CheckCircle,
@@ -348,7 +311,7 @@ export function ApplianceDeliveryPage() {
                               <h3 className="text-sm font-semibold text-gray-900 truncate">{item.patient_name}</h3>
 
                               {/* Scheduled Appointment Info */}
-                              {item.delivery_status === 'in-transit' && item.scheduled_delivery_date && (
+                              {item.delivery_status === 'patient-scheduled' && item.scheduled_delivery_date && (
                                 <div className="flex items-center space-x-2 mt-1">
                                   <CalendarIcon className="h-3 w-3 text-blue-600" />
                                   <span className="text-xs font-medium text-blue-700">
@@ -465,140 +428,242 @@ export function ApplianceDeliveryPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Insertion Details Dialog */}
+      {/* Appliance Preview Dialog */}
       {selectedDeliveryItem && (
         <Dialog open={showDeliveryDetails} onOpenChange={setShowDeliveryDetails}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Package className="h-6 w-6 text-blue-600" />
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
+                  <Package className="h-7 w-7 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Insertion Appointment Details</h2>
-                  <p className="text-gray-600">{selectedDeliveryItem.patient_name}</p>
+                  <h2 className="text-2xl font-bold text-gray-900">Appliance Summary</h2>
+                  <p className="text-lg text-gray-600">{selectedDeliveryItem.patient_name}</p>
+                </div>
+                <div className="ml-auto">
+                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                    selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
+                    selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
+                    selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
+                     selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                     selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
+                     selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </span>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                {/* Patient Information */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Patient Information</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-gray-700">Name:</span>
-                      <span className="ml-2 text-gray-900">{selectedDeliveryItem.patient_name}</span>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-6">
+                  {/* Patient Information */}
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
+                    <div className="flex items-center gap-2 mb-4">
+                      <User className="h-5 w-5 text-blue-600" />
+                      <h3 className="text-lg font-semibold text-blue-900">Patient Information</h3>
                     </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Arch Type:</span>
-                      <span className="ml-2 text-gray-900 capitalize">{selectedDeliveryItem.arch_type}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Appliance Information */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Appliance Details</h3>
-                  <div className="space-y-2 text-sm">
-                    {selectedDeliveryItem.upper_appliance_type && (
-                      <div>
-                        <span className="font-medium text-gray-700">Upper Appliance:</span>
-                        <span className="ml-2 text-gray-900">{selectedDeliveryItem.upper_appliance_type}</span>
-                        {selectedDeliveryItem.upper_appliance_number && (
-                          <span className="ml-2 text-gray-600">({selectedDeliveryItem.upper_appliance_number})</span>
-                        )}
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="font-medium text-blue-800">Patient Name:</span>
+                        <span className="text-blue-900 font-semibold">{selectedDeliveryItem.patient_name}</span>
                       </div>
-                    )}
-                    {selectedDeliveryItem.lower_appliance_type && (
-                      <div>
-                        <span className="font-medium text-gray-700">Lower Appliance:</span>
-                        <span className="ml-2 text-gray-900">{selectedDeliveryItem.lower_appliance_type}</span>
-                        {selectedDeliveryItem.lower_appliance_number && (
-                          <span className="ml-2 text-gray-600">({selectedDeliveryItem.lower_appliance_number})</span>
-                        )}
+                      <div className="flex justify-between">
+                        <span className="font-medium text-blue-800">Arch Type:</span>
+                        <span className="text-blue-900 capitalize font-medium">{selectedDeliveryItem.arch_type}</span>
                       </div>
-                    )}
-                    <div>
-                      <span className="font-medium text-gray-700">Shade:</span>
-                      <span className="ml-2 text-gray-900">{selectedDeliveryItem.shade}</span>
+                      <div className="flex justify-between">
+                        <span className="font-medium text-blue-800">Created:</span>
+                        <span className="text-blue-900">{new Date(selectedDeliveryItem.created_at).toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Appliance Specifications */}
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Settings className="h-5 w-5 text-purple-600" />
+                      <h3 className="text-lg font-semibold text-purple-900">Appliance Specifications</h3>
+                    </div>
+                    <div className="space-y-3">
+                      {selectedDeliveryItem.upper_appliance_type && (
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-purple-800">Upper Appliance:</span>
+                          <div className="text-right">
+                            <span className="text-purple-900 font-medium">{selectedDeliveryItem.upper_appliance_type}</span>
+                            {selectedDeliveryItem.upper_appliance_number && (
+                              <span className="block text-sm text-purple-700">#{selectedDeliveryItem.upper_appliance_number}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {selectedDeliveryItem.lower_appliance_type && (
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-purple-800">Lower Appliance:</span>
+                          <div className="text-right">
+                            <span className="text-purple-900 font-medium">{selectedDeliveryItem.lower_appliance_type}</span>
+                            {selectedDeliveryItem.lower_appliance_number && (
+                              <span className="block text-sm text-purple-700">#{selectedDeliveryItem.lower_appliance_number}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-purple-800">Shade:</span>
+                        <div className="flex items-center gap-2">
+                          <Palette className="h-4 w-4 text-purple-600" />
+                          <span className="text-purple-900 font-medium">{selectedDeliveryItem.shade}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Insertion Status */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Insertion Status</h3>
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
-                      selectedDeliveryItem.delivery_status === 'in-transit' ? 'bg-blue-100 text-blue-800' :
-                      selectedDeliveryItem.delivery_status === 'delivered' ? 'bg-emerald-100 text-emerald-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
-                       selectedDeliveryItem.delivery_status === 'in-transit' ? 'Scheduled' :
-                       selectedDeliveryItem.delivery_status === 'delivered' ? 'Inserted' :
-                       selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </span>
-                  </div>
-                  {selectedDeliveryItem.delivery_notes && (
-                    <div className="mt-2">
-                      <span className="font-medium text-gray-700">Notes:</span>
-                      <p className="text-gray-900 text-sm mt-1">{selectedDeliveryItem.delivery_notes}</p>
-                    </div>
-                  )}
-                </div>
+                {/* Right Column */}
+                <div className="space-y-6">
 
-                {/* Dates */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Timeline</h3>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="font-medium text-gray-700">Created:</span>
-                      <span className="ml-2 text-gray-900">
-                        {new Date(selectedDeliveryItem.created_at).toLocaleDateString()}
-                      </span>
+                  {/* Delivery Status */}
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Truck className="h-5 w-5 text-green-600" />
+                      <h3 className="text-lg font-semibold text-green-900">Delivery Status</h3>
                     </div>
-                    {selectedDeliveryItem.scheduled_delivery_date && (
-                      <div>
-                        <span className="font-medium text-gray-700">Appointment Date:</span>
-                        <span className="ml-2 text-gray-900">
-                          {new Date(selectedDeliveryItem.scheduled_delivery_date).toLocaleDateString('en-US', {
-                            weekday: 'long',
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-green-800">Current Status:</span>
+                        <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
+                          selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-200 text-green-900' :
+                          selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-200 text-blue-900' :
+                          selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-200 text-emerald-900' :
+                          'bg-gray-200 text-gray-900'
+                        }`}>
+                          {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
+                           selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                           selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
+                           selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                      </div>
+                      {selectedDeliveryItem.delivery_notes && (
+                        <div>
+                          <span className="font-medium text-green-800">Notes:</span>
+                          <p className="text-green-900 text-sm mt-1 bg-green-50 p-2 rounded border">{selectedDeliveryItem.delivery_notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Timeline & Appointments */}
+                  <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-5 border border-amber-200">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Calendar className="h-5 w-5 text-amber-600" />
+                      <h3 className="text-lg font-semibold text-amber-900">Timeline & Appointments</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-amber-800">Created:</span>
+                        <span className="text-amber-900 font-medium">
+                          {new Date(selectedDeliveryItem.created_at).toLocaleDateString('en-US', {
+                            weekday: 'short',
                             year: 'numeric',
-                            month: 'long',
+                            month: 'short',
                             day: 'numeric'
                           })}
                         </span>
-                        {selectedDeliveryItem.scheduled_delivery_time && (
-                          <div className="mt-1">
-                            <span className="font-medium text-gray-700">Appointment Time:</span>
-                            <span className="ml-2 text-gray-900">
-                              {formatTime(selectedDeliveryItem.scheduled_delivery_time)}
+                      </div>
+
+                      {selectedDeliveryItem.scheduled_delivery_date && (
+                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium text-amber-800">Appointment Date:</span>
+                            <span className="text-amber-900 font-semibold">
+                              {new Date(selectedDeliveryItem.scheduled_delivery_date).toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
                             </span>
                           </div>
-                        )}
-                      </div>
-                    )}
-                    {selectedDeliveryItem.actual_delivery_date && (
-                      <div>
-                        <span className="font-medium text-gray-700">Insertion Date:</span>
-                        <span className="ml-2 text-gray-900">
-                          {new Date(selectedDeliveryItem.actual_delivery_date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
+                          {selectedDeliveryItem.scheduled_delivery_time && (
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium text-amber-800">Appointment Time:</span>
+                              <span className="text-amber-900 font-medium">
+                                {formatTime(selectedDeliveryItem.scheduled_delivery_time)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedDeliveryItem.actual_delivery_date && (
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-amber-800">Insertion Date:</span>
+                          <span className="text-amber-900 font-semibold">
+                            {new Date(selectedDeliveryItem.actual_delivery_date).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end mt-6">
-                <Button
-                  onClick={() => setShowDeliveryDetails(false)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white"
-                >
-                  Close
-                </Button>
+              {/* Action Buttons */}
+              <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                <div className="text-sm text-gray-500">
+                  Last updated: {new Date(selectedDeliveryItem.updated_at).toLocaleString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+                <div className="flex gap-3">
+                  {selectedDeliveryItem.delivery_status === 'ready-for-delivery' && (
+                    <Button
+                      onClick={() => {
+                        setShowDeliveryDetails(false);
+                        setShowAppointmentScheduler(true);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Schedule Appointment
+                    </Button>
+                  )}
+                  {selectedDeliveryItem.delivery_status === 'patient-scheduled' && (
+                    <Button
+                      onClick={() => {
+                        setShowDeliveryDetails(false);
+                        handleCompleteDelivery(selectedDeliveryItem);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark Inserted
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => setShowDeliveryDetails(false)}
+                    className="bg-gray-600 hover:bg-gray-700 text-white"
+                  >
+                    Close Preview
+                  </Button>
+                </div>
               </div>
             </div>
           </DialogContent>

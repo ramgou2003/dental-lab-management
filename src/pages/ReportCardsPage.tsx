@@ -5,8 +5,11 @@ import { ParticleButton } from "@/components/ui/particle-button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
+import { ClinicalReportCardForm } from "@/components/ClinicalReportCardForm";
+import { ViewClinicalReportCard } from "@/components/ViewClinicalReportCard";
 import { useReportCards } from "@/hooks/useReportCards";
-import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Stethoscope } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import type { ReportCard } from "@/hooks/useReportCards";
 
@@ -15,8 +18,11 @@ export function ReportCardsPage() {
   const [showNewReportForm, setShowNewReportForm] = useState(false);
   const [showLabReportForm, setShowLabReportForm] = useState(false);
   const [showViewLabReport, setShowViewLabReport] = useState(false);
+  const [showClinicalReportForm, setShowClinicalReportForm] = useState(false);
+  const [showViewClinicalReport, setShowViewClinicalReport] = useState(false);
   const [selectedReportCard, setSelectedReportCard] = useState<ReportCard | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [insertionStatus, setInsertionStatus] = useState<{canSubmit: boolean; reason: string; message: string} | null>(null);
   const { reportCards, loading, updateLabReportStatus, updateClinicalReportStatus } = useReportCards();
 
   const handleNewReport = () => {
@@ -26,6 +32,16 @@ export function ReportCardsPage() {
   const handleFillLabReport = (reportCard: ReportCard) => {
     setSelectedReportCard(reportCard);
     setShowLabReportForm(true);
+  };
+
+  const handleFillClinicalReport = async (reportCard: ReportCard) => {
+    setSelectedReportCard(reportCard);
+
+    // Check insertion status before opening the form
+    const statusCheck = await checkInsertionStatus(reportCard.id);
+    setInsertionStatus(statusCheck);
+
+    setShowClinicalReportForm(true);
   };
 
   const handleViewLabReport = (reportCard: ReportCard) => {
@@ -55,6 +71,110 @@ export function ReportCardsPage() {
 
   const handleViewLabReportClose = () => {
     setShowViewLabReport(false);
+    setSelectedReportCard(null);
+  };
+
+  const checkInsertionStatus = async (reportCardId: string) => {
+    try {
+      // Find the report card to get lab_script_id
+      const reportCard = reportCards.find(card => card.id === reportCardId);
+      if (!reportCard) {
+        return { canSubmit: false, reason: 'error', message: 'Report card not found.' };
+      }
+
+      // Check if there's a delivery item for this report card and if it's inserted
+      const { data: deliveryItem, error } = await supabase
+        .from('delivery_items')
+        .select('delivery_status, patient_name')
+        .eq('lab_script_id', reportCard.lab_script_id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (!deliveryItem) {
+        // Check manufacturing status
+        const { data: manufacturingItem, error: mfgError } = await supabase
+          .from('manufacturing_items')
+          .select('status, patient_name')
+          .eq('lab_script_id', reportCard.lab_script_id)
+          .single();
+
+        if (mfgError && mfgError.code !== 'PGRST116') {
+          throw mfgError;
+        }
+
+        if (!manufacturingItem) {
+          return { canSubmit: false, reason: 'not_manufactured', message: 'Appliance has not been manufactured yet. Please complete manufacturing first.' };
+        }
+
+        if (manufacturingItem.status !== 'completed') {
+          // Format the manufacturing status for better user experience
+          const statusDisplay = manufacturingItem.status === 'pending-printing' ? 'Pending Printing' :
+                                manufacturingItem.status === 'in-production' ? 'Printing' :
+                                manufacturingItem.status === 'quality-check' ? 'Quality Check' :
+                                manufacturingItem.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+          // Add helpful context based on the manufacturing stage
+          const contextMessage = manufacturingItem.status === 'pending-printing' ? 'The appliance is waiting to start printing.' :
+                                 manufacturingItem.status === 'in-production' ? 'The appliance is currently being printed.' :
+                                 manufacturingItem.status === 'quality-check' ? 'The appliance is undergoing quality inspection.' :
+                                 'The appliance is still being processed.';
+
+          return { canSubmit: false, reason: 'not_completed', message: `Appliance is still in manufacturing (Status: ${statusDisplay}). ${contextMessage} Please complete manufacturing first.` };
+        }
+
+        return { canSubmit: false, reason: 'not_delivered', message: 'Appliance has been manufactured but not yet prepared for delivery. Please check the delivery status.' };
+      }
+
+      if (deliveryItem.delivery_status !== 'inserted') {
+        return { canSubmit: false, reason: 'not_inserted', message: `Appliance has not been inserted yet (Status: ${deliveryItem.delivery_status}). Clinical report can only be filled after appliance insertion.` };
+      }
+
+      return { canSubmit: true, reason: 'ready', message: 'Ready for clinical report submission.' };
+    } catch (error) {
+      console.error('Error checking insertion status:', error);
+      return { canSubmit: false, reason: 'error', message: 'Unable to verify appliance status. Please try again.' };
+    }
+  };
+
+  const handleClinicalReportSubmit = async (formData: any) => {
+    if (!selectedReportCard) return;
+
+    // Check insertion status before allowing submission
+    const statusCheck = await checkInsertionStatus(selectedReportCard.id);
+
+    if (!statusCheck.canSubmit) {
+      toast.error(statusCheck.message);
+      return;
+    }
+
+    try {
+      await updateClinicalReportStatus(selectedReportCard.id, 'completed', formData);
+      toast.success('Clinical report card completed successfully!');
+      setShowClinicalReportForm(false);
+      setSelectedReportCard(null);
+      setInsertionStatus(null);
+    } catch (error) {
+      console.error('Error submitting clinical report:', error);
+      toast.error('Failed to submit clinical report card. Please try again.');
+    }
+  };
+
+  const handleClinicalReportCancel = () => {
+    setShowClinicalReportForm(false);
+    setSelectedReportCard(null);
+    setInsertionStatus(null);
+  };
+
+  const handleViewClinicalReport = (reportCard: ReportCard) => {
+    setSelectedReportCard(reportCard);
+    setShowViewClinicalReport(true);
+  };
+
+  const handleViewClinicalReportClose = () => {
+    setShowViewClinicalReport(false);
     setSelectedReportCard(null);
   };
 
@@ -272,11 +392,12 @@ export function ReportCardsPage() {
                             </div>
                           </div>
 
-                          {/* Right side - Fill Lab Report Button */}
-                          <div className="ml-4">
+                          {/* Right side - Action Buttons */}
+                          <div className="ml-4 flex gap-2">
+                            {/* Lab Report Button */}
                             {card.lab_report_status === 'completed' ? (
                               <Button
-                                className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                                 onClick={() => handleViewLabReport(card)}
                               >
                                 <Eye className="h-4 w-4 mr-2" />
@@ -284,7 +405,7 @@ export function ReportCardsPage() {
                               </Button>
                             ) : (
                               <ParticleButton
-                                className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                                 onClick={() => handleFillLabReport(card)}
                                 onSuccess={() => {}}
                                 successDuration={1000}
@@ -292,6 +413,31 @@ export function ReportCardsPage() {
                                 <FileText className="h-4 w-4 mr-2" />
                                 Fill Lab Report
                               </ParticleButton>
+                            )}
+
+                            {/* Clinical Report Button - Show only for pending by clinic filter or when lab is completed */}
+                            {(activeFilter === "pending-clinic" || card.lab_report_status === 'completed') && (
+                              <>
+                                {card.clinical_report_status === 'completed' ? (
+                                  <Button
+                                    className="border-2 border-purple-600 text-purple-600 hover:border-purple-700 hover:text-purple-700 hover:bg-purple-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                    onClick={() => handleViewClinicalReport(card)}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Clinical Report
+                                  </Button>
+                                ) : card.lab_report_status === 'completed' ? (
+                                  <ParticleButton
+                                    className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                    onClick={() => handleFillClinicalReport(card)}
+                                    onSuccess={() => {}}
+                                    successDuration={1000}
+                                  >
+                                    <Stethoscope className="h-4 w-4 mr-2" />
+                                    Fill Clinic Report Card
+                                  </ParticleButton>
+                                ) : null}
+                              </>
                             )}
                           </div>
                         </div>
@@ -349,29 +495,55 @@ export function ReportCardsPage() {
       </Dialog>
 
       {/* Lab Report Card Form Dialog */}
-      {selectedReportCard && (
-        <Dialog open={showLabReportForm} onOpenChange={setShowLabReportForm}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={showLabReportForm && !!selectedReportCard} onOpenChange={setShowLabReportForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedReportCard && (
             <LabReportCardForm
               reportCard={selectedReportCard}
               onSubmit={handleLabReportSubmit}
               onCancel={handleLabReportCancel}
             />
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* View Lab Report Card Dialog */}
-      {selectedReportCard && (
-        <Dialog open={showViewLabReport} onOpenChange={setShowViewLabReport}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={showViewLabReport && !!selectedReportCard} onOpenChange={setShowViewLabReport}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedReportCard && (
             <ViewLabReportCard
               reportCard={selectedReportCard}
               onClose={handleViewLabReportClose}
             />
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Clinical Report Card Form Dialog */}
+      <Dialog open={showClinicalReportForm && !!selectedReportCard} onOpenChange={setShowClinicalReportForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedReportCard && (
+            <ClinicalReportCardForm
+              reportCard={selectedReportCard}
+              onSubmit={handleClinicalReportSubmit}
+              onCancel={handleClinicalReportCancel}
+              insertionStatus={insertionStatus}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Clinical Report Card Dialog */}
+      <Dialog open={showViewClinicalReport && !!selectedReportCard} onOpenChange={setShowViewClinicalReport}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedReportCard && (
+            <ViewClinicalReportCard
+              reportCardId={selectedReportCard.id}
+              onClose={handleViewClinicalReportClose}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

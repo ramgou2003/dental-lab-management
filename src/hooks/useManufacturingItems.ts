@@ -13,7 +13,7 @@ export interface ManufacturingItem {
   arch_type: string;
   upper_appliance_number: string | null;
   lower_appliance_number: string | null;
-  status: 'pending-design' | 'in-production' | 'quality-check' | 'completed';
+  status: 'pending-printing' | 'in-production' | 'quality-check' | 'completed';
   created_at: string;
   updated_at: string;
 }

@@ -14,7 +14,7 @@ export interface DeliveryItem {
   arch_type: string;
   upper_appliance_number: string | null;
   lower_appliance_number: string | null;
-  delivery_status: 'ready-for-delivery' | 'in-transit' | 'delivered' | 'returned';
+  delivery_status: 'ready-for-delivery' | 'patient-scheduled' | 'inserted' | 'returned';
   delivery_address: string | null;
   delivery_notes: string | null;
   scheduled_delivery_date: string | null;
@@ -87,8 +87,8 @@ export function useDeliveryItems() {
         if (deliveryData.tracking_number) updateData.tracking_number = deliveryData.tracking_number;
       }
 
-      // Set actual delivery date when status is 'delivered'
-      if (newStatus === 'delivered') {
+      // Set actual delivery date when status is 'inserted'
+      if (newStatus === 'inserted') {
         updateData.actual_delivery_date = new Date().toISOString().split('T')[0];
       }
 
