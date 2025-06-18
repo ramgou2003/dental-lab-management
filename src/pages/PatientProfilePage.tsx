@@ -1150,7 +1150,8 @@ export function PatientProfilePage() {
                           );
                         })}
                       </div>
-                    </>)
+                    </>
+                  )
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
