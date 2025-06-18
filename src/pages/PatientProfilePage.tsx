@@ -941,177 +941,154 @@ export function PatientProfilePage() {
             </TabsContent>
 
             <TabsContent value="manufacturing" className="mt-6 pb-1.5">
-              <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 350px)' }}>
-                <CardContent className="flex-1 overflow-hidden p-0">
-                  {manufacturingLoading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <Factory className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading manufacturing orders...</h3>
-                        <p className="text-gray-500">Please wait while we fetch manufacturing data.</p>
-                      </div>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}>
+                {manufacturingLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Factory className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading manufacturing orders...</h3>
+                      <p className="text-gray-500">Please wait while we fetch manufacturing data.</p>
                     </div>
-                  ) : manufacturingItems.length > 0 ? (
-                    <div className="flex flex-col h-full">
-                      {/* Table Header - Fixed */}
-                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-                        <div className="grid grid-cols-8 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Created Date</div>
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
-                          <div className="col-span-2 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Shade</div>
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
-                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Actions</div>
-                          <div className="col-span-1 text-center flex items-center justify-center pr-2">Preview</div>
-                        </div>
-                      </div>
+                  </div>
+                ) : manufacturingItems.length > 0 ? (
+                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                    <div className="space-y-4">
+                      {manufacturingItems.map((item) => {
+                        // Format appliance type display
+                        const upperAppliance = item.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
+                        const lowerAppliance = item.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
 
-                      {/* Table Body - Scrollable */}
-                      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
-                        {manufacturingItems.map((item) => {
-                          // Format appliance type display
-                          const getApplianceDisplay = () => {
-                            const upper = item.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
-                            const lower = item.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
-                            return `${upper} | ${lower}`;
-                          };
+                        // Get status-specific button configuration
+                        const getStatusButton = () => {
+                          switch (item.status) {
+                            case 'pending-printing':
+                              return {
+                                text: 'Start Printing',
+                                icon: Play,
+                                color: 'border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50',
+                                onClick: () => handleManufacturingStatusChange(item.id, 'in-production')
+                              };
+                            case 'in-production':
+                              return {
+                                text: 'Quality Check',
+                                icon: CheckCircle,
+                                color: 'border-purple-600 text-purple-600 hover:border-purple-700 hover:text-purple-700 hover:bg-purple-50',
+                                onClick: () => handleManufacturingStatusChange(item.id, 'quality-check')
+                              };
+                            case 'quality-check':
+                              return {
+                                text: 'Complete',
+                                icon: CheckCircle,
+                                color: 'border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50',
+                                onClick: () => handleManufacturingStatusChange(item.id, 'completed')
+                              };
+                            case 'completed':
+                              return {
+                                text: 'Completed',
+                                icon: CheckCircle,
+                                color: 'border-emerald-600 text-emerald-600 bg-emerald-50',
+                                onClick: () => {}
+                              };
+                            default:
+                              return {
+                                text: 'View Details',
+                                icon: Eye,
+                                color: 'border-gray-600 text-gray-600 hover:border-gray-700 hover:text-gray-700 hover:bg-gray-50',
+                                onClick: () => {}
+                              };
+                          }
+                        };
 
-                          // Render action buttons based on status
-                          const renderActionButtons = () => {
-                            switch (item.status) {
-                              case 'pending-printing':
-                                return (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 text-xs border-blue-600 text-blue-600 hover:bg-blue-50"
-                                    onClick={() => handleManufacturingStatusChange(item.id, 'in-production')}
-                                  >
-                                    <Play className="h-3 w-3 mr-1" />
-                                    Start
-                                  </Button>
-                                );
-                              case 'in-production':
-                                return (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 text-xs border-purple-600 text-purple-600 hover:bg-purple-50"
-                                    onClick={() => handleManufacturingStatusChange(item.id, 'quality-check')}
-                                  >
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    QC
-                                  </Button>
-                                );
-                              case 'quality-check':
-                                return (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 text-xs border-green-600 text-green-600 hover:bg-green-50"
-                                    onClick={() => handleManufacturingStatusChange(item.id, 'completed')}
-                                  >
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Done
-                                  </Button>
-                                );
-                              case 'completed':
-                                return (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 px-3 text-xs"
-                                    disabled
-                                  >
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Complete
-                                  </Button>
-                                );
-                              default:
-                                return null;
-                            }
-                          };
+                        const statusButton = getStatusButton();
 
-                          return (
-                            <div key={item.id} className="grid grid-cols-8 gap-4 px-3 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center h-16">
-                              {/* Created Date */}
-                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                                <p className="text-gray-600 text-xs">
-                                  {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'No date'}
-                                </p>
+                        return (
+                          <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
+                            <div className="flex items-center justify-between">
+                              {/* Left side - Patient info and appliance details */}
+                              <div className="flex items-center space-x-4 flex-1">
+                                {/* Manufacturing Avatar */}
+                                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <Factory className="h-4 w-4 text-white" />
+                                </div>
+
+                                {/* Patient Details */}
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="text-sm font-semibold text-gray-900 truncate">{item.patient_name}</h3>
+                                  <div className="flex items-center space-x-4 mt-1">
+                                    {/* Appliance Types with Numbers */}
+                                    {item.upper_appliance_type && (
+                                      <span className="text-xs text-gray-600">
+                                        <span className="font-medium">Upper:</span> {upperAppliance}
+                                        {item.upper_appliance_number && (
+                                          <span className="ml-1 font-mono text-purple-600">({item.upper_appliance_number})</span>
+                                        )}
+                                      </span>
+                                    )}
+                                    {item.lower_appliance_type && (
+                                      <span className="text-xs text-gray-600">
+                                        <span className="font-medium">Lower:</span> {lowerAppliance}
+                                        {item.lower_appliance_number && (
+                                          <span className="ml-1 font-mono text-purple-600">({item.lower_appliance_number})</span>
+                                        )}
+                                      </span>
+                                    )}
+                                    {/* Shade */}
+                                    <span className="text-xs text-gray-600">
+                                      <span className="font-medium">Shade:</span> {item.shade}
+                                    </span>
+                                  </div>
+                                  {/* Status Badge */}
+                                  <div className="mt-2">
+                                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                      item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                      item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
+                                      item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
+                                      'bg-amber-100 text-amber-700'
+                                    }`}>
+                                      {item.status === 'pending-printing' ? 'New Script' :
+                                       item.status === 'in-production' ? 'Printing' :
+                                       item.status === 'quality-check' ? 'Inspection' :
+                                       item.status === 'completed' ? 'Completed' :
+                                       item.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
 
-                              {/* Arch Type */}
-                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                  item.arch_type === 'dual' ? 'bg-purple-100 text-purple-700' :
-                                  item.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-green-100 text-green-700'
-                                }`}>
-                                  {item.arch_type === 'dual' ? 'Dual Arch' :
-                                   item.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}
-                                </span>
-                              </div>
-
-                              {/* Appliance Type */}
-                              <div className="col-span-2 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                                <p className="text-gray-600 text-xs">{getApplianceDisplay()}</p>
-                              </div>
-
-                              {/* Shade */}
-                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                                <span className="inline-flex px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
-                                  {item.shade}
-                                </span>
-                              </div>
-
-                              {/* Status */}
-                              <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                  item.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                                  item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
-                                  item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
-                                  'bg-amber-100 text-amber-700'
-                                }`}>
-                                  {item.status === 'pending-printing' ? 'New Script' :
-                                   item.status === 'in-production' ? 'Printing' :
-                                   item.status === 'quality-check' ? 'Inspection' :
-                                   'Completed'}
-                                </span>
-                              </div>
-
-                              {/* Actions */}
-                              <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                                {renderActionButtons()}
-                              </div>
-
-                              {/* Preview */}
-                              <div className="col-span-1 h-full flex items-center justify-center pr-2">
+                              {/* Right side - Action Button */}
+                              <div className="ml-4 flex gap-2">
                                 <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  title="View Details"
+                                  className={`border-2 ${statusButton.color} bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200`}
+                                  onClick={statusButton.onClick}
+                                  disabled={item.status === 'completed'}
                                 >
-                                  <Eye className="h-4 w-4" />
+                                  <statusButton.icon className="h-4 w-4 mr-2" />
+                                  {statusButton.text}
                                 </Button>
                               </div>
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <Factory className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Manufacturing Orders</h3>
-                        <p className="text-gray-500">Create orders for dental appliances and prosthetics.</p>
-                      </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Factory className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Manufacturing Orders</h3>
+                      <p className="text-gray-500 mb-4">Manufacturing orders will appear here when lab scripts are completed.</p>
+                      <Button
+                        onClick={() => window.location.href = '/lab'}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                      >
+                        <FlaskConical className="h-4 w-4 mr-2" />
+                        Go to Lab Scripts
+                      </Button>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="delivery" className="mt-6 pb-1.5">
