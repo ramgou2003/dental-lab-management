@@ -204,94 +204,69 @@ export function PatientProfilePage() {
     setSelectedReportCard(null);
   };
 
-  // Clinical Report Handlers
+  // Clinical Report Handlers - Using exact same logic as main report cards page
   const checkInsertionStatus = async (reportCardId: string) => {
     try {
-      console.log('Checking insertion status for report card:', reportCardId);
-      console.log('Available report cards:', reportCards.map(card => ({ id: card.id, lab_script_id: card.lab_script_id })));
-
       // Find the report card to get lab_script_id
       const reportCard = reportCards.find(card => card.id === reportCardId);
       if (!reportCard) {
-        console.error('Report card not found:', reportCardId);
         return { canSubmit: false, reason: 'error', message: 'Report card not found.' };
       }
 
-      console.log('Found report card:', { id: reportCard.id, lab_script_id: reportCard.lab_script_id });
-
-      // Check manufacturing status first
-      console.log('Checking manufacturing status for lab_script_id:', reportCard.lab_script_id);
-      const { data: manufacturingItem, error: mfgError } = await supabase
-        .from('manufacturing_items')
-        .select('status')
-        .eq('lab_script_id', reportCard.lab_script_id)
-        .single();
-
-      console.log('Manufacturing query result:', { data: manufacturingItem, error: mfgError });
-
-      if (mfgError && mfgError.code !== 'PGRST116') {
-        console.error('Error checking manufacturing status:', mfgError);
-        console.error('Manufacturing error details:', { code: mfgError.code, message: mfgError.message, details: mfgError.details });
-        return { canSubmit: false, reason: 'error', message: `Database error while checking manufacturing status: ${mfgError.message}. Please try again or contact support.` };
-      }
-
-      if (!manufacturingItem) {
-        return { canSubmit: false, reason: 'not_started', message: 'Manufacturing has not been started yet. Please begin manufacturing process first.' };
-      }
-
-      // Handle different manufacturing statuses
-      if (manufacturingItem.status === 'pending-printing') {
-        return { canSubmit: false, reason: 'pending_printing', message: 'Appliance is pending printing. Manufacturing is in progress.' };
-      }
-
-      if (manufacturingItem.status === 'in-production') {
-        return { canSubmit: false, reason: 'in_production', message: 'Appliance is currently in production. Manufacturing is in progress.' };
-      }
-
-      if (manufacturingItem.status === 'quality-check') {
-        return { canSubmit: false, reason: 'quality_check', message: 'Appliance is undergoing quality check. Manufacturing is almost complete.' };
-      }
-
-      if (manufacturingItem.status !== 'completed') {
-        return { canSubmit: false, reason: 'manufacturing_incomplete', message: `Manufacturing status: ${manufacturingItem.status}. Please complete manufacturing first.` };
-      }
-
-      // Manufacturing is complete, now check delivery status
-      const { data: deliveryItem, error: deliveryError } = await supabase
+      // Check if there's a delivery item for this report card and if it's inserted
+      const { data: deliveryItem, error } = await supabase
         .from('delivery_items')
         .select('delivery_status, patient_name')
         .eq('lab_script_id', reportCard.lab_script_id)
         .single();
 
-      if (deliveryError && deliveryError.code !== 'PGRST116') {
-        console.error('Error checking delivery status:', deliveryError);
-        console.error('Delivery error details:', { code: deliveryError.code, message: deliveryError.message, details: deliveryError.details });
-        return { canSubmit: false, reason: 'error', message: `Database error while checking delivery status: ${deliveryError.message}. Please try again or contact support.` };
+      if (error && error.code !== 'PGRST116') {
+        throw error;
       }
 
       if (!deliveryItem) {
-        return { canSubmit: false, reason: 'not_delivered', message: 'Appliance manufacturing is complete but delivery item has not been created yet. Please check the delivery process.' };
-      }
+        // Check manufacturing status
+        const { data: manufacturingItem, error: mfgError } = await supabase
+          .from('manufacturing_items')
+          .select('status, patient_name')
+          .eq('lab_script_id', reportCard.lab_script_id)
+          .single();
 
-      // Handle different delivery statuses
-      if (deliveryItem.delivery_status === 'ready-for-delivery') {
-        return { canSubmit: false, reason: 'ready_for_delivery', message: 'Appliance is ready for delivery but appointment has not been scheduled yet.' };
-      }
+        if (mfgError && mfgError.code !== 'PGRST116') {
+          throw mfgError;
+        }
 
-      if (deliveryItem.delivery_status === 'patient-scheduled') {
-        return { canSubmit: false, reason: 'scheduled', message: 'Appointment is scheduled but appliance has not been inserted yet.' };
+        if (!manufacturingItem) {
+          return { canSubmit: false, reason: 'not_manufactured', message: 'Appliance has not been manufactured yet. Please complete manufacturing first.' };
+        }
+
+        if (manufacturingItem.status !== 'completed') {
+          // Format the manufacturing status for better user experience
+          const statusDisplay = manufacturingItem.status === 'pending-printing' ? 'Pending Printing' :
+                                manufacturingItem.status === 'in-production' ? 'Printing' :
+                                manufacturingItem.status === 'quality-check' ? 'Quality Check' :
+                                manufacturingItem.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+          // Add helpful context based on the manufacturing stage
+          const contextMessage = manufacturingItem.status === 'pending-printing' ? 'The appliance is waiting to start printing.' :
+                                 manufacturingItem.status === 'in-production' ? 'The appliance is currently being printed.' :
+                                 manufacturingItem.status === 'quality-check' ? 'The appliance is undergoing quality inspection.' :
+                                 'The appliance is still being processed.';
+
+          return { canSubmit: false, reason: 'not_completed', message: `Appliance is still in manufacturing (Status: ${statusDisplay}). ${contextMessage} Please complete manufacturing first.` };
+        }
+
+        return { canSubmit: false, reason: 'not_delivered', message: 'Appliance has been manufactured but not yet prepared for delivery. Please check the delivery status.' };
       }
 
       if (deliveryItem.delivery_status !== 'inserted') {
-        return { canSubmit: false, reason: 'not_inserted', message: `Delivery status: ${deliveryItem.delivery_status}. Clinical report can only be filled after appliance insertion.` };
+        return { canSubmit: false, reason: 'not_inserted', message: `Appliance has not been inserted yet (Status: ${deliveryItem.delivery_status}). Clinical report can only be filled after appliance insertion.` };
       }
 
-      // All checks passed - appliance is inserted and ready for clinical assessment
-      return { canSubmit: true, reason: 'ready', message: 'Appliance has been inserted. Ready for clinical assessment.' };
-
+      return { canSubmit: true, reason: 'ready', message: 'Ready for clinical report submission.' };
     } catch (error) {
       console.error('Error checking insertion status:', error);
-      return { canSubmit: false, reason: 'error', message: 'An unexpected error occurred while checking appliance status. Please try again or contact support.' };
+      return { canSubmit: false, reason: 'error', message: 'Unable to verify appliance status. Please try again.' };
     }
   };
 
