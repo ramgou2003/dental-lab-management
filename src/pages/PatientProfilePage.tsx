@@ -207,22 +207,32 @@ export function PatientProfilePage() {
   // Clinical Report Handlers
   const checkInsertionStatus = async (reportCardId: string) => {
     try {
+      console.log('Checking insertion status for report card:', reportCardId);
+      console.log('Available report cards:', reportCards.map(card => ({ id: card.id, lab_script_id: card.lab_script_id })));
+
       // Find the report card to get lab_script_id
       const reportCard = reportCards.find(card => card.id === reportCardId);
       if (!reportCard) {
+        console.error('Report card not found:', reportCardId);
         return { canSubmit: false, reason: 'error', message: 'Report card not found.' };
       }
 
+      console.log('Found report card:', { id: reportCard.id, lab_script_id: reportCard.lab_script_id });
+
       // Check manufacturing status first
+      console.log('Checking manufacturing status for lab_script_id:', reportCard.lab_script_id);
       const { data: manufacturingItem, error: mfgError } = await supabase
         .from('manufacturing_items')
         .select('manufacturing_status')
         .eq('lab_script_id', reportCard.lab_script_id)
         .single();
 
+      console.log('Manufacturing query result:', { data: manufacturingItem, error: mfgError });
+
       if (mfgError && mfgError.code !== 'PGRST116') {
         console.error('Error checking manufacturing status:', mfgError);
-        return { canSubmit: false, reason: 'error', message: 'Unable to verify manufacturing status. Please try again.' };
+        console.error('Manufacturing error details:', { code: mfgError.code, message: mfgError.message, details: mfgError.details });
+        return { canSubmit: false, reason: 'error', message: `Database error while checking manufacturing status: ${mfgError.message}. Please try again or contact support.` };
       }
 
       if (!manufacturingItem) {
@@ -255,7 +265,8 @@ export function PatientProfilePage() {
 
       if (deliveryError && deliveryError.code !== 'PGRST116') {
         console.error('Error checking delivery status:', deliveryError);
-        return { canSubmit: false, reason: 'error', message: 'Unable to verify delivery status. Please try again.' };
+        console.error('Delivery error details:', { code: deliveryError.code, message: deliveryError.message, details: deliveryError.details });
+        return { canSubmit: false, reason: 'error', message: `Database error while checking delivery status: ${deliveryError.message}. Please try again or contact support.` };
       }
 
       if (!deliveryItem) {
