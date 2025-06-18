@@ -45,6 +45,8 @@ import {
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
+import { ClinicalReportCardForm } from "@/components/ClinicalReportCardForm";
+import { ViewClinicalReportCard } from "@/components/ViewClinicalReportCard";
 import { AppointmentScheduler } from "@/components/AppointmentScheduler";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -62,7 +64,7 @@ export function PatientProfilePage() {
   // Fetch patient-specific lab scripts and manufacturing items
   const { labScripts, loading: labScriptsLoading, updateLabScript } = usePatientLabScripts(patientId);
   const { manufacturingItems, loading: manufacturingLoading, updateManufacturingItemStatus } = usePatientManufacturingItems(patientId);
-  const { reportCards, loading: reportCardsLoading, updateLabReportStatus } = useReportCards();
+  const { reportCards, loading: reportCardsLoading, updateLabReportStatus, updateClinicalReportStatus } = useReportCards();
   const { deliveryItems, loading: deliveryItemsLoading, updateDeliveryStatus } = useDeliveryItems();
   const { toast } = useToast();
 
@@ -82,6 +84,11 @@ export function PatientProfilePage() {
   const [showLabReportForm, setShowLabReportForm] = useState(false);
   const [showViewLabReport, setShowViewLabReport] = useState(false);
   const [selectedReportCard, setSelectedReportCard] = useState<any | null>(null);
+
+  // State for clinical report dialogs
+  const [showClinicalReportForm, setShowClinicalReportForm] = useState(false);
+  const [showViewClinicalReport, setShowViewClinicalReport] = useState(false);
+  const [insertionStatus, setInsertionStatus] = useState<{canSubmit: boolean; reason: string; message: string} | null>(null);
 
   // State for delivery dialogs
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
@@ -194,6 +201,96 @@ export function PatientProfilePage() {
 
   const handleViewLabReportClose = () => {
     setShowViewLabReport(false);
+    setSelectedReportCard(null);
+  };
+
+  // Clinical Report Handlers
+  const checkInsertionStatus = async (reportCardId: string) => {
+    try {
+      // Get the delivery item for this report card
+      const { data: deliveryItem, error } = await supabase
+        .from('delivery_items')
+        .select('delivery_status')
+        .eq('report_card_id', reportCardId)
+        .single();
+
+      if (error) {
+        console.error('Error checking delivery status:', error);
+        return { canSubmit: false, reason: 'error', message: 'Unable to verify appliance status. Please try again.' };
+      }
+
+      if (!deliveryItem) {
+        return { canSubmit: false, reason: 'not_delivered', message: 'Appliance has been manufactured but not yet prepared for delivery. Please check the delivery status.' };
+      }
+
+      if (deliveryItem.delivery_status !== 'inserted') {
+        return { canSubmit: false, reason: 'not_inserted', message: `Appliance has not been inserted yet (Status: ${deliveryItem.delivery_status}). Clinical report can only be filled after appliance insertion.` };
+      }
+
+      return { canSubmit: true, reason: 'ready', message: 'Ready for clinical report submission.' };
+    } catch (error) {
+      console.error('Error checking insertion status:', error);
+      return { canSubmit: false, reason: 'error', message: 'Unable to verify appliance status. Please try again.' };
+    }
+  };
+
+  const handleFillClinicalReport = async (reportCard: any) => {
+    setSelectedReportCard(reportCard);
+
+    // Check insertion status before opening the form
+    const statusCheck = await checkInsertionStatus(reportCard.id);
+    setInsertionStatus(statusCheck);
+
+    setShowClinicalReportForm(true);
+  };
+
+  const handleClinicalReportSubmit = async (formData: any) => {
+    if (!selectedReportCard) return;
+
+    // Check insertion status before allowing submission
+    const statusCheck = await checkInsertionStatus(selectedReportCard.id);
+
+    if (!statusCheck.canSubmit) {
+      toast({
+        title: "Error",
+        description: statusCheck.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await updateClinicalReportStatus(selectedReportCard.id, 'completed', formData);
+      toast({
+        title: "Success",
+        description: "Clinical report card completed successfully!",
+      });
+      setShowClinicalReportForm(false);
+      setSelectedReportCard(null);
+      setInsertionStatus(null);
+    } catch (error) {
+      console.error('Error submitting clinical report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit clinical report card. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleClinicalReportCancel = () => {
+    setShowClinicalReportForm(false);
+    setSelectedReportCard(null);
+    setInsertionStatus(null);
+  };
+
+  const handleViewClinicalReport = (reportCard: any) => {
+    setSelectedReportCard(reportCard);
+    setShowViewClinicalReport(true);
+  };
+
+  const handleViewClinicalReportClose = () => {
+    setShowViewClinicalReport(false);
     setSelectedReportCard(null);
   };
 
@@ -680,6 +777,7 @@ export function PatientProfilePage() {
                                     {card.clinical_report_status === 'completed' ? (
                                       <Button
                                         className="border-2 border-purple-600 text-purple-600 hover:border-purple-700 hover:text-purple-700 hover:bg-purple-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                        onClick={() => handleViewClinicalReport(card)}
                                       >
                                         <Eye className="h-4 w-4 mr-2" />
                                         View Clinical Report
@@ -687,6 +785,7 @@ export function PatientProfilePage() {
                                     ) : (
                                       <Button
                                         className="border-2 border-orange-600 text-orange-600 hover:border-orange-700 hover:text-orange-700 hover:bg-orange-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                        onClick={() => handleFillClinicalReport(card)}
                                       >
                                         <Stethoscope className="h-4 w-4 mr-2" />
                                         Fill Clinical Report
@@ -1557,6 +1656,32 @@ export function PatientProfilePage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Clinical Report Card Form Dialog */}
+      <Dialog open={showClinicalReportForm && !!selectedReportCard} onOpenChange={setShowClinicalReportForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedReportCard && (
+            <ClinicalReportCardForm
+              reportCard={selectedReportCard}
+              onSubmit={handleClinicalReportSubmit}
+              onCancel={handleClinicalReportCancel}
+              insertionStatus={insertionStatus}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Clinical Report Card Dialog */}
+      <Dialog open={showViewClinicalReport && !!selectedReportCard} onOpenChange={setShowViewClinicalReport}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedReportCard && (
+            <ViewClinicalReportCard
+              reportCardId={selectedReportCard.id}
+              onClose={handleViewClinicalReportClose}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Appointment Scheduler */}
       <AppointmentScheduler
