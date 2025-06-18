@@ -207,19 +207,39 @@ export function PatientProfilePage() {
   // Clinical Report Handlers
   const checkInsertionStatus = async (reportCardId: string) => {
     try {
-      // Get the delivery item for this report card
+      // Find the report card to get lab_script_id
+      const reportCard = reportCards.find(card => card.id === reportCardId);
+      if (!reportCard) {
+        return { canSubmit: false, reason: 'error', message: 'Report card not found.' };
+      }
+
+      // Check if there's a delivery item for this report card using lab_script_id
       const { data: deliveryItem, error } = await supabase
         .from('delivery_items')
-        .select('delivery_status')
-        .eq('report_card_id', reportCardId)
+        .select('delivery_status, patient_name')
+        .eq('lab_script_id', reportCard.lab_script_id)
         .single();
 
-      if (error) {
-        console.error('Error checking delivery status:', error);
-        return { canSubmit: false, reason: 'error', message: 'Unable to verify appliance status. Please try again.' };
+      if (error && error.code !== 'PGRST116') {
+        throw error;
       }
 
       if (!deliveryItem) {
+        // Check manufacturing status
+        const { data: manufacturingItem, error: mfgError } = await supabase
+          .from('manufacturing_items')
+          .select('manufacturing_status')
+          .eq('lab_script_id', reportCard.lab_script_id)
+          .single();
+
+        if (mfgError && mfgError.code !== 'PGRST116') {
+          throw mfgError;
+        }
+
+        if (!manufacturingItem) {
+          return { canSubmit: false, reason: 'not_manufactured', message: 'Appliance has not been manufactured yet. Please complete manufacturing first.' };
+        }
+
         return { canSubmit: false, reason: 'not_delivered', message: 'Appliance has been manufactured but not yet prepared for delivery. Please check the delivery status.' };
       }
 
