@@ -867,189 +867,147 @@ export function PatientProfilePage() {
                       </div>
                     </div>
                   ) : labScripts.length > 0 ? (
-                    <>
-                      {/* Table Header - Fixed with responsive columns and no separators */}
-                      <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex-shrink-0" style={{ paddingRight: 'calc(1rem + 8px)' }}>
-                        <div className="grid text-xs font-semibold text-gray-600 uppercase tracking-wider h-6"
-                             style={{
-                               gridTemplateColumns: '120px 180px 120px 110px 130px 150px',
-                               gap: '12px'
-                             }}>
-                          <div className="text-center flex items-center justify-center">
-                            <span className="truncate">Arch Type</span>
-                          </div>
-                          <div className="text-center flex items-center justify-center">
-                            <span className="truncate">Appliance Type</span>
-                          </div>
-                          <div className="text-center flex items-center justify-center">
-                            <span className="truncate">Requested Date</span>
-                          </div>
-                          <div className="text-center flex items-center justify-center">
-                            <span className="truncate">Due Date</span>
-                          </div>
-                          <div className="text-center flex items-center justify-center">
-                            <span className="truncate">Status</span>
-                          </div>
-                          <div className="text-right flex items-center justify-end">
-                            <span className="truncate">Actions</span>
-                          </div>
+                    <div className="flex flex-col h-full">
+                      {/* Table Header - Fixed */}
+                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
+                        <div className="grid grid-cols-8 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
+                          <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
+                          <div className="col-span-1 text-right flex items-center justify-end pr-2">Actions</div>
                         </div>
                       </div>
 
                       {/* Table Body - Scrollable */}
                       <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
                         {labScripts.map((script) => {
-                          // Format appliance type display based on arch type
+                          // Format appliance type display
                           const getApplianceDisplay = () => {
-                            const upper = script.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                            const lower = script.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-                            if (script.arch_type === 'dual') {
-                              // Show both upper and lower for dual arch
-                              return {
-                                upper: upper || 'N/A',
-                                lower: lower || 'N/A',
-                                showBoth: true
-                              };
-                            } else if (script.arch_type === 'upper') {
-                              // Show only upper for upper arch
-                              return {
-                                upper: upper || 'N/A',
-                                lower: null,
-                                showBoth: false
-                              };
-                            } else if (script.arch_type === 'lower') {
-                              // Show only lower for lower arch
-                              return {
-                                upper: null,
-                                lower: lower || 'N/A',
-                                showBoth: false
-                              };
-                            } else {
-                              // Fallback for unknown arch types
-                              return {
-                                upper: upper || 'N/A',
-                                lower: lower || 'N/A',
-                                showBoth: true
-                              };
-                            }
-                          };
-
-                          // Get status icon configuration (same as main Lab page)
-                          const getStatusIcon = (status: string) => {
-                            switch (status) {
-                              case 'completed':
-                                return { icon: CheckCircle, bgColor: 'bg-green-100', textColor: 'text-green-600' };
-                              case 'in-progress':
-                                return { icon: Play, bgColor: 'bg-blue-100', textColor: 'text-blue-600' };
-                              case 'hold':
-                                return { icon: Square, bgColor: 'bg-purple-100', textColor: 'text-purple-600' };
-                              case 'delayed':
-                                return { icon: AlertCircle, bgColor: 'bg-red-100', textColor: 'text-red-600' };
-                              default:
-                                return { icon: Clock, bgColor: 'bg-amber-100', textColor: 'text-amber-600' };
-                            }
+                            const upper = script.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
+                            const lower = script.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
+                            return `${upper} | ${lower}`;
                           };
 
                           return (
-                            <div key={script.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 min-h-[64px]">
-                              <div className="grid px-4 py-3 text-sm items-center min-h-[64px]"
-                                   style={{
-                                     gridTemplateColumns: '120px 180px 120px 110px 130px 150px',
-                                     gap: '12px'
-                                   }}>
+                            <div key={script.id} className="grid grid-cols-8 gap-4 px-3 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors items-center h-16">
+                              {/* Requested Date */}
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <p className="text-gray-600 text-xs">
+                                  {script.requested_date ? new Date(script.requested_date).toLocaleDateString() : 'No date'}
+                                </p>
+                              </div>
 
-                                {/* Arch Type */}
-                                <div className="border-r border-gray-200 pr-3 h-full flex items-center justify-center min-w-0">
-                                  <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium min-w-0 max-w-full ${
-                                    script.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
-                                    script.arch_type === 'lower' ? 'bg-green-100 text-green-700' :
-                                    'bg-purple-100 text-purple-700'
-                                  }`}>
-                                    <span className="truncate">
-                                      {script.arch_type === 'upper' ? 'Upper' :
-                                       script.arch_type === 'lower' ? 'Lower' :
-                                       script.arch_type === 'dual' ? 'Dual' :
-                                       script.arch_type?.charAt(0).toUpperCase() + script.arch_type?.slice(1)}
-                                    </span>
-                                  </span>
-                                </div>
+                              {/* Arch Type */}
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                  script.arch_type === 'dual' ? 'bg-purple-100 text-purple-700' :
+                                  script.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-green-100 text-green-700'
+                                }`}>
+                                  {script.arch_type === 'dual' ? 'Dual Arch' :
+                                   script.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}
+                                </span>
+                              </div>
 
-                                {/* Appliance Type */}
-                                <div className="border-r border-gray-200 pr-3 h-full flex items-center justify-center min-w-0">
-                                  <div className="text-center min-w-0 max-w-full">
-                                    {getApplianceDisplay().upper && (
-                                      <div className="text-gray-900 font-medium text-xs leading-tight truncate">
-                                        {getApplianceDisplay().upper}
-                                      </div>
-                                    )}
-                                    {getApplianceDisplay().lower && (
-                                      <div className="text-gray-900 font-medium text-xs leading-tight truncate">
-                                        {getApplianceDisplay().lower}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
+                              {/* Appliance Type */}
+                              <div className="col-span-3 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <p className="text-gray-600 text-xs">{getApplianceDisplay()}</p>
+                              </div>
 
-                                {/* Requested Date */}
-                                <div className="text-center border-r border-gray-200 pr-3 h-full flex items-center justify-center min-w-0">
-                                  <p className="text-gray-600 text-xs truncate">
-                                    {script.requested_date ? new Date(script.requested_date).toLocaleDateString() : 'No date'}
-                                  </p>
-                                </div>
+                              {/* Due Date */}
+                              <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <p className="text-gray-600 text-xs">
+                                  {script.due_date ? new Date(script.due_date).toLocaleDateString() : 'No due date'}
+                                </p>
+                              </div>
 
-                                {/* Due Date */}
-                                <div className="text-center border-r border-gray-200 pr-3 h-full flex items-center justify-center min-w-0">
-                                  <p className="text-gray-600 text-xs truncate">
-                                    {script.due_date ? new Date(script.due_date).toLocaleDateString() : 'No due date'}
-                                  </p>
-                                </div>
+                              {/* Status */}
+                              <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                                  script.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                  script.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                                  script.status === 'delayed' ? 'bg-red-100 text-red-700' :
+                                  script.status === 'hold' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {script.status}
+                                </span>
+                              </div>
 
-                                {/* Status */}
-                                <div className="border-r border-gray-200 pr-3 h-full flex items-center justify-center min-w-0">
-                                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium min-w-0 max-w-full ${
-                                    script.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                                    script.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                                    script.status === 'delayed' ? 'bg-red-100 text-red-700' :
-                                    script.status === 'hold' ? 'bg-purple-100 text-purple-700' :
-                                    'bg-amber-100 text-amber-700'
-                                  }`}>
-                                    <span className="truncate">{script.status}</span>
-                                  </span>
-                                </div>
+                              {/* Actions */}
+                              <div className="col-span-1 h-full flex items-center justify-end pr-2">
+                                <div className="flex gap-1">
+                                {(() => {
+                                  const currentStatus = script.status;
+                                  const isEditingStatus = editingStatus[script.id] || false;
 
-                                {/* Actions */}
-                                <div className="pr-2 h-full flex items-center justify-end min-w-0">
-                                  <div className="flex gap-1">
-                                  {(() => {
-                                    const currentStatus = script.status;
-                                    const isEditingStatus = editingStatus[script.id] || false;
+                                  // If lab script is completed, show edit button or hold/complete when editing
+                                  if (currentStatus === 'completed' && !isEditingStatus) {
+                                    return (
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleEditStatus(script.id)}
+                                          className="h-8 w-8 p-0"
+                                          title="Edit Status"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    );
+                                  }
 
-                                    // If lab script is completed, show edit button or hold/complete when editing
-                                    if (currentStatus === 'completed' && !isEditingStatus) {
+                                  if (currentStatus === 'completed' && isEditingStatus) {
+                                    return (
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleDesignStateChange(script.id, 'hold')}
+                                          className="h-8 w-8 p-0"
+                                          title="Hold"
+                                        >
+                                          <Square className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleDesignStateChange(script.id, 'completed')}
+                                          className="h-8 w-8 p-0"
+                                          title="Complete"
+                                        >
+                                          <CheckCircle className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    );
+                                  }
+
+                                  // Use actual lab script status
+                                  switch (currentStatus) {
+                                    case 'pending':
                                       return (
-                                        <>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleEditStatus(script.id)}
-                                            className="h-8 w-8 p-0 flex-shrink-0"
-                                            title="Edit Status"
-                                          >
-                                            <Edit className="h-4 w-4" />
-                                          </Button>
-                                        </>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleDesignStateChange(script.id, 'in-progress')}
+                                          className="h-8 w-8 p-0"
+                                          title="Start Design"
+                                        >
+                                          <Play className="h-4 w-4" />
+                                        </Button>
                                       );
-                                    }
 
-                                    if (currentStatus === 'completed' && isEditingStatus) {
+                                    case 'in-progress':
                                       return (
                                         <>
                                           <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleDesignStateChange(script.id, 'hold')}
-                                            className="h-8 w-8 p-0 flex-shrink-0"
+                                            className="h-8 w-8 p-0"
                                             title="Hold"
                                           >
                                             <Square className="h-4 w-4" />
@@ -1058,100 +1016,58 @@ export function PatientProfilePage() {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleDesignStateChange(script.id, 'completed')}
-                                            className="h-8 w-8 p-0 flex-shrink-0"
+                                            className="h-8 w-8 p-0"
                                             title="Complete"
                                           >
                                             <CheckCircle className="h-4 w-4" />
                                           </Button>
                                         </>
                                       );
-                                    }
 
-                                    // Use actual lab script status
-                                    switch (currentStatus) {
-                                      case 'pending':
-                                        return (
+                                    case 'hold':
+                                      return (
+                                        <>
                                           <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleDesignStateChange(script.id, 'in-progress')}
-                                            className="h-8 w-8 p-0 flex-shrink-0"
-                                            title="Start Design"
+                                            className="h-8 w-8 p-0"
+                                            title="Resume Design"
                                           >
-                                            <Play className="h-4 w-4" />
+                                            <RotateCcw className="h-4 w-4" />
                                           </Button>
-                                        );
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDesignStateChange(script.id, 'completed')}
+                                            className="h-8 w-8 p-0"
+                                            title="Complete"
+                                          >
+                                            <CheckCircle className="h-4 w-4" />
+                                          </Button>
+                                        </>
+                                      );
 
-                                      case 'in-progress':
-                                        return (
-                                          <>
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => handleDesignStateChange(script.id, 'hold')}
-                                              className="h-8 w-8 p-0 flex-shrink-0"
-                                              title="Hold"
-                                            >
-                                              <Square className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => handleDesignStateChange(script.id, 'completed')}
-                                              className="h-8 w-8 p-0 flex-shrink-0"
-                                              title="Complete"
-                                            >
-                                              <CheckCircle className="h-4 w-4" />
-                                            </Button>
-                                          </>
-                                        );
-
-                                      case 'hold':
-                                        return (
-                                          <>
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => handleDesignStateChange(script.id, 'in-progress')}
-                                              className="h-8 w-8 p-0 flex-shrink-0"
-                                              title="Resume Design"
-                                            >
-                                              <RotateCcw className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => handleDesignStateChange(script.id, 'completed')}
-                                              className="h-8 w-8 p-0 flex-shrink-0"
-                                              title="Complete"
-                                            >
-                                              <CheckCircle className="h-4 w-4" />
-                                            </Button>
-                                          </>
-                                        );
-
-                                      default:
-                                        return null;
-                                    }
-                                  })()}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 flex-shrink-0"
-                                    onClick={() => handleViewLabScript(script)}
-                                    title="View Details"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                  </div>
+                                    default:
+                                      return null;
+                                  }
+                                })()}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => handleViewLabScript(script)}
+                                  title="View Details"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
                                 </div>
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                    </>
-                  )
+                    </div>
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
