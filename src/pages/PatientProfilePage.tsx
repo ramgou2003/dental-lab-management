@@ -1239,7 +1239,7 @@ export function PatientProfilePage() {
                                 </div>
                               </div>
 
-                              {/* Right side - Status and Action Buttons */}
+                              {/* Right side - Status and Action Button */}
                               <div className="ml-4 flex items-center gap-3">
                                 {/* Status Badge */}
                                 <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
@@ -1253,16 +1253,6 @@ export function PatientProfilePage() {
                                    item.delivery_status === 'inserted' ? 'Inserted' :
                                    item.delivery_status}
                                 </span>
-
-                                {/* View Details Button */}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleViewDeliveryDetails(item)}
-                                  className="border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-700"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
 
                                 {/* Status Action Button */}
                                 <Button
