@@ -223,7 +223,7 @@ export function PatientProfilePage() {
       console.log('Checking manufacturing status for lab_script_id:', reportCard.lab_script_id);
       const { data: manufacturingItem, error: mfgError } = await supabase
         .from('manufacturing_items')
-        .select('manufacturing_status')
+        .select('status')
         .eq('lab_script_id', reportCard.lab_script_id)
         .single();
 
@@ -240,20 +240,20 @@ export function PatientProfilePage() {
       }
 
       // Handle different manufacturing statuses
-      if (manufacturingItem.manufacturing_status === 'pending-printing') {
+      if (manufacturingItem.status === 'pending-printing') {
         return { canSubmit: false, reason: 'pending_printing', message: 'Appliance is pending printing. Manufacturing is in progress.' };
       }
 
-      if (manufacturingItem.manufacturing_status === 'in-production') {
+      if (manufacturingItem.status === 'in-production') {
         return { canSubmit: false, reason: 'in_production', message: 'Appliance is currently in production. Manufacturing is in progress.' };
       }
 
-      if (manufacturingItem.manufacturing_status === 'quality-check') {
+      if (manufacturingItem.status === 'quality-check') {
         return { canSubmit: false, reason: 'quality_check', message: 'Appliance is undergoing quality check. Manufacturing is almost complete.' };
       }
 
-      if (manufacturingItem.manufacturing_status !== 'printing-completed') {
-        return { canSubmit: false, reason: 'manufacturing_incomplete', message: `Manufacturing status: ${manufacturingItem.manufacturing_status}. Please complete manufacturing first.` };
+      if (manufacturingItem.status !== 'completed') {
+        return { canSubmit: false, reason: 'manufacturing_incomplete', message: `Manufacturing status: ${manufacturingItem.status}. Please complete manufacturing first.` };
       }
 
       // Manufacturing is complete, now check delivery status
