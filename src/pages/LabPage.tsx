@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 
 export function LabPage() {
   const [activeTab, setActiveTab] = useState("orders");
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("pending");
   const [showNewScriptForm, setShowNewScriptForm] = useState(false);
   const [showLabScriptDetail, setShowLabScriptDetail] = useState(false);
   const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
@@ -375,14 +375,14 @@ export function LabPage() {
             <>
               {/* Table Header - Fixed */}
               <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-                <div className="grid grid-cols-10 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
-                  <div className="col-span-2 border-r border-gray-300 pr-4 flex items-center">Patient Name</div>
-                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
-                  <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
-                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
-                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
-                  <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
-                  <div className="col-span-1 text-right flex items-center justify-end pr-2">Actions</div>
+                <div className="grid gap-3 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6" style={{ gridTemplateColumns: '1.8fr 1.2fr 2fr 1fr 0.8fr 1.2fr 1.3fr' }}>
+                  <div className="border-r border-gray-300 pr-3 flex items-center">Patient Name</div>
+                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Arch Type</div>
+                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Appliance Type</div>
+                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Requested Date</div>
+                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Due Date</div>
+                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Status</div>
+                  <div className="text-right flex items-center justify-end pr-2">Actions</div>
                 </div>
               </div>
 
@@ -391,59 +391,99 @@ export function LabPage() {
                 {filteredOrders.map((order) => {
                   const originalScript = labScripts.find(script => script.id === order.id);
 
-                  // Format appliance type display
+                  // Format appliance type display based on arch type
                   const getApplianceDisplay = () => {
-                    const upper = order.upperApplianceType?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
-                    const lower = order.lowerApplianceType?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
-                    return `${upper} | ${lower}`;
+                    const upper = order.upperApplianceType?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    const lower = order.lowerApplianceType?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                    if (order.archType === 'dual') {
+                      // Show both upper and lower for dual arch
+                      return {
+                        upper: upper || 'N/A',
+                        lower: lower || 'N/A',
+                        showBoth: true
+                      };
+                    } else if (order.archType === 'upper') {
+                      // Show only upper for upper arch
+                      return {
+                        upper: upper || 'N/A',
+                        lower: null,
+                        showBoth: false
+                      };
+                    } else if (order.archType === 'lower') {
+                      // Show only lower for lower arch
+                      return {
+                        upper: null,
+                        lower: lower || 'N/A',
+                        showBoth: false
+                      };
+                    } else {
+                      // Fallback for unknown arch types
+                      return {
+                        upper: upper || 'N/A',
+                        lower: lower || 'N/A',
+                        showBoth: true
+                      };
+                    }
                   };
 
                   return (
                     <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 h-16">
-                      <div className="grid grid-cols-10 gap-4 px-3 py-4 text-sm items-center h-full">
+                      <div className="grid gap-3 px-3 py-4 text-sm items-center h-full" style={{ gridTemplateColumns: '1.8fr 1.2fr 2fr 1fr 0.8fr 1.2fr 1.3fr' }}>
                         {/* Patient */}
-                        <div className="col-span-2 border-r border-gray-300 pr-4 h-full flex items-center">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <FlaskConical className="h-4 w-4 text-white" />
+                        <div className="border-r border-gray-300 pr-3 h-full flex items-center">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <FlaskConical className="h-3 w-3 text-white" />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-gray-900 font-medium truncate">{order.patient}</p>
+                              <p className="text-gray-900 font-medium truncate text-sm">{order.patient}</p>
                             </div>
                           </div>
                         </div>
 
                         {/* Arch */}
-                        <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                        <div className="border-r border-gray-300 pr-3 h-full flex items-center justify-center">
                           <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${
                             order.archType === 'upper' ? 'bg-blue-100 text-blue-700' :
                             order.archType === 'lower' ? 'bg-green-100 text-green-700' :
                             'bg-purple-100 text-purple-700'
                           }`}>
-                            {order.archType === 'upper' ? 'Upper Arch' :
-                             order.archType === 'lower' ? 'Lower Arch' :
-                             order.archType === 'dual' ? 'Dual Arch' :
+                            {order.archType === 'upper' ? 'Upper' :
+                             order.archType === 'lower' ? 'Lower' :
+                             order.archType === 'dual' ? 'Dual' :
                              order.archType?.charAt(0).toUpperCase() + order.archType?.slice(1)}
                           </span>
                         </div>
 
                         {/* Appliance Type */}
-                        <div className="col-span-3 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                          <p className="text-gray-900 font-medium text-xs leading-tight">{getApplianceDisplay()}</p>
+                        <div className="border-r border-gray-300 pr-3 h-full flex items-center justify-center">
+                          <div className="text-center">
+                            {getApplianceDisplay().upper && (
+                              <div className="text-gray-900 font-medium text-xs leading-tight">
+                                {getApplianceDisplay().upper}
+                              </div>
+                            )}
+                            {getApplianceDisplay().lower && (
+                              <div className="text-gray-900 font-medium text-xs leading-tight">
+                                {getApplianceDisplay().lower}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Requested Date */}
-                        <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                        <div className="text-center border-r border-gray-300 pr-3 h-full flex items-center justify-center">
                           <p className="text-gray-600 text-xs">{order.requestedDate}</p>
                         </div>
 
                         {/* Due Date */}
-                        <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                        <div className="text-center border-r border-gray-300 pr-3 h-full flex items-center justify-center">
                           <p className="text-gray-600 text-xs">{order.dueDate}</p>
                         </div>
 
                         {/* Status */}
-                        <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                        <div className="border-r border-gray-300 pr-3 h-full flex items-center justify-center">
                           <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                             order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                             order.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
@@ -456,7 +496,7 @@ export function LabPage() {
                         </div>
 
                         {/* Actions */}
-                        <div className="col-span-1 h-full flex items-center justify-end pr-2">
+                        <div className="h-full flex items-center justify-end pr-2">
                           <div className="flex gap-1">
                             {renderActionButtons(order.id, originalScript)}
                             <Button

@@ -14,7 +14,7 @@ import { toast } from "@/components/ui/sonner";
 import type { ReportCard } from "@/hooks/useReportCards";
 
 export function ReportCardsPage() {
-  const [activeFilter, setActiveFilter] = useState("all-report-cards");
+  const [activeFilter, setActiveFilter] = useState("pending-lab");
   const [showNewReportForm, setShowNewReportForm] = useState(false);
   const [showLabReportForm, setShowLabReportForm] = useState(false);
   const [showViewLabReport, setShowViewLabReport] = useState(false);
@@ -298,14 +298,14 @@ export function ReportCardsPage() {
           }}
         />
       </div>
-      <div className="flex-1 p-6 tablet:p-4">
+      <div className="flex-1 p-6">
         {/* Stats Cards - 5 filters */}
-        <div className="grid grid-cols-5 gap-2 tablet:gap-1.5 sm:gap-3 lg:gap-4 mb-6 tablet:mb-4">
+        <div className="grid grid-cols-5 gap-2 sm:gap-3 lg:gap-4 mb-6">
           {stats.map((stat, index) => (
             <button
               key={index}
               onClick={() => setActiveFilter(stat.filter)}
-              className={`h-20 tablet:h-16 sm:h-22 lg:h-24 p-2 tablet:p-1.5 sm:p-3 lg:p-3 rounded-xl tablet:rounded-lg border transition-all duration-200 hover:shadow-md relative ${
+              className={`h-20 sm:h-22 lg:h-24 p-2 sm:p-3 lg:p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${
                 activeFilter === stat.filter
                   ? 'border-indigo-300 bg-indigo-50 shadow-md border-b-4 border-b-indigo-500'
                   : 'border-gray-200 bg-white hover:border-gray-300'
@@ -314,19 +314,19 @@ export function ReportCardsPage() {
               <div className="flex flex-col h-full justify-between">
                 {/* Icon and Number at the top */}
                 <div className="flex items-center justify-between">
-                  <p className={`text-base tablet:text-sm sm:text-lg lg:text-xl font-bold leading-none ${
+                  <p className={`text-base sm:text-lg lg:text-xl font-bold leading-none ${
                     activeFilter === stat.filter ? 'text-indigo-900' : 'text-gray-900'
                   }`}>
                     {stat.value}
                   </p>
-                  <div className={`p-1 tablet:p-0.5 sm:p-1 lg:p-2 rounded-lg tablet:rounded flex-shrink-0 ${stat.color}`}>
-                    <stat.icon className="h-3 w-3 tablet:h-2.5 tablet:w-2.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-white" />
+                  <div className={`p-1 sm:p-1 lg:p-2 rounded-lg flex-shrink-0 ${stat.color}`}>
+                    <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-white" />
                   </div>
                 </div>
 
                 {/* Title at the bottom */}
                 <div className="w-full text-center">
-                  <p className={`text-xs tablet:text-[10px] sm:text-sm lg:text-sm font-semibold leading-tight ${
+                  <p className={`text-xs sm:text-sm lg:text-sm font-semibold leading-tight ${
                     activeFilter === stat.filter
                       ? 'text-indigo-700'
                       : 'text-gray-600'
@@ -340,16 +340,16 @@ export function ReportCardsPage() {
         </div>
 
         {/* Report Cards */}
-        <div className="bg-white rounded-xl tablet:rounded-lg shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 250px)', minHeight: '500px' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 250px)', minHeight: '500px' }}>
           {loading ? (
-            <div className="text-center py-12 tablet:py-8">
-              <FileText className="h-12 w-12 tablet:h-8 tablet:w-8 text-gray-300 mx-auto mb-4 tablet:mb-3 animate-pulse" />
-              <h3 className="text-lg tablet:text-base font-semibold text-gray-900 mb-2 tablet:mb-1">Loading report cards...</h3>
-              <p className="text-gray-500 tablet:text-sm">Please wait while we fetch report cards.</p>
+            <div className="text-center py-12">
+              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading report cards...</h3>
+              <p className="text-gray-500">Please wait while we fetch report cards.</p>
             </div>
           ) : filteredReportCards.length > 0 ? (
-            <div className="flex-1 overflow-y-scroll p-6 tablet:p-4 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
-                <div className="space-y-4 tablet:space-y-3">
+            <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                <div className="space-y-4">
                   {filteredReportCards.map((card) => {
                     // Format appliance types for display
                     const formatApplianceType = (type: string | undefined) => {
@@ -361,28 +361,28 @@ export function ReportCardsPage() {
                     const lowerAppliance = formatApplianceType(card.lab_script?.lower_appliance_type);
 
                     return (
-                      <div key={card.id} className="bg-white border border-gray-200 rounded-lg tablet:rounded shadow-sm hover:shadow-md transition-all duration-200 p-4 tablet:p-3">
+                      <div key={card.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
                         <div className="flex items-center justify-between">
                           {/* Left side - Patient info and appliance types */}
-                          <div className="flex items-center space-x-4 tablet:space-x-3 flex-1">
+                          <div className="flex items-center space-x-4 flex-1">
                             {/* Report Avatar */}
-                            <div className="w-8 h-8 tablet:w-6 tablet:h-6 bg-indigo-600 rounded-lg tablet:rounded flex items-center justify-center flex-shrink-0">
-                              <FileText className="h-4 w-4 tablet:h-3 tablet:w-3 text-white" />
+                            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <FileText className="h-4 w-4 text-white" />
                             </div>
 
                             {/* Patient Name */}
                             <div className="min-w-0 flex-1">
-                              <h3 className="text-sm tablet:text-xs font-semibold text-gray-900 truncate">{card.patient_name}</h3>
-                              <div className="flex items-center space-x-4 tablet:space-x-2 mt-1">
+                              <h3 className="text-sm font-semibold text-gray-900 truncate">{card.patient_name}</h3>
+                              <div className="flex items-center space-x-4 mt-1">
                                 {/* Upper Appliance */}
                                 {card.lab_script?.upper_appliance_type && (
-                                  <span className="text-xs tablet:text-[10px] text-gray-600">
+                                  <span className="text-xs text-gray-600">
                                     <span className="font-medium">Upper:</span> {upperAppliance}
                                   </span>
                                 )}
                                 {/* Lower Appliance */}
                                 {card.lab_script?.lower_appliance_type && (
-                                  <span className="text-xs tablet:text-[10px] text-gray-600">
+                                  <span className="text-xs text-gray-600">
                                     <span className="font-medium">Lower:</span> {lowerAppliance}
                                   </span>
                                 )}
@@ -391,27 +391,25 @@ export function ReportCardsPage() {
                           </div>
 
                           {/* Right side - Action Buttons */}
-                          <div className="ml-4 tablet:ml-2 flex gap-2 tablet:gap-1">
+                          <div className="ml-4 flex gap-2">
                             {/* Lab Report Button */}
                             {card.lab_report_status === 'completed' ? (
                               <Button
-                                className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 bg-white px-4 tablet:px-2 py-2.5 tablet:py-1.5 text-sm tablet:text-xs font-semibold rounded-lg tablet:rounded shadow-sm hover:shadow-md transition-all duration-200"
+                                className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                                 onClick={() => handleViewLabReport(card)}
                               >
-                                <Eye className="h-4 w-4 tablet:h-3 tablet:w-3 mr-2 tablet:mr-1" />
-                                <span className="tablet:hidden">View Lab Report</span>
-                                <span className="hidden tablet:inline">View Lab</span>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Lab Report
                               </Button>
                             ) : (
                               <ParticleButton
-                                className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 bg-white px-4 tablet:px-2 py-2.5 tablet:py-1.5 text-sm tablet:text-xs font-semibold rounded-lg tablet:rounded shadow-sm hover:shadow-md transition-all duration-200"
+                                className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                                 onClick={() => handleFillLabReport(card)}
                                 onSuccess={() => {}}
                                 successDuration={1000}
                               >
-                                <FileText className="h-4 w-4 tablet:h-3 tablet:w-3 mr-2 tablet:mr-1" />
-                                <span className="tablet:hidden">Fill Lab Report</span>
-                                <span className="hidden tablet:inline">Fill Lab</span>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Fill Lab Report
                               </ParticleButton>
                             )}
 
@@ -473,21 +471,21 @@ export function ReportCardsPage() {
 
       {/* New Report Card Dialog */}
       <Dialog open={showNewReportForm} onOpenChange={setShowNewReportForm}>
-        <DialogContent className="max-w-2xl tablet:max-w-xl tablet:max-h-[85vh] tablet:overflow-y-auto">
-          <div className="p-6 tablet:p-4">
-            <div className="flex items-center gap-3 tablet:gap-2 mb-6 tablet:mb-4">
-              <div className="p-2 tablet:p-1.5 bg-indigo-100 rounded-lg tablet:rounded">
-                <FileText className="h-6 w-6 tablet:h-5 tablet:w-5 text-indigo-600" />
+        <DialogContent className="max-w-2xl">
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <FileText className="h-6 w-6 text-indigo-600" />
               </div>
               <div>
-                <h2 className="text-xl tablet:text-lg font-bold text-gray-900">Create Report Card</h2>
-                <p className="text-gray-600 tablet:text-sm">Generate a new patient report card</p>
+                <h2 className="text-xl font-bold text-gray-900">Create Report Card</h2>
+                <p className="text-gray-600">Generate a new patient report card</p>
               </div>
             </div>
 
-            <div className="text-center py-12 tablet:py-8">
-              <FileText className="h-12 w-12 tablet:h-8 tablet:w-8 text-gray-300 mx-auto mb-4 tablet:mb-3" />
-              <p className="text-gray-500 tablet:text-sm">Report card form will be implemented here</p>
+            <div className="text-center py-12">
+              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">Report card form will be implemented here</p>
             </div>
           </div>
         </DialogContent>
@@ -495,7 +493,7 @@ export function ReportCardsPage() {
 
       {/* Lab Report Card Form Dialog */}
       <Dialog open={showLabReportForm && !!selectedReportCard} onOpenChange={setShowLabReportForm}>
-        <DialogContent className="max-w-4xl tablet:max-w-2xl max-h-[90vh] tablet:max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedReportCard && (
             <LabReportCardForm
               reportCard={selectedReportCard}
@@ -508,7 +506,7 @@ export function ReportCardsPage() {
 
       {/* View Lab Report Card Dialog */}
       <Dialog open={showViewLabReport && !!selectedReportCard} onOpenChange={setShowViewLabReport}>
-        <DialogContent className="max-w-4xl tablet:max-w-2xl max-h-[90vh] tablet:max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedReportCard && (
             <ViewLabReportCard
               reportCard={selectedReportCard}

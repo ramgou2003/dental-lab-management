@@ -9,7 +9,7 @@ import { toast } from "@/components/ui/sonner";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
 
 export function ManufacturingPage() {
-  const [activeFilter, setActiveFilter] = useState("all-cam-scripts");
+  const [activeFilter, setActiveFilter] = useState("new-script");
   const [showNewManufacturingForm, setShowNewManufacturingForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { manufacturingItems, loading, updateManufacturingItemStatus } = useManufacturingItems();
