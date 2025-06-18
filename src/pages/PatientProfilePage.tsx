@@ -15,6 +15,7 @@ import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
 import { LabScript } from "@/hooks/useLabScripts";
 import { ManufacturingItem } from "@/hooks/useManufacturingItems";
+import { useReportCards } from "@/hooks/useReportCards";
 import {
   User,
   Phone,
@@ -37,6 +38,8 @@ import {
   Square,
   RotateCcw
 } from "lucide-react";
+import { LabReportCardForm } from "@/components/LabReportCardForm";
+import { ViewLabReportCard } from "@/components/ViewLabReportCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -53,7 +56,19 @@ export function PatientProfilePage() {
   // Fetch patient-specific lab scripts and manufacturing items
   const { labScripts, loading: labScriptsLoading, updateLabScript } = usePatientLabScripts(patientId);
   const { manufacturingItems, loading: manufacturingLoading, updateManufacturingItemStatus } = usePatientManufacturingItems(patientId);
+  const { reportCards, loading: reportCardsLoading, updateLabReportStatus } = useReportCards();
   const { toast } = useToast();
+
+  // Filter report cards for this specific patient
+  const patientReportCards = reportCards.filter(card => {
+    // Check if the report card's lab script belongs to this patient
+    return card.lab_script_id && labScripts.some(script => script.id === card.lab_script_id);
+  });
+
+  // State for lab report dialogs
+  const [showLabReportForm, setShowLabReportForm] = useState(false);
+  const [showViewLabReport, setShowViewLabReport] = useState(false);
+  const [selectedReportCard, setSelectedReportCard] = useState<any | null>(null);
 
   useEffect(() => {
     if (patientId) {
@@ -119,6 +134,49 @@ export function PatientProfilePage() {
   const handleEditSubmit = (updatedPatientData: any) => {
     setPatient(updatedPatientData);
     setShowEditForm(false);
+  };
+
+  // Lab Report Card Handlers
+  const handleFillLabReport = (reportCard: any) => {
+    setSelectedReportCard(reportCard);
+    setShowLabReportForm(true);
+  };
+
+  const handleViewLabReport = (reportCard: any) => {
+    setSelectedReportCard(reportCard);
+    setShowViewLabReport(true);
+  };
+
+  const handleLabReportSubmit = async (formData: any) => {
+    if (!selectedReportCard) return;
+
+    try {
+      // The lab report card is already created by the form, now update the report card status
+      await updateLabReportStatus(selectedReportCard.id, 'completed', formData);
+      toast({
+        title: "Success",
+        description: "Lab report card completed successfully!",
+      });
+      setShowLabReportForm(false);
+      setSelectedReportCard(null);
+    } catch (error) {
+      console.error('Error completing lab report card:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete lab report card",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLabReportCancel = () => {
+    setShowLabReportForm(false);
+    setSelectedReportCard(null);
+  };
+
+  const handleViewLabReportClose = () => {
+    setShowViewLabReport(false);
+    setSelectedReportCard(null);
   };
 
   const handleEditCancel = () => {
@@ -238,171 +296,193 @@ export function PatientProfilePage() {
       {/* Content with top padding to account for fixed header */}
       <div className="flex-1 pt-[97px] px-6 pb-6 overflow-y-auto">
         <div className="space-y-6">
-          {/* Patient Header Card */}
-          <Card className="overflow-hidden sticky top-0 z-10 shadow-lg">
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4">
+          {/* Compact Patient Header */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden sticky top-0 z-10">
+            {/* Patient Info Section */}
+            <div className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  {/* Smaller Profile Picture */}
-                  <Avatar className="h-12 w-12 border-3 border-white shadow-lg">
-                    <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
-                    <AvatarFallback className="bg-white text-indigo-600 text-sm font-bold">
-                      {getInitials(patient.first_name, patient.last_name)}
-                    </AvatarFallback>
-                  </Avatar>
+                  {/* Compact Profile Avatar */}
+                  <div className="relative">
+                    <Avatar className="h-16 w-16 border-2 border-white shadow-md bg-white">
+                      <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-lg font-bold">
+                        {getInitials(patient.first_name, patient.last_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Status Indicator */}
+                    <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 bg-green-500 border-2 border-white rounded-full"></div>
+                  </div>
 
-                  {/* Compact Patient Info */}
-                  <div className="text-white">
-                    <h1 className="text-xl font-bold">{patient.full_name}</h1>
-                    <p className="text-indigo-100 text-sm">ID: {patient.id.slice(0, 8).toUpperCase()}</p>
-                    <div className="flex items-center gap-4 mt-1 text-indigo-100 text-sm">
-                      <span>{calculateAge(patient.date_of_birth)} years old</span>
-                      <span>{patient.phone || "No phone"}</span>
-                      <span className="capitalize">{patient.gender || "Not specified"}</span>
+                  {/* Patient Details */}
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-1">{patient.full_name}</h1>
+                    <div className="flex items-center gap-4 text-gray-600 mb-2">
+                      <span className="text-sm font-medium">ID: {patient.id.slice(0, 8).toUpperCase()}</span>
+                      <span className="text-sm font-medium">{calculateAge(patient.date_of_birth)} years old</span>
+                      <span className="text-sm font-medium capitalize">{patient.gender || "Not specified"}</span>
+                    </div>
+
+                    {/* Contact Info */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded-md">
+                        <Phone className="h-3 w-3 text-gray-500" />
+                        <span className="text-xs text-gray-700">{patient.phone || "No phone"}</span>
+                      </div>
+                      <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 font-medium text-xs">
+                        {patient.status}
+                      </Badge>
                     </div>
                   </div>
                 </div>
 
-                {/* Status and Actions */}
-                <div className="flex items-center gap-3">
-                  <Badge
-                    variant="secondary"
-                    className="bg-white text-indigo-600 font-semibold px-3 py-1"
-                  >
-                    {patient.status}
-                  </Badge>
+                {/* Separator */}
+                <div className="h-12 w-px bg-gray-200 mx-6"></div>
+
+                {/* Additional Patient Data */}
+                <div className="flex items-center gap-8">
+                  {/* Treatment Information */}
+                  <div className="text-center">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Stethoscope className="h-4 w-4 text-blue-600" />
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Treatment</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{patient.treatment_type || "Not assigned"}</p>
+                  </div>
+
+                  {/* Last Visit */}
+                  <div className="text-center">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="h-4 w-4 text-green-600" />
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Visit</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : "No visits"}
+                    </p>
+                  </div>
+
+                  {/* Next Appointment */}
+                  <div className="text-center">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="h-4 w-4 text-purple-600" />
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Next Appt</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {patient.next_appointment ? new Date(patient.next_appointment).toLocaleDateString() : "Not scheduled"}
+                    </p>
+                  </div>
+
+                  {/* Patient Since */}
+                  <div className="text-center">
+                    <div className="flex items-center gap-2 mb-1">
+                      <User className="h-4 w-4 text-orange-600" />
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Patient Since</span>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {patient.created_at ? new Date(patient.created_at).toLocaleDateString() : "N/A"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
-                    className="flex items-center gap-2"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
                     onClick={handleEditProfile}
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-4 w-4 mr-1" />
                     Edit Profile
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Schedule
                   </Button>
                 </div>
               </div>
             </div>
-
-            {/* Quick Stats Bar */}
-            <div className="bg-white border-t border-gray-100 px-6 py-4">
-              <div className="grid grid-cols-3 gap-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Stethoscope className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Treatment Type</p>
-                    <p className="font-semibold text-gray-900">{patient.treatment_type || "Not assigned"}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Clock className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Last Visit</p>
-                    <p className="font-semibold text-gray-900">
-                      {patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : "No visits yet"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Activity className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Next Appointment</p>
-                    <p className="font-semibold text-gray-900">
-                      {patient.next_appointment ? new Date(patient.next_appointment).toLocaleDateString() : "Not scheduled"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
+          </div>
 
           {/* Patient Details Tabs */}
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-white border border-gray-200 p-1 rounded-lg">
-              <TabsTrigger value="basic" className="flex items-center gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <TabsList className="grid w-full grid-cols-5 bg-white border border-gray-200 p-1 rounded-xl shadow-sm">
+              <TabsTrigger value="basic" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
                 <User className="h-4 w-4" />
                 Basic Details
               </TabsTrigger>
-              <TabsTrigger value="lab" className="flex items-center gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+              <TabsTrigger value="lab" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
                 <FlaskConical className="h-4 w-4" />
-                Lab Scripts
+                Lab Scripts ({labScripts.length})
               </TabsTrigger>
-              <TabsTrigger value="manufacturing" className="flex items-center gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+              <TabsTrigger value="reports" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
+                <FileText className="h-4 w-4" />
+                Report Cards ({patientReportCards.length})
+              </TabsTrigger>
+              <TabsTrigger value="manufacturing" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
                 <Factory className="h-4 w-4" />
-                Manufacturing
+                Manufacturing ({manufacturingItems.length})
               </TabsTrigger>
-
-              <TabsTrigger value="clinical" className="flex items-center gap-2 data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+              <TabsTrigger value="clinical" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
                 <FileText className="h-4 w-4" />
                 Clinical Forms
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="basic" className="space-y-6 mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TabsContent value="basic" className="space-y-8 mt-8">
+              {/* Modern Info Cards Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Personal Information */}
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <User className="h-5 w-5 text-indigo-600" />
-                      Personal Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-blue-100 rounded-xl">
+                      <User className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+                  </div>
+                  <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-500">First Name</p>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">First Name</p>
                         <p className="text-base font-semibold text-gray-900">{patient.first_name}</p>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Last Name</p>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Last Name</p>
                         <p className="text-base font-semibold text-gray-900">{patient.last_name}</p>
                       </div>
                     </div>
-                    <Separator />
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Date of Birth</p>
-                        <p className="text-base font-semibold text-gray-900">
-                          {new Date(patient.date_of_birth).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-gray-500">{calculateAge(patient.date_of_birth)} years old</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Gender</p>
-                        <p className="text-base font-semibold text-gray-900 capitalize">{patient.gender || "Not specified"}</p>
-                      </div>
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Date of Birth</p>
+                      <p className="text-base font-semibold text-gray-900">
+                        {new Date(patient.date_of_birth).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm text-gray-500">{calculateAge(patient.date_of_birth)} years old</p>
                     </div>
-                    <Separator />
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Patient ID</p>
-                      <p className="text-base font-semibold text-gray-900">{patient.id.slice(0, 8).toUpperCase()}</p>
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Gender</p>
+                      <p className="text-base font-semibold text-gray-900 capitalize">{patient.gender || "Not specified"}</p>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
                 {/* Contact Information */}
-                <Card className="shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Phone className="h-5 w-5 text-indigo-600" />
-                      Contact Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-green-100 rounded-xl">
+                      <Phone className="h-5 w-5 text-green-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+                  </div>
+                  <div className="space-y-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Phone Number</p>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Phone Number</p>
                       <p className="text-base font-semibold text-gray-900">{patient.phone || "Not provided"}</p>
                     </div>
-                    <Separator />
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Address</p>
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Address</p>
                       <div className="space-y-1">
                         {patient.street && <p className="text-base font-semibold text-gray-900">{patient.street}</p>}
                         <p className="text-base font-semibold text-gray-900">
@@ -410,55 +490,170 @@ export function PatientProfilePage() {
                         </p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Patient ID</p>
+                      <p className="text-base font-semibold text-gray-900 font-mono">{patient.id.slice(0, 8).toUpperCase()}</p>
+                    </div>
+                  </div>
+                </div>
 
-              {/* Treatment Information */}
-              <Card className="shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Stethoscope className="h-5 w-5 text-indigo-600" />
-                    Treatment Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Treatment Information */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-purple-100 rounded-xl">
+                      <Stethoscope className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Treatment Information</h3>
+                  </div>
+                  <div className="space-y-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Treatment Type</p>
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Treatment Type</p>
                       <p className="text-base font-semibold text-gray-900">{patient.treatment_type || "Not assigned"}</p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Treatment Status</p>
-                      <Badge variant="outline" className="mt-1">
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Treatment Status</p>
+                      <Badge variant="outline" className="mt-1 bg-blue-50 border-blue-200 text-blue-700">
                         {patient.status}
                       </Badge>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Patient Since</p>
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Patient Since</p>
                       <p className="text-base font-semibold text-gray-900">
-                        {new Date(patient.created_at).toLocaleDateString()}
+                        {patient.created_at ? new Date(patient.created_at).toLocaleDateString() : "N/A"}
                       </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="reports" className="mt-6 pb-1.5">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}>
+                {reportCardsLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading report cards...</h3>
+                      <p className="text-gray-500">Please wait while we fetch report cards.</p>
+                    </div>
+                  </div>
+                ) : patientReportCards.length > 0 ? (
+                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                    <div className="space-y-4">
+                      {patientReportCards.map((card) => {
+                        // Format appliance type display
+                        const upperAppliance = card.lab_scripts?.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
+                        const lowerAppliance = card.lab_scripts?.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
+
+                        return (
+                          <div key={card.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
+                            <div className="flex items-center justify-between">
+                              {/* Left side - Patient info and appliance types */}
+                              <div className="flex items-center space-x-4 flex-1">
+                                {/* Report Avatar */}
+                                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <FileText className="h-4 w-4 text-white" />
+                                </div>
+
+                                {/* Patient Name and Details */}
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="text-sm font-semibold text-gray-900 truncate">{card.patient_name}</h3>
+                                  <div className="flex items-center space-x-4 mt-1">
+                                    {/* Lab Script ID */}
+                                    <span className="text-xs text-gray-500 font-mono">
+                                      ID: {card.lab_script_id ? card.lab_script_id.slice(0, 8).toUpperCase() : 'N/A'}
+                                    </span>
+                                    {/* Created Date */}
+                                    <span className="text-xs text-gray-500">
+                                      Created: {card.created_at ? new Date(card.created_at).toLocaleDateString() : 'No date'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-4 mt-1">
+                                    {/* Upper Appliance */}
+                                    {upperAppliance && (
+                                      <span className="text-xs text-gray-600">
+                                        <span className="font-medium">Upper:</span> {upperAppliance}
+                                      </span>
+                                    )}
+                                    {/* Lower Appliance */}
+                                    {lowerAppliance && (
+                                      <span className="text-xs text-gray-600">
+                                        <span className="font-medium">Lower:</span> {lowerAppliance}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right side - Action Buttons */}
+                              <div className="ml-4 flex gap-2">
+                                {/* Lab Report Button */}
+                                {card.lab_report_status === 'completed' ? (
+                                  <Button
+                                    className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                    onClick={() => handleViewLabReport(card)}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Lab Report
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                    onClick={() => handleFillLabReport(card)}
+                                  >
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    Fill Lab Report
+                                  </Button>
+                                )}
+
+                                {/* Clinical Report Button - Show only when lab is completed */}
+                                {card.lab_report_status === 'completed' && (
+                                  <>
+                                    {card.clinical_report_status === 'completed' ? (
+                                      <Button
+                                        className="border-2 border-purple-600 text-purple-600 hover:border-purple-700 hover:text-purple-700 hover:bg-purple-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                      >
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        View Clinical Report
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        className="border-2 border-orange-600 text-orange-600 hover:border-orange-700 hover:text-orange-700 hover:bg-orange-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                      >
+                                        <Stethoscope className="h-4 w-4 mr-2" />
+                                        Fill Clinical Report
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Report Cards Available</h3>
+                      <p className="text-gray-500 mb-4">Report cards will appear here when lab scripts are completed.</p>
+                      <Button
+                        onClick={() => window.location.href = '/lab'}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                      >
+                        <FlaskConical className="h-4 w-4 mr-2" />
+                        Go to Lab Scripts
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="lab" className="mt-6 pb-1.5">
-              <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 400px)' }}>
-                <CardHeader className="pb-3 flex-shrink-0">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <FlaskConical className="h-5 w-5 text-indigo-600" />
-                      Lab Scripts & Results ({labScripts.length})
-                    </CardTitle>
-                    <Button className="flex items-center gap-2">
-                      <FlaskConical className="h-4 w-4" />
-                      Add Lab Script
-                    </Button>
-                  </div>
-                </CardHeader>
+              <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 350px)' }}>
                 <CardContent className="flex-1 overflow-hidden p-0">
                   {labScriptsLoading ? (
                     <div className="flex items-center justify-center h-full">
@@ -684,19 +879,7 @@ export function PatientProfilePage() {
             </TabsContent>
 
             <TabsContent value="manufacturing" className="mt-6 pb-1.5">
-              <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 400px)' }}>
-                <CardHeader className="pb-3 flex-shrink-0">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Factory className="h-5 w-5 text-indigo-600" />
-                      Manufacturing Orders ({manufacturingItems.length})
-                    </CardTitle>
-                    <Button className="flex items-center gap-2">
-                      <Factory className="h-4 w-4" />
-                      Create Order
-                    </Button>
-                  </div>
-                </CardHeader>
+              <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 350px)' }}>
                 <CardContent className="flex-1 overflow-hidden p-0">
                   {manufacturingLoading ? (
                     <div className="flex items-center justify-center h-full">
@@ -917,6 +1100,31 @@ export function PatientProfilePage() {
         labScript={selectedLabScript}
         onUpdate={handleLabScriptUpdate}
       />
+
+      {/* Lab Report Card Form Dialog */}
+      <Dialog open={showLabReportForm && !!selectedReportCard} onOpenChange={setShowLabReportForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedReportCard && (
+            <LabReportCardForm
+              reportCard={selectedReportCard}
+              onSubmit={handleLabReportSubmit}
+              onCancel={handleLabReportCancel}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Lab Report Card Dialog */}
+      <Dialog open={showViewLabReport && !!selectedReportCard} onOpenChange={setShowViewLabReport}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedReportCard && (
+            <ViewLabReportCard
+              reportCard={selectedReportCard}
+              onClose={handleViewLabReportClose}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
