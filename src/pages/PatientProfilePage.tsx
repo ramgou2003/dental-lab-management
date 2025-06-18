@@ -517,34 +517,34 @@ export function PatientProfilePage() {
 
           {/* Patient Details Tabs */}
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200 p-1 rounded-xl shadow-sm">
-              <TabsTrigger value="basic" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
-                <User className="h-4 w-4" />
+            <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200 p-0.5 rounded-xl shadow-sm">
+              <TabsTrigger value="basic" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
+                <User className="h-3.5 w-3.5" />
                 Basic Details
               </TabsTrigger>
-              <TabsTrigger value="lab" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
-                <FlaskConical className="h-4 w-4" />
+              <TabsTrigger value="lab" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
+                <FlaskConical className="h-3.5 w-3.5" />
                 Lab Scripts ({labScripts.length})
               </TabsTrigger>
-              <TabsTrigger value="reports" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
-                <FileText className="h-4 w-4" />
+              <TabsTrigger value="reports" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
+                <FileText className="h-3.5 w-3.5" />
                 Report Cards ({patientReportCards.length})
               </TabsTrigger>
-              <TabsTrigger value="manufacturing" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
-                <Factory className="h-4 w-4" />
+              <TabsTrigger value="manufacturing" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
+                <Factory className="h-3.5 w-3.5" />
                 Manufacturing ({manufacturingItems.length})
               </TabsTrigger>
-              <TabsTrigger value="delivery" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
-                <Package className="h-4 w-4" />
+              <TabsTrigger value="delivery" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
+                <Package className="h-3.5 w-3.5" />
                 Appliance Delivery ({patientDeliveryItems.length})
               </TabsTrigger>
-              <TabsTrigger value="clinical" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
-                <FileText className="h-4 w-4" />
+              <TabsTrigger value="clinical" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
+                <FileText className="h-3.5 w-3.5" />
                 Clinical Forms
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="basic" className="space-y-8 mt-8">
+            <TabsContent value="basic" className="space-y-6 mt-4">
               {/* Modern Info Cards Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Personal Information */}
@@ -639,8 +639,8 @@ export function PatientProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="reports" className="mt-6 pb-1.5">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}>
+            <TabsContent value="reports" className="mt-3 pb-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
                 {reportCardsLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -764,8 +764,8 @@ export function PatientProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="lab" className="mt-6 pb-1.5">
-              <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 350px)' }}>
+            <TabsContent value="lab" className="mt-3 pb-1">
+              <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 320px)' }}>
                 <CardContent className="flex-1 overflow-hidden p-0">
                   {labScriptsLoading ? (
                     <div className="flex items-center justify-center h-full">
@@ -990,8 +990,8 @@ export function PatientProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="manufacturing" className="mt-6 pb-1.5">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}>
+            <TabsContent value="manufacturing" className="mt-3 pb-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
                 {manufacturingLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -1141,8 +1141,8 @@ export function PatientProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="delivery" className="mt-6 pb-1.5">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}>
+            <TabsContent value="delivery" className="mt-3 pb-1">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
                 {deliveryItemsLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -1288,8 +1288,8 @@ export function PatientProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="clinical" className="mt-6 pb-1.5">
-              <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 400px)' }}>
+            <TabsContent value="clinical" className="mt-3 pb-1">
+              <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 370px)' }}>
                 <CardHeader className="pb-3 flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-lg">
