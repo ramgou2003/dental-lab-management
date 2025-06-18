@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
+import { AppointmentScheduler } from "@/components/AppointmentScheduler";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -82,6 +83,7 @@ export function PatientProfilePage() {
   // State for delivery dialogs
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
   const [selectedDeliveryItem, setSelectedDeliveryItem] = useState<any | null>(null);
+  const [showAppointmentScheduler, setShowAppointmentScheduler] = useState(false);
 
   useEffect(() => {
     if (patientId) {
@@ -198,13 +200,40 @@ export function PatientProfilePage() {
     setShowDeliveryDetails(true);
   };
 
-  const handleStartDelivery = async (deliveryItem: any) => {
+  const handleScheduleAppointment = (deliveryItem: any) => {
+    setSelectedDeliveryItem(deliveryItem);
+    setShowAppointmentScheduler(true);
+  };
+
+  const handleAppointmentScheduled = async (appointmentData: {
+    date: string;
+    time: string;
+    notes?: string;
+  }) => {
+    if (!selectedDeliveryItem) return;
+
     try {
-      await updateDeliveryStatus(deliveryItem.id, 'patient-scheduled');
+      await updateDeliveryStatus(selectedDeliveryItem.id, 'patient-scheduled', {
+        scheduled_delivery_date: appointmentData.date,
+        scheduled_delivery_time: appointmentData.time,
+        delivery_notes: appointmentData.notes || 'Appointment scheduled for appliance insertion.'
+      });
+
+      // Helper function to format time from 24-hour to 12-hour format
+      const formatTime = (time24: string) => {
+        const [hours, minutes] = time24.split(':');
+        const hour = parseInt(hours);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+        return `${hour12}:${minutes} ${ampm}`;
+      };
+
       toast({
         title: "Success",
-        description: "Appointment scheduled successfully!",
+        description: `Appointment scheduled for ${new Date(appointmentData.date).toLocaleDateString()} at ${formatTime(appointmentData.time)}`,
       });
+      setShowAppointmentScheduler(false);
+      setSelectedDeliveryItem(null);
     } catch (error) {
       console.error('Error scheduling appointment:', error);
       toast({
@@ -213,6 +242,10 @@ export function PatientProfilePage() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleStartDelivery = async (deliveryItem: any) => {
+    handleScheduleAppointment(deliveryItem);
   };
 
   const handleCompleteDelivery = async (deliveryItem: any) => {
@@ -234,6 +267,11 @@ export function PatientProfilePage() {
 
   const handleDeliveryDetailsClose = () => {
     setShowDeliveryDetails(false);
+    setSelectedDeliveryItem(null);
+  };
+
+  const handleAppointmentSchedulerClose = () => {
+    setShowAppointmentScheduler(false);
     setSelectedDeliveryItem(null);
   };
 
@@ -1117,7 +1155,7 @@ export function PatientProfilePage() {
                                 text: 'Schedule Appointment',
                                 icon: Calendar,
                                 color: 'border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50',
-                                onClick: () => handleStartDelivery(item)
+                                onClick: () => handleScheduleAppointment(item)
                               };
                             case 'patient-scheduled':
                               return {
@@ -1426,6 +1464,14 @@ export function PatientProfilePage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Appointment Scheduler */}
+      <AppointmentScheduler
+        isOpen={showAppointmentScheduler}
+        onClose={handleAppointmentSchedulerClose}
+        onSchedule={handleAppointmentScheduled}
+        deliveryItem={selectedDeliveryItem}
+      />
     </div>
   );
 }
