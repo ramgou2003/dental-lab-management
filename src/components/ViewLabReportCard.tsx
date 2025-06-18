@@ -146,34 +146,34 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xl font-bold text-gray-900">
-            <Eye className="h-6 w-6 text-indigo-600" />
+          <div className="flex items-center gap-2 tablet:gap-1.5 text-xl tablet:text-lg font-bold text-gray-900">
+            <Eye className="h-6 w-6 tablet:h-5 tablet:w-5 text-indigo-600" />
             Lab Report Card Preview
           </div>
-          <Button variant="outline" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={onClose} className="tablet:px-2 tablet:py-1">
+            <X className="h-4 w-4 tablet:h-3 tablet:w-3" />
           </Button>
         </DialogTitle>
       </DialogHeader>
 
-      <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+      <div className="space-y-6 tablet:space-y-4 max-h-[70vh] tablet:max-h-[75vh] overflow-y-auto">
         {/* Patient Information */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <User className="h-5 w-5 text-indigo-600" />
+        <div className="space-y-4 tablet:space-y-3">
+          <h3 className="text-lg tablet:text-base font-semibold text-gray-900 flex items-center gap-2 tablet:gap-1.5">
+            <User className="h-5 w-5 tablet:h-4 tablet:w-4 text-indigo-600" />
             Patient Information
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 tablet:gap-3">
             <div>
-              <Label>Patient Name</Label>
-              <div className="p-3 bg-gray-50 rounded-md border font-medium">
+              <Label className="tablet:text-sm">Patient Name</Label>
+              <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border font-medium tablet:text-sm">
                 {labReportData.patient_name}
               </div>
             </div>
             <div>
-              <Label>Arch Type</Label>
-              <div className="p-3 bg-gray-50 rounded-md border">
-                <span className={`inline-flex px-2 py-1 rounded-md text-sm font-medium ${
+              <Label className="tablet:text-sm">Arch Type</Label>
+              <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border">
+                <span className={`inline-flex px-2 py-1 tablet:px-1.5 tablet:py-0.5 rounded-md tablet:rounded text-sm tablet:text-xs font-medium ${
                   labReportData.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
                   labReportData.arch_type === 'lower' ? 'bg-green-100 text-green-700' :
                   'bg-purple-100 text-purple-700'
@@ -189,21 +189,21 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
         </div>
 
         {/* Original Lab Script Information */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-indigo-600" />
+        <div className="space-y-4 tablet:space-y-3">
+          <h3 className="text-lg tablet:text-base font-semibold text-gray-900 flex items-center gap-2 tablet:gap-1.5">
+            <Calendar className="h-5 w-5 tablet:h-4 tablet:w-4 text-indigo-600" />
             Original Lab Script Details
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 tablet:gap-3">
             <div>
-              <Label>Requested Date</Label>
-              <div className="p-3 bg-gray-50 rounded-md border">
+              <Label className="tablet:text-sm">Requested Date</Label>
+              <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border tablet:text-sm">
                 {new Date(labReportData.lab_script_requested_date).toLocaleDateString()}
               </div>
             </div>
             <div>
-              <Label>Due Date</Label>
-              <div className="p-3 bg-gray-50 rounded-md border">
+              <Label className="tablet:text-sm">Due Date</Label>
+              <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border tablet:text-sm">
                 {labReportData.lab_script_due_date ?
                   new Date(labReportData.lab_script_due_date).toLocaleDateString() :
                   'Not specified'}
@@ -212,33 +212,33 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
           </div>
           {labReportData.lab_script_instructions && (
             <div>
-              <Label>Original Instructions</Label>
-              <div className="p-3 bg-gray-50 rounded-md border whitespace-pre-wrap">
+              <Label className="tablet:text-sm">Original Instructions</Label>
+              <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border whitespace-pre-wrap tablet:text-sm">
                 {labReportData.lab_script_instructions}
               </div>
             </div>
           )}
           {labReportData.lab_script_notes && (
             <div>
-              <Label>Original Notes</Label>
-              <div className="p-3 bg-gray-50 rounded-md border whitespace-pre-wrap">
+              <Label className="tablet:text-sm">Original Notes</Label>
+              <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border whitespace-pre-wrap tablet:text-sm">
                 {labReportData.lab_script_notes}
               </div>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 tablet:gap-3">
             {labReportData.lab_script_screw_type && (
               <div>
-                <Label>Original Screw Type</Label>
-                <div className="p-3 bg-gray-50 rounded-md border">
+                <Label className="tablet:text-sm">Original Screw Type</Label>
+                <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border tablet:text-sm">
                   {labReportData.lab_script_screw_type}
                 </div>
               </div>
             )}
             {labReportData.lab_script_vdo_details && (
               <div>
-                <Label>VDO Details</Label>
-                <div className="p-3 bg-gray-50 rounded-md border">
+                <Label className="tablet:text-sm">VDO Details</Label>
+                <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border tablet:text-sm">
                   {labReportData.lab_script_vdo_details}
                 </div>
               </div>
@@ -477,16 +477,16 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-6 border-t">
-          <div className="text-sm text-gray-500">
+        <div className="flex justify-between items-center pt-6 tablet:pt-4 border-t">
+          <div className="text-sm tablet:text-xs text-gray-500">
             Lab Report Card #{labReportData.id.slice(0, 8)}... • {labReportData.patient_name}
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex gap-3 tablet:gap-2">
+            <Button variant="outline" onClick={onClose} className="tablet:px-3 tablet:py-1.5 tablet:text-sm">
               Close Preview
             </Button>
-            <Button onClick={onClose} className="bg-indigo-600 hover:bg-indigo-700">
-              <Eye className="h-4 w-4 mr-2" />
+            <Button onClick={onClose} className="bg-indigo-600 hover:bg-indigo-700 tablet:px-3 tablet:py-1.5 tablet:text-sm">
+              <Eye className="h-4 w-4 tablet:h-3 tablet:w-3 mr-2 tablet:mr-1" />
               Done Viewing
             </Button>
           </div>

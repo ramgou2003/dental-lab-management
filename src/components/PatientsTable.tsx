@@ -126,14 +126,14 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
   return (
     <div className="flex flex-col h-full">
       {/* Table Header - Fixed */}
-      <div className="bg-slate-50 border-b border-slate-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-        <div className="grid grid-cols-6 gap-4 text-sm font-medium text-slate-900 h-6">
-          <div className="text-left border-r border-gray-300 pr-4 flex items-center">Patient Name</div>
-          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Phone</div>
-          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Gender</div>
-          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Treatment Type</div>
-          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
-          <div className="text-center flex items-center justify-center pr-2">Actions</div>
+      <div className="bg-slate-50 border-b border-slate-200 px-3 tablet:px-2 py-3 tablet:py-2 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
+        <div className="grid grid-cols-6 gap-4 tablet:gap-2 text-sm tablet:text-xs font-medium text-slate-900 h-6 tablet:h-5">
+          <div className="text-left border-r border-gray-300 pr-4 tablet:pr-2 flex items-center">Patient Name</div>
+          <div className="text-center border-r border-gray-300 pr-4 tablet:pr-2 flex items-center justify-center">Phone</div>
+          <div className="text-center border-r border-gray-300 pr-4 tablet:pr-2 flex items-center justify-center">Gender</div>
+          <div className="text-center border-r border-gray-300 pr-4 tablet:pr-2 flex items-center justify-center">Treatment Type</div>
+          <div className="text-center border-r border-gray-300 pr-4 tablet:pr-2 flex items-center justify-center">Status</div>
+          <div className="text-center flex items-center justify-center pr-2 tablet:pr-1">Actions</div>
         </div>
       </div>
 
@@ -146,33 +146,33 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
             </div>
           ) : (
             filteredPatients.map((patient) => (
-              <div key={patient.id} className="grid grid-cols-6 gap-4 px-3 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center h-16">
+              <div key={patient.id} className="grid grid-cols-6 gap-4 tablet:gap-2 px-3 tablet:px-2 py-4 tablet:py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center h-16 tablet:h-12">
                 {/* Patient Name */}
-                <div className="border-r border-gray-300 pr-4 h-full flex items-center">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+                <div className="border-r border-gray-300 pr-4 tablet:pr-2 h-full flex items-center">
+                  <div className="flex items-center gap-3 tablet:gap-2">
+                    <Avatar className="h-10 w-10 tablet:h-8 tablet:w-8">
                       <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
-                      <AvatarFallback className="bg-indigo-600 text-white font-semibold">
+                      <AvatarFallback className="bg-indigo-600 text-white font-semibold tablet:text-xs">
                         {getInitials(patient.first_name, patient.last_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-slate-900 text-sm font-medium truncate">{patient.full_name}</span>
+                    <span className="text-slate-900 text-sm tablet:text-xs font-medium truncate">{patient.full_name}</span>
                   </div>
                 </div>
 
                 {/* Phone */}
-                <div className="text-slate-600 text-sm text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center truncate">{patient.phone || '-'}</div>
+                <div className="text-slate-600 text-sm tablet:text-xs text-center border-r border-gray-300 pr-4 tablet:pr-2 h-full flex items-center justify-center truncate">{patient.phone || '-'}</div>
 
                 {/* Gender */}
-                <div className="text-slate-600 text-sm text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center capitalize truncate">{patient.gender || '-'}</div>
+                <div className="text-slate-600 text-sm tablet:text-xs text-center border-r border-gray-300 pr-4 tablet:pr-2 h-full flex items-center justify-center capitalize truncate">{patient.gender || '-'}</div>
 
                 {/* Treatment Type */}
-                <div className="text-slate-600 text-sm text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center truncate">{patient.treatment_type || '-'}</div>
+                <div className="text-slate-600 text-sm tablet:text-xs text-center border-r border-gray-300 pr-4 tablet:pr-2 h-full flex items-center justify-center truncate">{patient.treatment_type || '-'}</div>
 
                 {/* Status */}
-                <div className="border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                <div className="border-r border-gray-300 pr-4 tablet:pr-2 h-full flex items-center justify-center">
                   <Button
-                    className={`${getStatusButtonColor(patient.status)} rounded-full px-4 h-8 text-sm font-medium`}
+                    className={`${getStatusButtonColor(patient.status)} rounded-full px-4 tablet:px-2 h-8 tablet:h-6 text-sm tablet:text-xs font-medium`}
                     variant="secondary"
                   >
                     {patient.status}
@@ -180,15 +180,16 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                 </div>
 
                 {/* Actions */}
-                <div className="h-full flex items-center justify-center pr-2">
+                <div className="h-full flex items-center justify-center pr-2 tablet:pr-1">
                   <Button
                     onClick={() => onViewProfile?.(patient.id)}
                     variant="outline"
                     size="sm"
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 tablet:gap-1 tablet:px-2 tablet:py-1 tablet:text-xs"
                   >
-                    <Eye className="h-4 w-4" />
-                    View Profile
+                    <Eye className="h-4 w-4 tablet:h-3 tablet:w-3" />
+                    <span className="tablet:hidden">View Profile</span>
+                    <span className="hidden tablet:inline">View</span>
                   </Button>
                 </div>
               </div>
