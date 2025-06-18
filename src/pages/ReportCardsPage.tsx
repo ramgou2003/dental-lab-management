@@ -283,7 +283,7 @@ export function ReportCardsPage() {
   });
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50">
       <div className="bg-white border-b border-gray-200">
         <PageHeader
           title="Report Cards"
@@ -298,7 +298,7 @@ export function ReportCardsPage() {
           }}
         />
       </div>
-      <div className="flex-1 px-6 pt-6 pb-6 min-h-0">
+      <div className="flex-1 px-6 pt-6 pb-2">
         {/* Stats Cards - 5 filters */}
         <div className="grid grid-cols-5 gap-2 sm:gap-3 lg:gap-4 mb-6">
           {stats.map((stat, index) => (
@@ -340,7 +340,7 @@ export function ReportCardsPage() {
         </div>
 
         {/* Report Cards */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col flex-1" style={{ minHeight: '500px' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
           {loading ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
