@@ -402,9 +402,9 @@ export function PatientProfilePage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col px-6 py-4 min-h-0">
+      <div className="flex-1 flex flex-col px-4 py-2 min-h-0">
         {/* Fixed Patient Header */}
-        <div className="flex-shrink-0 mb-3">
+        <div className="flex-shrink-0 mb-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             {/* Patient Info Section */}
             <div className="px-6 py-4">
@@ -514,9 +514,10 @@ export function PatientProfilePage() {
               </div>
             </div>
           </div>
+        </div>
 
-        {/* Fixed Tabs Navigation */}
-        <div className="flex-shrink-0 mb-3">
+        {/* Fixed Tabs Navigation and Content */}
+        <div className="flex-1 flex flex-col min-h-0">
           <Tabs defaultValue="basic" className="w-full flex flex-col h-full">
             <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200 p-0.5 rounded-xl shadow-sm flex-shrink-0">
               <TabsTrigger value="basic" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
@@ -545,10 +546,10 @@ export function PatientProfilePage() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="basic" className="flex-1 mt-3 overflow-hidden">
-              <div className="h-full overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full">
+            <TabsContent value="basic" className="flex-1 mt-2 overflow-hidden">
+              <div className="h-full overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full pb-4">
                 {/* Modern Info Cards Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-1">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-2">
                 {/* Personal Information */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-3 mb-6">
@@ -638,11 +639,12 @@ export function PatientProfilePage() {
                     </div>
                   </div>
                 </div>
+                </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="reports" className="flex-1 mt-3 overflow-hidden">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full">
+            <TabsContent value="reports" className="flex-1 mt-2 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full mb-4">
                 {reportCardsLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -766,8 +768,8 @@ export function PatientProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="lab" className="flex-1 mt-3 overflow-hidden">
-              <Card className="shadow-sm flex flex-col h-full">
+            <TabsContent value="lab" className="flex-1 mt-2 overflow-hidden">
+              <Card className="shadow-sm flex flex-col h-full mb-4">
                 <CardContent className="flex-1 overflow-hidden p-0">
                   {labScriptsLoading ? (
                     <div className="flex items-center justify-center h-full">
@@ -992,8 +994,8 @@ export function PatientProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="manufacturing" className="flex-1 mt-3 overflow-hidden">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full">
+            <TabsContent value="manufacturing" className="flex-1 mt-2 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full mb-4">
                 {manufacturingLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -1143,8 +1145,8 @@ export function PatientProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="delivery" className="flex-1 mt-3 overflow-hidden">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full">
+            <TabsContent value="delivery" className="flex-1 mt-2 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full mb-4">
                 {deliveryItemsLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -1290,8 +1292,8 @@ export function PatientProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="clinical" className="flex-1 mt-3 overflow-hidden">
-              <Card className="shadow-sm flex flex-col h-full">
+            <TabsContent value="clinical" className="flex-1 mt-2 overflow-hidden">
+              <Card className="shadow-sm flex flex-col h-full mb-4">
                 <CardHeader className="pb-3 flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-lg">
@@ -1316,7 +1318,6 @@ export function PatientProfilePage() {
           </Tabs>
         </div>
       </div>
-    </div>
 
       {/* Edit Patient Dialog */}
       <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
