@@ -403,7 +403,7 @@ export function PatientProfilePage() {
 
       {/* Content with top padding to account for fixed header */}
       <div className="flex-1 pt-[97px] px-6 pb-6 overflow-y-auto">
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Compact Patient Header */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden sticky top-0 z-10">
             {/* Patient Info Section */}
