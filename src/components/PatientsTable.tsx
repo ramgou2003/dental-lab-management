@@ -127,7 +127,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
     <div className="flex flex-col h-full">
       {/* Table Header - Fixed */}
       <div className="bg-slate-50 border-b border-slate-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-        <div className="grid grid-cols-6 gap-4 text-sm font-medium text-slate-900 h-6">
+        <div className="grid gap-4 text-sm font-medium text-slate-900 h-6" style={{ gridTemplateColumns: '2fr 1.5fr 0.8fr 1.8fr 1.2fr 1.5fr' }}>
           <div className="text-left border-r border-gray-300 pr-4 flex items-center">Patient Name</div>
           <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Phone</div>
           <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Gender</div>
@@ -146,7 +146,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
             </div>
           ) : (
             filteredPatients.map((patient) => (
-              <div key={patient.id} className="grid grid-cols-6 gap-4 px-3 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center h-16">
+              <div key={patient.id} className="grid gap-4 px-3 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center h-16" style={{ gridTemplateColumns: '2fr 1.5fr 0.8fr 1.8fr 1.2fr 1.5fr' }}>
                 {/* Patient Name */}
                 <div className="border-r border-gray-300 pr-4 h-full flex items-center">
                   <div className="flex items-center gap-3">

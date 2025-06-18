@@ -181,7 +181,7 @@ export function ApplianceDeliveryPage() {
   });
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
         <PageHeader
           title="Appliance Insertion"
@@ -196,7 +196,7 @@ export function ApplianceDeliveryPage() {
           }}
         />
       </div>
-      <div className="flex-1 p-6">
+      <div className="flex-1 px-6 pt-6 pb-6 min-h-0">
         {/* Stats Cards - 6 filters */}
         <div className="grid grid-cols-6 gap-2 sm:gap-3 lg:gap-4 mb-6">
           {stats.map((stat, index) => (
@@ -238,7 +238,7 @@ export function ApplianceDeliveryPage() {
         </div>
 
         {/* Appliance Deliveries */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 250px)', minHeight: '500px' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col flex-1" style={{ minHeight: '500px' }}>
           {loading ? (
             <div className="text-center py-12">
               <Package className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />

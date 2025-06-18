@@ -59,7 +59,7 @@ export function Sidebar({
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
-  return <div className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-10 shadow-sm ${collapsed ? 'w-16' : 'w-48'}`}>
+  return <div className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-10 shadow-sm ${collapsed ? 'w-16' : 'w-52'}`}>
       {/* Header - Clinic Logo */}
       <div className="border-b border-gray-200 py-1.5 px-[4px]">
         <button

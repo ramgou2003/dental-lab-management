@@ -244,9 +244,9 @@ export function PatientProfilePage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   {/* Smaller Profile Picture */}
-                  <Avatar className="h-16 w-16 border-3 border-white shadow-lg">
+                  <Avatar className="h-12 w-12 border-3 border-white shadow-lg">
                     <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
-                    <AvatarFallback className="bg-white text-indigo-600 text-lg font-bold">
+                    <AvatarFallback className="bg-white text-indigo-600 text-sm font-bold">
                       {getInitials(patient.first_name, patient.last_name)}
                     </AvatarFallback>
                   </Avatar>

@@ -118,6 +118,23 @@ export function LabPage() {
     }));
   };
 
+  // Function to get status-based icon and color
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return { icon: CheckCircle, bgColor: 'bg-emerald-600', textColor: 'text-white' };
+      case 'in-progress':
+        return { icon: Play, bgColor: 'bg-blue-600', textColor: 'text-white' };
+      case 'hold':
+        return { icon: AlertCircle, bgColor: 'bg-purple-600', textColor: 'text-white' };
+      case 'delayed':
+        return { icon: Clock, bgColor: 'bg-red-600', textColor: 'text-white' };
+      case 'pending':
+      default:
+        return { icon: Clock, bgColor: 'bg-amber-600', textColor: 'text-white' };
+    }
+  };
+
   const renderActionButtons = (orderId: string, originalScript: LabScript | undefined) => {
     const currentStatus = originalScript?.status;
     const isEditingStatus = editingStatus[orderId] || false;
@@ -279,7 +296,7 @@ export function LabPage() {
 
   const stats = [
     { title: "New Scripts", value: getOrderCount("pending").toString(), icon: Clock, color: "bg-amber-500", bgColor: "bg-amber-50", filter: "pending" },
-    { title: "In-Process", value: getOrderCount("in-progress").toString(), icon: FlaskConical, color: "bg-blue-500", bgColor: "bg-blue-50", filter: "in-progress" },
+    { title: "In-Process", value: getOrderCount("in-progress").toString(), icon: Play, color: "bg-blue-500", bgColor: "bg-blue-50", filter: "in-progress" },
     { title: "Hold", value: getOrderCount("hold").toString(), icon: AlertCircle, color: "bg-purple-500", bgColor: "bg-purple-50", filter: "hold" },
     { title: "Incomplete", value: getIncompleteCount().toString(), icon: Clock, color: "bg-orange-500", bgColor: "bg-orange-50", filter: "incomplete" },
     { title: "Completed", value: getOrderCount("completed").toString(), icon: CheckCircle, color: "bg-emerald-500", bgColor: "bg-emerald-50", filter: "completed" },
@@ -307,7 +324,7 @@ export function LabPage() {
   });
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
         <PageHeader
           title="Lab Scripts"
@@ -322,7 +339,7 @@ export function LabPage() {
           }}
         />
       </div>
-      <div className="flex-1 p-6">
+      <div className="flex-1 px-6 pt-6 pb-6 min-h-0">
         {/* Stats Cards */}
         <div className="grid grid-cols-6 gap-2 sm:gap-3 lg:gap-4 mb-6">
           {stats.map((stat, index) => (
@@ -364,7 +381,7 @@ export function LabPage() {
         </div>
 
         {/* Lab Scripts Table - Extended to viewport height */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 250px)', minHeight: '500px' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col flex-1" style={{ minHeight: '500px' }}>
           {loading ? (
             <div className="text-center py-12">
               <FlaskConical className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
@@ -433,9 +450,15 @@ export function LabPage() {
                         {/* Patient */}
                         <div className="border-r border-gray-300 pr-3 h-full flex items-center">
                           <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <FlaskConical className="h-3 w-3 text-white" />
-                            </div>
+                            {(() => {
+                              const statusConfig = getStatusIcon(order.status);
+                              const StatusIcon = statusConfig.icon;
+                              return (
+                                <div className={`w-6 h-6 ${statusConfig.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                                  <StatusIcon className={`h-3 w-3 ${statusConfig.textColor}`} />
+                                </div>
+                              );
+                            })()}
                             <div className="min-w-0">
                               <p className="text-gray-900 font-medium truncate text-sm">{order.patient}</p>
                             </div>

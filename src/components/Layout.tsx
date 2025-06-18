@@ -45,7 +45,7 @@ const Layout = () => {
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-      <main className={`flex-1 bg-white overflow-auto transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-48'}`}>
+      <main className={`flex-1 bg-white overflow-auto transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-52'}`}>
         <Outlet />
       </main>
     </div>
