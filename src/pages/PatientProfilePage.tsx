@@ -16,6 +16,7 @@ import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingIte
 import { LabScript } from "@/hooks/useLabScripts";
 import { ManufacturingItem } from "@/hooks/useManufacturingItems";
 import { useReportCards } from "@/hooks/useReportCards";
+import { useDeliveryItems } from "@/hooks/useDeliveryItems";
 import {
   User,
   Phone,
@@ -36,7 +37,8 @@ import {
   Calendar,
   Play,
   Square,
-  RotateCcw
+  RotateCcw,
+  Package
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -57,6 +59,7 @@ export function PatientProfilePage() {
   const { labScripts, loading: labScriptsLoading, updateLabScript } = usePatientLabScripts(patientId);
   const { manufacturingItems, loading: manufacturingLoading, updateManufacturingItemStatus } = usePatientManufacturingItems(patientId);
   const { reportCards, loading: reportCardsLoading, updateLabReportStatus } = useReportCards();
+  const { deliveryItems, loading: deliveryItemsLoading, updateDeliveryStatus } = useDeliveryItems();
   const { toast } = useToast();
 
   // Filter report cards for this specific patient
@@ -65,10 +68,20 @@ export function PatientProfilePage() {
     return card.lab_script_id && labScripts.some(script => script.id === card.lab_script_id);
   });
 
+  // Filter delivery items for this specific patient
+  const patientDeliveryItems = deliveryItems.filter(item => {
+    // Check if the delivery item's lab script belongs to this patient
+    return item.lab_script_id && labScripts.some(script => script.id === item.lab_script_id);
+  });
+
   // State for lab report dialogs
   const [showLabReportForm, setShowLabReportForm] = useState(false);
   const [showViewLabReport, setShowViewLabReport] = useState(false);
   const [selectedReportCard, setSelectedReportCard] = useState<any | null>(null);
+
+  // State for delivery dialogs
+  const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
+  const [selectedDeliveryItem, setSelectedDeliveryItem] = useState<any | null>(null);
 
   useEffect(() => {
     if (patientId) {
@@ -177,6 +190,51 @@ export function PatientProfilePage() {
   const handleViewLabReportClose = () => {
     setShowViewLabReport(false);
     setSelectedReportCard(null);
+  };
+
+  // Delivery Item Handlers
+  const handleViewDeliveryDetails = (deliveryItem: any) => {
+    setSelectedDeliveryItem(deliveryItem);
+    setShowDeliveryDetails(true);
+  };
+
+  const handleStartDelivery = async (deliveryItem: any) => {
+    try {
+      await updateDeliveryStatus(deliveryItem.id, 'patient-scheduled');
+      toast({
+        title: "Success",
+        description: "Appointment scheduled successfully!",
+      });
+    } catch (error) {
+      console.error('Error scheduling appointment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to schedule appointment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCompleteDelivery = async (deliveryItem: any) => {
+    try {
+      await updateDeliveryStatus(deliveryItem.id, 'inserted');
+      toast({
+        title: "Success",
+        description: "Appliance marked as inserted successfully!",
+      });
+    } catch (error) {
+      console.error('Error marking as inserted:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark appliance as inserted",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeliveryDetailsClose = () => {
+    setShowDeliveryDetails(false);
+    setSelectedDeliveryItem(null);
   };
 
   const handleEditCancel = () => {
@@ -409,7 +467,7 @@ export function PatientProfilePage() {
 
           {/* Patient Details Tabs */}
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 bg-white border border-gray-200 p-1 rounded-xl shadow-sm">
+            <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200 p-1 rounded-xl shadow-sm">
               <TabsTrigger value="basic" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
                 <User className="h-4 w-4" />
                 Basic Details
@@ -425,6 +483,10 @@ export function PatientProfilePage() {
               <TabsTrigger value="manufacturing" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
                 <Factory className="h-4 w-4" />
                 Manufacturing ({manufacturingItems.length})
+              </TabsTrigger>
+              <TabsTrigger value="delivery" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
+                <Package className="h-4 w-4" />
+                Appliance Delivery ({patientDeliveryItems.length})
               </TabsTrigger>
               <TabsTrigger value="clinical" className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all">
                 <FileText className="h-4 w-4" />
@@ -1052,6 +1114,152 @@ export function PatientProfilePage() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="delivery" className="mt-6 pb-1.5">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 350px)', minHeight: '400px' }}>
+                {deliveryItemsLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Package className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading delivery items...</h3>
+                      <p className="text-gray-500">Please wait while we fetch delivery items.</p>
+                    </div>
+                  </div>
+                ) : patientDeliveryItems.length > 0 ? (
+                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                    <div className="space-y-4">
+                      {patientDeliveryItems.map((item) => {
+                        // Format appliance type display
+                        const upperAppliance = item.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
+                        const lowerAppliance = item.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
+
+                        // Get status-specific button configuration
+                        const getStatusButton = () => {
+                          switch (item.delivery_status) {
+                            case 'ready-for-delivery':
+                              return {
+                                text: 'Schedule Appointment',
+                                icon: Calendar,
+                                color: 'border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50',
+                                onClick: () => handleStartDelivery(item)
+                              };
+                            case 'patient-scheduled':
+                              return {
+                                text: 'Mark Inserted',
+                                icon: CheckCircle,
+                                color: 'border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50',
+                                onClick: () => handleCompleteDelivery(item)
+                              };
+                            case 'inserted':
+                              return {
+                                text: 'Inserted',
+                                icon: CheckCircle,
+                                color: 'border-emerald-600 text-emerald-600 bg-emerald-50',
+                                onClick: () => handleViewDeliveryDetails(item)
+                              };
+                            default:
+                              return {
+                                text: 'View Details',
+                                icon: Eye,
+                                color: 'border-gray-600 text-gray-600 hover:border-gray-700 hover:text-gray-700 hover:bg-gray-50',
+                                onClick: () => handleViewDeliveryDetails(item)
+                              };
+                          }
+                        };
+
+                        const statusButton = getStatusButton();
+
+                        return (
+                          <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
+                            <div className="flex items-center justify-between">
+                              {/* Left side - Patient info and appliance details */}
+                              <div className="flex items-center space-x-4 flex-1">
+                                {/* Delivery Avatar */}
+                                <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <Package className="h-4 w-4 text-white" />
+                                </div>
+
+                                {/* Patient Name and Details */}
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="text-sm font-semibold text-gray-900 truncate">{item.patient_name}</h3>
+                                  <div className="flex items-center space-x-4 mt-1">
+                                    {/* Delivery ID */}
+                                    <span className="text-xs text-gray-500 font-mono">
+                                      ID: {item.id ? item.id.slice(0, 8).toUpperCase() : 'N/A'}
+                                    </span>
+                                    {/* Created Date */}
+                                    <span className="text-xs text-gray-500">
+                                      Created: {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'No date'}
+                                    </span>
+                                    {/* Shade */}
+                                    <span className="text-xs text-gray-600">
+                                      <span className="font-medium">Shade:</span> {item.shade}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-4 mt-1">
+                                    {/* Upper Appliance */}
+                                    {upperAppliance && (
+                                      <span className="text-xs text-gray-600">
+                                        <span className="font-medium">Upper:</span> {upperAppliance}
+                                      </span>
+                                    )}
+                                    {/* Lower Appliance */}
+                                    {lowerAppliance && (
+                                      <span className="text-xs text-gray-600">
+                                        <span className="font-medium">Lower:</span> {lowerAppliance}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right side - Status and Action Button */}
+                              <div className="ml-4 flex items-center gap-3">
+                                {/* Status Badge */}
+                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
+                                  item.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
+                                  item.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
+                                  item.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {item.delivery_status === 'ready-for-delivery' ? 'Ready for Delivery' :
+                                   item.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                                   item.delivery_status === 'inserted' ? 'Inserted' :
+                                   item.delivery_status}
+                                </span>
+
+                                {/* Action Button */}
+                                <Button
+                                  className={`border-2 ${statusButton.color} bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200`}
+                                  onClick={statusButton.onClick}
+                                >
+                                  <statusButton.icon className="h-4 w-4 mr-2" />
+                                  {statusButton.text}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Delivery Items Available</h3>
+                      <p className="text-gray-500 mb-4">Delivery items will appear here when manufacturing is completed.</p>
+                      <Button
+                        onClick={() => window.location.href = '/manufacturing'}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Factory className="h-4 w-4 mr-2" />
+                        Go to Manufacturing
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
 
             <TabsContent value="clinical" className="mt-6 pb-1.5">
               <Card className="shadow-sm flex flex-col" style={{ height: 'calc(100vh - 400px)' }}>
@@ -1125,6 +1333,122 @@ export function PatientProfilePage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delivery Details Dialog */}
+      {selectedDeliveryItem && (
+        <Dialog open={showDeliveryDetails} onOpenChange={setShowDeliveryDetails}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl">
+                  <Package className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Appliance Delivery Details</h2>
+                  <p className="text-lg text-gray-600">{selectedDeliveryItem.patient_name}</p>
+                </div>
+                <div className="ml-auto">
+                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                    selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
+                    selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
+                    selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready for Delivery' :
+                     selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                     selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
+                     selectedDeliveryItem.delivery_status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Appliance Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Appliance Information</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Arch Type</p>
+                      <p className="text-base text-gray-900 capitalize">{selectedDeliveryItem.arch_type}</p>
+                    </div>
+                    {selectedDeliveryItem.upper_appliance_type && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Upper Appliance</p>
+                        <p className="text-base text-gray-900">{selectedDeliveryItem.upper_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+                      </div>
+                    )}
+                    {selectedDeliveryItem.lower_appliance_type && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Lower Appliance</p>
+                        <p className="text-base text-gray-900">{selectedDeliveryItem.lower_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Shade</p>
+                      <p className="text-base text-gray-900">{selectedDeliveryItem.shade}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Delivery Information</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Created Date</p>
+                      <p className="text-base text-gray-900">
+                        {selectedDeliveryItem.created_at ? new Date(selectedDeliveryItem.created_at).toLocaleDateString() : 'No date'}
+                      </p>
+                    </div>
+                    {selectedDeliveryItem.scheduled_delivery_date && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Scheduled Date</p>
+                        <p className="text-base text-gray-900">
+                          {new Date(selectedDeliveryItem.scheduled_delivery_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+                    {selectedDeliveryItem.actual_delivery_date && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Delivery Date</p>
+                        <p className="text-base text-gray-900">
+                          {new Date(selectedDeliveryItem.actual_delivery_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-between items-center pt-6 border-t">
+                <div className="text-sm text-gray-500">
+                  Delivery Item #{selectedDeliveryItem.id.slice(0, 8)}... • {selectedDeliveryItem.patient_name}
+                </div>
+                <div className="flex gap-3">
+                  {selectedDeliveryItem.delivery_status === 'patient-scheduled' && (
+                    <Button
+                      onClick={() => {
+                        setShowDeliveryDetails(false);
+                        handleCompleteDelivery(selectedDeliveryItem);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark Inserted
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleDeliveryDetailsClose}
+                    className="bg-gray-600 hover:bg-gray-700 text-white"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
