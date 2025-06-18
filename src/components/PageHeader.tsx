@@ -43,7 +43,7 @@ export function PageHeader({
               className="w-64 tablet:w-48 pl-10 tablet:pl-8 pr-4 tablet:pr-3 py-2 tablet:py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 tablet:text-sm"
             />
             <div className="absolute inset-y-0 left-0 pl-3 tablet:pl-2 flex items-center pointer-events-none">
-              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-4 w-4 tablet:h-3 tablet:w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -53,15 +53,15 @@ export function PageHeader({
           <Button
             variant="outline"
             onClick={secondaryAction.onClick}
-            className={`flex items-center ${secondaryAction.label ? 'gap-2' : ''}`}
+            className={`flex items-center ${secondaryAction.label ? 'gap-2 tablet:gap-1' : ''} tablet:px-3 tablet:py-1.5 tablet:text-sm`}
             size={secondaryAction.label ? "default" : "icon"}
           >
-            {secondaryAction.icon && <secondaryAction.icon className="h-4 w-4" />}
+            {secondaryAction.icon && <secondaryAction.icon className="h-4 w-4 tablet:h-3 tablet:w-3" />}
             {secondaryAction.label && secondaryAction.label}
           </Button>
         )}
         {action && (
-          <Button onClick={action.onClick} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200">
+          <Button onClick={action.onClick} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 tablet:px-4 py-2 tablet:py-1.5 rounded-lg font-medium tablet:text-sm transition-colors duration-200">
             {action.label}
           </Button>
         )}
