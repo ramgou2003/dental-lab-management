@@ -390,16 +390,33 @@ export function LabPage() {
             </div>
           ) : filteredOrders.length > 0 ? (
             <>
-              {/* Table Header - Fixed */}
-              <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-                <div className="grid gap-3 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6" style={{ gridTemplateColumns: '1.8fr 1.2fr 2fr 1fr 0.8fr 1.2fr 1.3fr' }}>
-                  <div className="border-r border-gray-300 pr-3 flex items-center">Patient Name</div>
-                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Arch Type</div>
-                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Appliance Type</div>
-                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Requested Date</div>
-                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Due Date</div>
-                  <div className="text-center border-r border-gray-300 pr-3 flex items-center justify-center">Status</div>
-                  <div className="text-right flex items-center justify-end pr-2">Actions</div>
+              {/* Table Header - Fixed with responsive columns and no separators */}
+              <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex-shrink-0">
+                <div className="grid text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 gap-2 lg:gap-3"
+                     style={{
+                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                     }}>
+                  <div className="flex items-center px-2">
+                    <span className="truncate">Patient Name</span>
+                  </div>
+                  <div className="text-center flex items-center justify-center px-2">
+                    <span className="truncate">Arch Type</span>
+                  </div>
+                  <div className="text-center flex items-center justify-center px-2">
+                    <span className="truncate">Appliance Type</span>
+                  </div>
+                  <div className="text-center flex items-center justify-center px-2">
+                    <span className="truncate">Requested Date</span>
+                  </div>
+                  <div className="text-center flex items-center justify-center px-2">
+                    <span className="truncate">Due Date</span>
+                  </div>
+                  <div className="text-center flex items-center justify-center px-2">
+                    <span className="truncate">Status</span>
+                  </div>
+                  <div className="text-right flex items-center justify-end px-2">
+                    <span className="truncate">Actions</span>
+                  </div>
                 </div>
               </div>
 
@@ -445,11 +462,15 @@ export function LabPage() {
                   };
 
                   return (
-                    <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 h-16">
-                      <div className="grid gap-3 px-3 py-4 text-sm items-center h-full" style={{ gridTemplateColumns: '1.8fr 1.2fr 2fr 1fr 0.8fr 1.2fr 1.3fr' }}>
+                    <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 min-h-[64px]">
+                      <div className="grid gap-2 lg:gap-3 px-4 py-3 text-sm items-center min-h-[64px]"
+                           style={{
+                             gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                           }}>
+
                         {/* Patient */}
-                        <div className="border-r border-gray-300 pr-3 h-full flex items-center">
-                          <div className="flex items-center space-x-2">
+                        <div className="border-r border-gray-200 px-2 h-full flex items-center min-w-0">
+                          <div className="flex items-center space-x-2 min-w-0">
                             {(() => {
                               const statusConfig = getStatusIcon(order.status);
                               const StatusIcon = statusConfig.icon;
@@ -466,29 +487,31 @@ export function LabPage() {
                         </div>
 
                         {/* Arch */}
-                        <div className="border-r border-gray-300 pr-3 h-full flex items-center justify-center">
-                          <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${
+                        <div className="border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
+                          <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium min-w-0 max-w-full ${
                             order.archType === 'upper' ? 'bg-blue-100 text-blue-700' :
                             order.archType === 'lower' ? 'bg-green-100 text-green-700' :
                             'bg-purple-100 text-purple-700'
                           }`}>
-                            {order.archType === 'upper' ? 'Upper' :
-                             order.archType === 'lower' ? 'Lower' :
-                             order.archType === 'dual' ? 'Dual' :
-                             order.archType?.charAt(0).toUpperCase() + order.archType?.slice(1)}
+                            <span className="truncate">
+                              {order.archType === 'upper' ? 'Upper' :
+                               order.archType === 'lower' ? 'Lower' :
+                               order.archType === 'dual' ? 'Dual' :
+                               order.archType?.charAt(0).toUpperCase() + order.archType?.slice(1)}
+                            </span>
                           </span>
                         </div>
 
                         {/* Appliance Type */}
-                        <div className="border-r border-gray-300 pr-3 h-full flex items-center justify-center">
-                          <div className="text-center">
+                        <div className="border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
+                          <div className="text-center min-w-0 max-w-full">
                             {getApplianceDisplay().upper && (
-                              <div className="text-gray-900 font-medium text-xs leading-tight">
+                              <div className="text-gray-900 font-medium text-xs leading-tight truncate">
                                 {getApplianceDisplay().upper}
                               </div>
                             )}
                             {getApplianceDisplay().lower && (
-                              <div className="text-gray-900 font-medium text-xs leading-tight">
+                              <div className="text-gray-900 font-medium text-xs leading-tight truncate">
                                 {getApplianceDisplay().lower}
                               </div>
                             )}
@@ -496,37 +519,37 @@ export function LabPage() {
                         </div>
 
                         {/* Requested Date */}
-                        <div className="text-center border-r border-gray-300 pr-3 h-full flex items-center justify-center">
-                          <p className="text-gray-600 text-xs">{order.requestedDate}</p>
+                        <div className="text-center border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
+                          <p className="text-gray-600 text-xs truncate">{order.requestedDate}</p>
                         </div>
 
                         {/* Due Date */}
-                        <div className="text-center border-r border-gray-300 pr-3 h-full flex items-center justify-center">
-                          <p className="text-gray-600 text-xs">{order.dueDate}</p>
+                        <div className="text-center border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
+                          <p className="text-gray-600 text-xs truncate">{order.dueDate}</p>
                         </div>
 
                         {/* Status */}
-                        <div className="border-r border-gray-300 pr-3 h-full flex items-center justify-center">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        <div className="border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium min-w-0 max-w-full ${
                             order.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                             order.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
                             order.status === 'delayed' ? 'bg-red-100 text-red-700' :
                             order.status === 'hold' ? 'bg-purple-100 text-purple-700' :
                             'bg-amber-100 text-amber-700'
                           }`}>
-                            {order.status}
+                            <span className="truncate">{order.status}</span>
                           </span>
                         </div>
 
                         {/* Actions */}
-                        <div className="h-full flex items-center justify-end pr-2">
+                        <div className="px-2 h-full flex items-center justify-end min-w-0">
                           <div className="flex gap-1">
                             {renderActionButtons(order.id, originalScript)}
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => originalScript && handleViewLabScript(originalScript)}
-                              className="h-8 w-8 p-0"
+                              className="h-8 w-8 p-0 flex-shrink-0"
                               title="View Details"
                             >
                               <Eye className="h-4 w-4" />

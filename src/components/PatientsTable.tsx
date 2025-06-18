@@ -125,70 +125,103 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
 
   return (
     <div className="flex flex-col h-full">
-      {/* Table Header - Fixed */}
-      <div className="bg-slate-50 border-b border-slate-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
-        <div className="grid gap-4 text-sm font-medium text-slate-900 h-6" style={{ gridTemplateColumns: '2fr 1.5fr 0.8fr 1.8fr 1.2fr 1.5fr' }}>
-          <div className="text-left border-r border-gray-300 pr-4 flex items-center">Patient Name</div>
-          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Phone</div>
-          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Gender</div>
-          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Treatment Type</div>
-          <div className="text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
-          <div className="text-center flex items-center justify-center pr-2">Actions</div>
+      {/* Table Header - Fixed with proper responsive columns */}
+      <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0">
+        <div className="grid text-sm font-medium text-slate-900 h-6 gap-2 lg:gap-4"
+             style={{
+               gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.2fr) minmax(80px, 0.8fr) minmax(140px, 1.4fr) minmax(140px, 1.4fr) minmax(120px, 1.2fr)'
+             }}>
+          <div className="text-left flex items-center px-2">
+            <span className="truncate">Patient Name</span>
+          </div>
+          <div className="text-center flex items-center justify-center px-2">
+            <span className="truncate">Phone</span>
+          </div>
+          <div className="text-center flex items-center justify-center px-2">
+            <span className="truncate">Gender</span>
+          </div>
+          <div className="text-center flex items-center justify-center px-2">
+            <span className="truncate">Treatment Type</span>
+          </div>
+          <div className="text-center flex items-center justify-center px-2">
+            <span className="truncate">Status</span>
+          </div>
+          <div className="text-center flex items-center justify-center px-2">
+            <span className="truncate">Actions</span>
+          </div>
         </div>
       </div>
 
-      {/* Table Body - Scrollable */}
+      {/* Table Body - Scrollable with matching column structure */}
       <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
         <div className="bg-white">
           {filteredPatients.length === 0 ? (
-            <div className="px-3 py-8 text-center text-slate-500">
+            <div className="px-4 py-8 text-center text-slate-500">
               {patients.length === 0 ? "No patients found. Add your first patient!" : "No patients match your search criteria."}
             </div>
           ) : (
-            filteredPatients.map((patient) => (
-              <div key={patient.id} className="grid gap-4 px-3 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors items-center h-16" style={{ gridTemplateColumns: '2fr 1.5fr 0.8fr 1.8fr 1.2fr 1.5fr' }}>
+            filteredPatients.map((patient, index) => (
+              <div key={patient.id}
+                   className={`grid gap-2 lg:gap-4 px-4 py-3 transition-colors items-center min-h-[64px] ${
+                     index !== filteredPatients.length - 1 ? 'border-b border-slate-100' : ''
+                   } hover:bg-slate-50`}
+                   style={{
+                     gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.2fr) minmax(80px, 0.8fr) minmax(140px, 1.4fr) minmax(140px, 1.4fr) minmax(120px, 1.2fr)'
+                   }}>
+
                 {/* Patient Name */}
-                <div className="border-r border-gray-300 pr-4 h-full flex items-center">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+                <div className="flex items-center px-2 min-w-0 border-r border-gray-200">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar className="h-10 w-10 flex-shrink-0">
                       <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
-                      <AvatarFallback className="bg-indigo-600 text-white font-semibold">
+                      <AvatarFallback className="bg-indigo-600 text-white font-semibold text-xs">
                         {getInitials(patient.first_name, patient.last_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-slate-900 text-sm font-medium truncate">{patient.full_name}</span>
+                    <span className="text-slate-900 text-sm font-medium truncate min-w-0">
+                      {patient.full_name}
+                    </span>
                   </div>
                 </div>
 
                 {/* Phone */}
-                <div className="text-slate-600 text-sm text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center truncate">{patient.phone || '-'}</div>
+                <div className="text-slate-600 text-sm text-center px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
+                  <span className="truncate">{patient.phone || '-'}</span>
+                </div>
 
                 {/* Gender */}
-                <div className="text-slate-600 text-sm text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center capitalize truncate">{patient.gender || '-'}</div>
+                <div className="text-slate-600 text-sm text-center px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
+                  <span className="truncate capitalize">{patient.gender || '-'}</span>
+                </div>
 
                 {/* Treatment Type */}
-                <div className="text-slate-600 text-sm text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center truncate">{patient.treatment_type || '-'}</div>
+                <div className="text-slate-600 text-sm text-center px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
+                  <span className="truncate">{patient.treatment_type || '-'}</span>
+                </div>
 
                 {/* Status */}
-                <div className="border-r border-gray-300 pr-4 h-full flex items-center justify-center">
+                <div className="px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
                   <Button
-                    className={`${getStatusButtonColor(patient.status)} rounded-full px-4 h-8 text-sm font-medium`}
+                    className={`${getStatusButtonColor(patient.status)} rounded-full px-3 h-7 text-xs font-medium min-w-0 max-w-full`}
                     variant="secondary"
                   >
-                    {patient.status}
+                    <span className="truncate">
+                      {patient.status.replace('Treatment ', '').replace('Patient ', '')}
+                    </span>
                   </Button>
                 </div>
 
                 {/* Actions */}
-                <div className="h-full flex items-center justify-center pr-2">
+                <div className="px-2 flex items-center justify-center min-w-0">
                   <Button
                     onClick={() => onViewProfile?.(patient.id)}
                     variant="outline"
                     size="sm"
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-1 h-8 px-3 text-xs min-w-0"
                   >
-                    <Eye className="h-4 w-4" />
-                    View Profile
+                    <Eye className="h-3 w-3 flex-shrink-0" />
+                    <span className="hidden sm:inline truncate">View Profile</span>
+                    <span className="sm:hidden truncate">View</span>
                   </Button>
                 </div>
               </div>
