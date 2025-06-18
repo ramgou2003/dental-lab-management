@@ -444,54 +444,6 @@ export function PatientProfilePage() {
                   </div>
                 </div>
 
-                {/* Separator */}
-                <div className="h-12 w-px bg-gray-200 mx-6"></div>
-
-                {/* Additional Patient Data */}
-                <div className="flex items-center gap-8">
-                  {/* Treatment Information */}
-                  <div className="text-center">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Stethoscope className="h-4 w-4 text-blue-600" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Treatment</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">{patient.treatment_type || "Not assigned"}</p>
-                  </div>
-
-                  {/* Last Visit */}
-                  <div className="text-center">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Clock className="h-4 w-4 text-green-600" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Visit</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : "No visits"}
-                    </p>
-                  </div>
-
-                  {/* Next Appointment */}
-                  <div className="text-center">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="h-4 w-4 text-purple-600" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Next Appt</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {patient.next_appointment ? new Date(patient.next_appointment).toLocaleDateString() : "Not scheduled"}
-                    </p>
-                  </div>
-
-                  {/* Patient Since */}
-                  <div className="text-center">
-                    <div className="flex items-center gap-2 mb-1">
-                      <User className="h-4 w-4 text-orange-600" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Patient Since</span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {patient.created_at ? new Date(patient.created_at).toLocaleDateString() : "N/A"}
-                    </p>
-                  </div>
-                </div>
-
                 {/* Action Buttons */}
                 <div className="flex gap-2">
                   <Button
