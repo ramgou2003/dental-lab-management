@@ -499,7 +499,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 // Calculate position within the grid
                 const totalHours = hours.length;
                 const firstHour = hours[0];
-                const hourHeight = 80; // min-h-[80px]
+                const hourHeight = 120; // h-[120px]
 
                 const startHour = Math.floor(startTotalMinutes / 60);
                 const endHour = Math.floor((endTotalMinutes - 1) / 60);
@@ -559,7 +559,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
                 // Calculate position within the grid
                 const firstHour = hours[0];
-                const hourHeight = 80;
+                const hourHeight = 120;
 
                 // Calculate exact position based on total minutes from first hour
                 const startMinutesFromFirst = startTotalMinutes - (firstHour * 60);
@@ -679,11 +679,11 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
           <div className="grid grid-cols-1">
             {hours.map((hour) => {
               return (
-                <div key={hour} className="border-b border-gray-200 h-[80px]">
+                <div key={hour} className="border-b border-gray-200 h-[120px]">
                   <div className="grid h-full" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
                     {/* Time Column */}
-                    <div className="border-r border-gray-200 flex items-start justify-end p-2 pt-1">
-                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                    <div className="border-r border-gray-200 flex items-start justify-end pl-2 pr-1 pt-1 pb-2">
+                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap text-right">
                         {formatTime(hour)}
                       </span>
                     </div>
