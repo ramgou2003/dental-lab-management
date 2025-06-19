@@ -27,34 +27,42 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     {
       key: 'consultation',
       label: 'Consult',
+      shortLabel: 'Consult',
       color: 'bg-blue-50 border-blue-300',
       hoverColor: 'hover:bg-blue-25',
       selectedColor: 'bg-blue-100 border-blue-400',
-      dragColor: 'bg-blue-200 border-blue-500'
+      dragColor: 'bg-blue-200 border-blue-500',
+      badgeColor: 'bg-blue-500 text-white'
     },
     {
       key: 'printed-try-in',
       label: 'Printed Try In',
+      shortLabel: 'Try In',
       color: 'bg-green-50 border-green-300',
       hoverColor: 'hover:bg-green-25',
       selectedColor: 'bg-green-100 border-green-400',
-      dragColor: 'bg-green-200 border-green-500'
+      dragColor: 'bg-green-200 border-green-500',
+      badgeColor: 'bg-green-500 text-white'
     },
     {
       key: 'follow-up',
       label: 'Follow Up',
+      shortLabel: 'Follow Up',
       color: 'bg-orange-50 border-orange-300',
       hoverColor: 'hover:bg-orange-25',
       selectedColor: 'bg-orange-100 border-orange-400',
-      dragColor: 'bg-orange-200 border-orange-500'
+      dragColor: 'bg-orange-200 border-orange-500',
+      badgeColor: 'bg-orange-500 text-white'
     },
     {
       key: 'surgery',
       label: 'Surgery',
+      shortLabel: 'Surgery',
       color: 'bg-purple-50 border-purple-300',
       hoverColor: 'hover:bg-purple-25',
       selectedColor: 'bg-purple-100 border-purple-400',
-      dragColor: 'bg-purple-200 border-purple-500'
+      dragColor: 'bg-purple-200 border-purple-500',
+      badgeColor: 'bg-purple-500 text-white'
     }
   ];
 
@@ -88,8 +96,50 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   };
 
   // Drag handlers
+  // Check if a time slot has an existing appointment
+  const hasAppointmentInSlot = (hour: number, minute: number, column: string): boolean => {
+    const slotTime = hour * 60 + minute;
+
+    return appointments.some(appointment => {
+      if (appointment.type !== column) return false;
+
+      const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+      const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+
+      const appointmentStart = startHour * 60 + startMinute;
+      const appointmentEnd = endHour * 60 + endMinute;
+
+      // Check if the slot is within the appointment time range
+      return slotTime >= appointmentStart && slotTime < appointmentEnd;
+    });
+  };
+
+  // Check if an entire hour has appointments (for visual feedback)
+  const hasAppointmentInHour = (hour: number, column: string): boolean => {
+    return appointments.some(appointment => {
+      if (appointment.type !== column) return false;
+
+      const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+      const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+
+      const appointmentStart = startHour * 60 + startMinute;
+      const appointmentEnd = endHour * 60 + endMinute;
+      const hourStart = hour * 60;
+      const hourEnd = (hour + 1) * 60;
+
+      // Check if appointment overlaps with this hour
+      return !(appointmentEnd <= hourStart || appointmentStart >= hourEnd);
+    });
+  };
+
   const handleMouseDown = useCallback((hour: number, minute: number, column: string, e: React.MouseEvent) => {
     e.preventDefault();
+
+    // Check if there's already an appointment in this slot
+    if (hasAppointmentInSlot(hour, minute, column)) {
+      return; // Don't start dragging if slot is occupied
+    }
+
     setIsDragging(true);
     setDragStart({ hour, minute, column });
     setDragEnd({ hour, minute, column });
@@ -98,24 +148,57 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   const handleMouseEnter = useCallback((hour: number, minute: number, column: string) => {
     if (isDragging && dragColumn === column) {
-      setDragEnd({ hour, minute, column });
+      // Check if we're trying to drag into an occupied slot
+      const currentTime = hour * 60 + minute;
+      const startTime = dragStart!.hour * 60 + dragStart!.minute;
+
+      // Determine the range we're trying to select
+      const rangeStart = Math.min(startTime, currentTime);
+      const rangeEnd = Math.max(startTime, currentTime) + 15; // Add 15 minutes for the slot duration
+
+      // Check if any part of this range conflicts with existing appointments
+      const hasConflict = appointments.some(appointment => {
+        if (appointment.type !== column) return false;
+
+        const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+        const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+
+        const appointmentStart = startHour * 60 + startMinute;
+        const appointmentEnd = endHour * 60 + endMinute;
+
+        // Check if ranges overlap
+        return !(rangeEnd <= appointmentStart || rangeStart >= appointmentEnd);
+      });
+
+      // Only update drag end if there's no conflict
+      if (!hasConflict) {
+        setDragEnd({ hour, minute, column });
+      }
     }
-  }, [isDragging, dragColumn]);
+  }, [isDragging, dragColumn, dragStart, appointments]);
 
   const handleMouseUp = useCallback(() => {
     if (isDragging && dragStart && dragEnd && dragColumn) {
+      // Only create appointment if we actually dragged (moved to a different slot)
       const startTotalMinutes = dragStart.hour * 60 + dragStart.minute;
       const endTotalMinutes = dragEnd.hour * 60 + dragEnd.minute + 15; // +15 for end of slot
 
-      const startHour = Math.floor(Math.min(startTotalMinutes, endTotalMinutes) / 60);
-      const startMinute = Math.min(startTotalMinutes, endTotalMinutes) % 60;
-      const endHour = Math.floor(Math.max(startTotalMinutes, endTotalMinutes) / 60);
-      const endMinute = Math.max(startTotalMinutes, endTotalMinutes) % 60;
+      // Check if this is a meaningful drag (not just a click)
+      const isDraggedSelection = Math.abs(endTotalMinutes - startTotalMinutes) > 15 ||
+                                dragStart.hour !== dragEnd.hour ||
+                                dragStart.minute !== dragEnd.minute;
 
-      const startTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
-      const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+      if (isDraggedSelection) {
+        const startHour = Math.floor(Math.min(startTotalMinutes, endTotalMinutes) / 60);
+        const startMinute = Math.min(startTotalMinutes, endTotalMinutes) % 60;
+        const endHour = Math.floor(Math.max(startTotalMinutes, endTotalMinutes) / 60);
+        const endMinute = Math.max(startTotalMinutes, endTotalMinutes) % 60;
 
-      onTimeSlotClick(startTime, endTime, dragColumn);
+        const startTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
+        const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
+
+        onTimeSlotClick(startTime, endTime, dragColumn);
+      }
     }
 
     // Reset drag state
@@ -225,11 +308,16 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 const startHour = Math.floor(startTotalMinutes / 60);
                 const endHour = Math.floor((endTotalMinutes - 1) / 60);
 
-                const topPosition = (startHour - firstHour) * hourHeight + ((startTotalMinutes % 60) / 60) * hourHeight;
-                const bottomPosition = (endHour - firstHour) * hourHeight + (((endTotalMinutes % 60) || 60) / 60) * hourHeight;
+                // Calculate exact position based on total minutes from first hour
+                const startMinutesFromFirst = startTotalMinutes - (firstHour * 60);
+                const endMinutesFromFirst = endTotalMinutes - (firstHour * 60);
+
+                const topPosition = (startMinutesFromFirst / 60) * hourHeight;
+                const bottomPosition = (endMinutesFromFirst / 60) * hourHeight;
                 const height = bottomPosition - topPosition;
 
-                // Calculate column position
+                // Calculate column position to match the grid exactly
+                // Grid uses: '80px 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
                 const columnWidth = `calc((100% - 80px) / ${appointmentTypes.length})`;
                 const leftPosition = `calc(80px + ${typeIndex} * ${columnWidth})`;
 
@@ -238,25 +326,18 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                     key={type.key}
                     className={`absolute ${typeColors.dragColor} rounded-lg border-2 ${typeColors.dragColor.split(' ')[1]} shadow-lg`}
                     style={{
-                      left: leftPosition,
-                      width: columnWidth,
+                      left: `calc(${leftPosition} + 8px)`, // Add left padding
+                      width: `calc(${columnWidth} - 16px)`, // Subtract left and right padding
                       top: `${topPosition}px`,
                       height: `${height}px`,
-                      marginLeft: '4px',
-                      marginRight: '4px',
                     }}
                   >
-                    <div className="p-3 h-full flex flex-col justify-center">
-                      <div className="text-center">
-                        <div className="text-sm font-medium text-gray-700 mb-1">
-                          Creating {type.label}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {Math.floor(startTotalMinutes / 60)}:
-                          {String(startTotalMinutes % 60).padStart(2, '0')} -
-                          {Math.floor(endTotalMinutes / 60)}:
-                          {String(endTotalMinutes % 60).padStart(2, '0')}
-                        </div>
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-sm font-medium text-gray-700">
+                        {Math.floor(startTotalMinutes / 60)}:
+                        {String(startTotalMinutes % 60).padStart(2, '0')} -
+                        {Math.floor(endTotalMinutes / 60)}:
+                        {String(endTotalMinutes % 60).padStart(2, '0')}
                       </div>
                     </div>
                   </div>
@@ -265,11 +346,90 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
             </div>
           )}
 
+          {/* Continuous appointment rectangles - positioned absolutely over the entire grid */}
+          <div className="absolute inset-0 pointer-events-none z-30">
+            {appointmentTypes.map((type, typeIndex) => {
+              const typeColors = getTypeColors(type.key);
+
+              // Get all appointments for this type
+              const typeAppointments = appointments.filter(apt => apt.type === type.key);
+
+              return typeAppointments.map((appointment) => {
+                const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+
+                const startTotalMinutes = startHour * 60 + startMinute;
+                const endTotalMinutes = endHour * 60 + endMinute;
+
+                // Calculate position within the grid
+                const firstHour = hours[0];
+                const hourHeight = 80;
+
+                // Calculate exact position based on total minutes from first hour
+                const startMinutesFromFirst = startTotalMinutes - (firstHour * 60);
+                const endMinutesFromFirst = endTotalMinutes - (firstHour * 60);
+
+                const topPosition = (startMinutesFromFirst / 60) * hourHeight;
+                const bottomPosition = (endMinutesFromFirst / 60) * hourHeight;
+                const height = bottomPosition - topPosition;
+
+                // Calculate column position to match the grid exactly
+                // Grid uses: '80px 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
+                const columnWidth = `calc((100% - 80px) / ${appointmentTypes.length})`;
+                const leftPosition = `calc(80px + ${typeIndex} * ${columnWidth})`;
+
+                return (
+                  <div
+                    key={appointment.id}
+                    className={`absolute ${typeColors.color} ${typeColors.selectedColor.split(' ')[1]} rounded-lg border-2 shadow-sm cursor-pointer hover:shadow-lg transition-all pointer-events-auto`}
+                    style={{
+                      left: `calc(${leftPosition} + 8px)`, // Add left padding
+                      width: `calc(${columnWidth} - 16px)`, // Subtract left and right padding
+                      top: `${topPosition}px`,
+                      height: `${height}px`,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onAppointmentClick(appointment);
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    onMouseMove={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onMouseUp={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <div className="p-2 h-full flex flex-col justify-between">
+                      <div className="flex justify-between items-start">
+                        <h4 className="font-semibold text-sm text-gray-800 truncate">
+                          {appointment.patient}
+                        </h4>
+                        <div className="text-xs text-gray-600 ml-2 flex-shrink-0">
+                          {appointment.startTime} - {appointment.endTime}
+                        </div>
+                      </div>
+                      <div className="flex justify-start">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${typeColors.badgeColor || 'bg-gray-100 text-gray-800'}`}>
+                          {typeColors.shortLabel || typeColors.label}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              });
+            })}
+          </div>
+
           {/* Hour grid */}
           <div className="grid grid-cols-1">
             {hours.map((hour) => {
               return (
-                <div key={hour} className="border-b border-gray-200 min-h-[80px]">
+                <div key={hour} className="border-b border-gray-200 h-[80px]">
                   <div className="grid h-full" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 1fr' }}>
                     {/* Time Column */}
                     <div className="border-r border-gray-200 flex items-center justify-end p-4">
@@ -282,24 +442,20 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                     {appointmentTypes.map((type, typeIndex) => {
                       const typeColors = getTypeColors(type.key);
 
-                      // Get appointments for this hour and type
-                      const hourAppointments = appointments.filter(apt => {
-                        const startHour = parseInt(apt.startTime.split(':')[0]);
-                        const typeMatch = apt.type === type.key;
-                        return startHour === hour && typeMatch;
-                      });
-
                       const hasActiveSelection = isDragging && dragColumn === type.key;
+
+                      // Check if this hour has appointments for subtle visual feedback
+                      const hourHasAppointment = hasAppointmentInHour(hour, type.key);
 
                       return (
                         <div
                           key={type.key}
-                          className={`p-2 cursor-pointer transition-all relative ${
+                          className={`p-2 transition-all relative ${
                             typeIndex < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''
                           } ${
                             hasActiveSelection
                               ? ``
-                              : `hover:bg-gray-50`
+                              : `cursor-pointer`
                           }`}
                           onMouseDown={(e) => {
                             // Calculate which 15-minute slot was clicked based on position
@@ -308,63 +464,71 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                             const slotHeight = rect.height / 4;
                             const slotIndex = Math.floor(relativeY / slotHeight);
                             const minute = Math.min(slotIndex * 15, 45);
-                            handleMouseDown(hour, minute, type.key, e);
+
+                            // Don't start drag if there's an appointment in this slot
+                            if (!hasAppointmentInSlot(hour, minute, type.key)) {
+                              handleMouseDown(hour, minute, type.key, e);
+                            }
                           }}
                           onMouseMove={(e) => {
                             if (isDragging && dragColumn === type.key) {
+                              // Check if we're hovering over an appointment area
                               const rect = e.currentTarget.getBoundingClientRect();
                               const relativeY = e.clientY - rect.top;
                               const slotHeight = rect.height / 4;
                               const slotIndex = Math.floor(relativeY / slotHeight);
                               const minute = Math.min(slotIndex * 15, 45);
-                              handleMouseEnter(hour, minute, type.key);
+
+                              // Don't update drag if we're over an existing appointment
+                              if (!hasAppointmentInSlot(hour, minute, type.key)) {
+                                handleMouseEnter(hour, minute, type.key);
+                              }
                             }
                           }}
                         >
-                          {!hasActiveSelection && hourAppointments.length > 0 ? (
-                            <div className="space-y-2 relative z-10 p-1">
-                              {hourAppointments.map((appointment) => (
-                                <div
-                                  key={appointment.id}
-                                  className={`p-3 rounded-lg border-2 cursor-pointer hover:shadow-lg transition-all ${typeColors.color} ${typeColors.selectedColor.split(' ')[1]} shadow-sm`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAppointmentClick(appointment);
-                                  }}
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-1 mb-2">
-                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${typeColors.selectedColor} text-gray-700`}>
-                                          {type.label}
-                                        </span>
-                                      </div>
-                                      <h4 className="font-semibold text-sm mb-1 text-gray-800">
-                                        {appointment.title}
-                                      </h4>
-                                      <div className="flex items-center text-xs text-gray-600 mb-1">
-                                        <User className="h-3 w-3 mr-1" />
-                                        <span className="truncate">{appointment.patient}</span>
-                                      </div>
-                                      <div className="flex items-center text-xs text-gray-600">
-                                        <Clock className="h-3 w-3 mr-1" />
-                                        {appointment.startTime} - {appointment.endTime}
-                                      </div>
-                                      {appointment.notes && (
-                                        <p className="text-xs text-gray-500 mt-2 truncate">
-                                          {appointment.notes}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : !hasActiveSelection ? (
-                            <div className="h-full flex items-center justify-center text-gray-400 text-sm opacity-0 hover:opacity-100 transition-opacity relative z-10">
-                              Drag to schedule
-                            </div>
-                          ) : null}
+                          {/* 15-minute separator lines */}
+                          <div className="absolute inset-0 pointer-events-none">
+                            {/* 15-minute line */}
+                            <div
+                              className="absolute left-2 right-2 border-t border-dashed border-gray-300 opacity-30"
+                              style={{ top: '25%' }}
+                            />
+                            {/* 30-minute line */}
+                            <div
+                              className="absolute left-2 right-2 border-t border-dashed border-gray-300 opacity-30"
+                              style={{ top: '50%' }}
+                            />
+                            {/* 45-minute line */}
+                            <div
+                              className="absolute left-2 right-2 border-t border-dashed border-gray-300 opacity-30"
+                              style={{ top: '75%' }}
+                            />
+                          </div>
+
+                          {/* 15-minute hover slots */}
+                          {[0, 15, 30, 45].map((minute) => {
+                            const hasAppointment = hasAppointmentInSlot(hour, minute, type.key);
+                            return (
+                              <div
+                                key={minute}
+                                className={`absolute inset-x-0 transition-all ${
+                                  hasAppointment
+                                    ? 'cursor-default'
+                                    : 'cursor-pointer hover:bg-gray-50'
+                                }`}
+                                style={{
+                                  top: `${(minute / 60) * 100}%`,
+                                  height: '25%',
+                                }}
+                                onMouseDown={(e) => {
+                                  if (!hasAppointment) {
+                                    handleMouseDown(hour, minute, type.key, e);
+                                  }
+                                }}
+                              />
+                            );
+                          })}
+
                         </div>
                       );
                     })}

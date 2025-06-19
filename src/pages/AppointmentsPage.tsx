@@ -2,7 +2,7 @@ import { useState } from "react";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { DayView } from "@/components/calendar/DayView";
 import { AppointmentForm } from "@/components/calendar/AppointmentForm";
-import { AppointmentDetails } from "@/components/calendar/AppointmentDetails";
+import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { useAppointments, type Appointment } from "@/hooks/useAppointments";
 import { toast } from "@/components/ui/sonner";
 
@@ -16,6 +16,7 @@ export function AppointmentsPage() {
   const [initialFormDate, setInitialFormDate] = useState<Date | undefined>(undefined);
   const [initialFormTime, setInitialFormTime] = useState<string | undefined>(undefined);
   const [initialFormEndTime, setInitialFormEndTime] = useState<string | undefined>(undefined);
+  const [selectedAppointmentType, setSelectedAppointmentType] = useState<string | undefined>(undefined);
 
   const {
     appointments,
@@ -47,6 +48,7 @@ export function AppointmentsPage() {
     setInitialFormDate(undefined);
     setInitialFormTime(undefined);
     setInitialFormEndTime(undefined);
+    setSelectedAppointmentType(undefined);
     setShowAppointmentForm(true);
   };
 
@@ -55,6 +57,7 @@ export function AppointmentsPage() {
     setInitialFormDate(currentDate);
     setInitialFormTime(startTime);
     setInitialFormEndTime(endTime);
+    setSelectedAppointmentType(appointmentType);
     setEditingAppointment(null);
     setShowAppointmentForm(true);
   };
@@ -62,6 +65,18 @@ export function AppointmentsPage() {
   const handleAppointmentClick = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setShowAppointmentDetails(true);
+  };
+
+  const handleEditAppointment = (appointment: Appointment) => {
+    setEditingAppointment(appointment);
+    setShowAppointmentDetails(false);
+    setShowAppointmentForm(true);
+  };
+
+  const handleDeleteAppointment = (appointmentId: string) => {
+    deleteAppointment(appointmentId);
+    setShowAppointmentDetails(false);
+    toast.success("Appointment deleted successfully");
   };
 
   const handleSaveAppointment = (appointmentData: any) => {
@@ -80,20 +95,7 @@ export function AppointmentsPage() {
     }
   };
 
-  const handleEditAppointment = (appointment: Appointment) => {
-    setEditingAppointment(appointment);
-    setShowAppointmentDetails(false);
-    setShowAppointmentForm(true);
-  };
 
-  const handleDeleteAppointment = (appointmentId: string) => {
-    try {
-      deleteAppointment(appointmentId);
-      toast.success("Appointment deleted successfully!");
-    } catch (error) {
-      toast.error("Failed to delete appointment. Please try again.");
-    }
-  };
 
   const handleStatusChange = (appointmentId: string, status: Appointment['status']) => {
     try {
@@ -154,21 +156,24 @@ export function AppointmentsPage() {
         onSave={handleSaveAppointment}
         initialDate={initialFormDate}
         initialTime={initialFormTime}
+        initialEndTime={initialFormEndTime}
+        appointmentType={selectedAppointmentType}
         editingAppointment={editingAppointment}
       />
 
       {/* Appointment Details Modal */}
-      <AppointmentDetails
-        appointment={selectedAppointment}
+      <AppointmentDetailsDialog
         isOpen={showAppointmentDetails}
         onClose={() => {
           setShowAppointmentDetails(false);
           setSelectedAppointment(null);
         }}
+        appointment={selectedAppointment}
         onEdit={handleEditAppointment}
         onDelete={handleDeleteAppointment}
-        onStatusChange={handleStatusChange}
       />
+
+
     </div>
   );
 }

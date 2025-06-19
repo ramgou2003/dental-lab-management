@@ -135,13 +135,13 @@ export function useAppointments() {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Load from localStorage or use mock data
+        // Load from localStorage or start with empty array
         const stored = localStorage.getItem('appointments');
         if (stored) {
           setAppointments(JSON.parse(stored));
         } else {
-          setAppointments(mockAppointments);
-          localStorage.setItem('appointments', JSON.stringify(mockAppointments));
+          setAppointments([]);
+          localStorage.setItem('appointments', JSON.stringify([]));
         }
         
         setError(null);
