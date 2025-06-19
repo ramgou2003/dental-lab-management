@@ -28,6 +28,7 @@ const Layout = () => {
   const getCurrentSection = () => {
     const path = location.pathname;
     if (path === "/" || path === "/dashboard") return "dashboard";
+    if (path === "/appointments") return "appointments";
     if (path.startsWith("/patients")) return "patients";
     if (path === "/lab") return "lab";
     if (path === "/report-cards") return "report-cards";

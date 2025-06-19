@@ -381,7 +381,7 @@ export function LabPage() {
         </div>
 
         {/* Lab Scripts Table - Extended to viewport height */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col table-container-rounded" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
           {loading ? (
             <div className="text-center py-12">
               <FlaskConical className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
@@ -391,7 +391,7 @@ export function LabPage() {
           ) : filteredOrders.length > 0 ? (
             <>
               {/* Table Header - Fixed with responsive columns and no separators */}
-              <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex-shrink-0">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex-shrink-0 table-header">
                 <div className="grid text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 gap-2 lg:gap-3"
                      style={{
                        gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
@@ -421,7 +421,7 @@ export function LabPage() {
               </div>
 
               {/* Table Body - Scrollable */}
-              <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+              <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
                 {filteredOrders.map((order) => {
                   const originalScript = labScripts.find(script => script.id === order.id);
 

@@ -1,4 +1,4 @@
-import { House, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
@@ -13,6 +13,11 @@ const navigation = [
     href: "/dashboard",
     section: "dashboard",
     icon: House
+  }, {
+    name: "Appointments",
+    href: "/appointments",
+    section: "appointments",
+    icon: Calendar
   }, {
     name: "Patients",
     href: "/patients",
@@ -111,7 +116,7 @@ export function Sidebar({
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 p-4 px-[9px] space-y-2">
+      <nav className="flex-1 p-4 px-[9px] space-y-1">
         {navigation.map(item => {
         const isActive = activeSection === item.section;
         return <div key={item.section} className="relative">

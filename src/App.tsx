@@ -7,6 +7,7 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import OrientationGuard from "@/components/OrientationGuard";
 import Layout from "./components/Layout";
 import { DashboardPage } from "./pages/DashboardPage";
+import { AppointmentsPage } from "./pages/AppointmentsPage";
 import { PatientsPage } from "./pages/PatientsPage";
 import { PatientProfilePage } from "./pages/PatientProfilePage";
 import { LabPage } from "./pages/LabPage";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/" element={<Layout />}>
               <Route index element={<DashboardPage />} />
               <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="appointments" element={<AppointmentsPage />} />
               <Route path="patients" element={<PatientsPage />} />
               <Route path="patients/:patientId" element={<PatientProfilePage />} />
               <Route path="lab" element={<LabPage />} />

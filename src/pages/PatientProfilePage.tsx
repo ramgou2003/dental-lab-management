@@ -729,7 +729,7 @@ export function PatientProfilePage() {
             </TabsContent>
 
             <TabsContent value="reports" className="flex-1 mt-2 overflow-hidden">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full mb-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full mb-4 table-container-rounded">
                 {reportCardsLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -739,7 +739,7 @@ export function PatientProfilePage() {
                     </div>
                   </div>
                 ) : patientReportCards.length > 0 ? (
-                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
                     <div className="space-y-4">
                       {patientReportCards.map((card) => {
                         // Format appliance type display
@@ -856,7 +856,7 @@ export function PatientProfilePage() {
             </TabsContent>
 
             <TabsContent value="lab" className="flex-1 mt-2 overflow-hidden">
-              <Card className="shadow-sm flex flex-col h-full mb-4">
+              <Card className="shadow-sm flex flex-col h-full mb-4 table-container-rounded">
                 <CardContent className="flex-1 overflow-hidden p-0">
                   {labScriptsLoading ? (
                     <div className="flex items-center justify-center h-full">
@@ -869,7 +869,7 @@ export function PatientProfilePage() {
                   ) : labScripts.length > 0 ? (
                     <div className="flex flex-col h-full">
                       {/* Table Header - Fixed */}
-                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0" style={{ paddingRight: 'calc(12px + 8px)' }}>
+                      <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0 table-header" style={{ paddingRight: 'calc(12px + 8px)' }}>
                         <div className="grid grid-cols-8 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
                           <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
@@ -881,7 +881,7 @@ export function PatientProfilePage() {
                       </div>
 
                       {/* Table Body - Scrollable */}
-                      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
                         {labScripts.map((script) => {
                           // Format appliance type display
                           const getApplianceDisplay = () => {
@@ -1082,7 +1082,7 @@ export function PatientProfilePage() {
             </TabsContent>
 
             <TabsContent value="manufacturing" className="flex-1 mt-2 overflow-hidden">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full mb-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full mb-4 table-container-rounded">
                 {manufacturingLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
@@ -1092,7 +1092,7 @@ export function PatientProfilePage() {
                     </div>
                   </div>
                 ) : manufacturingItems.length > 0 ? (
-                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
                     <div className="space-y-4">
                       {manufacturingItems.map((item) => {
                         // Format appliance type display

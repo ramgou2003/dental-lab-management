@@ -62,7 +62,7 @@ export function PatientsPage() {
         </div>
 
         {/* Patients Table - Extended to viewport height */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col table-container-rounded" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
           <PatientsTable
             searchTerm={searchTerm}
             activeTab={activeTab}

@@ -119,6 +119,34 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
 
+/* Table container rounded corners fix */
+.table-container-rounded {
+  border-radius: 0.75rem; /* rounded-xl */
+  overflow: hidden;
+}
+
+.table-container-rounded .table-header {
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
+}
+
+.table-container-rounded .table-body {
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+}
+
+/* Ensure table content doesn't overflow rounded container */
+.table-container-rounded .overflow-y-scroll {
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+}
+
+/* Fix for last table row to respect rounded corners */
+.table-container-rounded .table-body > div:last-child {
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+}
+
 /* Firefox date input styling */
 input[type="date"]::-moz-calendar-picker-indicator {
   position: absolute;

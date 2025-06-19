@@ -126,7 +126,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
   return (
     <div className="flex flex-col h-full">
       {/* Table Header - Fixed with proper responsive columns */}
-      <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0">
+      <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0 table-header">
         <div className="grid text-sm font-medium text-slate-900 h-6 gap-2 lg:gap-4"
              style={{
                gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.2fr) minmax(80px, 0.8fr) minmax(140px, 1.4fr) minmax(140px, 1.4fr) minmax(120px, 1.2fr)'
@@ -153,7 +153,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
       </div>
 
       {/* Table Body - Scrollable with matching column structure */}
-      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
         <div className="bg-white">
           {filteredPatients.length === 0 ? (
             <div className="px-4 py-8 text-center text-slate-500">

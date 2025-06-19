@@ -182,7 +182,7 @@ export function ManufacturingPage() {
         </div>
 
         {/* Manufacturing Items */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col table-container-rounded" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
           {loading ? (
             <div className="text-center py-12">
               <Factory className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
@@ -190,7 +190,7 @@ export function ManufacturingPage() {
               <p className="text-gray-500">Please wait while we fetch manufacturing data.</p>
             </div>
           ) : filteredManufacturingItems.length > 0 ? (
-            <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+            <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
                 <div className="space-y-4">
                   {filteredManufacturingItems.map((item) => {
                     // Format appliance types for display
