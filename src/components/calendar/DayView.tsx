@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Clock, User, MapPin, MoreHorizontal } from "lucide-react";
 
@@ -28,7 +28,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       key: 'consultation',
       label: 'Consult',
       shortLabel: 'Consult',
-      color: 'bg-blue-50 border-blue-300',
+      color: 'bg-blue-100 border-blue-300 text-blue-800',
       hoverColor: 'hover:bg-blue-25',
       selectedColor: 'bg-blue-100 border-blue-400',
       dragColor: 'bg-blue-200 border-blue-500',
@@ -38,7 +38,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       key: 'printed-try-in',
       label: 'Printed Try In',
       shortLabel: 'Try In',
-      color: 'bg-green-50 border-green-300',
+      color: 'bg-green-100 border-green-300 text-green-800',
       hoverColor: 'hover:bg-green-25',
       selectedColor: 'bg-green-100 border-green-400',
       dragColor: 'bg-green-200 border-green-500',
@@ -48,7 +48,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       key: 'follow-up',
       label: 'Follow Up',
       shortLabel: 'Follow Up',
-      color: 'bg-orange-50 border-orange-300',
+      color: 'bg-orange-100 border-orange-300 text-orange-800',
       hoverColor: 'hover:bg-orange-25',
       selectedColor: 'bg-orange-100 border-orange-400',
       dragColor: 'bg-orange-200 border-orange-500',
@@ -58,7 +58,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       key: 'surgery',
       label: 'Surgery',
       shortLabel: 'Surgery',
-      color: 'bg-purple-50 border-purple-300',
+      color: 'bg-purple-100 border-purple-300 text-purple-800',
       hoverColor: 'hover:bg-purple-25',
       selectedColor: 'bg-purple-100 border-purple-400',
       dragColor: 'bg-purple-200 border-purple-500',
@@ -71,12 +71,25 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [dragStart, setDragStart] = useState<{ hour: number; minute: number; column: string } | null>(null);
   const [dragEnd, setDragEnd] = useState<{ hour: number; minute: number; column: string } | null>(null);
   const [dragColumn, setDragColumn] = useState<string | null>(null);
-  const dragRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const formatTime = (hour: number) => {
     const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
     return `${displayHour}:00 ${period}`;
+  };
+
+  const getTypeColors = (typeKey: string) => {
+    return appointmentTypes.find(type => type.key === typeKey) || {
+      key: typeKey,
+      label: typeKey,
+      shortLabel: typeKey,
+      color: 'bg-gray-100 border-gray-300 text-gray-800',
+      hoverColor: 'hover:bg-gray-25',
+      selectedColor: 'bg-gray-100 border-gray-400',
+      dragColor: 'bg-gray-200 border-gray-500',
+      badgeColor: 'bg-gray-500 text-white'
+    };
   };
 
   const getAppointmentsForTimeSlotAndType = (hour: number, minute: number, appointmentType: string) => {
@@ -146,8 +159,25 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     setDragColumn(column);
   }, []);
 
-  const handleMouseEnter = useCallback((hour: number, minute: number, column: string) => {
+  const handleMouseEnter = useCallback((hour: number, minute: number, column: string, mouseY?: number) => {
     if (isDragging && dragColumn === column) {
+      // Auto-scroll functionality for mouse drag
+      if (mouseY && scrollContainerRef.current) {
+        const scrollContainer = scrollContainerRef.current;
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const scrollThreshold = 50; // pixels from edge to trigger scroll
+        const scrollSpeed = 5; // pixels per scroll
+
+        // Check if mouse is near top edge - scroll up
+        if (mouseY < containerRect.top + scrollThreshold) {
+          scrollContainer.scrollTop = Math.max(0, scrollContainer.scrollTop - scrollSpeed);
+        }
+        // Check if mouse is near bottom edge - scroll down
+        else if (mouseY > containerRect.bottom - scrollThreshold) {
+          scrollContainer.scrollTop = scrollContainer.scrollTop + scrollSpeed;
+        }
+      }
+
       // Check if we're trying to drag into an occupied slot
       const currentTime = hour * 60 + minute;
       const startTime = dragStart!.hour * 60 + dragStart!.minute;
@@ -208,6 +238,130 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     setDragColumn(null);
   }, [isDragging, dragStart, dragEnd, dragColumn, onTimeSlotClick]);
 
+  // Touch event handlers for tablet support
+  const handleTouchStart = useCallback((hour: number, minute: number, column: string, e: React.TouchEvent) => {
+    // Prevent all default touch behaviors
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Check if there's already an appointment in this slot
+    if (hasAppointmentInSlot(hour, minute, column)) {
+      return; // Don't start dragging if slot is occupied
+    }
+
+    setIsDragging(true);
+    setDragStart({ hour, minute, column });
+    setDragEnd({ hour, minute, column });
+    setDragColumn(column);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging || !dragColumn) return;
+
+    // Prevent all default touch behaviors during drag
+    e.preventDefault();
+    e.stopPropagation();
+
+    const touch = e.touches[0];
+    const scrollContainer = scrollContainerRef.current;
+
+    // Auto-scroll functionality
+    if (scrollContainer) {
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const touchY = touch.clientY;
+      const scrollThreshold = 50; // pixels from edge to trigger scroll
+      const scrollSpeed = 5; // pixels per scroll
+
+      // Check if touch is near top edge - scroll up
+      if (touchY < containerRect.top + scrollThreshold) {
+        scrollContainer.scrollTop = Math.max(0, scrollContainer.scrollTop - scrollSpeed);
+      }
+      // Check if touch is near bottom edge - scroll down
+      else if (touchY > containerRect.bottom - scrollThreshold) {
+        scrollContainer.scrollTop = scrollContainer.scrollTop + scrollSpeed;
+      }
+    }
+
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+
+    if (element) {
+      // Find the closest time slot element
+      const slotElement = element.closest('[data-hour][data-minute][data-column]');
+      if (slotElement) {
+        const hour = parseInt(slotElement.getAttribute('data-hour') || '0');
+        const minute = parseInt(slotElement.getAttribute('data-minute') || '0');
+        const column = slotElement.getAttribute('data-column') || '';
+
+        if (column === dragColumn) {
+          handleMouseEnter(hour, minute, column);
+        }
+      }
+    }
+  }, [isDragging, dragColumn, handleMouseEnter]);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Prevent default behaviors
+    e.preventDefault();
+    e.stopPropagation();
+    handleMouseUp();
+  }, [handleMouseUp]);
+
+
+
+  // Add global touch event prevention during drag and auto-scroll functionality
+  useEffect(() => {
+    const preventDefaultTouch = (e: TouchEvent) => {
+      if (isDragging) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const preventScroll = (e: Event) => {
+      if (isDragging) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    if (isDragging) {
+      // Completely disable all scrolling during drag
+      document.addEventListener('touchmove', preventDefaultTouch, { passive: false });
+      document.addEventListener('touchstart', preventDefaultTouch, { passive: false });
+      document.addEventListener('wheel', preventScroll, { passive: false });
+      document.addEventListener('scroll', preventScroll, { passive: false });
+
+      // Prevent all scroll behaviors
+      document.body.style.overflow = 'hidden';
+      document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.overscrollBehavior = 'none';
+
+      // Disable scroll on the container too
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.style.overflow = 'hidden';
+      }
+    }
+
+    return () => {
+      document.removeEventListener('touchmove', preventDefaultTouch);
+      document.removeEventListener('touchstart', preventDefaultTouch);
+      document.removeEventListener('wheel', preventScroll);
+      document.removeEventListener('scroll', preventScroll);
+
+      // Restore normal scroll behavior
+      document.body.style.overflow = '';
+      document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.overscrollBehavior = '';
+
+      // Restore container scroll
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.style.overflow = 'auto';
+      }
+    };
+  }, [isDragging]);
+
   // Check if this hour contains any part of the drag selection
   const isHourInDragSelection = (hour: number, column: string) => {
     if (!isDragging || !dragStart || !dragEnd || dragColumn !== column) return false;
@@ -244,10 +398,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     return { topPercent, heightPercent };
   };
 
-  // Get the color scheme for an appointment type
-  const getTypeColors = (typeKey: string) => {
-    return appointmentTypes.find(type => type.key === typeKey) || appointmentTypes[0];
-  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -269,11 +420,24 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       className="flex flex-col h-full bg-white select-none"
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        touchAction: isDragging ? 'none' : 'auto',
+        overscrollBehavior: isDragging ? 'none' : 'auto'
+      }}
     >
       {/* Time Grid - Scrollable */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full"
+        style={{
+          overscrollBehavior: isDragging ? 'none' : 'auto',
+          touchAction: isDragging ? 'none' : 'pan-y'
+        }}
+      >
         {/* Column Headers - Inside scrollable container */}
-        <div className="border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
+        <div className="border-b border-gray-200 bg-gray-50 sticky top-0 z-50">
           <div className="grid" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 1fr' }}>
             {/* Time Column Header */}
             <div className="p-3 border-r border-gray-200 flex items-center justify-center">
@@ -292,7 +456,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         <div className="relative">
           {/* Continuous drag selection overlay - positioned absolutely over the entire grid */}
           {isDragging && dragStart && dragEnd && dragColumn && (
-            <div className="absolute inset-0 pointer-events-none z-20">
+            <div className="absolute inset-0 pointer-events-none z-10">
               {appointmentTypes.map((type, typeIndex) => {
                 if (type.key !== dragColumn) return null;
 
@@ -324,7 +488,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 return (
                   <div
                     key={type.key}
-                    className={`absolute ${typeColors.dragColor} rounded-lg border-2 ${typeColors.dragColor.split(' ')[1]} shadow-lg`}
+                    className={`absolute ${typeColors.dragColor} rounded-lg border-2 shadow-lg`}
                     style={{
                       left: `calc(${leftPosition} + 8px)`, // Add left padding
                       width: `calc(${columnWidth} - 16px)`, // Subtract left and right padding
@@ -347,7 +511,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
           )}
 
           {/* Continuous appointment rectangles - positioned absolutely over the entire grid */}
-          <div className="absolute inset-0 pointer-events-none z-30">
+          <div className="absolute inset-0 pointer-events-none z-20">
             {appointmentTypes.map((type, typeIndex) => {
               const typeColors = getTypeColors(type.key);
 
@@ -381,7 +545,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 return (
                   <div
                     key={appointment.id}
-                    className={`absolute ${typeColors.color} ${typeColors.selectedColor.split(' ')[1]} rounded-lg border-2 shadow-sm cursor-pointer hover:shadow-lg transition-all pointer-events-auto`}
+                    className={`absolute ${typeColors.color} rounded-lg border-2 shadow-sm cursor-pointer hover:shadow-lg transition-all pointer-events-auto z-10`}
                     style={{
                       left: `calc(${leftPosition} + 8px)`, // Add left padding
                       width: `calc(${columnWidth} - 16px)`, // Subtract left and right padding
@@ -402,6 +566,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                     }}
                     onMouseUp={(e) => {
                       e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    onTouchEnd={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onAppointmentClick(appointment);
                     }}
                   >
                     <div className="p-2 h-full flex flex-col justify-between">
@@ -481,7 +654,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
                               // Don't update drag if we're over an existing appointment
                               if (!hasAppointmentInSlot(hour, minute, type.key)) {
-                                handleMouseEnter(hour, minute, type.key);
+                                handleMouseEnter(hour, minute, type.key, e.clientY);
                               }
                             }
                           }}
@@ -520,9 +693,17 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                   top: `${(minute / 60) * 100}%`,
                                   height: '25%',
                                 }}
+                                data-hour={hour}
+                                data-minute={minute}
+                                data-column={type.key}
                                 onMouseDown={(e) => {
                                   if (!hasAppointment) {
                                     handleMouseDown(hour, minute, type.key, e);
+                                  }
+                                }}
+                                onTouchStart={(e) => {
+                                  if (!hasAppointment) {
+                                    handleTouchStart(hour, minute, type.key, e);
                                   }
                                 }}
                               />
