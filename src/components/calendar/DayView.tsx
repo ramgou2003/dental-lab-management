@@ -609,15 +609,16 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                       onAppointmentClick(appointment);
                     }}
                   >
-                    <div className="p-2 h-full flex flex-col justify-between">
+                    <div className="p-1 h-full flex flex-col justify-between">
                       {(() => {
                         // Calculate appointment duration in minutes
                         const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
                         const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
                         const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
 
-                        // Single line layout for 15 and 30 minute appointments
-                        if (durationMinutes === 15 || durationMinutes === 30) {
+                        // Different layouts for 15 and 30 minute appointments
+                        if (durationMinutes === 15) {
+                          // Single line layout for 15-minute appointments
                           const firstLetter = typeColors.shortLabel?.charAt(0) || typeColors.label?.charAt(0) || 'A';
                           return (
                             <div className="flex items-center justify-between h-full w-full">
@@ -635,18 +636,25 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                             </div>
                           );
                         } else {
-                          // Original layout for longer appointments
+                          // Layout for 30-minute and longer appointments
                           return (
-                            <>
-                              <div className="flex justify-between items-start">
+                            <div className="flex flex-col h-full justify-between">
+                              {/* Top row - Name in top left */}
+                              <div className="flex justify-start">
                                 <h4 className="font-semibold text-sm text-gray-800 truncate">
                                   {appointment.patient}
                                 </h4>
-                                <div className="text-xs text-gray-600 ml-2 flex-shrink-0">
+                              </div>
+                              {/* Bottom row - Badge left, Time right */}
+                              <div className="flex justify-between items-end">
+                                <span className={`inline-flex px-1 py-0.5 text-xs font-medium rounded-full ${typeColors.badgeColor || 'bg-gray-100 text-gray-800'}`}>
+                                  {typeColors.shortLabel || typeColors.label}
+                                </span>
+                                <div className="text-xs text-gray-600">
                                   {appointment.startTime} - {appointment.endTime}
                                 </div>
                               </div>
-                            </>
+                            </div>
                           );
                         }
                       })()}
@@ -656,16 +664,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
                         const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
 
-                        // Only show bottom badge for appointments longer than 30 minutes
-                        if (durationMinutes > 30) {
-                          return (
-                            <div className="flex justify-start">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${typeColors.badgeColor || 'bg-gray-100 text-gray-800'}`}>
-                                {typeColors.shortLabel || typeColors.label}
-                              </span>
-                            </div>
-                          );
-                        }
+                        // No additional badge needed since it's now inline for 30+ minute appointments
                         return null;
                       })()}
                     </div>
