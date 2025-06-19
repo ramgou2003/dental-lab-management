@@ -55,6 +55,16 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       badgeColor: 'bg-orange-500 text-white'
     },
     {
+      key: 'data-collection',
+      label: 'Data Collection',
+      shortLabel: 'Data Collection',
+      color: 'bg-yellow-100 border-yellow-300 text-yellow-800',
+      hoverColor: 'hover:bg-yellow-25',
+      selectedColor: 'bg-yellow-100 border-yellow-400',
+      dragColor: 'bg-yellow-200 border-yellow-500',
+      badgeColor: 'bg-yellow-500 text-white'
+    },
+    {
       key: 'surgery',
       label: 'Surgery',
       shortLabel: 'Surgery',
@@ -63,6 +73,16 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       selectedColor: 'bg-purple-100 border-purple-400',
       dragColor: 'bg-purple-200 border-purple-500',
       badgeColor: 'bg-purple-500 text-white'
+    },
+    {
+      key: 'emergency',
+      label: 'Emergency',
+      shortLabel: 'Emergency',
+      color: 'bg-red-100 border-red-300 text-red-800',
+      hoverColor: 'hover:bg-red-25',
+      selectedColor: 'bg-red-100 border-red-400',
+      dragColor: 'bg-red-200 border-red-500',
+      badgeColor: 'bg-red-500 text-white'
     }
   ];
 
@@ -438,7 +458,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       >
         {/* Column Headers - Inside scrollable container */}
         <div className="border-b border-gray-200 bg-gray-50 sticky top-0 z-50">
-          <div className="grid" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 1fr' }}>
+          <div className="grid" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
             {/* Time Column Header */}
             <div className="p-3 border-r border-gray-200 flex items-center justify-center">
               <span className="text-xs font-medium text-gray-600">Time</span>
@@ -481,7 +501,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 const height = bottomPosition - topPosition;
 
                 // Calculate column position to match the grid exactly
-                // Grid uses: '80px 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
+                // Grid uses: '80px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
                 const columnWidth = `calc((100% - 80px) / ${appointmentTypes.length})`;
                 const leftPosition = `calc(80px + ${typeIndex} * ${columnWidth})`;
 
@@ -538,7 +558,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 const height = bottomPosition - topPosition;
 
                 // Calculate column position to match the grid exactly
-                // Grid uses: '80px 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
+                // Grid uses: '80px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
                 const columnWidth = `calc((100% - 80px) / ${appointmentTypes.length})`;
                 const leftPosition = `calc(80px + ${typeIndex} * ${columnWidth})`;
 
@@ -603,7 +623,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
             {hours.map((hour) => {
               return (
                 <div key={hour} className="border-b border-gray-200 h-[80px]">
-                  <div className="grid h-full" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 1fr' }}>
+                  <div className="grid h-full" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
                     {/* Time Column */}
                     <div className="border-r border-gray-200 flex items-center justify-end p-4">
                       <span className="text-sm font-medium text-gray-600 whitespace-nowrap">

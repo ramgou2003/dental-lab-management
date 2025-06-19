@@ -68,8 +68,12 @@ export function AppointmentDetailsDialog({
         return 'Printed Try In';
       case 'follow-up':
         return 'Follow Up';
+      case 'data-collection':
+        return 'Data Collection';
       case 'surgery':
         return 'Surgery';
+      case 'emergency':
+        return 'Emergency';
       default:
         return type;
     }

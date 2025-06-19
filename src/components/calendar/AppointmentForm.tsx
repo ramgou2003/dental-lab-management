@@ -50,7 +50,9 @@ export function AppointmentForm({
     { id: 'consultation', name: 'Consult' },
     { id: 'printed-try-in', name: 'Printed Try In' },
     { id: 'follow-up', name: 'Follow Up' },
-    { id: 'surgery', name: 'Surgery' }
+    { id: 'data-collection', name: 'Data Collection' },
+    { id: 'surgery', name: 'Surgery' },
+    { id: 'emergency', name: 'Emergency' }
   ];
 
   // Generate time slots for dropdowns (15-minute intervals)
