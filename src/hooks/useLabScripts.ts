@@ -12,6 +12,8 @@ export interface LabScript {
   lower_treatment_type?: string;
   screw_type?: string;
   custom_screw_type?: string;
+  material?: string;
+  shade?: string;
   vdo_details?: string;
   is_nightguard_needed?: string;
   requested_date: string;
@@ -19,7 +21,8 @@ export interface LabScript {
   instructions?: string;
   notes?: string;
   status: 'pending' | 'in-progress' | 'completed' | 'delayed' | 'hold';
-  comments?: Array<{id: string, text: string, timestamp: string}>;
+  comments?: Array<{id: string, comment_text: string, author_name: string | null, author_role: string | null, created_at: string, updated_at: string}>;
+  lab_script_comments?: Array<{id: string, comment_text: string, author_name: string | null, author_role: string | null, created_at: string, updated_at: string}>;
   created_at: string;
   updated_at: string;
 }
@@ -35,7 +38,17 @@ export function useLabScripts() {
 
       const { data, error } = await supabase
         .from('lab_scripts')
-        .select('*')
+        .select(`
+          *,
+          lab_script_comments (
+            id,
+            comment_text,
+            author_name,
+            author_role,
+            created_at,
+            updated_at
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -50,6 +63,8 @@ export function useLabScripts() {
             upper_appliance_type: 'surgical-day-appliance',
             upper_treatment_type: 'orthodontic',
             screw_type: 'DC Screw',
+            material: 'Zirconia',
+            shade: 'A2',
             vdo_details: 'Open up to 4mm without calling Doctor',
             is_nightguard_needed: 'no',
             requested_date: '2024-01-15',
@@ -70,6 +85,8 @@ export function useLabScripts() {
             upper_treatment_type: 'restorative',
             lower_treatment_type: 'cosmetic',
             screw_type: 'Rosen',
+            material: 'Titanium',
+            shade: 'B1',
             vdo_details: 'Open VDO based on requirement',
             is_nightguard_needed: 'yes',
             requested_date: '2024-01-14',
@@ -87,6 +104,8 @@ export function useLabScripts() {
             arch_type: 'upper',
             upper_appliance_type: 'night-guard',
             upper_treatment_type: 'preventive',
+            material: 'Acrylic',
+            shade: 'Clear',
             requested_date: '2024-01-20',
             due_date: '2024-01-25',
             instructions: 'Please fabricate night guard for upper arch.',
@@ -103,6 +122,8 @@ export function useLabScripts() {
             lower_appliance_type: 'direct-load-zirconia',
             upper_treatment_type: 'prosthetic',
             screw_type: 'SIN PRH30',
+            material: 'Ceramic',
+            shade: 'A3',
             vdo_details: 'Open up to 4mm with calling Doctor',
             is_nightguard_needed: 'no',
             requested_date: '2024-01-18',
@@ -121,7 +142,13 @@ export function useLabScripts() {
         return;
       }
 
-      setLabScripts(data || []);
+      // Process the data to format comments properly
+      const processedData = (data || []).map(script => ({
+        ...script,
+        comments: script.lab_script_comments || []
+      }));
+
+      setLabScripts(processedData);
       setError(null);
     } catch (err) {
       console.error('Error fetching lab scripts:', err);

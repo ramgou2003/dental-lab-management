@@ -8,15 +8,17 @@ import { Label } from "@/components/ui/label";
 import { PatientAutocomplete } from "@/components/PatientAutocomplete";
 import { User, FlaskConical, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { useLabScriptComments } from "@/hooks/useLabScriptComments";
 
 interface NewLabScriptFormProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<any>;
 }
 
 export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormProps) {
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const { addComment } = useLabScriptComments();
 
   // Hardcoded dropdown options
   const options = {
@@ -28,9 +30,7 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       { id: 5, value: 'direct-load-zirconia', label: 'Direct Load Zirconia' },
       { id: 6, value: 'ti-bar-superstructure', label: 'Ti-Bar and Superstructure' },
       { id: 7, value: 'crown', label: 'Crown' },
-      { id: 8, value: 'bridge', label: 'Bridge' },
-      { id: 9, value: 'denture', label: 'Denture' },
-      { id: 10, value: 'retainer', label: 'Retainer' }
+      { id: 8, value: 'bridge', label: 'Bridge' }
     ],
     screw_type: [
       { id: 19, value: 'dc_screw', label: 'DC Screw' },
@@ -47,6 +47,44 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       { id: 28, value: 'open_4mm_with', label: 'Open up to 4mm with calling Doctor' },
       { id: 29, value: 'open_based_requirement', label: 'Open VDO based on requirement' },
       { id: 30, value: 'no_changes', label: 'No changes required in VDO' }
+    ],
+    material: [
+      { id: 31, value: 'flexera-smile-ultra-plus', label: 'Flexera Smile Ultra Plus' },
+      { id: 32, value: 'sprint-ray-onx', label: 'Sprint Ray ONX' },
+      { id: 33, value: 'sprint-ray-nightguard-flex', label: 'Sprint Ray Nightguard Flex' },
+      { id: 34, value: 'flexera-model-x', label: 'Flexera Model X' },
+      { id: 35, value: 'zirconia', label: 'Zirconia' },
+      { id: 36, value: 'pmma', label: 'PMMA' },
+      { id: 37, value: 'onx-tough', label: 'ONX Tough' },
+      { id: 38, value: 'titanium-zirconia', label: 'Titanium & Zirconia' },
+      { id: 39, value: 'titanium', label: 'Titanium' }
+    ],
+    shade: [
+      { id: 39, value: 'na', label: 'N/A' },
+      { id: 40, value: 'a1', label: 'A1' },
+      { id: 41, value: 'a2', label: 'A2' },
+      { id: 42, value: 'a3', label: 'A3' },
+      { id: 43, value: 'a3.5', label: 'A3.5' },
+      { id: 44, value: 'a4', label: 'A4' },
+      { id: 45, value: 'b1', label: 'B1' },
+      { id: 46, value: 'b2', label: 'B2' },
+      { id: 47, value: 'b3', label: 'B3' },
+      { id: 48, value: 'b4', label: 'B4' },
+      { id: 49, value: 'c1', label: 'C1' },
+      { id: 50, value: 'c2', label: 'C2' },
+      { id: 51, value: 'c3', label: 'C3' },
+      { id: 52, value: 'c4', label: 'C4' },
+      { id: 53, value: 'd2', label: 'D2' },
+      { id: 54, value: 'd3', label: 'D3' },
+      { id: 55, value: 'd4', label: 'D4' },
+      { id: 56, value: 'bl1', label: 'BL1' },
+      { id: 57, value: 'bl2', label: 'BL2' },
+      { id: 58, value: 'bl3', label: 'BL3' },
+      { id: 59, value: 'bl4', label: 'BL4' },
+      { id: 60, value: 'bleach', label: 'BLEACH' },
+      { id: 61, value: 'nw', label: 'NW' },
+      { id: 62, value: 'clear', label: 'Clear' },
+      { id: 63, value: 'custom', label: 'Custom' }
     ]
   };
   const [formData, setFormData] = useState({
@@ -57,6 +95,8 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     lowerApplianceType: "",
     screwType: "",
     customScrewType: "",
+    material: "",
+    shade: "",
     vdoDetails: "",
     isNightguardNeeded: "",
     requestedDate: new Date().toISOString().split('T')[0], // Today's date
@@ -80,7 +120,7 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validation logic for required fields
@@ -190,24 +230,48 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       return;
     }
 
-    onSubmit(formData);
-    // Reset form
-    setFormData({
-      patientId: "",
-      patientName: "",
-      archType: "",
-      upperApplianceType: "",
-      lowerApplianceType: "",
-      screwType: "",
-      customScrewType: "",
-      vdoDetails: "",
-      isNightguardNeeded: "",
-      requestedDate: new Date().toISOString().split('T')[0], // Today's date
-      dueDate: "",
-      instructions: "",
-      notes: ""
-    });
-    onClose();
+    try {
+      // Submit the lab script and get the created lab script with ID
+      const createdLabScript = await onSubmit(formData);
+
+      // If there's a notes field with content and we got a lab script ID, save it as a comment
+      if (formData.notes && formData.notes.trim() && createdLabScript?.id) {
+        try {
+          await addComment({
+            comment_text: formData.notes.trim(),
+            author_name: "Guest",
+            author_role: "Guest"
+          }, createdLabScript.id);
+        } catch (commentError) {
+          console.error("Error adding comment:", commentError);
+          // Don't fail the whole operation if comment fails
+          toast.error("Lab script created but failed to save comment");
+        }
+      }
+
+      // Reset form
+      setFormData({
+        patientId: "",
+        patientName: "",
+        archType: "",
+        upperApplianceType: "",
+        lowerApplianceType: "",
+        screwType: "",
+        customScrewType: "",
+        material: "",
+        shade: "",
+        vdoDetails: "",
+        isNightguardNeeded: "",
+        requestedDate: new Date().toISOString().split('T')[0], // Today's date
+        dueDate: "",
+        instructions: "",
+        notes: ""
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      toast.error("Failed to create lab script. Please try again.");
+    }
   };
 
   // Format date for display
@@ -336,6 +400,8 @@ Please respond with only the professionally enhanced text, no additional comment
       lowerApplianceType: "",
       screwType: "",
       customScrewType: "",
+      material: "",
+      shade: "",
       vdoDetails: "",
       isNightguardNeeded: "",
       requestedDate: new Date().toISOString().split('T')[0], // Today's date
@@ -702,6 +768,54 @@ Please respond with only the professionally enhanced text, no additional comment
                 </div>
               ) : null;
             })()}
+
+            {/* Material and Shade Fields - Side by Side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="material">Material</Label>
+                <Select
+                  value={options.material.find(opt => opt.label === formData.material)?.value || formData.material}
+                  onValueChange={(value) => {
+                    // Find the option and save the label (which has correct case)
+                    const selectedOption = options.material.find(opt => opt.value === value);
+                    handleInputChange("material", selectedOption ? selectedOption.label : value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select material" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.material.map((option) => (
+                      <SelectItem key={option.id} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="shade">Shade</Label>
+                <Select
+                  value={options.shade.find(opt => opt.label === formData.shade)?.value || formData.shade}
+                  onValueChange={(value) => {
+                    // Find the option and save the label (which has correct case)
+                    const selectedOption = options.shade.find(opt => opt.value === value);
+                    handleInputChange("shade", selectedOption ? selectedOption.label : value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select shade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.shade.map((option) => (
+                      <SelectItem key={option.id} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {/* Date Fields - Side by Side */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

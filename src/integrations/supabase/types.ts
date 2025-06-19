@@ -95,6 +95,8 @@ export type Database = {
           lower_treatment_type: string | null
           screw_type: string | null
           custom_screw_type: string | null
+          material: string | null
+          shade: string | null
           vdo_details: string | null
           is_nightguard_needed: string | null
           requested_date: string
@@ -116,6 +118,8 @@ export type Database = {
           lower_treatment_type?: string | null
           screw_type?: string | null
           custom_screw_type?: string | null
+          material?: string | null
+          shade?: string | null
           vdo_details?: string | null
           is_nightguard_needed?: string | null
           requested_date: string
@@ -130,19 +134,22 @@ export type Database = {
           id?: string
           patient_id?: string | null
           patient_name?: string
-          appliance_type?: string
           arch_type?: string
+          upper_appliance_type?: string | null
+          lower_appliance_type?: string | null
           upper_treatment_type?: string | null
           lower_treatment_type?: string | null
           screw_type?: string | null
           custom_screw_type?: string | null
+          material?: string | null
+          shade?: string | null
           vdo_details?: string | null
+          is_nightguard_needed?: string | null
           requested_date?: string
           due_date?: string | null
           instructions?: string | null
           notes?: string | null
           status?: string
-          lab_name?: string | null
           created_at?: string
           updated_at?: string
         }

@@ -10,11 +10,16 @@ export interface LabReportCard {
   upper_appliance_type: string | null;
   lower_appliance_type: string | null;
   screw: string;
+  material: string | null;
   shade: string;
   implant_on_upper: string | null;
   implant_on_lower: string | null;
+  custom_implant_upper: string | null;
+  custom_implant_lower: string | null;
   tooth_library_upper: string | null;
   tooth_library_lower: string | null;
+  custom_tooth_library_upper: string | null;
+  custom_tooth_library_lower: string | null;
   upper_appliance_number: string | null;
   lower_appliance_number: string | null;
   notes_and_remarks: string;
@@ -30,11 +35,16 @@ export interface LabReportCardFormData {
   upper_appliance_type: string;
   lower_appliance_type: string;
   screw: string;
+  material: string;
   shade: string;
   implant_on_upper: string;
   implant_on_lower: string;
+  custom_implant_upper: string;
+  custom_implant_lower: string;
   tooth_library_upper: string;
   tooth_library_lower: string;
+  custom_tooth_library_upper: string;
+  custom_tooth_library_lower: string;
   upper_appliance_number: string;
   lower_appliance_number: string;
   notes_and_remarks: string;
@@ -87,11 +97,16 @@ export function useLabReportCards() {
           upper_appliance_type: formData.upper_appliance_type || null,
           lower_appliance_type: formData.lower_appliance_type || null,
           screw: formData.screw,
+          material: formData.material || null,
           shade: formData.shade,
           implant_on_upper: formData.implant_on_upper || null,
           implant_on_lower: formData.implant_on_lower || null,
+          custom_implant_upper: formData.custom_implant_upper || null,
+          custom_implant_lower: formData.custom_implant_lower || null,
           tooth_library_upper: formData.tooth_library_upper || null,
           tooth_library_lower: formData.tooth_library_lower || null,
+          custom_tooth_library_upper: formData.custom_tooth_library_upper || null,
+          custom_tooth_library_lower: formData.custom_tooth_library_lower || null,
           upper_appliance_number: formData.upper_appliance_number || null,
           lower_appliance_number: formData.lower_appliance_number || null,
           notes_and_remarks: formData.notes_and_remarks,

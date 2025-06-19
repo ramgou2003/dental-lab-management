@@ -19,6 +19,9 @@ export interface ReportCard {
     upper_appliance_type?: string;
     lower_appliance_type?: string;
     screw_type?: string;
+    custom_screw_type?: string;
+    material?: string;
+    shade?: string;
     notes?: string;
   };
 }
@@ -41,6 +44,9 @@ export function useReportCards() {
             upper_appliance_type,
             lower_appliance_type,
             screw_type,
+            custom_screw_type,
+            material,
+            shade,
             notes
           )
         `)

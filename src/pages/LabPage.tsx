@@ -25,7 +25,7 @@ export function LabPage() {
 
   const handleFormSubmit = async (formData: any) => {
     try {
-      await addLabScript({
+      const newLabScript = await addLabScript({
         patient_id: formData.patientId,
         patient_name: formData.patientName,
         arch_type: formData.archType,
@@ -33,6 +33,8 @@ export function LabPage() {
         lower_appliance_type: formData.lowerApplianceType,
         screw_type: formData.screwType,
         custom_screw_type: formData.customScrewType,
+        material: formData.material,
+        shade: formData.shade,
         vdo_details: formData.vdoDetails,
         is_nightguard_needed: formData.isNightguardNeeded,
         requested_date: formData.requestedDate,
@@ -41,11 +43,14 @@ export function LabPage() {
         notes: formData.notes,
         status: 'pending'
       });
+
       toast.success("Lab script created successfully!");
       setShowNewScriptForm(false);
+      return newLabScript; // Return the created lab script so the form can access the ID
     } catch (error) {
       console.error("Error creating lab script:", error);
       toast.error("Failed to create lab script. Please try again.");
+      throw error; // Re-throw so the form can handle the error
     }
   };
 
@@ -269,6 +274,8 @@ export function LabPage() {
       upperApplianceType: script.upper_appliance_type,
       lowerApplianceType: script.lower_appliance_type,
       screwType: script.screw_type,
+      material: script.material,
+      shade: script.shade,
       vdoDetails: script.vdo_details,
       isNightguardNeeded: script.is_nightguard_needed,
       status: script.status,
@@ -394,24 +401,30 @@ export function LabPage() {
               <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex-shrink-0 table-header">
                 <div className="grid text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 gap-2 lg:gap-3"
                      style={{
-                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(100px, 1fr) minmax(60px, 0.6fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
                      }}>
-                  <div className="flex items-center px-2">
+                  <div className="border-r border-gray-200 flex items-center px-2">
                     <span className="truncate">Patient Name</span>
                   </div>
-                  <div className="text-center flex items-center justify-center px-2">
+                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
                     <span className="truncate">Arch Type</span>
                   </div>
-                  <div className="text-center flex items-center justify-center px-2">
+                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
                     <span className="truncate">Appliance Type</span>
                   </div>
-                  <div className="text-center flex items-center justify-center px-2">
+                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
+                    <span className="truncate">Screw Type</span>
+                  </div>
+                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
+                    <span className="truncate">Shade</span>
+                  </div>
+                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
                     <span className="truncate">Requested Date</span>
                   </div>
-                  <div className="text-center flex items-center justify-center px-2">
+                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
                     <span className="truncate">Due Date</span>
                   </div>
-                  <div className="text-center flex items-center justify-center px-2">
+                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
                     <span className="truncate">Status</span>
                   </div>
                   <div className="text-right flex items-center justify-end px-2">
@@ -465,7 +478,7 @@ export function LabPage() {
                     <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 min-h-[64px]">
                       <div className="grid gap-2 lg:gap-3 px-4 py-3 text-sm items-center min-h-[64px]"
                            style={{
-                             gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                             gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(100px, 1fr) minmax(60px, 0.6fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
                            }}>
 
                         {/* Patient */}
@@ -516,6 +529,16 @@ export function LabPage() {
                               </div>
                             )}
                           </div>
+                        </div>
+
+                        {/* Screw Type */}
+                        <div className="border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
+                          <p className="text-gray-600 text-xs text-center truncate">{order.screwType || 'N/A'}</p>
+                        </div>
+
+                        {/* Shade */}
+                        <div className="border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
+                          <p className="text-gray-600 text-xs text-center truncate">{order.shade || 'N/A'}</p>
                         </div>
 
                         {/* Requested Date */}
