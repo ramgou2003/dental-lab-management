@@ -1016,8 +1016,8 @@ export function PatientProfilePage() {
                             <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
                             <div className="col-span-1 text-right flex items-center justify-end pr-2">Actions</div>
                           </div>
-                          {/* Scrollbar compensation element - matches scrollbar width */}
-                          <div className="w-[10px] flex-shrink-0"></div>
+                          {/* Scrollbar compensation element - matches scrollbar width (desktop only) */}
+                          <div className="w-[10px] flex-shrink-0 hidden md:block"></div>
                         </div>
                       </div>
 

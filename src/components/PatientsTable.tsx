@@ -159,8 +159,8 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
               <span className="truncate">Actions</span>
             </div>
           </div>
-          {/* Scrollbar compensation element - matches scrollbar width */}
-          <div className="w-[10px] flex-shrink-0"></div>
+          {/* Scrollbar compensation element - matches scrollbar width (desktop only) */}
+          <div className="w-[10px] flex-shrink-0 hidden md:block"></div>
         </div>
       </div>
 
