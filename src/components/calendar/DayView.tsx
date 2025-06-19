@@ -470,7 +470,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       >
         {/* Column Headers - Inside scrollable container */}
         <div className="border-b border-gray-200 bg-gray-50 sticky top-0 z-50">
-          <div className="grid" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
+          <div className="grid" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
             {/* Time Column Header */}
             <div className="p-3 border-r border-gray-200 flex items-center justify-center">
               <span className="text-xs font-medium text-gray-600">Time</span>
@@ -513,9 +513,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 const height = bottomPosition - topPosition;
 
                 // Calculate column position to match the grid exactly
-                // Grid uses: '80px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
-                const columnWidth = `calc((100% - 80px) / ${appointmentTypes.length})`;
-                const leftPosition = `calc(80px + ${typeIndex} * ${columnWidth})`;
+                // Grid uses: '60px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
+                const columnWidth = `calc((100% - 60px) / ${appointmentTypes.length})`;
+                const leftPosition = `calc(60px + ${typeIndex} * ${columnWidth})`;
 
                 return (
                   <div
@@ -570,9 +570,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 const height = bottomPosition - topPosition;
 
                 // Calculate column position to match the grid exactly
-                // Grid uses: '80px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
-                const columnWidth = `calc((100% - 80px) / ${appointmentTypes.length})`;
-                const leftPosition = `calc(80px + ${typeIndex} * ${columnWidth})`;
+                // Grid uses: '60px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
+                const columnWidth = `calc((100% - 60px) / ${appointmentTypes.length})`;
+                const leftPosition = `calc(60px + ${typeIndex} * ${columnWidth})`;
 
                 return (
                   <div
@@ -621,11 +621,11 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           const firstLetter = typeColors.shortLabel?.charAt(0) || typeColors.label?.charAt(0) || 'A';
                           return (
                             <div className="flex items-center justify-between h-full w-full">
-                              <h4 className="font-semibold text-sm text-gray-800 truncate flex-1 min-w-0 pr-2">
+                              <h4 className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 pr-2">
                                 {appointment.patient}
                               </h4>
                               <div className="flex items-center gap-1 flex-shrink-0 ml-auto">
-                                <span className="text-xs text-gray-600 whitespace-nowrap">
+                                <span className="text-xs text-gray-600 whitespace-nowrap text-[10px]">
                                   {appointment.startTime} - {appointment.endTime}
                                 </span>
                                 <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full ${typeColors.badgeColor || 'bg-gray-500'}`}>
@@ -680,10 +680,10 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
             {hours.map((hour) => {
               return (
                 <div key={hour} className="border-b border-gray-200 h-[80px]">
-                  <div className="grid h-full" style={{ gridTemplateColumns: '80px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
+                  <div className="grid h-full" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
                     {/* Time Column */}
-                    <div className="border-r border-gray-200 flex items-center justify-end p-4">
-                      <span className="text-sm font-medium text-gray-600 whitespace-nowrap">
+                    <div className="border-r border-gray-200 flex items-start justify-end p-2 pt-1">
+                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
                         {formatTime(hour)}
                       </span>
                     </div>
