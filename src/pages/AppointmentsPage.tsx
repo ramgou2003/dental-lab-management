@@ -62,6 +62,11 @@ export function AppointmentsPage() {
     setShowAppointmentForm(true);
   };
 
+  const handleClearSelection = () => {
+    // This will be called when the selection needs to be cleared
+    // Currently no additional state to clear in the parent
+  };
+
   const handleAppointmentClick = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setShowAppointmentDetails(true);
@@ -142,6 +147,8 @@ export function AppointmentsPage() {
             appointments={filteredAppointments}
             onAppointmentClick={handleAppointmentClick}
             onTimeSlotClick={handleTimeSlotClick}
+            isDialogOpen={showAppointmentForm || showAppointmentDetails}
+            onClearSelection={handleClearSelection}
           />
         </div>
       </div>

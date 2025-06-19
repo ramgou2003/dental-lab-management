@@ -18,10 +18,14 @@ interface Patient {
   city: string | null;
   state: string | null;
   zip_code: string | null;
+  status: string | null;
   treatment_type: string | null;
-  last_visit: string | null;
-  next_appointment: string | null;
-  status: string;
+  upper_arch: boolean | null;
+  lower_arch: boolean | null;
+  upper_treatment: string | null;
+  lower_treatment: string | null;
+  upper_surgery_date: string | null;
+  lower_surgery_date: string | null;
   profile_picture?: string | null;
   created_at: string;
   updated_at: string;
@@ -92,8 +96,10 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
     return matchesSearch && patient.status === statusMap[activeTab];
   });
 
-  const getStatusButtonColor = (status: string) => {
+  const getStatusButtonColor = (status: string | null) => {
     switch (status) {
+      case "New patient":
+        return "bg-purple-200 text-purple-900 hover:bg-purple-300";
       case "Treatment not started":
         return "bg-yellow-200 text-yellow-900 hover:bg-yellow-300";
       case "Treatment in progress":
@@ -102,6 +108,8 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
         return "bg-green-200 text-green-900 hover:bg-green-300";
       case "Patient deceased":
         return "bg-gray-200 text-gray-900 hover:bg-gray-300";
+      case null:
+        return "bg-gray-100 text-gray-600 hover:bg-gray-200";
       default:
         return "bg-slate-200 text-slate-900 hover:bg-slate-300";
     }
@@ -206,7 +214,10 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                     variant="secondary"
                   >
                     <span className="truncate">
-                      {patient.status.replace('Treatment ', '').replace('Patient ', '')}
+                      {patient.status ?
+                        patient.status === 'New patient' ? 'New' :
+                        patient.status.replace('Treatment ', '').replace('Patient ', '')
+                        : 'No Status'}
                     </span>
                   </Button>
                 </div>

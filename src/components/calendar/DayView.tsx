@@ -18,9 +18,11 @@ interface DayViewProps {
   appointments: Appointment[];
   onAppointmentClick: (appointment: Appointment) => void;
   onTimeSlotClick: (startTime: string, endTime: string, appointmentType?: string) => void;
+  isDialogOpen?: boolean;
+  onClearSelection?: () => void;
 }
 
-export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick }: DayViewProps) {
+export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection }: DayViewProps) {
   const hours = Array.from({ length: 13 }, (_, i) => i + 7); // 7 AM to 7 PM
 
   const appointmentTypes = [
@@ -91,6 +93,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [dragStart, setDragStart] = useState<{ hour: number; minute: number; column: string } | null>(null);
   const [dragEnd, setDragEnd] = useState<{ hour: number; minute: number; column: string } | null>(null);
   const [dragColumn, setDragColumn] = useState<string | null>(null);
+  const [keepSelectionVisible, setKeepSelectionVisible] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const formatTime = (hour: number) => {
@@ -260,14 +263,14 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
 
         onTimeSlotClick(startTime, endTime, dragColumn);
+
+        // Keep selection visible while dialog is open
+        setKeepSelectionVisible(true);
       }
     }
 
-    // Reset drag state
+    // Only reset drag state, keep selection visible for dialog
     setIsDragging(false);
-    setDragStart(null);
-    setDragEnd(null);
-    setDragColumn(null);
   }, [isDragging, dragStart, dragEnd, dragColumn, onTimeSlotClick]);
 
   // Touch event handlers for tablet support
@@ -394,9 +397,22 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     };
   }, [isDragging]);
 
+  // Clear selection when dialog closes
+  useEffect(() => {
+    if (!isDialogOpen && keepSelectionVisible) {
+      setKeepSelectionVisible(false);
+      setDragStart(null);
+      setDragEnd(null);
+      setDragColumn(null);
+      if (onClearSelection) {
+        onClearSelection();
+      }
+    }
+  }, [isDialogOpen, keepSelectionVisible, onClearSelection]);
+
   // Check if this hour contains any part of the drag selection
   const isHourInDragSelection = (hour: number, column: string) => {
-    if (!isDragging || !dragStart || !dragEnd || dragColumn !== column) return false;
+    if (!(isDragging || keepSelectionVisible) || !dragStart || !dragEnd || dragColumn !== column) return false;
 
     const startTotalMinutes = Math.min(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute);
     const endTotalMinutes = Math.max(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute + 15);
@@ -409,7 +425,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Get the drag selection rectangle dimensions for this hour
   const getDragSelectionForHour = (hour: number, column: string) => {
-    if (!isDragging || !dragStart || !dragEnd || dragColumn !== column) return null;
+    if (!(isDragging || keepSelectionVisible) || !dragStart || !dragEnd || dragColumn !== column) return null;
 
     const startTotalMinutes = Math.min(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute);
     const endTotalMinutes = Math.max(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute + 15);
@@ -487,7 +503,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
         <div className="relative">
           {/* Continuous drag selection overlay - positioned absolutely over the entire grid */}
-          {isDragging && dragStart && dragEnd && dragColumn && (
+          {(isDragging || keepSelectionVisible) && dragStart && dragEnd && dragColumn && (
             <div className="absolute inset-0 pointer-events-none z-10">
               {appointmentTypes.map((type, typeIndex) => {
                 if (type.key !== dragColumn) return null;
@@ -528,8 +544,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                       height: `${height}px`,
                     }}
                   >
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-sm font-medium text-gray-700">
+                    <div className="h-full flex items-end justify-end p-2">
+                      <div className="text-xs font-medium text-gray-700">
                         {Math.floor(startTotalMinutes / 60)}:
                         {String(startTotalMinutes % 60).padStart(2, '0')} -
                         {Math.floor(endTotalMinutes / 60)}:

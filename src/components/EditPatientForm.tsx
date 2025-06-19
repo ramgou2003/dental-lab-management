@@ -22,10 +22,14 @@ interface Patient {
   zip_code: string | null;
   gender: string | null;
   date_of_birth: string;
+  status: string | null;
   treatment_type: string | null;
-  status: string;
-  last_visit: string | null;
-  next_appointment: string | null;
+  upper_arch: boolean | null;
+  lower_arch: boolean | null;
+  upper_treatment: string | null;
+  lower_treatment: string | null;
+  upper_surgery_date: string | null;
+  lower_surgery_date: string | null;
   profile_picture?: string | null;
 }
 
@@ -41,15 +45,15 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
     lastName: '',
     dateOfBirth: '',
     phone: '',
-    treatmentType: '',
-    lastVisit: '',
-    nextAppointment: '',
-    status: 'Treatment not started',
+    status: '',
     street: '',
     city: '',
     state: '',
     zipCode: '',
-    gender: 'male'
+    gender: 'male',
+    treatmentType: '',
+    upperArch: false,
+    lowerArch: false
   });
 
   const [errors, setErrors] = useState({
@@ -69,15 +73,15 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
         lastName: patient.last_name || '',
         dateOfBirth: patient.date_of_birth || '',
         phone: patient.phone || '',
-        treatmentType: patient.treatment_type || '',
-        lastVisit: patient.last_visit || '',
-        nextAppointment: patient.next_appointment || '',
-        status: patient.status || 'Treatment not started',
+        status: patient.status || '',
         street: patient.street || '',
         city: patient.city || '',
         state: patient.state || '',
         zipCode: patient.zip_code || '',
-        gender: patient.gender || 'male'
+        gender: patient.gender || 'male',
+        treatmentType: patient.treatment_type || '',
+        upperArch: patient.upper_arch || false,
+        lowerArch: patient.lower_arch || false
       });
     }
   }, [patient]);
@@ -116,15 +120,15 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
           full_name: `${formData.firstName} ${formData.lastName}`,
           date_of_birth: formData.dateOfBirth,
           phone: formData.phone || null,
-          treatment_type: formData.treatmentType || null,
-          last_visit: formData.lastVisit || null,
-          next_appointment: formData.nextAppointment || null,
-          status: formData.status,
+          status: formData.status || null,
           street: formData.street || null,
           city: formData.city || null,
           state: formData.state || null,
           zip_code: formData.zipCode || null,
           gender: formData.gender,
+          treatment_type: formData.treatmentType || null,
+          upper_arch: formData.upperArch,
+          lower_arch: formData.lowerArch,
           updated_at: new Date().toISOString()
         })
         .eq('id', patient.id)
@@ -259,43 +263,7 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
             }}
           />
 
-          <div>
-            <Label htmlFor="treatmentType">Treatment Type</Label>
-            <Select value={formData.treatmentType} onValueChange={(value) => handleInputChange('treatmentType', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select treatment type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Restorative">Restorative</SelectItem>
-                <SelectItem value="Cosmetic">Cosmetic</SelectItem>
-                <SelectItem value="Orthodontics">Orthodontics</SelectItem>
-                <SelectItem value="Periodontal">Periodontal</SelectItem>
-                <SelectItem value="Oral Surgery">Oral Surgery</SelectItem>
-                <SelectItem value="Preventive">Preventive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="lastVisit">Last Visit</Label>
-              <Input
-                id="lastVisit"
-                type="date"
-                value={formData.lastVisit}
-                onChange={(e) => handleInputChange('lastVisit', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="nextAppointment">Next Appointment</Label>
-              <Input
-                id="nextAppointment"
-                type="date"
-                value={formData.nextAppointment}
-                onChange={(e) => handleInputChange('nextAppointment', e.target.value)}
-              />
-            </div>
-          </div>
 
           <div>
             <Label htmlFor="status">Status</Label>
@@ -304,12 +272,80 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="">No Status Set</SelectItem>
+                <SelectItem value="New patient">New Patient</SelectItem>
                 <SelectItem value="Treatment not started">Treatment Not Started</SelectItem>
                 <SelectItem value="Treatment in progress">Treatment In Progress</SelectItem>
                 <SelectItem value="Treatment completed">Treatment Completed</SelectItem>
                 <SelectItem value="Patient deceased">Patient Deceased</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Treatment Information Section */}
+          <div className="space-y-4 pt-4 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Treatment Information</h3>
+
+            <div>
+              <Label htmlFor="treatmentType">Treatment Type</Label>
+              <Select value={formData.treatmentType} onValueChange={(value) => handleInputChange('treatmentType', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select treatment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Treatment Type</SelectItem>
+                  <SelectItem value="Orthodontics">Orthodontics</SelectItem>
+                  <SelectItem value="Dental Cleaning">Dental Cleaning</SelectItem>
+                  <SelectItem value="Root Canal">Root Canal</SelectItem>
+                  <SelectItem value="Dental Implant">Dental Implant</SelectItem>
+                  <SelectItem value="Teeth Whitening">Teeth Whitening</SelectItem>
+                  <SelectItem value="Periodontal Treatment">Periodontal Treatment</SelectItem>
+                  <SelectItem value="Crown Replacement">Crown Replacement</SelectItem>
+                  <SelectItem value="Wisdom Tooth Extraction">Wisdom Tooth Extraction</SelectItem>
+                  <SelectItem value="Dental Bridge">Dental Bridge</SelectItem>
+                  <SelectItem value="Cavity Filling">Cavity Filling</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-base font-medium">Arch Selection</Label>
+              <div className="flex space-x-4 mt-2">
+                <div
+                  className={`flex items-center justify-center px-4 py-2 rounded-md border-2 cursor-pointer transition-colors ${
+                    formData.upperArch
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                  }`}
+                  onClick={() => handleInputChange('upperArch', !formData.upperArch)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.upperArch}
+                    onChange={(e) => handleInputChange('upperArch', e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span className="font-medium">Upper</span>
+                </div>
+
+                <div
+                  className={`flex items-center justify-center px-4 py-2 rounded-md border-2 cursor-pointer transition-colors ${
+                    formData.lowerArch
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                  }`}
+                  onClick={() => handleInputChange('lowerArch', !formData.lowerArch)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.lowerArch}
+                    onChange={(e) => handleInputChange('lowerArch', e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span className="font-medium">Lower</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end space-x-4 pt-4">

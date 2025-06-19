@@ -169,10 +169,14 @@ export type Database = {
           city: string | null
           state: string | null
           zip_code: string | null
+          status: string | null
           treatment_type: string | null
-          status: string
-          last_visit: string | null
-          next_appointment: string | null
+          upper_arch: boolean | null
+          lower_arch: boolean | null
+          upper_treatment: string | null
+          lower_treatment: string | null
+          upper_surgery_date: string | null
+          lower_surgery_date: string | null
           created_at: string
           updated_at: string
         }
@@ -187,10 +191,14 @@ export type Database = {
           city?: string | null
           state?: string | null
           zip_code?: string | null
+          status?: string | null
           treatment_type?: string | null
-          status?: string
-          last_visit?: string | null
-          next_appointment?: string | null
+          upper_arch?: boolean | null
+          lower_arch?: boolean | null
+          upper_treatment?: string | null
+          lower_treatment?: string | null
+          upper_surgery_date?: string | null
+          lower_surgery_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -205,10 +213,14 @@ export type Database = {
           city?: string | null
           state?: string | null
           zip_code?: string | null
+          status?: string | null
           treatment_type?: string | null
-          status?: string
-          last_visit?: string | null
-          next_appointment?: string | null
+          upper_arch?: boolean | null
+          lower_arch?: boolean | null
+          upper_treatment?: string | null
+          lower_treatment?: string | null
+          upper_surgery_date?: string | null
+          lower_surgery_date?: string | null
           created_at?: string
           updated_at?: string
         }

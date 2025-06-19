@@ -22,15 +22,12 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
     lastName: '',
     dateOfBirth: '',
     phone: '',
-    treatmentType: '',
-    lastVisit: '',
-    nextAppointment: '',
-    status: 'Treatment not started',
     street: '',
     city: '',
     state: '',
     zipCode: '',
-    gender: 'male'
+    gender: 'male',
+    status: 'New patient'
   });
 
   const [errors, setErrors] = useState({
@@ -72,9 +69,6 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
         city: formData.city || null,
         state: formData.state || null,
         zip_code: formData.zipCode || null,
-        treatment_type: formData.treatmentType || null,
-        last_visit: formData.lastVisit || null,
-        next_appointment: formData.nextAppointment || null,
         status: formData.status
       };
 
@@ -176,63 +170,6 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
             value={formData.phone}
             onChange={(value) => handleInputChange('phone', value)}
           />
-
-          <div>
-            <Label htmlFor="treatmentType">Treatment Type</Label>
-            <Select value={formData.treatmentType} onValueChange={(value) => handleInputChange('treatmentType', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select treatment type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Orthodontics">Orthodontics</SelectItem>
-                <SelectItem value="Dental Cleaning">Dental Cleaning</SelectItem>
-                <SelectItem value="Root Canal">Root Canal</SelectItem>
-                <SelectItem value="Dental Implant">Dental Implant</SelectItem>
-                <SelectItem value="Teeth Whitening">Teeth Whitening</SelectItem>
-                <SelectItem value="Periodontal Treatment">Periodontal Treatment</SelectItem>
-                <SelectItem value="Crown Replacement">Crown Replacement</SelectItem>
-                <SelectItem value="Wisdom Tooth Extraction">Wisdom Tooth Extraction</SelectItem>
-                <SelectItem value="Dental Bridge">Dental Bridge</SelectItem>
-                <SelectItem value="Cavity Filling">Cavity Filling</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="lastVisit">Last Visit</Label>
-              <Input
-                id="lastVisit"
-                type="date"
-                value={formData.lastVisit}
-                onChange={(e) => handleInputChange('lastVisit', e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="nextAppointment">Next Appointment</Label>
-              <Input
-                id="nextAppointment"
-                type="date"
-                value={formData.nextAppointment}
-                onChange={(e) => handleInputChange('nextAppointment', e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Treatment not started">Treatment not started</SelectItem>
-                <SelectItem value="Treatment in progress">Treatment in progress</SelectItem>
-                <SelectItem value="Treatment completed">Treatment completed</SelectItem>
-                <SelectItem value="Patient deceased">Patient deceased</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           <AddressAutocomplete
             street={formData.street}

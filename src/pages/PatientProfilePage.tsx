@@ -9,8 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EditPatientForm } from "@/components/EditPatientForm";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
+import { TreatmentDialog, TreatmentData } from "@/components/TreatmentDialog";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
 import { LabScript } from "@/hooks/useLabScripts";
@@ -41,7 +43,8 @@ import {
   Package,
   Truck,
   Settings,
-  Palette
+  Palette,
+  Plus
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -60,6 +63,7 @@ export function PatientProfilePage() {
   const [showLabScriptDetail, setShowLabScriptDetail] = useState(false);
   const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
   const [editingStatus, setEditingStatus] = useState<Record<string, boolean>>({});
+  const [showTreatmentDialog, setShowTreatmentDialog] = useState(false);
 
   // Fetch patient-specific lab scripts and manufacturing items
   const { labScripts, loading: labScriptsLoading, updateLabScript } = usePatientLabScripts(patientId);
@@ -112,10 +116,14 @@ export function PatientProfilePage() {
         zip_code: "94102",
         gender: "male",
         date_of_birth: "1985-06-15",
-        treatment_type: "Orthodontics",
         status: "Treatment in progress",
-        last_visit: "2024-01-15",
-        next_appointment: "2024-02-15",
+        treatment_type: "Orthodontics",
+        upper_arch: true,
+        lower_arch: false,
+        upper_treatment: "FULL ARCH FIXED",
+        lower_treatment: "NO TREATMENT",
+        upper_surgery_date: "2025-07-15",
+        lower_surgery_date: null,
         profile_picture: null
       });
       setLoading(false);
@@ -424,6 +432,50 @@ export function PatientProfilePage() {
     setShowEditForm(false);
   };
 
+  const handleAddTreatment = () => {
+    setShowTreatmentDialog(true);
+  };
+
+  const handleTreatmentSubmit = async (treatmentData: TreatmentData) => {
+    if (!patient) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .update({
+          upper_treatment: treatmentData.upperTreatment || null,
+          lower_treatment: treatmentData.lowerTreatment || null,
+          upper_surgery_date: treatmentData.upperSurgeryDate || null,
+          lower_surgery_date: treatmentData.lowerSurgeryDate || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', patient.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setPatient(data);
+      toast({
+        title: "Success",
+        description: "Treatment information updated successfully!",
+      });
+    } catch (error) {
+      console.error('Error updating treatment information:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update treatment information",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTreatmentDialogClose = () => {
+    setShowTreatmentDialog(false);
+  };
+
   const handleViewLabScript = (labScript: LabScript) => {
     setSelectedLabScript(labScript);
     setShowLabScriptDetail(true);
@@ -634,7 +686,7 @@ export function PatientProfilePage() {
             <TabsContent value="basic" className="flex-1 mt-2 overflow-hidden">
               <div className="h-full overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full pb-4">
                 {/* Modern Info Cards Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-2">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-2">
                 {/* Personal Information */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-3 mb-6">
@@ -699,28 +751,113 @@ export function PatientProfilePage() {
 
                 {/* Treatment Information */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-purple-100 rounded-xl">
-                      <Stethoscope className="h-5 w-5 text-purple-600" />
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-xl">
+                        <Stethoscope className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900">Treatment Information</h3>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Treatment Information</h3>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={handleAddTreatment}
+                            size="sm"
+                            className="bg-purple-600 hover:bg-purple-700 text-white h-8 w-8 p-0 rounded-md shadow-sm hover:shadow-md transition-all duration-200"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Add Treatment</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                   <div className="space-y-4">
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Treatment Type</p>
-                      <p className="text-base font-semibold text-gray-900">{patient.treatment_type || "Not assigned"}</p>
-                    </div>
                     <div className="pt-2">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Treatment Status</p>
                       <Badge variant="outline" className="mt-1 bg-blue-50 border-blue-200 text-blue-700">
-                        {patient.status}
+                        {patient.status || "No Status Set"}
                       </Badge>
                     </div>
+
+                    {/* Upper and Lower Treatment Information Side by Side */}
+                    {((patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT") ||
+                      (patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT")) && (
+                      <div className="pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Upper Treatment */}
+                          {patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT" && (
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Upper Treatment</p>
+                              <div className="space-y-2">
+                                <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
+                                  {patient.upper_treatment}
+                                </Badge>
+                                {patient.upper_surgery_date && (
+                                  <div className="text-sm text-gray-600">
+                                    Surgery: {new Date(patient.upper_surgery_date).toLocaleDateString('en-US')}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Lower Treatment */}
+                          {patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT" && (
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Lower Treatment</p>
+                              <div className="space-y-2">
+                                <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">
+                                  {patient.lower_treatment}
+                                </Badge>
+                                {patient.lower_surgery_date && (
+                                  <div className="text-sm text-gray-600">
+                                    Surgery: {new Date(patient.lower_surgery_date).toLocaleDateString('en-US')}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="pt-2">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Patient Since</p>
                       <p className="text-base font-semibold text-gray-900">
                         {patient.created_at ? new Date(patient.created_at).toLocaleDateString() : "N/A"}
                       </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Medical Information */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-red-100 rounded-xl">
+                      <Heart className="h-5 w-5 text-red-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Medical Information</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Medical History</p>
+                      <p className="text-base font-semibold text-gray-900">No medical history recorded</p>
+                    </div>
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Allergies</p>
+                      <p className="text-base font-semibold text-gray-900">No known allergies</p>
+                    </div>
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Emergency Contact</p>
+                      <p className="text-base font-semibold text-gray-900">Not provided</p>
+                    </div>
+                    <div className="pt-2">
+                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Insurance</p>
+                      <p className="text-base font-semibold text-gray-900">Not provided</p>
                     </div>
                   </div>
                 </div>
@@ -1725,6 +1862,19 @@ export function PatientProfilePage() {
         onClose={handleAppointmentSchedulerClose}
         onSchedule={handleAppointmentScheduled}
         deliveryItem={selectedDeliveryItem}
+      />
+
+      {/* Treatment Dialog */}
+      <TreatmentDialog
+        isOpen={showTreatmentDialog}
+        onClose={handleTreatmentDialogClose}
+        onSubmit={handleTreatmentSubmit}
+        initialData={patient ? {
+          upperTreatment: patient.upper_treatment || "",
+          lowerTreatment: patient.lower_treatment || "",
+          upperSurgeryDate: patient.upper_surgery_date || "",
+          lowerSurgeryDate: patient.lower_surgery_date || ""
+        } : undefined}
       />
     </div>
   );

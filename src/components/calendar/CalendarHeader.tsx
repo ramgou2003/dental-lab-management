@@ -64,18 +64,18 @@ export function CalendarHeader({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigateDate('next')}
-              className="h-8 w-8 p-0"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={goToToday}
               className="px-3 h-8"
             >
               Today
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigateDate('next')}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
