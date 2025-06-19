@@ -390,33 +390,37 @@ export function LabPage() {
             </div>
           ) : filteredOrders.length > 0 ? (
             <>
-              {/* Table Header - Fixed with responsive columns and no separators */}
+              {/* Table Header - Fixed with responsive columns and scrollbar compensation */}
               <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex-shrink-0 table-header">
-                <div className="grid text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 gap-2 lg:gap-3"
-                     style={{
-                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
-                     }}>
-                  <div className="flex items-center px-2">
-                    <span className="truncate">Patient Name</span>
+                <div className="flex">
+                  <div className="grid text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 gap-2 lg:gap-3 flex-1"
+                       style={{
+                         gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                       }}>
+                    <div className="flex items-center px-2">
+                      <span className="truncate">Patient Name</span>
+                    </div>
+                    <div className="text-center flex items-center justify-center px-2">
+                      <span className="truncate">Arch Type</span>
+                    </div>
+                    <div className="text-center flex items-center justify-center px-2">
+                      <span className="truncate">Appliance Type</span>
+                    </div>
+                    <div className="text-center flex items-center justify-center px-2">
+                      <span className="truncate">Requested Date</span>
+                    </div>
+                    <div className="text-center flex items-center justify-center px-2">
+                      <span className="truncate">Due Date</span>
+                    </div>
+                    <div className="text-center flex items-center justify-center px-2">
+                      <span className="truncate">Status</span>
+                    </div>
+                    <div className="text-right flex items-center justify-end px-2">
+                      <span className="truncate">Actions</span>
+                    </div>
                   </div>
-                  <div className="text-center flex items-center justify-center px-2">
-                    <span className="truncate">Arch Type</span>
-                  </div>
-                  <div className="text-center flex items-center justify-center px-2">
-                    <span className="truncate">Appliance Type</span>
-                  </div>
-                  <div className="text-center flex items-center justify-center px-2">
-                    <span className="truncate">Requested Date</span>
-                  </div>
-                  <div className="text-center flex items-center justify-center px-2">
-                    <span className="truncate">Due Date</span>
-                  </div>
-                  <div className="text-center flex items-center justify-center px-2">
-                    <span className="truncate">Status</span>
-                  </div>
-                  <div className="text-right flex items-center justify-end px-2">
-                    <span className="truncate">Actions</span>
-                  </div>
+                  {/* Scrollbar compensation element - matches scrollbar width */}
+                  <div className="w-[10px] flex-shrink-0"></div>
                 </div>
               </div>
 

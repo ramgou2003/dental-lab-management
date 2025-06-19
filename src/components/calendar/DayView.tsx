@@ -475,18 +475,10 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         overscrollBehavior: isDragging ? 'none' : 'auto'
       }}
     >
-      {/* Time Grid - Scrollable */}
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full"
-        style={{
-          overscrollBehavior: isDragging ? 'none' : 'auto',
-          touchAction: isDragging ? 'none' : 'pan-y'
-        }}
-      >
-        {/* Column Headers - Inside scrollable container */}
-        <div className="border-b border-gray-200 bg-gray-50 sticky top-0 z-50">
-          <div className="grid" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
+      {/* Column Headers - Fixed outside scrollable container */}
+      <div className="border-b border-gray-200 bg-gray-50 flex-shrink-0">
+        <div className="flex">
+          <div className="grid flex-1" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
             {/* Time Column Header */}
             <div className="p-3 border-r border-gray-200 flex items-center justify-center">
               <span className="text-xs font-medium text-gray-600">Time</span>
@@ -499,7 +491,20 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
               </div>
             ))}
           </div>
+          {/* Scrollbar compensation element - matches scrollbar width */}
+          <div className="w-[10px] flex-shrink-0"></div>
         </div>
+      </div>
+
+      {/* Time Grid - Scrollable content only */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced"
+        style={{
+          overscrollBehavior: isDragging ? 'none' : 'auto',
+          touchAction: isDragging ? 'none' : 'pan-y'
+        }}
+      >
 
         <div className="relative">
           {/* Continuous drag selection overlay - positioned absolutely over the entire grid */}
