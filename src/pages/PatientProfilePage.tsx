@@ -876,7 +876,7 @@ export function PatientProfilePage() {
                     </div>
                   </div>
                 ) : patientReportCards.length > 0 ? (
-                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
+                  <div className="flex-1 overflow-y-auto p-6 scrollbar-enhanced table-body">
                     <div className="space-y-4">
                       {patientReportCards.map((card) => {
                         // Format appliance type display
@@ -1005,24 +1005,20 @@ export function PatientProfilePage() {
                     </div>
                   ) : labScripts.length > 0 ? (
                     <div className="flex flex-col h-full">
-                      {/* Table Header - Fixed with scrollbar compensation */}
+                      {/* Table Header - Fixed */}
                       <div className="bg-gray-50 border-b border-gray-200 px-3 py-3 flex-shrink-0 table-header">
-                        <div className="flex">
-                          <div className="grid grid-cols-8 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 flex-1">
-                            <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
-                            <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
-                            <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
-                            <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
-                            <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
-                            <div className="col-span-1 text-right flex items-center justify-end pr-2">Actions</div>
-                          </div>
-                          {/* Scrollbar compensation element - matches scrollbar width (desktop only) */}
-                          <div className="w-[10px] flex-shrink-0 hidden md:block"></div>
+                        <div className="grid grid-cols-8 gap-4 text-xs font-semibold text-gray-600 uppercase tracking-wider h-6">
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Requested Date</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Arch Type</div>
+                          <div className="col-span-3 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Appliance Type</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Due Date</div>
+                          <div className="col-span-1 text-center border-r border-gray-300 pr-4 flex items-center justify-center">Status</div>
+                          <div className="col-span-1 text-right flex items-center justify-end pr-2">Actions</div>
                         </div>
                       </div>
 
                       {/* Table Body - Scrollable */}
-                      <div className="flex-1 overflow-y-scroll scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
+                      <div className="flex-1 overflow-y-auto scrollbar-enhanced table-body">
                         {labScripts.map((script) => {
                           // Format appliance type display
                           const getApplianceDisplay = () => {
@@ -1233,7 +1229,7 @@ export function PatientProfilePage() {
                     </div>
                   </div>
                 ) : manufacturingItems.length > 0 ? (
-                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
+                  <div className="flex-1 overflow-y-auto p-6 scrollbar-enhanced table-body">
                     <div className="space-y-4">
                       {manufacturingItems.map((item) => {
                         // Format appliance type display
@@ -1384,7 +1380,7 @@ export function PatientProfilePage() {
                     </div>
                   </div>
                 ) : patientDeliveryItems.length > 0 ? (
-                  <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced">
+                  <div className="flex-1 overflow-y-auto p-6 scrollbar-enhanced">
                     <div className="space-y-4">
                       {patientDeliveryItems.map((item) => {
                         // Format appliance type display

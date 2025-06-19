@@ -275,7 +275,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Touch event handlers for tablet support
   const handleTouchStart = useCallback((hour: number, minute: number, column: string, e: React.TouchEvent) => {
-    // Prevent all default touch behaviors
+    // Prevent default touch behaviors
     e.preventDefault();
     e.stopPropagation();
 
@@ -284,6 +284,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       return; // Don't start dragging if slot is occupied
     }
 
+    console.log('Touch start detected:', { hour, minute, column }); // Debug log
+
+    // Set dragging state - CSS will handle scroll prevention via .dragging class
     setIsDragging(true);
     setDragStart({ hour, minute, column });
     setDragEnd({ hour, minute, column });
@@ -297,6 +300,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     e.preventDefault();
     e.stopPropagation();
 
+    console.log('Touch move during drag'); // Debug log
     const touch = e.touches[0];
     const scrollContainer = scrollContainerRef.current;
 
@@ -338,6 +342,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     // Prevent default behaviors
     e.preventDefault();
     e.stopPropagation();
+
+    // CSS will handle scroll restoration when .dragging class is removed
     handleMouseUp();
   }, [handleMouseUp]);
 
@@ -477,32 +483,42 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     >
       {/* Column Headers - Fixed outside scrollable container */}
       <div className="border-b border-gray-200 bg-gray-50 flex-shrink-0">
-        <div className="flex">
-          <div className="grid flex-1" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
-            {/* Time Column Header */}
-            <div className="p-3 border-r border-gray-200 flex items-center justify-center">
-              <span className="text-xs font-medium text-gray-600">Time</span>
-            </div>
-
-            {/* Appointment Type Column Headers */}
-            {appointmentTypes.map((type, index) => (
-              <div key={type.key} className={`p-3 flex items-center justify-center ${index < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''}`}>
-                <span className="text-xs font-medium text-gray-700">{type.label}</span>
-              </div>
-            ))}
+        <div className="grid" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
+          {/* Time Column Header */}
+          <div className="p-3 border-r border-gray-200 flex items-center justify-center">
+            <span className="text-xs font-medium text-gray-600">Time</span>
           </div>
-          {/* Scrollbar compensation element - matches scrollbar width (desktop only) */}
-          <div className="w-[10px] flex-shrink-0 hidden md:block"></div>
+
+          {/* Appointment Type Column Headers */}
+          {appointmentTypes.map((type, index) => (
+            <div key={type.key} className={`p-3 flex items-center justify-center ${index < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''}`}>
+              <span className="text-xs font-medium text-gray-700">{type.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Time Grid - Scrollable content only */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced"
+        className={`flex-1 calendar-scroll ${isDragging ? 'dragging' : ''}`}
         style={{
           overscrollBehavior: isDragging ? 'none' : 'auto',
           touchAction: isDragging ? 'none' : 'pan-y'
+        }}
+        onTouchStart={(e) => {
+          // Allow touch events to bubble to slots for drag detection
+          console.log('Container touch start');
+        }}
+        onTouchMove={(e) => {
+          if (isDragging) {
+            handleTouchMove(e);
+          }
+        }}
+        onTouchEnd={(e) => {
+          if (isDragging) {
+            handleTouchEnd(e);
+          }
         }}
       >
 
