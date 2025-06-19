@@ -229,20 +229,32 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   const handleMouseUp = useCallback(() => {
     if (isDragging && dragStart && dragEnd && dragColumn) {
-      // Only create appointment if we actually dragged (moved to a different slot)
       const startTotalMinutes = dragStart.hour * 60 + dragStart.minute;
       const endTotalMinutes = dragEnd.hour * 60 + dragEnd.minute + 15; // +15 for end of slot
 
-      // Check if this is a meaningful drag (not just a click)
+      // Check if this is a single click (same slot) or a drag selection
+      const isSingleClick = dragStart.hour === dragEnd.hour && dragStart.minute === dragEnd.minute;
       const isDraggedSelection = Math.abs(endTotalMinutes - startTotalMinutes) > 15 ||
                                 dragStart.hour !== dragEnd.hour ||
                                 dragStart.minute !== dragEnd.minute;
 
-      if (isDraggedSelection) {
-        const startHour = Math.floor(Math.min(startTotalMinutes, endTotalMinutes) / 60);
-        const startMinute = Math.min(startTotalMinutes, endTotalMinutes) % 60;
-        const endHour = Math.floor(Math.max(startTotalMinutes, endTotalMinutes) / 60);
-        const endMinute = Math.max(startTotalMinutes, endTotalMinutes) % 60;
+      // Create appointment for both single clicks (15 minutes) and drag selections
+      if (isSingleClick || isDraggedSelection) {
+        let startHour, startMinute, endHour, endMinute;
+
+        if (isSingleClick) {
+          // For single click, create a 15-minute appointment
+          startHour = dragStart.hour;
+          startMinute = dragStart.minute;
+          endHour = Math.floor((startTotalMinutes + 15) / 60);
+          endMinute = (startTotalMinutes + 15) % 60;
+        } else {
+          // For drag selection, use the selected range
+          startHour = Math.floor(Math.min(startTotalMinutes, endTotalMinutes) / 60);
+          startMinute = Math.min(startTotalMinutes, endTotalMinutes) % 60;
+          endHour = Math.floor(Math.max(startTotalMinutes, endTotalMinutes) / 60);
+          endMinute = Math.max(startTotalMinutes, endTotalMinutes) % 60;
+        }
 
         const startTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
         const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
@@ -598,19 +610,64 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                     }}
                   >
                     <div className="p-2 h-full flex flex-col justify-between">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-semibold text-sm text-gray-800 truncate">
-                          {appointment.patient}
-                        </h4>
-                        <div className="text-xs text-gray-600 ml-2 flex-shrink-0">
-                          {appointment.startTime} - {appointment.endTime}
-                        </div>
-                      </div>
-                      <div className="flex justify-start">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${typeColors.badgeColor || 'bg-gray-100 text-gray-800'}`}>
-                          {typeColors.shortLabel || typeColors.label}
-                        </span>
-                      </div>
+                      {(() => {
+                        // Calculate appointment duration in minutes
+                        const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                        const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+                        const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+
+                        // Single line layout for 15 and 30 minute appointments
+                        if (durationMinutes === 15 || durationMinutes === 30) {
+                          const firstLetter = typeColors.shortLabel?.charAt(0) || typeColors.label?.charAt(0) || 'A';
+                          return (
+                            <div className="flex items-center justify-between h-full w-full">
+                              <h4 className="font-semibold text-sm text-gray-800 truncate flex-1 min-w-0 pr-2">
+                                {appointment.patient}
+                              </h4>
+                              <div className="flex items-center gap-1 flex-shrink-0 ml-auto">
+                                <span className="text-xs text-gray-600 whitespace-nowrap">
+                                  {appointment.startTime} - {appointment.endTime}
+                                </span>
+                                <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full ${typeColors.badgeColor || 'bg-gray-500'}`}>
+                                  {firstLetter}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        } else {
+                          // Original layout for longer appointments
+                          return (
+                            <>
+                              <div className="flex justify-between items-start">
+                                <h4 className="font-semibold text-sm text-gray-800 truncate">
+                                  {appointment.patient}
+                                </h4>
+                                <div className="text-xs text-gray-600 ml-2 flex-shrink-0">
+                                  {appointment.startTime} - {appointment.endTime}
+                                </div>
+                              </div>
+                            </>
+                          );
+                        }
+                      })()}
+                      {(() => {
+                        // Calculate appointment duration in minutes
+                        const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                        const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+                        const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+
+                        // Only show bottom badge for appointments longer than 30 minutes
+                        if (durationMinutes > 30) {
+                          return (
+                            <div className="flex justify-start">
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${typeColors.badgeColor || 'bg-gray-100 text-gray-800'}`}>
+                                {typeColors.shortLabel || typeColors.label}
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                 );
