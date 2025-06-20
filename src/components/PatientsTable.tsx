@@ -87,6 +87,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
 
     // Map tab IDs to status values
     const statusMap: { [key: string]: string } = {
+      "new": "New patient",
       "not-started": "Treatment not started",
       "in-progress": "Treatment in progress",
       "completed": "Treatment completed",
@@ -119,6 +120,58 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
     return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
   };
 
+  const getArchTypeDisplay = (patient: Patient) => {
+    const hasUpper = patient.upper_arch;
+    const hasLower = patient.lower_arch;
+
+    if (hasUpper && hasLower) {
+      return { type: 'dual', text: 'Dual' };
+    } else if (hasUpper) {
+      return { type: 'upper', text: 'Upper' };
+    } else if (hasLower) {
+      return { type: 'lower', text: 'Lower' };
+    }
+
+    return { type: 'none', text: '-' };
+  };
+
+  const getTreatmentDisplay = (patient: Patient) => {
+    // Check if we have upper and/or lower treatments (ignore arch flags, focus on actual treatment data)
+    const hasUpper = patient.upper_treatment && patient.upper_treatment !== 'NO TREATMENT';
+    const hasLower = patient.lower_treatment && patient.lower_treatment !== 'NO TREATMENT';
+
+    // Build treatment display based on actual treatment data
+    if (hasUpper && hasLower) {
+      // Dual treatments - show both in two rows
+      return {
+        type: 'dual',
+        upper: patient.upper_treatment,
+        lower: patient.lower_treatment
+      };
+    } else if (hasUpper) {
+      // Upper treatment only
+      return { type: 'single', text: patient.upper_treatment };
+    } else if (hasLower) {
+      // Lower treatment only
+      return { type: 'single', text: patient.lower_treatment };
+    }
+
+    // If no specific treatments but treatment_type is available, use it
+    if (patient.treatment_type) {
+      return { type: 'single', text: patient.treatment_type };
+    }
+
+    // Check if any arch is selected but no treatment specified
+    if (patient.upper_arch || patient.lower_arch) {
+      const arches = [];
+      if (patient.upper_arch) arches.push('Upper');
+      if (patient.lower_arch) arches.push('Lower');
+      return { type: 'single', text: `${arches.join(' & ')} Arch` };
+    }
+
+    return { type: 'single', text: '-' };
+  };
+
   if (loading) {
     return (
       <div className="px-4 py-3">
@@ -137,21 +190,24 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
       <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0 table-header">
         <div className="grid text-sm font-medium text-slate-900 h-6 gap-2 lg:gap-4"
              style={{
-               gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.2fr) minmax(80px, 0.8fr) minmax(140px, 1.4fr) minmax(140px, 1.4fr) minmax(120px, 1.2fr)'
+               gridTemplateColumns: 'minmax(200px, 2.2fr) minmax(120px, 1.1fr) minmax(80px, 0.7fr) minmax(100px, 0.9fr) minmax(140px, 1.3fr) minmax(120px, 1.1fr) minmax(120px, 1.1fr)'
              }}>
-          <div className="text-left flex items-center px-2">
+          <div className="text-left flex items-center px-2 border-r border-slate-300">
             <span className="truncate">Patient Name</span>
           </div>
-          <div className="text-center flex items-center justify-center px-2">
+          <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
             <span className="truncate">Phone</span>
           </div>
-          <div className="text-center flex items-center justify-center px-2">
+          <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
             <span className="truncate">Gender</span>
           </div>
-          <div className="text-center flex items-center justify-center px-2">
+          <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
+            <span className="truncate">Arch Type</span>
+          </div>
+          <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
             <span className="truncate">Treatment Type</span>
           </div>
-          <div className="text-center flex items-center justify-center px-2">
+          <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
             <span className="truncate">Status</span>
           </div>
           <div className="text-center flex items-center justify-center px-2">
@@ -174,7 +230,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                      index !== filteredPatients.length - 1 ? 'border-b border-slate-100' : ''
                    } hover:bg-slate-50`}
                    style={{
-                     gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.2fr) minmax(80px, 0.8fr) minmax(140px, 1.4fr) minmax(140px, 1.4fr) minmax(120px, 1.2fr)'
+                     gridTemplateColumns: 'minmax(200px, 2.2fr) minmax(120px, 1.1fr) minmax(80px, 0.7fr) minmax(100px, 0.9fr) minmax(140px, 1.3fr) minmax(120px, 1.1fr) minmax(120px, 1.1fr)'
                    }}>
 
                 {/* Patient Name */}
@@ -202,9 +258,55 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                   <span className="truncate capitalize">{patient.gender || '-'}</span>
                 </div>
 
+                {/* Arch Type */}
+                <div className="text-slate-600 text-sm text-center px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
+                  {(() => {
+                    const archType = getArchTypeDisplay(patient);
+                    if (archType.type === 'dual') {
+                      return (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          Dual
+                        </span>
+                      );
+                    } else if (archType.type === 'upper') {
+                      return (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          Upper
+                        </span>
+                      );
+                    } else if (archType.type === 'lower') {
+                      return (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Lower
+                        </span>
+                      );
+                    } else {
+                      return <span className="text-slate-500">-</span>;
+                    }
+                  })()}
+                </div>
+
                 {/* Treatment Type */}
                 <div className="text-slate-600 text-sm text-center px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
-                  <span className="truncate">{patient.treatment_type || '-'}</span>
+                  {(() => {
+                    const treatment = getTreatmentDisplay(patient);
+                    if (treatment.type === 'dual') {
+                      return (
+                        <div className="flex flex-col gap-0.5 w-full">
+                          <div className="text-xs font-medium text-blue-700 truncate">
+                            {treatment.upper}
+                          </div>
+                          {/* Separator line */}
+                          <div className="w-full h-px bg-slate-300 my-0.5"></div>
+                          <div className="text-xs font-medium text-green-700 truncate">
+                            {treatment.lower}
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return <span className="truncate">{treatment.text}</span>;
+                    }
+                  })()}
                 </div>
 
                 {/* Status */}
