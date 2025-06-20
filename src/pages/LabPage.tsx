@@ -401,7 +401,7 @@ export function LabPage() {
               <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex-shrink-0 table-header">
                 <div className="grid text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 gap-2 lg:gap-3"
                      style={{
-                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(100px, 1fr) minmax(60px, 0.6fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(100px, 1fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
                      }}>
                   <div className="border-r border-gray-200 flex items-center px-2">
                     <span className="truncate">Patient Name</span>
@@ -414,9 +414,6 @@ export function LabPage() {
                   </div>
                   <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
                     <span className="truncate">Screw Type</span>
-                  </div>
-                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
-                    <span className="truncate">Shade</span>
                   </div>
                   <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
                     <span className="truncate">Requested Date</span>
@@ -478,7 +475,7 @@ export function LabPage() {
                     <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 min-h-[64px]">
                       <div className="grid gap-2 lg:gap-3 px-4 py-3 text-sm items-center min-h-[64px]"
                            style={{
-                             gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(100px, 1fr) minmax(60px, 0.6fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                             gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(100px, 1fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
                            }}>
 
                         {/* Patient */}
@@ -534,11 +531,6 @@ export function LabPage() {
                         {/* Screw Type */}
                         <div className="border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
                           <p className="text-gray-600 text-xs text-center truncate">{order.screwType || 'N/A'}</p>
-                        </div>
-
-                        {/* Shade */}
-                        <div className="border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
-                          <p className="text-gray-600 text-xs text-center truncate">{order.shade || 'N/A'}</p>
                         </div>
 
                         {/* Requested Date */}
