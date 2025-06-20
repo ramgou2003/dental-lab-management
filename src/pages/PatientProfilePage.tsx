@@ -13,7 +13,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { EditPatientForm } from "@/components/EditPatientForm";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { TreatmentDialog, TreatmentData } from "@/components/TreatmentDialog";
@@ -30,7 +31,7 @@ import {
   FileText,
   FlaskConical,
   Factory,
-  Stethoscope,
+
   Mail,
   Heart,
   ArrowLeft,
@@ -64,6 +65,18 @@ import { useToast } from "@/hooks/use-toast";
 export function PatientProfilePage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
+
+  // Treatment options for IV sedation form
+  const treatmentOptions = [
+    "NO TREATMENT",
+    "FULL ARCH FIXED",
+    "DENTURE",
+    "IMPLANT REMOVABLE DENTURE",
+    "SINGLE IMPLANT",
+    "MULTIPLE IMPLANTS",
+    "EXTRACTION",
+    "EXTRACTION AND GRAFT"
+  ];
 
   // Data collection reasons
   const dataCollectionReasons = [
@@ -138,7 +151,7 @@ export function PatientProfilePage() {
   // State for IV Sedation Flow Chart
   const [showIVSedationForm, setShowIVSedationForm] = useState(false);
   const [ivSedationCurrentStep, setIVSedationCurrentStep] = useState(1);
-  const ivSedationTotalSteps = 7; // Define total number of steps for IV sedation
+  const ivSedationTotalSteps = 6; // Define total number of steps for IV sedation
   const [ivSedationSheets, setIVSedationSheets] = useState<any[]>([]);
   const [showIVSedationPreview, setShowIVSedationPreview] = useState(false);
   const [selectedIVSedationSheet, setSelectedIVSedationSheet] = useState<any | null>(null);
@@ -149,6 +162,60 @@ export function PatientProfilePage() {
   const [isIVSedationEditMode, setIsIVSedationEditMode] = useState(false);
   const [showIVSedationDeleteConfirmation, setShowIVSedationDeleteConfirmation] = useState(false);
   const [ivSedationSheetToDelete, setIVSedationSheetToDelete] = useState<any | null>(null);
+
+  // State for Flow Entry Dialog
+  const [showFlowEntryDialog, setShowFlowEntryDialog] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [newFlowEntry, setNewFlowEntry] = useState({
+    hour: '',
+    minute: '',
+    systolic: '',
+    diastolic: '',
+    heartRate: '',
+    rr: '',
+    spo2: '',
+    medications: [] as string[]
+  });
+
+  // Medication options for surgery
+  const medicationOptions = [
+    // Versed (Midazolam)
+    { id: 'versed-0.5', name: '0.5mg | Versed', category: 'Versed' },
+    { id: 'versed-1', name: '1mg | Versed', category: 'Versed' },
+    { id: 'versed-2', name: '2mg | Versed', category: 'Versed' },
+    { id: 'versed-3', name: '3mg | Versed', category: 'Versed' },
+
+    // Fentanyl
+    { id: 'fentanyl-25', name: '25 mcg | Fentanyl', category: 'Fentanyl' },
+    { id: 'fentanyl-50', name: '50 mcg | Fentanyl', category: 'Fentanyl' },
+    { id: 'fentanyl-75', name: '75 mcg | Fentanyl', category: 'Fentanyl' },
+    { id: 'fentanyl-100', name: '100 mcg | Fentanyl', category: 'Fentanyl' },
+
+    // Ketorolac
+    { id: 'ketorolac-15', name: '15 mg | Ketorolac', category: 'Ketorolac' },
+    { id: 'ketorolac-30', name: '30 mg | Ketorolac', category: 'Ketorolac' },
+
+    // Benadryl
+    { id: 'benadryl-25', name: '25 mg | Benadryl', category: 'Benadryl' },
+    { id: 'benadryl-50', name: '50 mg | Benadryl', category: 'Benadryl' },
+
+    // Dexamethasone
+    { id: 'dexamethasone-2', name: '2 mg | Dexamethasone', category: 'Dexamethasone' },
+    { id: 'dexamethasone-4', name: '4 mg | Dexamethasone', category: 'Dexamethasone' },
+
+    // Acetaminophen
+    { id: 'acetaminophen-20', name: '2 ml (20 mg) | Acetaminophen', category: 'Acetaminophen' },
+    { id: 'acetaminophen-50', name: '5 ml (50 mg) | Acetaminophen', category: 'Acetaminophen' },
+
+    // Valium
+    { id: 'valium-10', name: '10 mg | Valium Tab', category: 'Valium' },
+
+    // Clindamycin
+    { id: 'clindamycin-300', name: '300 mg | Clinda Tab', category: 'Clindamycin' },
+
+    // Lidocaine
+    { id: 'lidocaine-2.5', name: '0.5 ml (2.5 mg) | Lidocaine', category: 'Lidocaine' }
+  ];
 
   // Define steps for the stepper
   const stepperSteps = [
@@ -193,70 +260,64 @@ export function PatientProfilePage() {
   const [ivSedationFormData, setIVSedationFormData] = useState({
     patientName: "",
     date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
-    // Step 1 - Pre-Sedation Assessment
-    medicalHistory: "",
-    allergies: "",
-    currentMedications: "",
-    fastingStatus: "", // "compliant" | "non-compliant"
-    baselineVitals: {
-      bloodPressure: "",
-      heartRate: "",
-      respiratoryRate: "",
-      oxygenSaturation: "",
-      temperature: ""
-    },
-    // Step 2 - Sedation Plan
-    sedationType: "", // "minimal" | "moderate" | "deep"
-    medications: [] as string[],
-    dosages: {} as Record<string, string>,
-    administrationRoute: "", // "iv" | "oral" | "inhalation"
-    // Step 3 - Monitoring Setup
-    monitoringEquipment: {
-      pulseOximeter: false,
-      bloodPressureMonitor: false,
-      ecgMonitor: false,
-      capnography: false,
-      temperatureMonitor: false
-    },
-    emergencyEquipment: {
-      oxygenSupply: false,
-      suction: false,
-      bagMaskVentilation: false,
-      emergencyMedications: false,
-      defibrillator: false
-    },
-    // Step 4 - Sedation Administration
-    startTime: "",
-    initialDose: "",
-    additionalDoses: [] as Array<{time: string, medication: string, dose: string}>,
-    patientResponse: "",
-    // Step 5 - Intraoperative Monitoring
-    vitalSigns: [] as Array<{
-      time: string,
-      bloodPressure: string,
-      heartRate: string,
-      respiratoryRate: string,
-      oxygenSaturation: string,
-      sedationLevel: string
+    upperTreatment: "",
+    lowerTreatment: "",
+    heightFeet: "",
+    heightInches: "",
+    weight: "",
+    // Pre-Assessment fields
+    npoStatus: "",
+    morningMedications: "",
+    allergies: [] as string[],
+    allergiesOther: "",
+    pregnancyRisk: "",
+    lastMenstrualCycle: "",
+    anesthesiaHistory: "",
+    anesthesiaHistoryOther: "",
+    respiratoryProblems: [] as string[],
+    respiratoryProblemsOther: "",
+    cardiovascularProblems: [] as string[],
+    cardiovascularProblemsOther: "",
+    gastrointestinalProblems: [] as string[],
+    gastrointestinalProblemsOther: "",
+    neurologicProblems: [] as string[],
+    neurologicProblemsOther: "",
+    endocrineRenalProblems: [] as string[],
+    endocrineRenalProblemsOther: "",
+    lastA1CLevel: "",
+    miscellaneous: [] as string[],
+    miscellaneousOther: "",
+    socialHistory: [] as string[],
+    socialHistoryOther: "",
+    // Additional Assessment fields
+    wellDevelopedNourished: "",
+    patientAnxious: "",
+    asaClassification: "",
+    airwayEvaluation: [] as string[],
+    airwayEvaluationOther: "",
+    mallampatiScore: "",
+    heartLungEvaluation: [] as string[],
+    heartLungEvaluationOther: "",
+    // Sedation Plan fields
+    instrumentsChecklist: {} as Record<string, boolean>,
+    sedationType: "",
+    medicationsPlanned: [] as string[],
+    medicationsOther: "",
+    administrationRoute: [] as string[],
+    emergencyProtocols: {} as Record<string, boolean>,
+    // IV Sedation Flow Chart fields
+    timeInRoom: "",
+    sedationStartTime: "",
+    // Flow monitoring entries
+    flowEntries: [] as Array<{
+      id: string;
+      time: string;
+      bp: string;
+      heartRate: string;
+      rr: string;
+      spo2: string;
+      medications: string[];
     }>,
-    complications: "",
-    interventions: "",
-    // Step 6 - Recovery Phase
-    recoveryStartTime: "",
-    dischargeReadiness: {
-      consciousnessLevel: "", // "alert" | "drowsy" | "confused"
-      vitalStability: false,
-      painLevel: "",
-      nauseaVomiting: false,
-      ambulation: false
-    },
-    dischargeTime: "",
-    // Step 7 - Post-Sedation Instructions
-    dischargeInstructions: "",
-    followUpRequired: false,
-    followUpDate: "",
-    complications_notes: "",
-    overallAssessment: ""
   });
 
   // Close dropdown when clicking outside
@@ -674,63 +735,56 @@ export function PatientProfilePage() {
     setIVSedationFormData({
       patientName: patient ? `${patient.first_name} ${patient.last_name}` : "",
       date: new Date().toISOString().split('T')[0], // Reset to current date each time
-      // Step 1 - Pre-Sedation Assessment
-      medicalHistory: "",
-      allergies: "",
-      currentMedications: "",
-      fastingStatus: "",
-      baselineVitals: {
-        bloodPressure: "",
-        heartRate: "",
-        respiratoryRate: "",
-        oxygenSaturation: "",
-        temperature: ""
-      },
-      // Step 2 - Sedation Plan
+      upperTreatment: "",
+      lowerTreatment: "",
+      heightFeet: "",
+      heightInches: "",
+      weight: "",
+      // Pre-Assessment fields
+      npoStatus: "",
+      morningMedications: "",
+      allergies: [],
+      allergiesOther: "",
+      pregnancyRisk: "",
+      lastMenstrualCycle: "",
+      anesthesiaHistory: "",
+      anesthesiaHistoryOther: "",
+      respiratoryProblems: [],
+      respiratoryProblemsOther: "",
+      cardiovascularProblems: [],
+      cardiovascularProblemsOther: "",
+      gastrointestinalProblems: [],
+      gastrointestinalProblemsOther: "",
+      neurologicProblems: [],
+      neurologicProblemsOther: "",
+      endocrineRenalProblems: [],
+      endocrineRenalProblemsOther: "",
+      lastA1CLevel: "",
+      miscellaneous: [],
+      miscellaneousOther: "",
+      socialHistory: [],
+      socialHistoryOther: "",
+      // Additional Assessment fields
+      wellDevelopedNourished: "",
+      patientAnxious: "",
+      asaClassification: "",
+      airwayEvaluation: [],
+      airwayEvaluationOther: "",
+      mallampatiScore: "",
+      heartLungEvaluation: [],
+      heartLungEvaluationOther: "",
+      // Sedation Plan fields
+      instrumentsChecklist: {},
       sedationType: "",
-      medications: [],
-      dosages: {},
-      administrationRoute: "",
-      // Step 3 - Monitoring Setup
-      monitoringEquipment: {
-        pulseOximeter: false,
-        bloodPressureMonitor: false,
-        ecgMonitor: false,
-        capnography: false,
-        temperatureMonitor: false
-      },
-      emergencyEquipment: {
-        oxygenSupply: false,
-        suction: false,
-        bagMaskVentilation: false,
-        emergencyMedications: false,
-        defibrillator: false
-      },
-      // Step 4 - Sedation Administration
-      startTime: "",
-      initialDose: "",
-      additionalDoses: [],
-      patientResponse: "",
-      // Step 5 - Intraoperative Monitoring
-      vitalSigns: [],
-      complications: "",
-      interventions: "",
-      // Step 6 - Recovery Phase
-      recoveryStartTime: "",
-      dischargeReadiness: {
-        consciousnessLevel: "",
-        vitalStability: false,
-        painLevel: "",
-        nauseaVomiting: false,
-        ambulation: false
-      },
-      dischargeTime: "",
-      // Step 7 - Post-Sedation Instructions
-      dischargeInstructions: "",
-      followUpRequired: false,
-      followUpDate: "",
-      complications_notes: "",
-      overallAssessment: ""
+      medicationsPlanned: [],
+      medicationsOther: "",
+      administrationRoute: [],
+      emergencyProtocols: {},
+      // IV Sedation Flow Chart fields
+      timeInRoom: "",
+      sedationStartTime: "",
+      // Flow monitoring entries
+      flowEntries: [],
     });
     setIVSedationCurrentStep(1); // Reset to first step
     setShowIVSedationForm(true);
@@ -1426,11 +1480,11 @@ export function PatientProfilePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 pl-0 pr-0 pt-2 pb-2" style={{ height: 'calc(100vh - 280px)' }}>
                 {/* Personal Information */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
-                  <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                    <div className="p-2 bg-blue-100 rounded-xl">
-                      <User className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                    <div className="p-1.5 bg-blue-100 rounded-lg">
+                      <User className="h-4 w-4 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+                    <h3 className="text-base font-semibold text-gray-900">Personal Information</h3>
                   </div>
                   <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0">
                     <div className="space-y-3 pb-2">
@@ -1461,11 +1515,11 @@ export function PatientProfilePage() {
 
                 {/* Contact Information */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
-                  <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                    <div className="p-2 bg-green-100 rounded-xl">
-                      <Phone className="h-5 w-5 text-green-600" />
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                    <div className="p-1.5 bg-green-100 rounded-lg">
+                      <Phone className="h-4 w-4 text-green-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+                    <h3 className="text-base font-semibold text-gray-900">Contact Information</h3>
                   </div>
                   <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0">
                     <div className="space-y-3 pb-2">
@@ -1492,12 +1546,12 @@ export function PatientProfilePage() {
 
                 {/* Treatment Information */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 rounded-xl">
-                        <Stethoscope className="h-5 w-5 text-purple-600" />
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-purple-100 rounded-lg">
+                        <Activity className="h-4 w-4 text-purple-600" />
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900">Treatment Information</h3>
+                      <h3 className="text-base font-semibold text-gray-900">Treatment Information</h3>
                     </div>
                     <TooltipProvider>
                       <Tooltip>
@@ -1505,9 +1559,9 @@ export function PatientProfilePage() {
                           <Button
                             onClick={handleAddTreatment}
                             size="sm"
-                            className="bg-purple-600 hover:bg-purple-700 text-white h-8 w-8 p-0 rounded-md shadow-sm hover:shadow-md transition-all duration-200"
+                            className="bg-purple-600 hover:bg-purple-700 text-white h-7 w-7 p-0 rounded-md shadow-sm hover:shadow-md transition-all duration-200"
                           >
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-3.5 w-3.5" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -1525,45 +1579,61 @@ export function PatientProfilePage() {
                         </Badge>
                       </div>
 
-                      {/* Upper and Lower Treatment Information Side by Side */}
+                      {/* Upper and Lower Treatment Information - Separated */}
                       {((patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT") ||
                         (patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT")) && (
-                        <div>
-                          <div className="grid grid-cols-1 gap-3">
-                            {/* Upper Treatment */}
-                            {patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT" && (
-                              <div>
-                                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Upper Treatment</p>
-                                <div className="space-y-1">
-                                  <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 text-xs">
-                                    {patient.upper_treatment}
-                                  </Badge>
-                                  {patient.upper_surgery_date && (
-                                    <div className="text-xs text-gray-600">
-                                      Surgery: {new Date(patient.upper_surgery_date).toLocaleDateString('en-US')}
-                                    </div>
-                                  )}
-                                </div>
+                        <div className="space-y-4">
+                          {/* Upper Treatment Section */}
+                          {patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT" && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Upper Arch Treatment</p>
                               </div>
-                            )}
+                              <div className="space-y-2">
+                                <Badge variant="outline" className="bg-white border-blue-300 text-blue-800 text-xs font-medium">
+                                  {patient.upper_treatment}
+                                </Badge>
+                                {patient.upper_surgery_date && (
+                                  <div className="text-xs text-blue-700 font-medium">
+                                    Surgery Date: {new Date(patient.upper_surgery_date).toLocaleDateString('en-US')}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
-                            {/* Lower Treatment */}
-                            {patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT" && (
-                              <div>
-                                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Lower Treatment</p>
-                                <div className="space-y-1">
-                                  <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700 text-xs">
-                                    {patient.lower_treatment}
-                                  </Badge>
-                                  {patient.lower_surgery_date && (
-                                    <div className="text-xs text-gray-600">
-                                      Surgery: {new Date(patient.lower_surgery_date).toLocaleDateString('en-US')}
-                                    </div>
-                                  )}
-                                </div>
+                          {/* Divider - Only show if both treatments exist */}
+                          {patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT" &&
+                           patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT" && (
+                            <div className="flex items-center">
+                              <div className="flex-1 border-t border-gray-300"></div>
+                              <div className="px-3">
+                                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
                               </div>
-                            )}
-                          </div>
+                              <div className="flex-1 border-t border-gray-300"></div>
+                            </div>
+                          )}
+
+                          {/* Lower Treatment Section */}
+                          {patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT" && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                                <p className="text-xs font-semibold text-green-900 uppercase tracking-wide">Lower Arch Treatment</p>
+                              </div>
+                              <div className="space-y-2">
+                                <Badge variant="outline" className="bg-white border-green-300 text-green-800 text-xs font-medium">
+                                  {patient.lower_treatment}
+                                </Badge>
+                                {patient.lower_surgery_date && (
+                                  <div className="text-xs text-green-700 font-medium">
+                                    Surgery Date: {new Date(patient.lower_surgery_date).toLocaleDateString('en-US')}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1579,11 +1649,11 @@ export function PatientProfilePage() {
 
                 {/* Medical Information */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
-                  <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 flex-shrink-0">
-                    <div className="p-2 bg-red-100 rounded-xl">
-                      <Heart className="h-5 w-5 text-red-600" />
+                  <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                    <div className="p-1.5 bg-red-100 rounded-lg">
+                      <Heart className="h-4 w-4 text-red-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Medical Information</h3>
+                    <h3 className="text-base font-semibold text-gray-900">Medical Information</h3>
                   </div>
                   <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0">
                     <div className="space-y-3 pb-2">
@@ -1705,7 +1775,7 @@ export function PatientProfilePage() {
                                         className="border-2 border-orange-600 text-orange-600 hover:border-orange-700 hover:text-orange-700 hover:bg-orange-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                                         onClick={() => handleFillClinicalReport(card)}
                                       >
-                                        <Stethoscope className="h-4 w-4 mr-2" />
+                                        <Activity className="h-4 w-4 mr-2" />
                                         Fill Clinical Report
                                       </Button>
                                     )}
@@ -2424,7 +2494,7 @@ export function PatientProfilePage() {
                     {/* Header */}
                     <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
                       <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <Stethoscope className="h-4 w-4 text-blue-600" />
+                        <Activity className="h-4 w-4 text-blue-600" />
                       </div>
                       <h3 className="text-base font-semibold text-gray-900">Encounter Form (0)</h3>
                     </div>
@@ -2441,7 +2511,7 @@ export function PatientProfilePage() {
 
                         {/* Empty State */}
                         <div className="text-center py-8">
-                          <Stethoscope className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                           <p className="text-sm font-medium text-gray-500 mb-1">No encounter forms</p>
                           <p className="text-xs text-gray-400">Use the button above to create your first encounter form</p>
                         </div>
@@ -4017,11 +4087,11 @@ export function PatientProfilePage() {
 
       {/* IV Sedation Flow Chart Form Dialog */}
       <Dialog open={showIVSedationForm} onOpenChange={handleIVSedationFormClose}>
-        <DialogContent className="max-w-5xl h-[85vh] flex flex-col overflow-hidden">
-          <DialogHeader className="flex-shrink-0 pb-2">
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col overflow-hidden p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
               <Activity className="h-5 w-5 text-blue-600" />
-              {isIVSedationEditMode ? 'Edit IV Sedation Flow Chart' : 'IV Sedation Flow Chart'} - Step {ivSedationCurrentStep} of {ivSedationTotalSteps}
+              IV Sedation Flow Chart - Step {ivSedationCurrentStep} of {ivSedationTotalSteps}
             </DialogTitle>
           </DialogHeader>
 
@@ -4035,7 +4105,7 @@ export function PatientProfilePage() {
                   <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
                     ivSedationCurrentStep >= 1 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
-                    Pre-Assessment
+                    Basic Info
                   </span>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'
@@ -4047,7 +4117,7 @@ export function PatientProfilePage() {
                   <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
                     ivSedationCurrentStep >= 2 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
-                    Sedation Plan
+                    Pre-Assessment
                   </span>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
@@ -4059,7 +4129,7 @@ export function PatientProfilePage() {
                   <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
                     ivSedationCurrentStep >= 3 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
-                    Monitoring Setup
+                    Sedation Plan
                   </span>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'
@@ -4071,7 +4141,7 @@ export function PatientProfilePage() {
                   <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
                     ivSedationCurrentStep >= 4 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
-                    Administration
+                    Time Tracking
                   </span>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 4 ? 'bg-blue-600' : 'bg-gray-300'
@@ -4083,7 +4153,7 @@ export function PatientProfilePage() {
                   <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
                     ivSedationCurrentStep >= 5 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
-                    Monitoring
+                    Flow
                   </span>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 5 ? 'bg-blue-600' : 'bg-gray-300'
@@ -4095,99 +4165,323 @@ export function PatientProfilePage() {
                   <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
                     ivSedationCurrentStep >= 6 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
-                    Recovery
-                  </span>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
-                    ivSedationCurrentStep >= 6 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
-                </div>
-
-                {/* Step 7 */}
-                <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
-                    ivSedationCurrentStep >= 7 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
                     Discharge
                   </span>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
-                    ivSedationCurrentStep >= 7 ? 'bg-blue-600' : 'bg-gray-300'
+                    ivSedationCurrentStep >= 6 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Form Content - Optimized to fit */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <form className="flex-1 flex flex-col">
-              {/* Step Content Container */}
-              <div className="flex-1 px-6 py-2 overflow-hidden">
+          {/* Form Content - Compact Design */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <form className="flex-1 flex flex-col min-h-0">
+              {/* Step Content Container - Hidden Scrollbar */}
+              <div className="flex-1 px-6 py-2 overflow-y-auto scrollbar-hidden">
                 {ivSedationCurrentStep === 1 && (
-                  <div className="h-full flex flex-col space-y-4">
-                    {/* Patient Information Row */}
-                    <div className="space-y-3">
-                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="space-y-4">
+                    {/* Patient Information - Compact */}
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
                         <User className="h-4 w-4 text-blue-600" />
                         Patient Information
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label htmlFor="ivPatientName" className="text-sm">Patient Name</Label>
+                          <Label htmlFor="ivPatientName" className="text-xs text-gray-600">Patient Name</Label>
                           <Input
                             id="ivPatientName"
                             value={ivSedationFormData.patientName}
                             disabled
-                            className="bg-gray-50 text-gray-600"
+                            className="bg-white text-gray-600 text-sm h-8"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="ivDate" className="text-sm">Date</Label>
+                          <Label htmlFor="ivDate" className="text-xs text-gray-600">Date</Label>
                           <Input
                             id="ivDate"
                             type="date"
                             value={ivSedationFormData.date}
                             onChange={(e) => setIVSedationFormData({...ivSedationFormData, date: e.target.value})}
-                            className="text-sm"
+                            className="text-sm h-8"
                           />
                         </div>
                       </div>
                     </div>
 
-                    {/* Pre-Sedation Assessment */}
-                    <div className="space-y-3">
-                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                        <Stethoscope className="h-4 w-4 text-blue-600" />
-                        Pre-Sedation Assessment
-                      </h3>
-                      <div className="grid grid-cols-1 gap-3">
-                        <div>
-                          <Label htmlFor="medicalHistory" className="text-sm">Medical History</Label>
-                          <Textarea
-                            id="medicalHistory"
-                            value={ivSedationFormData.medicalHistory}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, medicalHistory: e.target.value})}
-                            placeholder="Enter relevant medical history..."
-                            rows={3}
-                          />
+                    {/* Treatment Sections Side by Side */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Upper Treatment Section */}
+                      <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                          <h3 className="text-base font-semibold text-blue-900">Upper Arch Treatment</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <Label htmlFor="allergies" className="text-sm">Allergies</Label>
-                            <Input
-                              id="allergies"
-                              value={ivSedationFormData.allergies}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, allergies: e.target.value})}
-                              placeholder="List any allergies..."
-                            />
+
+                        <Select
+                          value={ivSedationFormData.upperTreatment}
+                          onValueChange={(value) => setIVSedationFormData({...ivSedationFormData, upperTreatment: value})}
+                        >
+                          <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                            <SelectValue placeholder="Select upper treatment type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {treatmentOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Lower Treatment Section */}
+                      <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                          <h3 className="text-base font-semibold text-blue-900">Lower Arch Treatment</h3>
+                        </div>
+
+                        <Select
+                          value={ivSedationFormData.lowerTreatment}
+                          onValueChange={(value) => setIVSedationFormData({...ivSedationFormData, lowerTreatment: value})}
+                        >
+                          <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                            <SelectValue placeholder="Select lower treatment type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {treatmentOptions.map((option) => (
+                              <SelectItem key={option} value={option}>
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Physical Measurements Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-base font-semibold text-blue-900 flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-600" />
+                        Physical Measurements
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Height Selection */}
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                            <h4 className="text-sm font-semibold text-blue-900">Height</h4>
                           </div>
-                          <div>
-                            <Label htmlFor="currentMedications" className="text-sm">Current Medications</Label>
-                            <Input
-                              id="currentMedications"
-                              value={ivSedationFormData.currentMedications}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, currentMedications: e.target.value})}
-                              placeholder="List current medications..."
+
+                          <div className="flex items-center gap-2">
+                            {/* Feet Selector */}
+                            <div className="flex-1">
+                              <Select
+                                value={ivSedationFormData.heightFeet}
+                                onValueChange={(value) => setIVSedationFormData({...ivSedationFormData, heightFeet: value})}
+                              >
+                                <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                                  <SelectValue placeholder="Feet" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.from({length: 5}, (_, i) => i + 4).map((feet) => (
+                                    <SelectItem key={feet} value={feet.toString()}>
+                                      {feet} ft
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <span className="text-blue-700 font-medium">and</span>
+
+                            {/* Inches Selector */}
+                            <div className="flex-1">
+                              <Select
+                                value={ivSedationFormData.heightInches}
+                                onValueChange={(value) => setIVSedationFormData({...ivSedationFormData, heightInches: value})}
+                              >
+                                <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                                  <SelectValue placeholder="Inches" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.from({length: 12}, (_, i) => i).map((inches) => (
+                                    <SelectItem key={inches} value={inches.toString()}>
+                                      {inches} in
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          {/* Height Display */}
+                          {ivSedationFormData.heightFeet && ivSedationFormData.heightInches && (
+                            <div className="mt-2 text-center">
+                              <span className="text-sm font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                                {ivSedationFormData.heightFeet}'{ivSedationFormData.heightInches}"
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Weight Selection */}
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                            <h4 className="text-sm font-semibold text-blue-900">Weight</h4>
+                          </div>
+
+                          <div className="space-y-3">
+                            {/* Weight Input with Slider */}
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                value={ivSedationFormData.weight}
+                                onChange={(e) => setIVSedationFormData({...ivSedationFormData, weight: e.target.value})}
+                                placeholder="Enter weight"
+                                min="50"
+                                max="500"
+                                className="border-blue-300 focus:border-blue-500 text-center text-lg font-medium"
+                              />
+                              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-600 font-medium">
+                                lbs
+                              </span>
+                            </div>
+
+                            {/* Weight Range Slider */}
+                            <input
+                              type="range"
+                              min="50"
+                              max="500"
+                              step="5"
+                              value={ivSedationFormData.weight || "150"}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, weight: e.target.value})}
+                              className="w-full h-2 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-600 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                              style={{
+                                background: `linear-gradient(to right, #dbeafe 0%, #60a5fa 50%, #2563eb 100%)`
+                              }}
                             />
+
+                            {/* Weight Range Labels */}
+                            <div className="flex justify-between text-xs text-blue-600">
+                              <span>50 lbs</span>
+                              <span>275 lbs</span>
+                              <span>500 lbs</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* BMI Calculation and Obesity Assessment */}
+                    <div className="space-y-4">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-indigo-600" />
+                        BMI Assessment
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* BMI Display */}
+                        <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>
+                            <h4 className="text-sm font-semibold text-indigo-900">BMI Calculation</h4>
+                          </div>
+
+                          <div className="text-center">
+                            {(() => {
+                              const heightFeet = parseFloat(ivSedationFormData.heightFeet) || 0;
+                              const heightInches = parseFloat(ivSedationFormData.heightInches) || 0;
+                              const weight = parseFloat(ivSedationFormData.weight) || 0;
+
+                              if (heightFeet > 0 && weight > 0) {
+                                // Convert height to inches, then to meters
+                                const totalInches = (heightFeet * 12) + heightInches;
+                                const heightMeters = totalInches * 0.0254;
+                                const weightKg = weight * 0.453592;
+                                const bmi = weightKg / (heightMeters * heightMeters);
+
+                                return (
+                                  <>
+                                    <div className="text-2xl font-bold text-indigo-700 mb-2">
+                                      {bmi.toFixed(2)}
+                                    </div>
+                                    <div className="text-xs text-indigo-600">
+                                      BMI (kg/m²)
+                                    </div>
+                                    <div className={`mt-2 px-2 py-1 rounded text-xs font-medium ${
+                                      bmi < 18.5 ? 'bg-blue-100 text-blue-700' :
+                                      bmi < 25 ? 'bg-green-100 text-green-700' :
+                                      bmi < 30 ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-red-100 text-red-700'
+                                    }`}>
+                                      {bmi < 18.5 ? 'Underweight' :
+                                       bmi < 25 ? 'Normal' :
+                                       bmi < 30 ? 'Overweight' :
+                                       'Obese'}
+                                    </div>
+                                  </>
+                                );
+                              } else {
+                                return (
+                                  <div className="text-gray-400">
+                                    <div className="text-2xl font-bold mb-2">--</div>
+                                    <div className="text-xs">Enter height and weight</div>
+                                  </div>
+                                );
+                              }
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* Obesity Assessment */}
+                        <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-3 h-3 bg-red-600 rounded-full"></div>
+                            <h4 className="text-sm font-semibold text-red-900">Obesity Assessment</h4>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="text-sm text-red-800 font-medium">
+                              Is the patient obese (BMI over 30)?
+                            </div>
+
+                            <div className="flex justify-center">
+                              {(() => {
+                                const heightFeet = parseFloat(ivSedationFormData.heightFeet) || 0;
+                                const heightInches = parseFloat(ivSedationFormData.heightInches) || 0;
+                                const weight = parseFloat(ivSedationFormData.weight) || 0;
+
+                                if (heightFeet > 0 && weight > 0) {
+                                  const totalInches = (heightFeet * 12) + heightInches;
+                                  const heightMeters = totalInches * 0.0254;
+                                  const weightKg = weight * 0.453592;
+                                  const bmi = weightKg / (heightMeters * heightMeters);
+                                  const isObese = bmi >= 30;
+
+                                  return (
+                                    <div className={`px-4 py-2 rounded-lg font-bold text-lg ${
+                                      isObese
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-green-600 text-white'
+                                    }`}>
+                                      {isObese ? 'YES' : 'NO'}
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <div className="px-4 py-2 rounded-lg bg-gray-300 text-gray-600 font-bold text-lg">
+                                      --
+                                    </div>
+                                  );
+                                }
+                              })()}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -4195,8 +4489,1252 @@ export function PatientProfilePage() {
                   </div>
                 )}
 
+                {/* Step 2: Pre-Assessment */}
+                {ivSedationCurrentStep === 2 && (
+                  <div className="space-y-4">
+                    {/* NPO Status */}
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-3">NPO Status</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-blue-800 mb-2">Is the patient NPO? (No Food or Liquid Ingestion Since Last Night)</p>
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                ivSedationFormData.npoStatus === 'yes'
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                              onClick={() => setIVSedationFormData({...ivSedationFormData, npoStatus: 'yes'})}
+                            >
+                              YES
+                            </button>
+                            <button
+                              type="button"
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                ivSedationFormData.npoStatus === 'no'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                              onClick={() => setIVSedationFormData({...ivSedationFormData, npoStatus: 'no'})}
+                            >
+                              NO
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-blue-800 mb-2">Have you taken any current medications this morning?</p>
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                ivSedationFormData.morningMedications === 'yes'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                              onClick={() => setIVSedationFormData({...ivSedationFormData, morningMedications: 'yes'})}
+                            >
+                              YES
+                            </button>
+                            <button
+                              type="button"
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                ivSedationFormData.morningMedications === 'no'
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                              onClick={() => setIVSedationFormData({...ivSedationFormData, morningMedications: 'no'})}
+                            >
+                              NO
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Allergies */}
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-3">Allergies</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {[
+                          'N/A', 'Penicillin', 'Sulfa', 'Codeine', 'Aspirin', 'Ibuprofen',
+                          'Latex', 'Iodine', 'Shellfish', 'Nuts', 'Eggs', 'Dairy',
+                          'Environmental', 'Seasonal', 'Other'
+                        ].map((allergy) => (
+                          <button
+                            key={allergy}
+                            type="button"
+                            className={`px-3 py-2 rounded text-xs font-medium transition-colors ${
+                              ivSedationFormData.allergies?.includes(allergy)
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => {
+                              const currentAllergies = ivSedationFormData.allergies || [];
+                              const updatedAllergies = currentAllergies.includes(allergy)
+                                ? currentAllergies.filter(a => a !== allergy)
+                                : [...currentAllergies, allergy];
+                              setIVSedationFormData({...ivSedationFormData, allergies: updatedAllergies});
+                            }}
+                          >
+                            {allergy}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Other Allergies Text Field */}
+                      {ivSedationFormData.allergies?.includes('Other') && (
+                        <div className="mt-3">
+                          <Label htmlFor="allergiesOther" className="text-xs text-blue-800">Please specify other allergies</Label>
+                          <Input
+                            id="allergiesOther"
+                            type="text"
+                            value={ivSedationFormData.allergiesOther || ''}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, allergiesOther: e.target.value})}
+                            placeholder="Enter other allergies"
+                            className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Female-specific Questions */}
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-3">Female Patients Only</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-blue-800 mb-2">Any chance patient might be pregnant today?</p>
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                ivSedationFormData.pregnancyRisk === 'yes'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                              onClick={() => setIVSedationFormData({...ivSedationFormData, pregnancyRisk: 'yes'})}
+                            >
+                              YES
+                            </button>
+                            <button
+                              type="button"
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                ivSedationFormData.pregnancyRisk === 'no'
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                              onClick={() => setIVSedationFormData({...ivSedationFormData, pregnancyRisk: 'no'})}
+                            >
+                              NO
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="lastMenstrualCycle" className="text-sm text-blue-800">Last Menstrual Cycle Date</Label>
+                          <Input
+                            id="lastMenstrualCycle"
+                            type="date"
+                            value={ivSedationFormData.lastMenstrualCycle || ''}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, lastMenstrualCycle: e.target.value})}
+                            className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Medical History Sections */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Anesthesia History */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Anesthesia History</h3>
+                        <div className="space-y-2">
+                          {[
+                            'No Previous Anesthetic History',
+                            'Previous Anesthetic without any problems or complications',
+                            'Family Hx of Anesthetic Complications',
+                            'Malignant Hyperthermia',
+                            'Others'
+                          ].map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              className={`w-full text-left px-3 py-2 rounded text-xs font-medium transition-colors ${
+                                ivSedationFormData.anesthesiaHistory === option
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => setIVSedationFormData({...ivSedationFormData, anesthesiaHistory: option})}
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Others Anesthesia History Text Field */}
+                        {ivSedationFormData.anesthesiaHistory === 'Others' && (
+                          <div className="mt-3">
+                            <Label htmlFor="anesthesiaHistoryOther" className="text-xs text-blue-800">Please specify</Label>
+                            <Input
+                              id="anesthesiaHistoryOther"
+                              type="text"
+                              value={ivSedationFormData.anesthesiaHistoryOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, anesthesiaHistoryOther: e.target.value})}
+                              placeholder="Enter anesthesia history details"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Respiratory Problems */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Respiratory Problems</h3>
+                        <div className="grid grid-cols-2 gap-1">
+                          {[
+                            'N/A', 'Asthma', 'Anemia', 'Reactive Airway', 'Bronchitis', 'COPD',
+                            'Dyspnea', 'Orthopnea', 'Recent URI', 'SOB', 'Tuberculosis', 'Others'
+                          ].map((problem) => (
+                            <button
+                              key={problem}
+                              type="button"
+                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                ivSedationFormData.respiratoryProblems?.includes(problem)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.respiratoryProblems || [];
+                                const updated = current.includes(problem)
+                                  ? current.filter(p => p !== problem)
+                                  : [...current, problem];
+                                setIVSedationFormData({...ivSedationFormData, respiratoryProblems: updated});
+                              }}
+                            >
+                              {problem}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Others Respiratory Problems Text Field */}
+                        {ivSedationFormData.respiratoryProblems?.includes('Others') && (
+                          <div className="mt-3">
+                            <Label htmlFor="respiratoryProblemsOther" className="text-xs text-blue-800">Please specify other respiratory problems</Label>
+                            <Input
+                              id="respiratoryProblemsOther"
+                              type="text"
+                              value={ivSedationFormData.respiratoryProblemsOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, respiratoryProblemsOther: e.target.value})}
+                              placeholder="Enter other respiratory problems"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Cardiovascular Problems */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Cardiovascular Problems</h3>
+                        <div className="grid grid-cols-2 gap-1">
+                          {[
+                            'N/A', 'Anemia', 'Congestive Heart Failure (CHF)', 'Dysrhythmia', 'Murmur', 'Hypertension (HTN)',
+                            'Myocardial Infarction (MI)', 'Valvular DX', 'Rheumatic Fever', 'Sickle Cell Disease', 'Congenital Heart DX', 'Pacemaker', 'Other'
+                          ].map((problem) => (
+                            <button
+                              key={problem}
+                              type="button"
+                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                ivSedationFormData.cardiovascularProblems?.includes(problem)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.cardiovascularProblems || [];
+                                const updated = current.includes(problem)
+                                  ? current.filter(p => p !== problem)
+                                  : [...current, problem];
+                                setIVSedationFormData({...ivSedationFormData, cardiovascularProblems: updated});
+                              }}
+                            >
+                              {problem}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Other Cardiovascular Problems Text Field */}
+                        {ivSedationFormData.cardiovascularProblems?.includes('Other') && (
+                          <div className="mt-3">
+                            <Label htmlFor="cardiovascularProblemsOther" className="text-xs text-blue-800">Please specify other cardiovascular problems</Label>
+                            <Input
+                              id="cardiovascularProblemsOther"
+                              type="text"
+                              value={ivSedationFormData.cardiovascularProblemsOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, cardiovascularProblemsOther: e.target.value})}
+                              placeholder="Enter other cardiovascular problems"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Gastrointestinal Problems */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Gastrointestinal Problems</h3>
+                        <div className="grid grid-cols-2 gap-1">
+                          {[
+                            'N/A', 'Cirrhosis', 'Hepatitis', 'Reflux', 'Ulcers', 'Oesophageal Issues', 'Other'
+                          ].map((problem) => (
+                            <button
+                              key={problem}
+                              type="button"
+                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                ivSedationFormData.gastrointestinalProblems?.includes(problem)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.gastrointestinalProblems || [];
+                                const updated = current.includes(problem)
+                                  ? current.filter(p => p !== problem)
+                                  : [...current, problem];
+                                setIVSedationFormData({...ivSedationFormData, gastrointestinalProblems: updated});
+                              }}
+                            >
+                              {problem}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Other Gastrointestinal Problems Text Field */}
+                        {ivSedationFormData.gastrointestinalProblems?.includes('Other') && (
+                          <div className="mt-3">
+                            <Label htmlFor="gastrointestinalProblemsOther" className="text-xs text-blue-800">Please specify other gastrointestinal problems</Label>
+                            <Input
+                              id="gastrointestinalProblemsOther"
+                              type="text"
+                              value={ivSedationFormData.gastrointestinalProblemsOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, gastrointestinalProblemsOther: e.target.value})}
+                              placeholder="Enter other gastrointestinal problems"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Additional Medical History */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Neurologic Problems */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Neurologic Problems</h3>
+                        <div className="grid grid-cols-2 gap-1">
+                          {[
+                            'N/A', 'Cerebral Vascular Accident (CVA)', 'Headaches', 'Transient Ischemic Attack (TIA)', 'Syncope', 'Seizures', 'Other'
+                          ].map((problem) => (
+                            <button
+                              key={problem}
+                              type="button"
+                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                ivSedationFormData.neurologicProblems?.includes(problem)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.neurologicProblems || [];
+                                const updated = current.includes(problem)
+                                  ? current.filter(p => p !== problem)
+                                  : [...current, problem];
+                                setIVSedationFormData({...ivSedationFormData, neurologicProblems: updated});
+                              }}
+                            >
+                              {problem}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Other Neurologic Problems Text Field */}
+                        {ivSedationFormData.neurologicProblems?.includes('Other') && (
+                          <div className="mt-3">
+                            <Label htmlFor="neurologicProblemsOther" className="text-xs text-blue-800">Please specify other neurologic problems</Label>
+                            <Input
+                              id="neurologicProblemsOther"
+                              type="text"
+                              value={ivSedationFormData.neurologicProblemsOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, neurologicProblemsOther: e.target.value})}
+                              placeholder="Enter other neurologic problems"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Endocrine/Renal Problems */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Endocrine/Renal Problems</h3>
+                        <div className="grid grid-cols-2 gap-1">
+                          {[
+                            'N/A', 'Diabetes', 'Dialysis', 'Thyroid DX', 'Renal Failure', 'Other'
+                          ].map((problem) => (
+                            <button
+                              key={problem}
+                              type="button"
+                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                ivSedationFormData.endocrineRenalProblems?.includes(problem)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.endocrineRenalProblems || [];
+                                const updated = current.includes(problem)
+                                  ? current.filter(p => p !== problem)
+                                  : [...current, problem];
+                                setIVSedationFormData({...ivSedationFormData, endocrineRenalProblems: updated});
+                              }}
+                            >
+                              {problem}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Other Endocrine/Renal Problems Text Field */}
+                        {ivSedationFormData.endocrineRenalProblems?.includes('Other') && (
+                          <div className="mt-3">
+                            <Label htmlFor="endocrineRenalProblemsOther" className="text-xs text-blue-800">Please specify other endocrine/renal problems</Label>
+                            <Input
+                              id="endocrineRenalProblemsOther"
+                              type="text"
+                              value={ivSedationFormData.endocrineRenalProblemsOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, endocrineRenalProblemsOther: e.target.value})}
+                              placeholder="Enter other endocrine/renal problems"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+
+                        {/* A1C Level Input */}
+                        <div className="mt-3">
+                          <Label htmlFor="lastA1CLevel" className="text-xs text-blue-800">Last A1C Level</Label>
+                          <Input
+                            id="lastA1CLevel"
+                            type="text"
+                            value={ivSedationFormData.lastA1CLevel || ''}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, lastA1CLevel: e.target.value})}
+                            placeholder="Enter A1C level"
+                            className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Miscellaneous - Full Width */}
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-3">Miscellaneous</h3>
+                      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1">
+                        {[
+                          'N/A', 'Artificial Valve', 'Heart Birth Defect', 'Bypass', 'Seizures', 'Stroke',
+                          'Parkinson\'s Disease', 'Dementia (Alzheimer\'s)', 'Anxiety', 'Schizophrenia', 'Eating Disorder',
+                          'HIV', 'AIDS', 'Rheumatoid Arthritis', 'Lupus', 'Fibromyalgia', 'Immunosuppressive Disease',
+                          'Prolonged Bleeding', 'Platelet Disorder', 'Sickle Cell', 'Hemophilia', 'Chronic Kidney Disease',
+                          'Osteoporosis', 'Artificial Joint', 'Muscle Weakness', 'Cancer', 'Chemotherapy', 'Other'
+                        ].map((condition) => (
+                          <button
+                            key={condition}
+                            type="button"
+                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              ivSedationFormData.miscellaneous?.includes(condition)
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => {
+                              const current = ivSedationFormData.miscellaneous || [];
+                              const updated = current.includes(condition)
+                                ? current.filter(c => c !== condition)
+                                : [...current, condition];
+                              setIVSedationFormData({...ivSedationFormData, miscellaneous: updated});
+                            }}
+                          >
+                            {condition}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Other Miscellaneous Text Field */}
+                      {ivSedationFormData.miscellaneous?.includes('Other') && (
+                        <div className="mt-3">
+                          <Label htmlFor="miscellaneousOther" className="text-xs text-blue-800">Please specify other conditions</Label>
+                          <Input
+                            id="miscellaneousOther"
+                            type="text"
+                            value={ivSedationFormData.miscellaneousOther || ''}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, miscellaneousOther: e.target.value})}
+                            placeholder="Enter other conditions"
+                            className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Social History and Patient Assessment */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Social History */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Social History</h3>
+                        <div className="grid grid-cols-2 gap-1">
+                          {[
+                            'N/A', 'Tobacco', 'ETOH Consumption', 'Recreational Drugs', 'Other'
+                          ].map((habit) => (
+                            <button
+                              key={habit}
+                              type="button"
+                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                ivSedationFormData.socialHistory?.includes(habit)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.socialHistory || [];
+                                const updated = current.includes(habit)
+                                  ? current.filter(h => h !== habit)
+                                  : [...current, habit];
+                                setIVSedationFormData({...ivSedationFormData, socialHistory: updated});
+                              }}
+                            >
+                              {habit}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Other Social History Text Field */}
+                        {ivSedationFormData.socialHistory?.includes('Other') && (
+                          <div className="mt-3">
+                            <Label htmlFor="socialHistoryOther" className="text-xs text-blue-800">Please specify other social history</Label>
+                            <Input
+                              id="socialHistoryOther"
+                              type="text"
+                              value={ivSedationFormData.socialHistoryOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, socialHistoryOther: e.target.value})}
+                              placeholder="Enter other social history"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Patient Assessment */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Patient Assessment</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm text-blue-800 mb-2">Patient is Well Developed and Well Nourished</p>
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  ivSedationFormData.wellDevelopedNourished === 'yes'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                                onClick={() => setIVSedationFormData({...ivSedationFormData, wellDevelopedNourished: 'yes'})}
+                              >
+                                YES
+                              </button>
+                              <button
+                                type="button"
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  ivSedationFormData.wellDevelopedNourished === 'no'
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                                onClick={() => setIVSedationFormData({...ivSedationFormData, wellDevelopedNourished: 'no'})}
+                              >
+                                NO
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <p className="text-sm text-blue-800 mb-2">Patient is Anxious?</p>
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  ivSedationFormData.patientAnxious === 'yes'
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                                onClick={() => setIVSedationFormData({...ivSedationFormData, patientAnxious: 'yes'})}
+                              >
+                                YES
+                              </button>
+                              <button
+                                type="button"
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  ivSedationFormData.patientAnxious === 'no'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                                onClick={() => setIVSedationFormData({...ivSedationFormData, patientAnxious: 'no'})}
+                              >
+                                NO
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ASA Classification and Airway Evaluation */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* ASA Classification */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">ASA Classification</h3>
+                        <div>
+                          <p className="text-sm text-blue-800 mb-2">American Society of Anesthesiology Classification (ASA) Status</p>
+                          <div className="grid grid-cols-5 gap-2">
+                            {['1', '2', '3', '4', '5'].map((classification) => (
+                              <button
+                                key={classification}
+                                type="button"
+                                className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                                  ivSedationFormData.asaClassification === classification
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                }`}
+                                onClick={() => setIVSedationFormData({...ivSedationFormData, asaClassification: classification})}
+                              >
+                                {classification}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Airway Evaluation */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Airway Evaluation</h3>
+                        <div className="grid grid-cols-1 gap-2">
+                          {[
+                            'Good range of motion of neck and jaw',
+                            'Missing, Loose or Chipped Teeth',
+                            'Edentulous',
+                            'Other'
+                          ].map((evaluation) => (
+                            <button
+                              key={evaluation}
+                              type="button"
+                              className={`px-3 py-2 rounded text-xs font-medium transition-colors text-left ${
+                                ivSedationFormData.airwayEvaluation?.includes(evaluation)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.airwayEvaluation || [];
+                                const updated = current.includes(evaluation)
+                                  ? current.filter(e => e !== evaluation)
+                                  : [...current, evaluation];
+                                setIVSedationFormData({...ivSedationFormData, airwayEvaluation: updated});
+                              }}
+                            >
+                              {evaluation}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Other Airway Evaluation Text Field */}
+                        {ivSedationFormData.airwayEvaluation?.includes('Other') && (
+                          <div className="mt-3">
+                            <Label htmlFor="airwayEvaluationOther" className="text-xs text-blue-800">Please specify other airway findings</Label>
+                            <Input
+                              id="airwayEvaluationOther"
+                              type="text"
+                              value={ivSedationFormData.airwayEvaluationOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, airwayEvaluationOther: e.target.value})}
+                              placeholder="Enter other airway findings"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Mallampati Score and Heart/Lung Evaluation */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Mallampati Score */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Mallampati Score</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          {['Class I', 'Class II', 'Class III', 'Class IV'].map((score) => (
+                            <button
+                              key={score}
+                              type="button"
+                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                                ivSedationFormData.mallampatiScore === score
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => setIVSedationFormData({...ivSedationFormData, mallampatiScore: score})}
+                            >
+                              {score}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Heart and Lung Evaluation */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Heart and Lung Evaluation</h3>
+                        <div className="grid grid-cols-1 gap-2">
+                          {[
+                            'Heart Regular Rate and Rhythm',
+                            'Lung is Clear to Auscultation (CTA)',
+                            'Murmur',
+                            'Other'
+                          ].map((evaluation) => (
+                            <button
+                              key={evaluation}
+                              type="button"
+                              className={`px-3 py-2 rounded text-xs font-medium transition-colors text-left ${
+                                ivSedationFormData.heartLungEvaluation?.includes(evaluation)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.heartLungEvaluation || [];
+                                const updated = current.includes(evaluation)
+                                  ? current.filter(e => e !== evaluation)
+                                  : [...current, evaluation];
+                                setIVSedationFormData({...ivSedationFormData, heartLungEvaluation: updated});
+                              }}
+                            >
+                              {evaluation}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Other Heart/Lung Evaluation Text Field */}
+                        {ivSedationFormData.heartLungEvaluation?.includes('Other') && (
+                          <div className="mt-3">
+                            <Label htmlFor="heartLungEvaluationOther" className="text-xs text-blue-800">Please specify other heart/lung findings</Label>
+                            <Input
+                              id="heartLungEvaluationOther"
+                              type="text"
+                              value={ivSedationFormData.heartLungEvaluationOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, heartLungEvaluationOther: e.target.value})}
+                              placeholder="Enter other heart/lung findings"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+
+                  </div>
+                )}
+
+                {/* Step 3: Sedation Plan */}
+                {ivSedationCurrentStep === 3 && (
+                  <div className="space-y-4">
+                    {/* Instruments Checklist - Full Width */}
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                        <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Instruments Checklist
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {[
+                          { name: 'ECG', key: 'ecg' },
+                          { name: 'BP', key: 'bp' },
+                          { name: 'Pulse OX', key: 'pulseOx' },
+                          { name: 'ETCO2', key: 'etco2' },
+                          { name: 'Supplemental O2', key: 'supplementalO2' },
+                          { name: 'PPV Available', key: 'ppvAvailable' },
+                          { name: 'Suction Available', key: 'suctionAvailable' }
+                        ].map((instrument) => (
+                          <div key={instrument.key} className="bg-white rounded-lg p-3 border border-blue-200 hover:border-blue-300 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-blue-900">{instrument.name}</span>
+                              <button
+                                type="button"
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                  ivSedationFormData.instrumentsChecklist?.[instrument.key]
+                                    ? 'bg-green-500 border-green-500 text-white'
+                                    : 'border-gray-300 hover:border-green-400'
+                                }`}
+                                onClick={() => {
+                                  const current = ivSedationFormData.instrumentsChecklist || {};
+                                  setIVSedationFormData({
+                                    ...ivSedationFormData,
+                                    instrumentsChecklist: {
+                                      ...current,
+                                      [instrument.key]: !current[instrument.key]
+                                    }
+                                  });
+                                }}
+                              >
+                                {ivSedationFormData.instrumentsChecklist?.[instrument.key] && (
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                            <div className={`text-xs mt-2 transition-colors ${
+                              ivSedationFormData.instrumentsChecklist?.[instrument.key]
+                                ? 'text-green-600 font-medium'
+                                : 'text-gray-500'
+                            }`}>
+                              {ivSedationFormData.instrumentsChecklist?.[instrument.key] ? 'Checked' : 'Not Checked'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Sedation Plan Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Sedation Type */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Sedation Type</h3>
+                        <div className="space-y-2">
+                          {[
+                            'Minimal Sedation',
+                            'Moderate Sedation',
+                            'Deep Sedation',
+                            'General Anesthesia'
+                          ].map((type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                                ivSedationFormData.sedationType === type
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => setIVSedationFormData({...ivSedationFormData, sedationType: type})}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Medications Planned */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Medications Planned</h3>
+                        <div className="space-y-2">
+                          {[
+                            'Midazolam',
+                            'Propofol',
+                            'Fentanyl',
+                            'Ketamine',
+                            'Nitrous Oxide',
+                            'Other'
+                          ].map((medication) => (
+                            <button
+                              key={medication}
+                              type="button"
+                              className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                                ivSedationFormData.medicationsPlanned?.includes(medication)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.medicationsPlanned || [];
+                                const updated = current.includes(medication)
+                                  ? current.filter(m => m !== medication)
+                                  : [...current, medication];
+                                setIVSedationFormData({...ivSedationFormData, medicationsPlanned: updated});
+                              }}
+                            >
+                              {medication}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Other Medication Text Field */}
+                        {ivSedationFormData.medicationsPlanned?.includes('Other') && (
+                          <div className="mt-3">
+                            <Label htmlFor="medicationsOther" className="text-xs text-blue-800">Please specify other medications</Label>
+                            <Input
+                              id="medicationsOther"
+                              type="text"
+                              value={ivSedationFormData.medicationsOther || ''}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, medicationsOther: e.target.value})}
+                              placeholder="Enter other medications"
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Additional Planning Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Route of Administration */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Route of Administration</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            'IV',
+                            'Oral',
+                            'Intranasal',
+                            'Inhalation'
+                          ].map((route) => (
+                            <button
+                              key={route}
+                              type="button"
+                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                                ivSedationFormData.administrationRoute?.includes(route)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.administrationRoute || [];
+                                const updated = current.includes(route)
+                                  ? current.filter(r => r !== route)
+                                  : [...current, route];
+                                setIVSedationFormData({...ivSedationFormData, administrationRoute: updated});
+                              }}
+                            >
+                              {route}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Emergency Protocols */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Emergency Protocols</h3>
+                        <div className="space-y-2">
+                          {[
+                            'Reversal Agents Available',
+                            'Emergency Cart Ready',
+                            'Crash Cart Accessible',
+                            'Emergency Contact List'
+                          ].map((protocol) => (
+                            <div key={protocol} className="flex items-center justify-between bg-white rounded p-2 border border-blue-200">
+                              <span className="text-sm text-blue-900">{protocol}</span>
+                              <button
+                                type="button"
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                  ivSedationFormData.emergencyProtocols?.[protocol.toLowerCase().replace(/\s+/g, '')]
+                                    ? 'bg-green-500 border-green-500 text-white'
+                                    : 'border-gray-300 hover:border-green-400'
+                                }`}
+                                onClick={() => {
+                                  const key = protocol.toLowerCase().replace(/\s+/g, '');
+                                  const current = ivSedationFormData.emergencyProtocols || {};
+                                  setIVSedationFormData({
+                                    ...ivSedationFormData,
+                                    emergencyProtocols: {
+                                      ...current,
+                                      [key]: !current[key]
+                                    }
+                                  });
+                                }}
+                              >
+                                {ivSedationFormData.emergencyProtocols?.[protocol.toLowerCase().replace(/\s+/g, '')] && (
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 4: IV Sedation Flow Chart */}
+                {ivSedationCurrentStep === 4 && (
+                  <div className="space-y-4">
+                    {/* Time Tracking Section */}
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                        <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Time Tracking
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Time in Room */}
+                        <div className="bg-white rounded-lg p-4 border border-blue-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-blue-900">Time in Room</h4>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const now = new Date();
+                                const estTime = new Intl.DateTimeFormat('en-US', {
+                                  timeZone: 'America/New_York',
+                                  hour12: false,
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }).format(now);
+                                setIVSedationFormData({...ivSedationFormData, timeInRoom: estTime});
+                              }}
+                              className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+                            >
+                              Current Time
+                            </button>
+                          </div>
+                          <p className="text-xs text-blue-700 mb-2">When patient enters the operation room</p>
+                          <input
+                            type="time"
+                            value={ivSedationFormData.timeInRoom}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, timeInRoom: e.target.value})}
+                            className="w-full px-3 py-2 border border-blue-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
+                          />
+                          {ivSedationFormData.timeInRoom && (
+                            <div className="mt-2 text-xs text-green-600 font-medium">
+                              ✓ Patient entered room at {ivSedationFormData.timeInRoom} EST
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Sedation Start Time */}
+                        <div className="bg-white rounded-lg p-4 border border-blue-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-blue-900">Sedation Start Time</h4>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const now = new Date();
+                                const estTime = new Intl.DateTimeFormat('en-US', {
+                                  timeZone: 'America/New_York',
+                                  hour12: false,
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }).format(now);
+                                setIVSedationFormData({...ivSedationFormData, sedationStartTime: estTime});
+                              }}
+                              className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
+                            >
+                              Current Time
+                            </button>
+                          </div>
+                          <p className="text-xs text-blue-700 mb-2">When sedation administration begins</p>
+                          <input
+                            type="time"
+                            value={ivSedationFormData.sedationStartTime}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, sedationStartTime: e.target.value})}
+                            className="w-full px-3 py-2 border border-blue-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
+                          />
+                          {ivSedationFormData.sedationStartTime && (
+                            <div className="mt-2 text-xs text-green-600 font-medium">
+                              ✓ Sedation started at {ivSedationFormData.sedationStartTime} EST
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Time Summary Cards */}
+                      {ivSedationFormData.timeInRoom && ivSedationFormData.sedationStartTime && (
+                        <div className="mt-4">
+                          <h4 className="text-sm font-semibold text-green-900 mb-3">Time Summary</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {/* Room Entry Card */}
+                            <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-xs font-medium text-gray-700">Room Entry</span>
+                              </div>
+                              <div className="text-lg font-bold text-blue-600">{ivSedationFormData.timeInRoom}</div>
+                              <div className="text-xs text-gray-500">EST</div>
+                            </div>
+
+                            {/* Sedation Start Card */}
+                            <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span className="text-xs font-medium text-gray-700">Sedation Start</span>
+                              </div>
+                              <div className="text-lg font-bold text-green-600">{ivSedationFormData.sedationStartTime}</div>
+                              <div className="text-xs text-gray-500">EST</div>
+                            </div>
+
+                            {/* Preparation Time Card */}
+                            <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                <span className="text-xs font-medium text-gray-700">Preparation Time</span>
+                              </div>
+                              <div className="text-lg font-bold text-orange-600">
+                                {(() => {
+                                  const roomTime = ivSedationFormData.timeInRoom.split(':');
+                                  const sedationTime = ivSedationFormData.sedationStartTime.split(':');
+                                  const roomMinutes = parseInt(roomTime[0]) * 60 + parseInt(roomTime[1]);
+                                  const sedationMinutes = parseInt(sedationTime[0]) * 60 + parseInt(sedationTime[1]);
+                                  const diffMinutes = sedationMinutes - roomMinutes;
+
+                                  if (diffMinutes >= 0) {
+                                    return `${diffMinutes}`;
+                                  }
+                                  return '--';
+                                })()}
+                              </div>
+                              <div className="text-xs text-gray-500">minutes</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+
+                  </div>
+                )}
+
+                {/* Step 5: Flow - Monitoring During Surgery */}
+                {ivSedationCurrentStep === 5 && (
+                  <div className="space-y-4">
+                    {/* Add Entry Button */}
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Monitoring Log
+                        <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                          {ivSedationFormData.flowEntries?.length || 0}
+                        </div>
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowFlowEntryDialog(true)}
+                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+                      >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Entry
+                      </button>
+                    </div>
+
+                    {/* Monitoring Table */}
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+
+
+                      {ivSedationFormData.flowEntries && ivSedationFormData.flowEntries.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-blue-50">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-blue-900 border-b border-blue-200">Time</th>
+                                <th className="px-3 py-2 text-center text-xs font-semibold text-blue-900 border-b border-blue-200">BP</th>
+                                <th className="px-3 py-2 text-center text-xs font-semibold text-blue-900 border-b border-blue-200">HR</th>
+                                <th className="px-3 py-2 text-center text-xs font-semibold text-blue-900 border-b border-blue-200">RR</th>
+                                <th className="px-3 py-2 text-center text-xs font-semibold text-blue-900 border-b border-blue-200">SpO2</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-blue-900 border-b border-blue-200">Medications</th>
+                                <th className="px-3 py-2 text-center text-xs font-semibold text-blue-900 border-b border-blue-200">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ivSedationFormData.flowEntries.map((entry, index) => (
+                                <tr key={entry.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                  <td className="px-3 py-2 text-sm font-mono text-gray-900 border-b border-gray-200">
+                                    {entry.time} EST
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-center text-gray-900 border-b border-gray-200">
+                                    {entry.bp || '-'}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-center text-gray-900 border-b border-gray-200">
+                                    {entry.heartRate ? `${entry.heartRate} bpm` : '-'}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-center text-gray-900 border-b border-gray-200">
+                                    {entry.rr ? `${entry.rr}/min` : '-'}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-center text-gray-900 border-b border-gray-200">
+                                    {entry.spo2 ? `${entry.spo2}%` : '-'}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-900 border-b border-gray-200">
+                                    {entry.medications && entry.medications.length > 0 ? (
+                                      <div className="space-y-1">
+                                        {entry.medications.map((medId, index) => {
+                                          const medication = medicationOptions.find(med => med.id === medId);
+                                          return medication ? (
+                                            <div key={index} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                              {medication.name}
+                                            </div>
+                                          ) : null;
+                                        })}
+                                      </div>
+                                    ) : '-'}
+                                  </td>
+                                  <td className="px-3 py-2 text-center border-b border-gray-200">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          // Parse the existing entry data
+                                          const [hour, minute] = entry.time.split(':');
+                                          const [systolic, diastolic] = entry.bp ? entry.bp.split('/') : ['', ''];
+
+                                          setNewFlowEntry({
+                                            hour: hour || '',
+                                            minute: minute || '',
+                                            systolic: systolic || '',
+                                            diastolic: diastolic || '',
+                                            heartRate: entry.heartRate || '',
+                                            rr: entry.rr || '',
+                                            spo2: entry.spo2 || '',
+                                            medications: entry.medications || []
+                                          });
+                                          setEditingEntryId(entry.id);
+                                          setShowFlowEntryDialog(true);
+                                        }}
+                                        className="text-blue-600 hover:text-blue-800 text-xs"
+                                        title="Edit entry"
+                                      >
+                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const updatedEntries = ivSedationFormData.flowEntries?.filter(e => e.id !== entry.id) || [];
+                                          setIVSedationFormData({
+                                            ...ivSedationFormData,
+                                            flowEntries: updatedEntries
+                                          });
+                                        }}
+                                        className="text-red-600 hover:text-red-800 text-xs"
+                                        title="Delete entry"
+                                      >
+                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-gray-500">
+                          <svg className="h-12 w-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          <p className="text-sm">No monitoring entries yet</p>
+                          <p className="text-xs text-gray-400 mt-1">Add your first entry using the form above</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Placeholder for other steps */}
-                {ivSedationCurrentStep > 1 && (
+                {ivSedationCurrentStep > 5 && (
                   <div className="h-full flex items-center justify-center">
                     <div className="text-center">
                       <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -4281,6 +5819,307 @@ export function PatientProfilePage() {
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Flow Entry Dialog */}
+      <Dialog open={showFlowEntryDialog} onOpenChange={setShowFlowEntryDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+              <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+              </svg>
+              {editingEntryId ? 'Edit Monitoring Entry' : 'Add Monitoring Entry'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-2">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Time */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">Time</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={newFlowEntry.hour}
+                    onChange={(e) => setNewFlowEntry({...newFlowEntry, hour: e.target.value})}
+                    className="w-16 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
+                  >
+                    <option value="">HH</option>
+                    {Array.from({length: 24}, (_, i) => (
+                      <option key={i} value={i.toString().padStart(2, '0')}>
+                        {i.toString().padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-blue-600 font-medium">:</span>
+                  <select
+                    value={newFlowEntry.minute}
+                    onChange={(e) => setNewFlowEntry({...newFlowEntry, minute: e.target.value})}
+                    className="w-16 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
+                  >
+                    <option value="">MM</option>
+                    {Array.from({length: 60}, (_, i) => (
+                      <option key={i} value={i.toString().padStart(2, '0')}>
+                        {i.toString().padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const now = new Date();
+                      const estTime = new Intl.DateTimeFormat('en-US', {
+                        timeZone: 'America/New_York',
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }).format(now);
+                      const [hours, minutes] = estTime.split(':');
+                      setNewFlowEntry({...newFlowEntry, hour: hours, minute: minutes});
+                    }}
+                    className="px-2 py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Current Time
+                  </button>
+                </div>
+              </div>
+
+              {/* BP */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">Blood Pressure</label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={newFlowEntry.systolic}
+                    onChange={(e) => setNewFlowEntry({...newFlowEntry, systolic: e.target.value})}
+                    className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm text-center"
+                    min="80"
+                    max="180"
+                  />
+                  <span className="text-blue-600 font-medium">/</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={newFlowEntry.diastolic}
+                    onChange={(e) => setNewFlowEntry({...newFlowEntry, diastolic: e.target.value})}
+                    className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm text-center"
+                    min="40"
+                    max="120"
+                  />
+                </div>
+              </div>
+
+              {/* Heart Rate */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">Heart Rate (bpm)</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={newFlowEntry.heartRate}
+                  onChange={(e) => setNewFlowEntry({...newFlowEntry, heartRate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* RR */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">Respiratory Rate (/min)</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={newFlowEntry.rr}
+                  onChange={(e) => setNewFlowEntry({...newFlowEntry, rr: e.target.value})}
+                  placeholder="16"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* SpO2 */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">SpO2 (%)</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={newFlowEntry.spo2}
+                  onChange={(e) => setNewFlowEntry({...newFlowEntry, spo2: e.target.value})}
+                  placeholder="98"
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              </div>
+
+              {/* Medications Section - Full Width with Scroll */}
+              <div className="border-t pt-4">
+                <label className="text-sm font-medium text-gray-700 block mb-3">Medications</label>
+
+                {/* Selected Medications Display */}
+                {newFlowEntry.medications.length > 0 && (
+                  <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-600 mb-2">Selected:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {newFlowEntry.medications.map((medId) => {
+                        const medication = medicationOptions.find(med => med.id === medId);
+                        return medication ? (
+                          <div key={medId} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs flex items-center gap-1">
+                            {medication.name}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewFlowEntry({
+                                  ...newFlowEntry,
+                                  medications: newFlowEntry.medications.filter(id => id !== medId)
+                                });
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Medication Categories with Scroll */}
+                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {['Versed', 'Fentanyl', 'Ketorolac', 'Benadryl', 'Dexamethasone', 'Acetaminophen', 'Valium', 'Clindamycin', 'Lidocaine'].map(category => (
+                      <div key={category} className="border border-gray-100 rounded p-2">
+                        <h4 className="text-xs font-semibold text-gray-700 mb-1">{category}</h4>
+                        <div className="space-y-1">
+                          {medicationOptions
+                            .filter(med => med.category === category)
+                            .map(medication => (
+                              <button
+                                key={medication.id}
+                                type="button"
+                                onClick={() => {
+                                  if (!newFlowEntry.medications.includes(medication.id)) {
+                                    setNewFlowEntry({
+                                      ...newFlowEntry,
+                                      medications: [...newFlowEntry.medications, medication.id]
+                                    });
+                                  }
+                                }}
+                                disabled={newFlowEntry.medications.includes(medication.id)}
+                                className={`w-full text-left px-1.5 py-0.5 text-xs rounded transition-colors ${
+                                  newFlowEntry.medications.includes(medication.id)
+                                    ? 'bg-blue-100 text-blue-800 cursor-not-allowed'
+                                    : 'bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                                }`}
+                              >
+                                {medication.name.split(' | ')[0]} {/* Show only dosage */}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-shrink-0 flex gap-3 justify-end pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowFlowEntryDialog(false);
+                setEditingEntryId(null);
+                setNewFlowEntry({
+                  hour: '',
+                  minute: '',
+                  systolic: '',
+                  diastolic: '',
+                  heartRate: '',
+                  rr: '',
+                  spo2: '',
+                  medications: []
+                });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (newFlowEntry.hour && newFlowEntry.minute) {
+                  const timeValue = `${newFlowEntry.hour}:${newFlowEntry.minute}`;
+                  const bpValue = newFlowEntry.systolic && newFlowEntry.diastolic
+                    ? `${newFlowEntry.systolic}/${newFlowEntry.diastolic}`
+                    : '';
+
+                  if (editingEntryId) {
+                    // Update existing entry
+                    const updatedEntries = ivSedationFormData.flowEntries?.map(entry =>
+                      entry.id === editingEntryId
+                        ? {
+                            ...entry,
+                            time: timeValue,
+                            bp: bpValue,
+                            heartRate: newFlowEntry.heartRate,
+                            rr: newFlowEntry.rr,
+                            spo2: newFlowEntry.spo2,
+                            medications: newFlowEntry.medications
+                          }
+                        : entry
+                    ) || [];
+
+                    setIVSedationFormData({
+                      ...ivSedationFormData,
+                      flowEntries: updatedEntries
+                    });
+                  } else {
+                    // Add new entry
+                    const newEntry = {
+                      id: Date.now().toString(),
+                      time: timeValue,
+                      bp: bpValue,
+                      heartRate: newFlowEntry.heartRate,
+                      rr: newFlowEntry.rr,
+                      spo2: newFlowEntry.spo2,
+                      medications: newFlowEntry.medications
+                    };
+
+                    setIVSedationFormData({
+                      ...ivSedationFormData,
+                      flowEntries: [...(ivSedationFormData.flowEntries || []), newEntry]
+                    });
+                  }
+
+                  setShowFlowEntryDialog(false);
+                  setEditingEntryId(null);
+                  setNewFlowEntry({
+                    hour: '',
+                    minute: '',
+                    systolic: '',
+                    diastolic: '',
+                    heartRate: '',
+                    rr: '',
+                    spo2: '',
+                    medications: []
+                  });
+                }
+              }}
+              disabled={!newFlowEntry.hour || !newFlowEntry.minute}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {editingEntryId ? 'Update Entry' : 'Add Entry'}
             </Button>
           </div>
         </DialogContent>
