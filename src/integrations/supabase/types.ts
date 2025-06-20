@@ -9,6 +9,161 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      data_collection_sheets: {
+        Row: {
+          id: string
+          patient_id: string | null
+          patient_name: string
+          collection_date: string
+          reasons_for_collection: string[]
+          custom_reason: string | null
+          current_upper_appliance: string | null
+          current_lower_appliance: string | null
+          pre_surgical_pictures: boolean | null
+          surgical_pictures: boolean | null
+          follow_up_pictures: boolean | null
+          fractured_appliance_pictures: boolean | null
+          pre_surgical_jaw_records_upper: boolean | null
+          pre_surgical_jaw_records_lower: boolean | null
+          facial_scan: boolean | null
+          jaw_records_upper: boolean | null
+          jaw_records_lower: boolean | null
+          tissue_scan_upper: boolean | null
+          tissue_scan_lower: boolean | null
+          photogrammetry_upper: boolean | null
+          photogrammetry_lower: boolean | null
+          dc_ref_scan_upper: boolean | null
+          dc_ref_scan_lower: boolean | null
+          appliance_360_upper: boolean | null
+          appliance_360_lower: boolean | null
+          additional_notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          patient_id?: string | null
+          patient_name: string
+          collection_date: string
+          reasons_for_collection: string[]
+          custom_reason?: string | null
+          current_upper_appliance?: string | null
+          current_lower_appliance?: string | null
+          pre_surgical_pictures?: boolean | null
+          surgical_pictures?: boolean | null
+          follow_up_pictures?: boolean | null
+          fractured_appliance_pictures?: boolean | null
+          pre_surgical_jaw_records_upper?: boolean | null
+          pre_surgical_jaw_records_lower?: boolean | null
+          facial_scan?: boolean | null
+          jaw_records_upper?: boolean | null
+          jaw_records_lower?: boolean | null
+          tissue_scan_upper?: boolean | null
+          tissue_scan_lower?: boolean | null
+          photogrammetry_upper?: boolean | null
+          photogrammetry_lower?: boolean | null
+          dc_ref_scan_upper?: boolean | null
+          dc_ref_scan_lower?: boolean | null
+          appliance_360_upper?: boolean | null
+          appliance_360_lower?: boolean | null
+          additional_notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          patient_id?: string | null
+          patient_name?: string
+          collection_date?: string
+          reasons_for_collection?: string[]
+          custom_reason?: string | null
+          current_upper_appliance?: string | null
+          current_lower_appliance?: string | null
+          pre_surgical_pictures?: boolean | null
+          surgical_pictures?: boolean | null
+          follow_up_pictures?: boolean | null
+          fractured_appliance_pictures?: boolean | null
+          pre_surgical_jaw_records_upper?: boolean | null
+          pre_surgical_jaw_records_lower?: boolean | null
+          facial_scan?: boolean | null
+          jaw_records_upper?: boolean | null
+          jaw_records_lower?: boolean | null
+          tissue_scan_upper?: boolean | null
+          tissue_scan_lower?: boolean | null
+          photogrammetry_upper?: boolean | null
+          photogrammetry_lower?: boolean | null
+          dc_ref_scan_upper?: boolean | null
+          dc_ref_scan_lower?: boolean | null
+          appliance_360_upper?: boolean | null
+          appliance_360_lower?: boolean | null
+          additional_notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_collection_sheets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      delivery_items: {
+        Row: {
+          id: string
+          lab_script_id: string | null
+          patient_name: string
+          delivery_status: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          lab_script_id?: string | null
+          patient_name: string
+          delivery_status: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          lab_script_id?: string | null
+          patient_name?: string
+          delivery_status?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      manufacturing_items: {
+        Row: {
+          id: string
+          lab_script_id: string | null
+          patient_name: string
+          status: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          lab_script_id?: string | null
+          patient_name: string
+          status: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          lab_script_id?: string | null
+          patient_name?: string
+          status?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       lab_report_cards: {
         Row: {
           id: string
