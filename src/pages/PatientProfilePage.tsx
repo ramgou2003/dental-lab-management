@@ -135,6 +135,21 @@ export function PatientProfilePage() {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [sheetToDelete, setSheetToDelete] = useState<any | null>(null);
 
+  // State for IV Sedation Flow Chart
+  const [showIVSedationForm, setShowIVSedationForm] = useState(false);
+  const [ivSedationCurrentStep, setIVSedationCurrentStep] = useState(1);
+  const ivSedationTotalSteps = 7; // Define total number of steps for IV sedation
+  const [ivSedationSheets, setIVSedationSheets] = useState<any[]>([]);
+  const [showIVSedationPreview, setShowIVSedationPreview] = useState(false);
+  const [selectedIVSedationSheet, setSelectedIVSedationSheet] = useState<any | null>(null);
+  const [ivSedationFormMessage, setIVSedationFormMessage] = useState<{ type: 'error' | 'success' | null; text: string }>({ type: null, text: '' });
+  const [showIVSedationToast, setShowIVSedationToast] = useState(false);
+  const [ivSedationActiveDropdown, setIVSedationActiveDropdown] = useState<string | null>(null);
+  const [editingIVSedationSheet, setEditingIVSedationSheet] = useState<any | null>(null);
+  const [isIVSedationEditMode, setIsIVSedationEditMode] = useState(false);
+  const [showIVSedationDeleteConfirmation, setShowIVSedationDeleteConfirmation] = useState(false);
+  const [ivSedationSheetToDelete, setIVSedationSheetToDelete] = useState<any | null>(null);
+
   // Define steps for the stepper
   const stepperSteps = [
     { title: "Patient Info", description: "Basic information" },
@@ -172,6 +187,76 @@ export function PatientProfilePage() {
       // Fractured appliance option
       fracturedAppliancePictures: null // null = not selected, true = yes, false = no
     }
+  });
+
+  // IV Sedation Form Data
+  const [ivSedationFormData, setIVSedationFormData] = useState({
+    patientName: "",
+    date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+    // Step 1 - Pre-Sedation Assessment
+    medicalHistory: "",
+    allergies: "",
+    currentMedications: "",
+    fastingStatus: "", // "compliant" | "non-compliant"
+    baselineVitals: {
+      bloodPressure: "",
+      heartRate: "",
+      respiratoryRate: "",
+      oxygenSaturation: "",
+      temperature: ""
+    },
+    // Step 2 - Sedation Plan
+    sedationType: "", // "minimal" | "moderate" | "deep"
+    medications: [] as string[],
+    dosages: {} as Record<string, string>,
+    administrationRoute: "", // "iv" | "oral" | "inhalation"
+    // Step 3 - Monitoring Setup
+    monitoringEquipment: {
+      pulseOximeter: false,
+      bloodPressureMonitor: false,
+      ecgMonitor: false,
+      capnography: false,
+      temperatureMonitor: false
+    },
+    emergencyEquipment: {
+      oxygenSupply: false,
+      suction: false,
+      bagMaskVentilation: false,
+      emergencyMedications: false,
+      defibrillator: false
+    },
+    // Step 4 - Sedation Administration
+    startTime: "",
+    initialDose: "",
+    additionalDoses: [] as Array<{time: string, medication: string, dose: string}>,
+    patientResponse: "",
+    // Step 5 - Intraoperative Monitoring
+    vitalSigns: [] as Array<{
+      time: string,
+      bloodPressure: string,
+      heartRate: string,
+      respiratoryRate: string,
+      oxygenSaturation: string,
+      sedationLevel: string
+    }>,
+    complications: "",
+    interventions: "",
+    // Step 6 - Recovery Phase
+    recoveryStartTime: "",
+    dischargeReadiness: {
+      consciousnessLevel: "", // "alert" | "drowsy" | "confused"
+      vitalStability: false,
+      painLevel: "",
+      nauseaVomiting: false,
+      ambulation: false
+    },
+    dischargeTime: "",
+    // Step 7 - Post-Sedation Instructions
+    dischargeInstructions: "",
+    followUpRequired: false,
+    followUpDate: "",
+    complications_notes: "",
+    overallAssessment: ""
   });
 
   // Close dropdown when clicking outside
@@ -583,6 +668,83 @@ export function PatientProfilePage() {
     setShowTreatmentDialog(false);
   };
 
+  // IV Sedation Form Handlers
+  const handleIVSedationFormOpen = () => {
+    // Pre-fill patient name from current patient data
+    setIVSedationFormData({
+      patientName: patient ? `${patient.first_name} ${patient.last_name}` : "",
+      date: new Date().toISOString().split('T')[0], // Reset to current date each time
+      // Step 1 - Pre-Sedation Assessment
+      medicalHistory: "",
+      allergies: "",
+      currentMedications: "",
+      fastingStatus: "",
+      baselineVitals: {
+        bloodPressure: "",
+        heartRate: "",
+        respiratoryRate: "",
+        oxygenSaturation: "",
+        temperature: ""
+      },
+      // Step 2 - Sedation Plan
+      sedationType: "",
+      medications: [],
+      dosages: {},
+      administrationRoute: "",
+      // Step 3 - Monitoring Setup
+      monitoringEquipment: {
+        pulseOximeter: false,
+        bloodPressureMonitor: false,
+        ecgMonitor: false,
+        capnography: false,
+        temperatureMonitor: false
+      },
+      emergencyEquipment: {
+        oxygenSupply: false,
+        suction: false,
+        bagMaskVentilation: false,
+        emergencyMedications: false,
+        defibrillator: false
+      },
+      // Step 4 - Sedation Administration
+      startTime: "",
+      initialDose: "",
+      additionalDoses: [],
+      patientResponse: "",
+      // Step 5 - Intraoperative Monitoring
+      vitalSigns: [],
+      complications: "",
+      interventions: "",
+      // Step 6 - Recovery Phase
+      recoveryStartTime: "",
+      dischargeReadiness: {
+        consciousnessLevel: "",
+        vitalStability: false,
+        painLevel: "",
+        nauseaVomiting: false,
+        ambulation: false
+      },
+      dischargeTime: "",
+      // Step 7 - Post-Sedation Instructions
+      dischargeInstructions: "",
+      followUpRequired: false,
+      followUpDate: "",
+      complications_notes: "",
+      overallAssessment: ""
+    });
+    setIVSedationCurrentStep(1); // Reset to first step
+    setShowIVSedationForm(true);
+  };
+
+  const handleIVSedationFormClose = () => {
+    setShowIVSedationForm(false);
+    setIVSedationCurrentStep(1);
+    setIsIVSedationEditMode(false);
+    setEditingIVSedationSheet(null);
+    setIVSedationFormMessage({ type: null, text: '' });
+    setShowIVSedationToast(false);
+  };
+
   // Data Collection Form Handlers
   const handleDataCollectionFormOpen = () => {
     // Pre-fill patient name from current patient data
@@ -853,6 +1015,23 @@ export function PatientProfilePage() {
       setCurrentStep(currentStep - 1);
       setFormMessage({ type: null, text: '' }); // Clear messages when moving to previous step
       setShowToast(false); // Clear toast when moving to previous step
+    }
+  };
+
+  // IV Sedation Step Navigation
+  const handleIVSedationNextStep = () => {
+    if (ivSedationCurrentStep < ivSedationTotalSteps) {
+      setIVSedationCurrentStep(ivSedationCurrentStep + 1);
+      setIVSedationFormMessage({ type: null, text: '' }); // Clear messages when moving to next step
+      setShowIVSedationToast(false); // Clear toast when moving to next step
+    }
+  };
+
+  const handleIVSedationPreviousStep = () => {
+    if (ivSedationCurrentStep > 1) {
+      setIVSedationCurrentStep(ivSedationCurrentStep - 1);
+      setIVSedationFormMessage({ type: null, text: '' }); // Clear messages when moving to previous step
+      setShowIVSedationToast(false); // Clear toast when moving to previous step
     }
   };
 
@@ -2223,6 +2402,7 @@ export function PatientProfilePage() {
                       <div className="space-y-3 pb-2">
                         {/* Add Button */}
                         <button
+                          onClick={handleIVSedationFormOpen}
                           className="w-full px-4 py-2 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
                         >
                           <Plus className="h-4 w-4" />
@@ -2641,7 +2821,7 @@ export function PatientProfilePage() {
 
       {/* Data Collection Form Dialog */}
       <Dialog open={showDataCollectionForm} onOpenChange={handleDataCollectionFormClose}>
-        <DialogContent className="max-w-5xl h-[85vh] flex flex-col overflow-hidden">
+        <DialogContent className="max-w-5xl h-[88vh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0 pb-2">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
               <FileText className="h-5 w-5 text-indigo-600" />
@@ -2649,55 +2829,55 @@ export function PatientProfilePage() {
             </DialogTitle>
           </DialogHeader>
 
-          {/* Progress Bar - Full Width with Separated Segments */}
+          {/* Progress Bar - Balanced size */}
           <div className="flex-shrink-0 px-6 py-4">
             <div className="w-full">
               {/* Progress Bar Container with Labels - Separated Segments */}
               <div className="flex items-center gap-2 w-full">
                 {/* Step 1 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${
                     currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
                     Basic Info
                   </span>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${
                     currentStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
                 </div>
 
                 {/* Step 2 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${
                     currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
                     Pictures
                   </span>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${
                     currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
                 </div>
 
                 {/* Step 3 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${
                     currentStep >= 3 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
                     IOS / 3D Data
                   </span>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${
                     currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
                 </div>
 
                 {/* Step 4 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${
                     currentStep >= 4 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
                     Notes and Submit
                   </span>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${
                     currentStep >= 4 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
                 </div>
@@ -2707,37 +2887,37 @@ export function PatientProfilePage() {
 
 
 
-          {/* Form Content - Optimized to fit */}
+          {/* Form Content - Balanced sizing */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <form onSubmit={handleDataCollectionFormSubmit} className="flex-1 flex flex-col">
               {/* Step Content Container */}
-              <div className="flex-1 px-6 py-2 overflow-hidden">
+              <div className="flex-1 px-6 py-3 overflow-hidden">
                 {currentStep === 1 && (
-                  <div className="h-full flex flex-col space-y-4">
+                  <div className="h-full flex flex-col space-y-5">
                     {/* Patient Information Row */}
                     <div className="space-y-3">
-                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                        <User className="h-4 w-4 text-indigo-600" />
+                      <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <User className="h-5 w-5 text-indigo-600" />
                         Patient Information
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="patientName" className="text-sm">Patient Name</Label>
+                          <Label htmlFor="patientName" className="text-sm font-semibold">Patient Name</Label>
                           <Input
                             id="patientName"
                             value={dataCollectionFormData.patientName}
                             disabled
-                            className="bg-gray-50 h-9"
+                            className="bg-gray-50 h-10 text-sm mt-1"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="date" className="text-sm">Date</Label>
+                          <Label htmlFor="date" className="text-sm font-semibold">Date</Label>
                           <Input
                             id="date"
                             type="date"
                             value={dataCollectionFormData.date}
                             onChange={(e) => handleDataCollectionFormChange('date', e.target.value)}
-                            className="cursor-pointer h-9"
+                            className="cursor-pointer h-10 text-sm mt-1"
                           />
                         </div>
                       </div>
@@ -2745,13 +2925,13 @@ export function PatientProfilePage() {
 
                     {/* Reason for Data Collection */}
                     <div className="flex-1 space-y-3 min-h-0">
-                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-indigo-600" />
+                      <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-indigo-600" />
                         Reason for Data Collection
                       </h3>
 
-                      {/* Reason Selection Grid - Scrollable if needed */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 overflow-y-auto max-h-64">
+                      {/* Reason Selection Grid - Balanced sizing */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto max-h-72">
                         {dataCollectionReasons.map((reason) => {
                           const isSelected = dataCollectionFormData.reasonsForCollection.includes(reason);
 
@@ -2789,22 +2969,22 @@ export function PatientProfilePage() {
                             isDisabled = true;
                           }
 
-                          // All buttons have the same size, including OTHERS
+                          // Slightly smaller button size
                           return (
                             <button
                               key={reason}
                               type="button"
                               onClick={() => !isDisabled && handleToggleReason(reason)}
                               disabled={isDisabled}
-                              className={`flex items-center gap-2 p-2 rounded-lg border-2 transition-all duration-200 text-left ${
+                              className={`flex items-center gap-2 p-2.5 rounded-lg border-2 transition-all duration-200 text-left min-h-[45px] ${
                                 isSelected
-                                  ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
+                                  ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-md'
                                   : isDisabled
                                   ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
-                                  : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 cursor-pointer'
+                                  : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 cursor-pointer hover:shadow-sm'
                               }`}
                             >
-                              <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
+                              <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                                 isSelected
                                   ? 'border-indigo-500 bg-indigo-500'
                                   : 'border-gray-300'
@@ -2813,19 +2993,19 @@ export function PatientProfilePage() {
                                   <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
                                 )}
                               </div>
-                              <span className="text-xs font-medium">{reason}</span>
+                              <span className="text-sm font-medium leading-tight">{reason}</span>
                             </button>
                           );
                         })}
 
-                        {/* Custom input field that spans two button widths - only show if OTHERS is selected */}
+                        {/* Custom input field - slightly smaller size when OTHERS is selected */}
                         {dataCollectionFormData.reasonsForCollection.includes("OTHERS") && (
-                          <div className="md:col-span-2 lg:col-span-2">
+                          <div className="md:col-span-2">
                             <Input
                               placeholder="Specify custom reason..."
                               value={dataCollectionFormData.customReason}
                               onChange={(e) => handleDataCollectionFormChange('customReason', e.target.value)}
-                              className="w-full p-2 text-xs border-2 border-black rounded-lg bg-white text-black placeholder-gray-500"
+                              className="w-full p-2.5 text-sm border-2 border-indigo-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 h-[45px] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                             />
                           </div>
                         )}
@@ -2837,58 +3017,54 @@ export function PatientProfilePage() {
                 {/* Step 2 Content - Data Collection */}
                 {currentStep === 2 && (
                   <div className="h-full flex flex-col space-y-4 overflow-hidden">
-                    <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-indigo-600" />
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-indigo-600" />
                       Data Collection & Current Appliances
                     </h3>
 
-                    {/* Current Appliances Row - Side by Side */}
-                    <div className="max-w-6xl mx-auto">
+                    {/* Current Appliances Row - Balanced sizing */}
+                    <div className="max-w-full">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {/* Current Upper Appliance */}
-                        <div className="flex items-center justify-between bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                          <Label htmlFor="currentUpperAppliance" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div className="flex flex-col bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                          <Label htmlFor="currentUpperAppliance" className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-2">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                             Current Upper Appliance
                           </Label>
-                          <div className="flex-1 max-w-xs ml-4">
-                            <Input
-                              id="currentUpperAppliance"
-                              value={dataCollectionFormData.currentUpperAppliance}
-                              onChange={(e) => handleDataCollectionFormChange('currentUpperAppliance', e.target.value)}
-                              placeholder="Enter current upper appliance..."
-                              className="h-9"
-                            />
-                          </div>
+                          <Input
+                            id="currentUpperAppliance"
+                            value={dataCollectionFormData.currentUpperAppliance}
+                            onChange={(e) => handleDataCollectionFormChange('currentUpperAppliance', e.target.value)}
+                            placeholder="Enter current upper appliance..."
+                            className="h-10 text-sm"
+                          />
                         </div>
 
                         {/* Current Lower Appliance */}
-                        <div className="flex items-center justify-between bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                          <Label htmlFor="currentLowerAppliance" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <div className="flex flex-col bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                          <Label htmlFor="currentLowerAppliance" className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-2">
+                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                             Current Lower Appliance
                           </Label>
-                          <div className="flex-1 max-w-xs ml-4">
-                            <Input
-                              id="currentLowerAppliance"
-                              value={dataCollectionFormData.currentLowerAppliance}
-                              onChange={(e) => handleDataCollectionFormChange('currentLowerAppliance', e.target.value)}
-                              placeholder="Enter current lower appliance..."
-                              className="h-9"
-                            />
-                          </div>
+                          <Input
+                            id="currentLowerAppliance"
+                            value={dataCollectionFormData.currentLowerAppliance}
+                            onChange={(e) => handleDataCollectionFormChange('currentLowerAppliance', e.target.value)}
+                            placeholder="Enter current lower appliance..."
+                            className="h-10 text-sm"
+                          />
                         </div>
                       </div>
                     </div>
 
-                    {/* Data Collection Checklist - Conditional based on Step 1 selection */}
+                    {/* Data Collection Checklist - Enhanced with larger elements */}
                     <div className="flex-1 overflow-y-auto">
-                      <h4 className="text-sm font-semibold text-gray-800 mb-3">Data Collection Status</h4>
+                      <h4 className="text-lg font-bold text-gray-800 mb-4">Data Collection Status</h4>
 
                       {/* Picture-Related Data Collection Options */}
                       {dataCollectionFormData.reasonsForCollection.length > 0 && (
                         <div className="grid grid-cols-1 gap-3">
-                          {/* Pre-Surgical Pictures - Only for pre-surgical */}
+                          {/* Pre-Surgical Pictures - Balanced sizing */}
                           {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
                             <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
                               dataCollectionFormData.dataCollected.preSurgicalPictures === null
@@ -2896,7 +3072,7 @@ export function PatientProfilePage() {
                                 : 'border-gray-200 shadow-sm hover:shadow-md'
                             }`}>
                               <div className="flex items-center justify-between">
-                                <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                <h5 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                                   <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
                                   Pre-Surgical Pictures <span className="text-red-500 text-base">*</span>
                                 </h5>
@@ -2904,10 +3080,10 @@ export function PatientProfilePage() {
                                   <button
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('preSurgicalPictures', null, true)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                                       dataCollectionFormData.dataCollected.preSurgicalPictures === true
-                                        ? 'bg-blue-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        ? 'bg-green-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-300 hover:border-green-400'
                                     }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2918,10 +3094,10 @@ export function PatientProfilePage() {
                                   <button
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('preSurgicalPictures', null, false)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                                       dataCollectionFormData.dataCollected.preSurgicalPictures === false
                                         ? 'bg-red-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-300 hover:border-red-400'
                                     }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3082,26 +3258,26 @@ export function PatientProfilePage() {
                   </div>
                 )}
 
-                {/* Step 3 Content - 3D Scans & Upper/Lower Data */}
+                {/* Step 3 Content - Balanced 3D Scans & Upper/Lower Data */}
                 {currentStep === 3 && (
-                  <div className="h-full flex flex-col space-y-3">
-                    {/* Header Section - Fixed */}
+                  <div className="h-full flex flex-col space-y-4">
+                    {/* Header Section - Balanced */}
                     <div className="flex-shrink-0">
-                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-1">
+                      <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-1">
                         <div className="p-1.5 bg-purple-100 rounded-lg">
-                          <FileText className="h-4 w-4 text-purple-600" />
+                          <FileText className="h-5 w-5 text-purple-600" />
                         </div>
                         3D Scans & Upper/Lower Data Collection
                       </h3>
                     </div>
 
-                    {/* Scrollable Content Area */}
+                    {/* Scrollable Content Area - Balanced */}
                     <div className="flex-1 overflow-y-auto pr-1 space-y-3" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                       {dataCollectionFormData.reasonsForCollection.length > 0 && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                              {/* Pre-Surgical Jaw Records - Only for pre-surgical */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                              {/* Pre-Surgical Jaw Records - Balanced sizing */}
                               {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
+                                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
                                   <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
                                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                     Pre-Surgical Jaw Records (IOS)
@@ -3110,10 +3286,10 @@ export function PatientProfilePage() {
                                     <button
                                       type="button"
                                       onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'upper', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper)}
-                                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                                         dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper
                                           ? 'bg-blue-500 text-white shadow-sm'
-                                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                                          : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
                                       }`}
                                     >
                                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
@@ -3130,10 +3306,10 @@ export function PatientProfilePage() {
                                     <button
                                       type="button"
                                       onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'lower', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower)}
-                                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                                         dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower
                                           ? 'bg-blue-500 text-white shadow-sm'
-                                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                                          : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
                                       }`}
                                     >
                                       <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
@@ -3186,7 +3362,7 @@ export function PatientProfilePage() {
                               {/* Regular Data Collection Options (for all selections except pre-surgical) */}
                               {!dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
                                 <>
-                                  {/* Jaw Records */}
+                                  {/* Jaw Records - Balanced */}
                                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
                                     <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
                                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -3836,6 +4012,232 @@ export function PatientProfilePage() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* IV Sedation Flow Chart Form Dialog */}
+      <Dialog open={showIVSedationForm} onOpenChange={handleIVSedationFormClose}>
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0 pb-2">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+              <Activity className="h-5 w-5 text-blue-600" />
+              {isIVSedationEditMode ? 'Edit IV Sedation Flow Chart' : 'IV Sedation Flow Chart'} - Step {ivSedationCurrentStep} of {ivSedationTotalSteps}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Progress Bar - Full Width with Separated Segments */}
+          <div className="flex-shrink-0 px-6 py-4">
+            <div className="w-full">
+              {/* Progress Bar Container with Labels - Separated Segments */}
+              <div className="flex items-center gap-2 w-full">
+                {/* Step 1 */}
+                <div className="flex-1 flex flex-col items-center">
+                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                    ivSedationCurrentStep >= 1 ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    Pre-Assessment
+                  </span>
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                    ivSedationCurrentStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'
+                  }`} />
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex-1 flex flex-col items-center">
+                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                    ivSedationCurrentStep >= 2 ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    Sedation Plan
+                  </span>
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                    ivSedationCurrentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
+                  }`} />
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex-1 flex flex-col items-center">
+                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                    ivSedationCurrentStep >= 3 ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    Monitoring Setup
+                  </span>
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                    ivSedationCurrentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'
+                  }`} />
+                </div>
+
+                {/* Step 4 */}
+                <div className="flex-1 flex flex-col items-center">
+                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                    ivSedationCurrentStep >= 4 ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    Administration
+                  </span>
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                    ivSedationCurrentStep >= 4 ? 'bg-blue-600' : 'bg-gray-300'
+                  }`} />
+                </div>
+
+                {/* Step 5 */}
+                <div className="flex-1 flex flex-col items-center">
+                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                    ivSedationCurrentStep >= 5 ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    Monitoring
+                  </span>
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                    ivSedationCurrentStep >= 5 ? 'bg-blue-600' : 'bg-gray-300'
+                  }`} />
+                </div>
+
+                {/* Step 6 */}
+                <div className="flex-1 flex flex-col items-center">
+                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                    ivSedationCurrentStep >= 6 ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    Recovery
+                  </span>
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                    ivSedationCurrentStep >= 6 ? 'bg-blue-600' : 'bg-gray-300'
+                  }`} />
+                </div>
+
+                {/* Step 7 */}
+                <div className="flex-1 flex flex-col items-center">
+                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
+                    ivSedationCurrentStep >= 7 ? 'text-blue-600' : 'text-gray-400'
+                  }`}>
+                    Discharge
+                  </span>
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
+                    ivSedationCurrentStep >= 7 ? 'bg-blue-600' : 'bg-gray-300'
+                  }`} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Form Content - Optimized to fit */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <form className="flex-1 flex flex-col">
+              {/* Step Content Container */}
+              <div className="flex-1 px-6 py-2 overflow-hidden">
+                {ivSedationCurrentStep === 1 && (
+                  <div className="h-full flex flex-col space-y-4">
+                    {/* Patient Information Row */}
+                    <div className="space-y-3">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-600" />
+                        Patient Information
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="ivPatientName" className="text-sm">Patient Name</Label>
+                          <Input
+                            id="ivPatientName"
+                            value={ivSedationFormData.patientName}
+                            disabled
+                            className="bg-gray-50 text-gray-600"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="ivDate" className="text-sm">Date</Label>
+                          <Input
+                            id="ivDate"
+                            type="date"
+                            value={ivSedationFormData.date}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, date: e.target.value})}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pre-Sedation Assessment */}
+                    <div className="space-y-3">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        <Stethoscope className="h-4 w-4 text-blue-600" />
+                        Pre-Sedation Assessment
+                      </h3>
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <Label htmlFor="medicalHistory" className="text-sm">Medical History</Label>
+                          <Textarea
+                            id="medicalHistory"
+                            value={ivSedationFormData.medicalHistory}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, medicalHistory: e.target.value})}
+                            placeholder="Enter relevant medical history..."
+                            rows={3}
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label htmlFor="allergies" className="text-sm">Allergies</Label>
+                            <Input
+                              id="allergies"
+                              value={ivSedationFormData.allergies}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, allergies: e.target.value})}
+                              placeholder="List any allergies..."
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="currentMedications" className="text-sm">Current Medications</Label>
+                            <Input
+                              id="currentMedications"
+                              value={ivSedationFormData.currentMedications}
+                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, currentMedications: e.target.value})}
+                              placeholder="List current medications..."
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Placeholder for other steps */}
+                {ivSedationCurrentStep > 1 && (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">Step {ivSedationCurrentStep} content will be implemented here</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex-shrink-0 flex justify-between items-center px-6 py-4 border-t bg-gray-50">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleIVSedationPreviousStep}
+                  disabled={ivSedationCurrentStep === 1}
+                  className="flex items-center gap-2"
+                >
+                  Previous
+                </Button>
+
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleIVSedationFormClose}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleIVSedationNextStep}
+                    disabled={ivSedationCurrentStep === ivSedationTotalSteps}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {ivSedationCurrentStep === ivSedationTotalSteps ? 'Complete' : 'Next'}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
         </DialogContent>
       </Dialog>
 
