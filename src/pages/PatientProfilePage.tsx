@@ -64,7 +64,7 @@ export function PatientProfilePage() {
 
   // Data collection reasons
   const dataCollectionReasons = [
-    "PRE-SURGICAL RECORD COLLECTION",
+    "PRE SURGICAL DATA COLLECTION",
     "SURGICAL DAY DATA COLLECTION",
     "SURGICAL REVISION DATA COLLECTION",
     "FOLLOW-UP DATA COLLECTION",
@@ -121,6 +121,9 @@ export function PatientProfilePage() {
   const [showDataCollectionForm, setShowDataCollectionForm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4; // Define total number of steps
+  const [dataCollectionSheets, setDataCollectionSheets] = useState<any[]>([]);
+  const [showDataCollectionPreview, setShowDataCollectionPreview] = useState(false);
+  const [selectedDataCollectionSheet, setSelectedDataCollectionSheet] = useState<any | null>(null);
 
   // Define steps for the stepper
   const stepperSteps = [
@@ -134,24 +137,37 @@ export function PatientProfilePage() {
     date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
     reasonsForCollection: [] as string[],
     customReason: "",
-    // Step 2 - Data Collection Checklist
+    // Step 2 - Current Appliances
+    currentUpperAppliance: "",
+    currentLowerAppliance: "",
+    // Step 4 - Additional Notes
+    additionalNotes: "",
+    // Step 2 - Data Collection Status
     dataCollected: {
-      currentAppliance: { upper: "", lower: "" },
-      preSurgicalPictures: { upper: false, lower: false },
+      // Pre-surgical options
+      preSurgicalPictures: null, // null = not selected, true = yes, false = no
+      preSurgicalJawRecords: { upper: false, lower: false },
+      facialScan: false,
+      // Regular options
       jawRecords: { upper: false, lower: false },
       tissueScan: { upper: false, lower: false },
       photogrammetry: { upper: false, lower: false },
       dcRefScan: { upper: false, lower: false },
       appliance360: { upper: false, lower: false },
-      facialScan: { collected: false },
-      followUpPictures: { collected: false },
-      fracturedAppliancePictures: { collected: false }
+      followUpPictures: null, // null = not selected, true = yes, false = no
+      // Surgical options
+      surgicalPictures: null, // null = not selected, true = yes, false = no
+      surgicalJawRecords: { upper: false, lower: false },
+      surgicalTissueScan: { upper: false, lower: false },
+      // Fractured appliance option
+      fracturedAppliancePictures: null // null = not selected, true = yes, false = no
     }
   });
 
   useEffect(() => {
     if (patientId) {
       fetchPatientData();
+      fetchDataCollectionSheets();
     } else {
       // Use mock data if no patientId provided
       setPatient({
@@ -203,6 +219,25 @@ export function PatientProfilePage() {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDataCollectionSheets = async () => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('data_collection_sheets')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching data collection sheets:', error);
+        return;
+      }
+
+      setDataCollectionSheets(data || []);
+    } catch (error) {
+      console.error('Error:', error);
     }
   };
 
@@ -535,17 +570,28 @@ export function PatientProfilePage() {
       reasonsForCollection: [],
       customReason: "",
       // Reset Step 2 data
+      currentUpperAppliance: "",
+      currentLowerAppliance: "",
+      // Reset Step 4 data
+      additionalNotes: "",
       dataCollected: {
-        currentAppliance: { upper: "", lower: "" },
-        preSurgicalPictures: { upper: false, lower: false },
+        // Pre-surgical options
+        preSurgicalPictures: null, // null = not selected, true = yes, false = no
+        preSurgicalJawRecords: { upper: false, lower: false },
+        facialScan: false,
+        // Regular options
         jawRecords: { upper: false, lower: false },
         tissueScan: { upper: false, lower: false },
         photogrammetry: { upper: false, lower: false },
         dcRefScan: { upper: false, lower: false },
         appliance360: { upper: false, lower: false },
-        facialScan: { collected: false },
-        followUpPictures: { collected: false },
-        fracturedAppliancePictures: { collected: false }
+        followUpPictures: null, // null = not selected, true = yes, false = no
+        // Surgical options
+        surgicalPictures: null, // null = not selected, true = yes, false = no
+        surgicalJawRecords: { upper: false, lower: false },
+        surgicalTissueScan: { upper: false, lower: false },
+        // Fractured appliance option
+        fracturedAppliancePictures: null // null = not selected, true = yes, false = no
       }
     });
     setCurrentStep(1); // Reset to first step
@@ -556,6 +602,16 @@ export function PatientProfilePage() {
     setShowDataCollectionForm(false);
   };
 
+  const handleViewDataCollectionSheet = (sheet: any) => {
+    setSelectedDataCollectionSheet(sheet);
+    setShowDataCollectionPreview(true);
+  };
+
+  const handleDataCollectionPreviewClose = () => {
+    setShowDataCollectionPreview(false);
+    setSelectedDataCollectionSheet(null);
+  };
+
   const handleDataCollectionFormChange = (field: string, value: string) => {
     setDataCollectionFormData(prev => ({
       ...prev,
@@ -564,42 +620,78 @@ export function PatientProfilePage() {
   };
 
   const handleToggleReason = (reason: string) => {
-    setDataCollectionFormData(prev => ({
-      ...prev,
-      reasonsForCollection: prev.reasonsForCollection.includes(reason)
-        ? prev.reasonsForCollection.filter(r => r !== reason)
-        : [...prev.reasonsForCollection, reason],
-      // Clear custom reason if "OTHERS" is removed
-      customReason: reason === "OTHERS" && prev.reasonsForCollection.includes(reason) ? "" : prev.customReason
-    }));
+    // Define single selection options (mutually exclusive)
+    const singleSelectionOptions = [
+      "PRE SURGICAL DATA COLLECTION",
+      "SURGICAL DAY DATA COLLECTION",
+      "SURGICAL REVISION DATA COLLECTION"
+    ];
+
+    // Define multiple selection options
+    const multipleSelectionOptions = [
+      "FOLLOW-UP DATA COLLECTION",
+      "DATA COLLECTED BECAUSE OF BITE ADJUSTMENT",
+      "INTAGLIO GAP",
+      "APPLIANCE FIT NOT PASSIVE",
+      "APPLIANCE FRACTURED",
+      "FINAL DATA COLLECTION",
+      "OTHERS"
+    ];
+
+    setDataCollectionFormData(prev => {
+      const currentSelections = prev.reasonsForCollection;
+      const isCurrentlySelected = currentSelections.includes(reason);
+
+      // If deselecting, just remove it
+      if (isCurrentlySelected) {
+        return {
+          ...prev,
+          reasonsForCollection: currentSelections.filter(r => r !== reason),
+          // Clear custom reason if "OTHERS" is removed
+          customReason: reason === "OTHERS" ? "" : prev.customReason
+        };
+      }
+
+      // If selecting a single selection option
+      if (singleSelectionOptions.includes(reason)) {
+        return {
+          ...prev,
+          reasonsForCollection: [reason], // Replace all selections with just this one
+          customReason: "" // Clear custom reason when switching to single selection
+        };
+      }
+
+      // If selecting a multiple selection option
+      if (multipleSelectionOptions.includes(reason)) {
+        // Remove any single selection options first
+        const filteredSelections = currentSelections.filter(r => !singleSelectionOptions.includes(r));
+        return {
+          ...prev,
+          reasonsForCollection: [...filteredSelections, reason],
+          customReason: prev.customReason
+        };
+      }
+
+      // Fallback (shouldn't reach here)
+      return prev;
+    });
   };
 
   // Step 2 handlers for data collection checklist
-  const handleDataCollectionToggle = (category: string, arch: string, value: boolean) => {
+  const handleDataCollectionToggle = (category: string, arch: string | null, value: boolean) => {
     setDataCollectionFormData(prev => ({
       ...prev,
       dataCollected: {
         ...prev.dataCollected,
-        [category]: {
-          ...prev.dataCollected[category as keyof typeof prev.dataCollected],
+        [category]: arch ? {
+          ...(prev.dataCollected[category as keyof typeof prev.dataCollected] as any),
           [arch]: value
-        }
+        } : value
       }
     }));
   };
 
-  const handleApplianceChange = (arch: string, value: string) => {
-    setDataCollectionFormData(prev => ({
-      ...prev,
-      dataCollected: {
-        ...prev.dataCollected,
-        currentAppliance: {
-          ...prev.dataCollected.currentAppliance,
-          [arch]: value
-        }
-      }
-    }));
-  };
+
 
   const handleNextStep = () => {
     if (currentStep < totalSteps) {
@@ -615,12 +707,97 @@ export function PatientProfilePage() {
 
   const handleDataCollectionFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation for Step 2 - Picture fields are mandatory
+    if (currentStep === 2) {
+      const { reasonsForCollection, dataCollected } = dataCollectionFormData;
+      let missingPictures = [];
+
+      // Check which picture fields should be validated based on selection
+      if (reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION")) {
+        if (dataCollected.preSurgicalPictures === null) {
+          missingPictures.push("Pre-Surgical Pictures");
+        }
+      }
+
+      if (reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") ||
+          reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION")) {
+        if (dataCollected.surgicalPictures === null) {
+          missingPictures.push("Surgical Pictures");
+        }
+      }
+
+      if (!reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") &&
+          !reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") &&
+          !reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION")) {
+        if (dataCollected.followUpPictures === null) {
+          missingPictures.push("Follow-Up Pictures");
+        }
+      }
+
+      if (reasonsForCollection.includes("APPLIANCE FRACTURED")) {
+        if (dataCollected.fracturedAppliancePictures === null) {
+          missingPictures.push("Fractured Appliance Pictures");
+        }
+      }
+
+      // Show validation error if any picture fields are missing
+      if (missingPictures.length > 0) {
+        alert(`Please select Yes or No for the following mandatory fields:\n\n${missingPictures.join('\n')}`);
+        return;
+      }
+    }
+
     if (currentStep < totalSteps) {
       handleNextStep();
     } else {
-      // Final submission
-      console.log('Data Collection Form Data:', dataCollectionFormData);
+      // Final submission - Save to database
+      handleSubmitDataCollectionSheet();
+    }
+  };
+
+  // Submit data collection sheet to database
+  const handleSubmitDataCollectionSheet = async () => {
+    try {
+      const dataCollectionData = {
+        patient_id: patientId,
+        patient_name: dataCollectionFormData.patientName,
+        collection_date: dataCollectionFormData.date,
+        reasons_for_collection: dataCollectionFormData.reasonsForCollection,
+        custom_reason: dataCollectionFormData.customReason,
+        current_upper_appliance: dataCollectionFormData.currentUpperAppliance,
+        current_lower_appliance: dataCollectionFormData.currentLowerAppliance,
+        data_collected: dataCollectionFormData.dataCollected,
+        additional_notes: dataCollectionFormData.additionalNotes,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Save to Supabase database
+      const { data, error } = await (supabase as any)
+        .from('data_collection_sheets')
+        .insert([dataCollectionData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error saving data collection sheet:', error);
+        alert('Failed to save data collection sheet. Please try again.');
+        return;
+      }
+
+      // Update local state
+      setDataCollectionSheets(prev => [data, ...prev]);
+
+      // Show success message
+      alert('Data collection sheet submitted successfully!');
+
+      // Close form and reset
       handleDataCollectionFormClose();
+
+    } catch (error) {
+      console.error('Error submitting data collection sheet:', error);
+      alert('Failed to submit data collection sheet. Please try again.');
     }
   };
 
@@ -1684,11 +1861,46 @@ export function PatientProfilePage() {
                       <h3 className="text-lg font-semibold text-gray-900">Data Collection Sheet</h3>
                     </div>
                     {/* Content */}
-                    <div className="flex-1 flex items-center justify-center p-6">
-                      <div className="text-center">
-                        <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">Patient data collection and documentation</p>
-                      </div>
+                    <div className="flex-1 p-4 overflow-y-auto">
+                      {dataCollectionSheets.length > 0 ? (
+                        <div className="space-y-3">
+                          {dataCollectionSheets.map((sheet) => (
+                            <div key={sheet.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:bg-gray-100 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {new Date(sheet.collection_date).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-600 mb-1">
+                                    {sheet.reasons_for_collection?.slice(0, 2).join(', ')}
+                                    {sheet.reasons_for_collection?.length > 2 && ` +${sheet.reasons_for_collection.length - 2} more`}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(sheet.created_at).toLocaleDateString()} at {new Date(sheet.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 text-gray-400 hover:text-emerald-600"
+                                  onClick={() => handleViewDataCollectionSheet(sheet)}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">No data collection sheets yet</p>
+                          <p className="text-xs text-gray-400 mt-1">Click the + button to create one</p>
+                        </div>
+                      )}
                     </div>
                     {/* Plus Button - Bottom Right */}
                     <Button
@@ -2229,16 +2441,53 @@ export function PatientProfilePage() {
                         {dataCollectionReasons.map((reason) => {
                           const isSelected = dataCollectionFormData.reasonsForCollection.includes(reason);
 
+                          // Define option groups
+                          const singleSelectionOptions = [
+                            "PRE SURGICAL DATA COLLECTION",
+                            "SURGICAL DAY DATA COLLECTION",
+                            "SURGICAL REVISION DATA COLLECTION"
+                          ];
+
+                          const multipleSelectionOptions = [
+                            "FOLLOW-UP DATA COLLECTION",
+                            "DATA COLLECTED BECAUSE OF BITE ADJUSTMENT",
+                            "INTAGLIO GAP",
+                            "APPLIANCE FIT NOT PASSIVE",
+                            "APPLIANCE FRACTURED",
+                            "FINAL DATA COLLECTION",
+                            "OTHERS"
+                          ];
+
+                          // Check if this option should be disabled
+                          const currentSelections = dataCollectionFormData.reasonsForCollection;
+                          const hasSingleSelection = currentSelections.some(sel => singleSelectionOptions.includes(sel));
+                          const hasMultipleSelection = currentSelections.some(sel => multipleSelectionOptions.includes(sel));
+
+                          let isDisabled = false;
+
+                          // Disable single selection options if any multiple selection is chosen
+                          if (singleSelectionOptions.includes(reason) && hasMultipleSelection && !isSelected) {
+                            isDisabled = true;
+                          }
+
+                          // Disable multiple selection options if any single selection is chosen
+                          if (multipleSelectionOptions.includes(reason) && hasSingleSelection && !isSelected) {
+                            isDisabled = true;
+                          }
+
                           // All buttons have the same size, including OTHERS
                           return (
                             <button
                               key={reason}
                               type="button"
-                              onClick={() => handleToggleReason(reason)}
+                              onClick={() => !isDisabled && handleToggleReason(reason)}
+                              disabled={isDisabled}
                               className={`flex items-center gap-2 p-2 rounded-lg border-2 transition-all duration-200 text-left ${
                                 isSelected
                                   ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
-                                  : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-gray-700'
+                                  : isDisabled
+                                  ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+                                  : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 cursor-pointer'
                               }`}
                             >
                               <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
@@ -2271,587 +2520,657 @@ export function PatientProfilePage() {
                   </div>
                 )}
 
-                {/* Step 2 Content - Data Collection Checklist */}
+                {/* Step 2 Content - Data Collection */}
                 {currentStep === 2 && (
-                  <div className="h-full flex flex-col space-y-3 overflow-hidden">
-                    <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="h-full flex flex-col space-y-4 overflow-hidden">
+                    <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
                       <FileText className="h-4 w-4 text-indigo-600" />
-                      Data Collection Status
+                      Data Collection & Current Appliances
                     </h3>
 
-                    {/* Current Appliance Section - Compact */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
-                      <h4 className="text-xs font-semibold text-gray-800 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                        Current Appliance
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-1 block">Upper</label>
-                          <select
-                            value={dataCollectionFormData.dataCollected.currentAppliance.upper}
-                            onChange={(e) => handleApplianceChange('upper', e.target.value)}
-                            className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:border-indigo-500"
-                          >
-                            <option value="">Select...</option>
-                            <option value="denture">Denture</option>
-                            <option value="partial">Partial</option>
-                            <option value="crown">Crown</option>
-                            <option value="bridge">Bridge</option>
-                            <option value="implant">Implant</option>
-                            <option value="none">None</option>
-                          </select>
+                    {/* Current Appliances Row - Side by Side */}
+                    <div className="max-w-6xl mx-auto">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* Current Upper Appliance */}
+                        <div className="flex items-center justify-between bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                          <Label htmlFor="currentUpperAppliance" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            Current Upper Appliance
+                          </Label>
+                          <div className="flex-1 max-w-xs ml-4">
+                            <Input
+                              id="currentUpperAppliance"
+                              value={dataCollectionFormData.currentUpperAppliance}
+                              onChange={(e) => handleDataCollectionFormChange('currentUpperAppliance', e.target.value)}
+                              placeholder="Enter current upper appliance..."
+                              className="h-9"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-600 mb-1 block">Lower</label>
-                          <select
-                            value={dataCollectionFormData.dataCollected.currentAppliance.lower}
-                            onChange={(e) => handleApplianceChange('lower', e.target.value)}
-                            className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:border-indigo-500"
-                          >
-                            <option value="">Select...</option>
-                            <option value="denture">Denture</option>
-                            <option value="partial">Partial</option>
-                            <option value="crown">Crown</option>
-                            <option value="bridge">Bridge</option>
-                            <option value="implant">Implant</option>
-                            <option value="none">None</option>
-                          </select>
+
+                        {/* Current Lower Appliance */}
+                        <div className="flex items-center justify-between bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                          <Label htmlFor="currentLowerAppliance" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Current Lower Appliance
+                          </Label>
+                          <div className="flex-1 max-w-xs ml-4">
+                            <Input
+                              id="currentLowerAppliance"
+                              value={dataCollectionFormData.currentLowerAppliance}
+                              onChange={(e) => handleDataCollectionFormChange('currentLowerAppliance', e.target.value)}
+                              placeholder="Enter current lower appliance..."
+                              className="h-9"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Compact Data Collection Grid */}
-                    <div className="grid grid-cols-2 gap-2 flex-1">
-                      {/* Pre-Surgical Pictures */}
-                      <div className="bg-white border border-gray-200 rounded p-2">
-                        <h4 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1">
-                          <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
-                          Pre-Surgical Pictures
-                        </h4>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Upper</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('preSurgicalPictures', 'upper', true)}
-                                className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                                  dataCollectionFormData.dataCollected.preSurgicalPictures.upper
-                                    ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-green-200 border border-green-400'
-                                    : 'bg-white text-gray-600 border border-gray-300 hover:border-green-400 hover:text-green-600 hover:shadow-md'
-                                }`}
-                              >
-                                <span className="flex items-center gap-1">
-                                  {dataCollectionFormData.dataCollected.preSurgicalPictures.upper && (
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  )}
-                                  Yes
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('preSurgicalPictures', 'upper', false)}
-                                className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                                  !dataCollectionFormData.dataCollected.preSurgicalPictures.upper
-                                    ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-red-200 border border-red-400'
-                                    : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400 hover:text-red-600 hover:shadow-md'
-                                }`}
-                              >
-                                <span className="flex items-center gap-1">
-                                  {!dataCollectionFormData.dataCollected.preSurgicalPictures.upper && (
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                  )}
-                                  No
-                                </span>
-                              </button>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Lower</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('preSurgicalPictures', 'lower', true)}
-                                className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                                  dataCollectionFormData.dataCollected.preSurgicalPictures.lower
-                                    ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-green-200 border border-green-400'
-                                    : 'bg-white text-gray-600 border border-gray-300 hover:border-green-400 hover:text-green-600 hover:shadow-md'
-                                }`}
-                              >
-                                <span className="flex items-center gap-1">
-                                  {dataCollectionFormData.dataCollected.preSurgicalPictures.lower && (
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  )}
-                                  Yes
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('preSurgicalPictures', 'lower', false)}
-                                className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                                  !dataCollectionFormData.dataCollected.preSurgicalPictures.lower
-                                    ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-red-200 border border-red-400'
-                                    : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400 hover:text-red-600 hover:shadow-md'
-                                }`}
-                              >
-                                <span className="flex items-center gap-1">
-                                  {!dataCollectionFormData.dataCollected.preSurgicalPictures.lower && (
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                  )}
-                                  No
-                                </span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    {/* Data Collection Checklist - Conditional based on Step 1 selection */}
+                    <div className="flex-1 overflow-y-auto">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">Data Collection Status</h4>
 
-                      {/* Jaw Records */}
-                      <div className="bg-white border border-gray-200 rounded p-2">
-                        <h4 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1">
-                          <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
-                          Jaw Records (IOS)
-                        </h4>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Upper</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('jawRecords', 'upper', true)}
-                                className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                                  dataCollectionFormData.dataCollected.jawRecords.upper
-                                    ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-green-200 border border-green-400'
-                                    : 'bg-white text-gray-600 border border-gray-300 hover:border-green-400 hover:text-green-600 hover:shadow-md'
-                                }`}
-                              >
-                                <span className="flex items-center gap-1">
-                                  {dataCollectionFormData.dataCollected.jawRecords.upper && (
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      {/* Picture-Related Data Collection Options */}
+                      {dataCollectionFormData.reasonsForCollection.length > 0 && (
+                        <div className="grid grid-cols-1 gap-3">
+                          {/* Pre-Surgical Pictures - Only for pre-surgical */}
+                          {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
+                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
+                              dataCollectionFormData.dataCollected.preSurgicalPictures === null
+                                ? 'border-red-300 bg-red-50 shadow-sm'
+                                : 'border-gray-200 shadow-sm hover:shadow-md'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                  Pre-Surgical Pictures <span className="text-red-500 text-base">*</span>
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('preSurgicalPictures', null, true)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                      dataCollectionFormData.dataCollected.preSurgicalPictures === true
+                                        ? 'bg-blue-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
-                                  )}
-                                  Yes
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('jawRecords', 'upper', false)}
-                                className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                                  !dataCollectionFormData.dataCollected.jawRecords.upper
-                                    ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-red-200 border border-red-400'
-                                    : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400 hover:text-red-600 hover:shadow-md'
-                                }`}
-                              >
-                                <span className="flex items-center gap-1">
-                                  {!dataCollectionFormData.dataCollected.jawRecords.upper && (
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    Yes
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('preSurgicalPictures', null, false)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                      dataCollectionFormData.dataCollected.preSurgicalPictures === false
+                                        ? 'bg-red-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
-                                  )}
-                                  No
-                                </span>
-                              </button>
+                                    No
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Lower</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('jawRecords', 'lower', true)}
-                                className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                                  dataCollectionFormData.dataCollected.jawRecords.lower
-                                    ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-green-200 border border-green-400'
-                                    : 'bg-white text-gray-600 border border-gray-300 hover:border-green-400 hover:text-green-600 hover:shadow-md'
-                                }`}
-                              >
-                                <span className="flex items-center gap-1">
-                                  {dataCollectionFormData.dataCollected.jawRecords.lower && (
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          )}
+
+                          {/* Surgical Pictures - Only for surgical day data collection */}
+                          {(dataCollectionFormData.reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") ||
+                            dataCollectionFormData.reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION")) && (
+                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
+                              dataCollectionFormData.dataCollected.surgicalPictures === null
+                                ? 'border-red-300 bg-red-50 shadow-sm'
+                                : 'border-gray-200 shadow-sm hover:shadow-md'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  Surgical Pictures <span className="text-red-500 text-base">*</span>
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('surgicalPictures', null, true)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                      dataCollectionFormData.dataCollected.surgicalPictures === true
+                                        ? 'bg-blue-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
-                                  )}
-                                  Yes
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('jawRecords', 'lower', false)}
-                                className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm ${
-                                  !dataCollectionFormData.dataCollected.jawRecords.lower
-                                    ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-red-200 border border-red-400'
-                                    : 'bg-white text-gray-600 border border-gray-300 hover:border-red-400 hover:text-red-600 hover:shadow-md'
-                                }`}
-                              >
-                                <span className="flex items-center gap-1">
-                                  {!dataCollectionFormData.dataCollected.jawRecords.lower && (
-                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    Yes
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('surgicalPictures', null, false)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                      dataCollectionFormData.dataCollected.surgicalPictures === false
+                                        ? 'bg-red-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
-                                  )}
-                                  No
-                                </span>
-                              </button>
+                                    No
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </div>
+                          )}
 
-                      {/* Tissue Scan */}
-                      <div className="bg-white border border-gray-200 rounded p-2">
-                        <h4 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1">
-                          <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
-                          Tissue Scan (MU-RP)
-                        </h4>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Upper</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('tissueScan', 'upper', true)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  dataCollectionFormData.dataCollected.tissueScan.upper
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                                }`}
-                              >
-                                Yes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('tissueScan', 'upper', false)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  !dataCollectionFormData.dataCollected.tissueScan.upper
-                                    ? 'bg-red-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                                }`}
-                              >
-                                No
-                              </button>
+                          {/* Follow-Up Pictures - For regular data collection (not pre-surgical or surgical) */}
+                          {!dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") &&
+                           !dataCollectionFormData.reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") &&
+                           !dataCollectionFormData.reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION") && (
+                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
+                              dataCollectionFormData.dataCollected.followUpPictures === null
+                                ? 'border-red-300 bg-red-50 shadow-sm'
+                                : 'border-gray-200 shadow-sm hover:shadow-md'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                  Follow-Up Pictures <span className="text-red-500 text-base">*</span>
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('followUpPictures', null, true)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                      dataCollectionFormData.dataCollected.followUpPictures === true
+                                        ? 'bg-blue-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Yes
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('followUpPictures', null, false)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                      dataCollectionFormData.dataCollected.followUpPictures === false
+                                        ? 'bg-red-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    No
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Lower</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('tissueScan', 'lower', true)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  dataCollectionFormData.dataCollected.tissueScan.lower
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                                }`}
-                              >
-                                Yes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('tissueScan', 'lower', false)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  !dataCollectionFormData.dataCollected.tissueScan.lower
-                                    ? 'bg-red-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                                }`}
-                              >
-                                No
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                          )}
 
-                      {/* Photogrammetry */}
-                      <div className="bg-white border border-gray-200 rounded p-2">
-                        <h4 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1">
-                          <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
-                          Photogrammetry (ICAM)
-                        </h4>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Upper</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('photogrammetry', 'upper', true)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  dataCollectionFormData.dataCollected.photogrammetry.upper
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                                }`}
-                              >
-                                Yes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('photogrammetry', 'upper', false)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  !dataCollectionFormData.dataCollected.photogrammetry.upper
-                                    ? 'bg-red-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                                }`}
-                              >
-                                No
-                              </button>
+                          {/* Fractured Appliance Pictures - Only show if "APPLIANCE FRACTURED" is selected */}
+                          {dataCollectionFormData.reasonsForCollection.includes("APPLIANCE FRACTURED") && (
+                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
+                              dataCollectionFormData.dataCollected.fracturedAppliancePictures === null
+                                ? 'border-red-300 bg-red-50 shadow-sm'
+                                : 'border-gray-200 shadow-sm hover:shadow-md'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                  Fractured Appliance Pictures <span className="text-red-500 text-base">*</span>
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('fracturedAppliancePictures', null, true)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                      dataCollectionFormData.dataCollected.fracturedAppliancePictures === true
+                                        ? 'bg-blue-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Yes
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('fracturedAppliancePictures', null, false)}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                      dataCollectionFormData.dataCollected.fracturedAppliancePictures === false
+                                        ? 'bg-red-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                    }`}
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    No
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Lower</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('photogrammetry', 'lower', true)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  dataCollectionFormData.dataCollected.photogrammetry.lower
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                                }`}
-                              >
-                                Yes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('photogrammetry', 'lower', false)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  !dataCollectionFormData.dataCollected.photogrammetry.lower
-                                    ? 'bg-red-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                                }`}
-                              >
-                                No
-                              </button>
-                            </div>
-                          </div>
+                          )}
                         </div>
-                      </div>
+                      )}
 
-                      {/* DC-REF Scan */}
-                      <div className="bg-white border border-gray-200 rounded p-2">
-                        <h4 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1">
-                          <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
-                          DC-REF Scan
-                        </h4>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Upper</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('dcRefScan', 'upper', true)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  dataCollectionFormData.dataCollected.dcRefScan.upper
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                                }`}
-                              >
-                                Yes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('dcRefScan', 'upper', false)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  !dataCollectionFormData.dataCollected.dcRefScan.upper
-                                    ? 'bg-red-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                                }`}
-                              >
-                                No
-                              </button>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Lower</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('dcRefScan', 'lower', true)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  dataCollectionFormData.dataCollected.dcRefScan.lower
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                                }`}
-                              >
-                                Yes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('dcRefScan', 'lower', false)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  !dataCollectionFormData.dataCollected.dcRefScan.lower
-                                    ? 'bg-red-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                                }`}
-                              >
-                                No
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
 
-                      {/* Appliance 360 */}
-                      <div className="bg-white border border-gray-200 rounded p-2">
-                        <h4 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1">
-                          <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
-                          Appliance 360
-                        </h4>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Upper</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('appliance360', 'upper', true)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  dataCollectionFormData.dataCollected.appliance360.upper
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                                }`}
-                              >
-                                Yes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('appliance360', 'upper', false)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  !dataCollectionFormData.dataCollected.appliance360.upper
-                                    ? 'bg-red-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                                }`}
-                              >
-                                No
-                              </button>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-600">Lower</span>
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('appliance360', 'lower', true)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  dataCollectionFormData.dataCollected.appliance360.lower
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                                }`}
-                              >
-                                Yes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDataCollectionToggle('appliance360', 'lower', false)}
-                                className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                  !dataCollectionFormData.dataCollected.appliance360.lower
-                                    ? 'bg-red-500 text-white'
-                                    : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                                }`}
-                              >
-                                No
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Facial Scan */}
-                      <div className="bg-white border border-gray-200 rounded p-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-semibold text-gray-800 flex items-center gap-1">
-                            <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
-                            Facial Scan
-                          </h4>
-                          <div className="flex gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleDataCollectionToggle('facialScan', 'collected', true)}
-                              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                dataCollectionFormData.dataCollected.facialScan.collected
-                                  ? 'bg-green-500 text-white'
-                                  : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                              }`}
-                            >
-                              Yes
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDataCollectionToggle('facialScan', 'collected', false)}
-                              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                !dataCollectionFormData.dataCollected.facialScan.collected
-                                  ? 'bg-red-500 text-white'
-                                  : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                              }`}
-                            >
-                              No
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Follow-up Pictures */}
-                      <div className="bg-white border border-gray-200 rounded p-2">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-semibold text-gray-800 flex items-center gap-1">
-                            <div className="w-1 h-1 bg-indigo-500 rounded-full"></div>
-                            Follow-up Pictures
-                          </h4>
-                          <div className="flex gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleDataCollectionToggle('followUpPictures', 'collected', true)}
-                              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                dataCollectionFormData.dataCollected.followUpPictures.collected
-                                  ? 'bg-green-500 text-white'
-                                  : 'bg-gray-200 text-gray-600 hover:bg-green-100'
-                              }`}
-                            >
-                              Yes
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDataCollectionToggle('followUpPictures', 'collected', false)}
-                              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-                                !dataCollectionFormData.dataCollected.followUpPictures.collected
-                                  ? 'bg-red-500 text-white'
-                                  : 'bg-gray-200 text-gray-600 hover:bg-red-100'
-                              }`}
-                            >
-                              No
-                            </button>
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Step 3 Content */}
+                {/* Step 3 Content - 3D Scans & Upper/Lower Data */}
                 {currentStep === 3 && (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <h3 className="text-base font-semibold text-gray-900 mb-2">Step 3 Content</h3>
-                      <p className="text-sm text-gray-500">Step 3 form fields will be added here</p>
+                  <div className="h-full flex flex-col space-y-3">
+                    {/* Header Section - Fixed */}
+                    <div className="flex-shrink-0">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-1">
+                        <div className="p-1.5 bg-purple-100 rounded-lg">
+                          <FileText className="h-4 w-4 text-purple-600" />
+                        </div>
+                        3D Scans & Upper/Lower Data Collection
+                      </h3>
+                    </div>
+
+                    {/* Scrollable Content Area */}
+                    <div className="flex-1 overflow-y-auto pr-1 space-y-3" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+                      {dataCollectionFormData.reasonsForCollection.length > 0 && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                              {/* Pre-Surgical Jaw Records - Only for pre-surgical */}
+                              {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
+                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-2.5 hover:shadow-sm transition-all duration-200">
+                                  <h5 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                    Pre-Surgical Jaw Records (IOS)
+                                  </h5>
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'upper', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper)}
+                                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                        dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper
+                                          ? 'bg-green-500 text-white shadow-sm'
+                                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                    >
+                                      <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                        dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper
+                                          ? 'border-white bg-white'
+                                          : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                        {dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper && (
+                                          <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                        )}
+                                      </div>
+                                      Upper
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'lower', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower)}
+                                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                        dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower
+                                          ? 'bg-green-500 text-white shadow-sm'
+                                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                    >
+                                      <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                        dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower
+                                          ? 'border-white bg-white'
+                                          : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                        {dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower && (
+                                          <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                        )}
+                                      </div>
+                                      Lower
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Facial Scan - Only for pre-surgical */}
+                              {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
+                                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg p-2.5 hover:shadow-sm transition-all duration-200">
+                                  <h5 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                                    Facial Scan
+                                  </h5>
+                                  <div className="flex items-center justify-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDataCollectionToggle('facialScan', null, !dataCollectionFormData.dataCollected.facialScan)}
+                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                                        dataCollectionFormData.dataCollected.facialScan
+                                          ? 'bg-green-500 text-white shadow-sm'
+                                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                    >
+                                      <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                        dataCollectionFormData.dataCollected.facialScan
+                                          ? 'border-white bg-white'
+                                          : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                        {dataCollectionFormData.dataCollected.facialScan && (
+                                          <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                        )}
+                                      </div>
+                                      Scan Collected
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Regular Data Collection Options (for all selections except pre-surgical) */}
+                              {!dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
+                                <>
+                                  {/* Jaw Records */}
+                                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-2.5 hover:shadow-sm transition-all duration-200">
+                                    <h5 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
+                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                      Jaw Records (IOS)
+                                    </h5>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('jawRecords', 'upper', !dataCollectionFormData.dataCollected.jawRecords.upper)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.jawRecords.upper
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.jawRecords.upper
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.jawRecords.upper && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Upper
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('jawRecords', 'lower', !dataCollectionFormData.dataCollected.jawRecords.lower)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.jawRecords.lower
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.jawRecords.lower
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.jawRecords.lower && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Lower
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Tissue Scan */}
+                                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-2.5 hover:shadow-sm transition-all duration-200">
+                                    <h5 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
+                                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                                      Tissue Scan
+                                    </h5>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('tissueScan', 'upper', !dataCollectionFormData.dataCollected.tissueScan.upper)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.tissueScan.upper
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.tissueScan.upper
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.tissueScan.upper && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Upper
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('tissueScan', 'lower', !dataCollectionFormData.dataCollected.tissueScan.lower)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.tissueScan.lower
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.tissueScan.lower
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.tissueScan.lower && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Lower
+                                      </button>
+                                    </div>
+                                  </div>
+                                  {/* Photogrammetry */}
+                                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg p-2.5 hover:shadow-sm transition-all duration-200">
+                                    <h5 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
+                                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                                      Photogrammetry (ICAM)
+                                    </h5>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('photogrammetry', 'upper', !dataCollectionFormData.dataCollected.photogrammetry.upper)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.photogrammetry.upper
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.photogrammetry.upper
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.photogrammetry.upper && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Upper
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('photogrammetry', 'lower', !dataCollectionFormData.dataCollected.photogrammetry.lower)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.photogrammetry.lower
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.photogrammetry.lower
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.photogrammetry.lower && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Lower
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* DC-REF Scan */}
+                                  <div className="bg-gradient-to-br from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-2.5 hover:shadow-sm transition-all duration-200">
+                                    <h5 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
+                                      <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                                      DC-REF Scan
+                                    </h5>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('dcRefScan', 'upper', !dataCollectionFormData.dataCollected.dcRefScan.upper)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.dcRefScan.upper
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.dcRefScan.upper
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.dcRefScan.upper && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Upper
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('dcRefScan', 'lower', !dataCollectionFormData.dataCollected.dcRefScan.lower)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.dcRefScan.lower
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.dcRefScan.lower
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.dcRefScan.lower && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Lower
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Appliance 360 */}
+                                  <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg p-2.5 hover:shadow-sm transition-all duration-200">
+                                    <h5 className="text-xs font-semibold text-gray-800 mb-2 flex items-center gap-1.5">
+                                      <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
+                                      Appliance 360
+                                    </h5>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('appliance360', 'upper', !dataCollectionFormData.dataCollected.appliance360.upper)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.appliance360.upper
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.appliance360.upper
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.appliance360.upper && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Upper
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDataCollectionToggle('appliance360', 'lower', !dataCollectionFormData.dataCollected.appliance360.lower)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                                          dataCollectionFormData.dataCollected.appliance360.lower
+                                            ? 'bg-green-500 text-white shadow-sm'
+                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                        }`}
+                                      >
+                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
+                                          dataCollectionFormData.dataCollected.appliance360.lower
+                                            ? 'border-white bg-white'
+                                            : 'border-gray-400 bg-transparent'
+                                        }`}>
+                                          {dataCollectionFormData.dataCollected.appliance360.lower && (
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                          )}
+                                        </div>
+                                        Lower
+                                      </button>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                     </div>
                   </div>
                 )}
 
-                {/* Step 4 Content */}
+                {/* Step 4 Content - Notes */}
                 {currentStep === 4 && (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <h3 className="text-base font-semibold text-gray-900 mb-2">Step 4 Content</h3>
-                      <p className="text-sm text-gray-500">Step 4 form fields will be added here</p>
+                  <div className="h-full flex flex-col space-y-4">
+                    {/* Header Section */}
+                    <div className="flex-shrink-0">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-1">
+                        <div className="p-1.5 bg-green-100 rounded-lg">
+                          <FileText className="h-4 w-4 text-green-600" />
+                        </div>
+                        Additional Notes
+                      </h3>
+                      <p className="text-sm text-gray-600">Add any additional notes or comments about this data collection (optional)</p>
+                    </div>
+
+                    {/* Notes Content */}
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="w-full max-w-4xl mx-auto">
+                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="additionalNotes" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                Additional Notes
+                                <span className="text-xs text-gray-500 font-normal">(Optional)</span>
+                              </Label>
+                              <textarea
+                                id="additionalNotes"
+                                value={dataCollectionFormData.additionalNotes || ''}
+                                onChange={(e) => handleDataCollectionFormChange('additionalNotes', e.target.value)}
+                                placeholder="Enter any additional notes, observations, or special instructions related to this data collection..."
+                                rows={8}
+                                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm"
+                              />
+                            </div>
+
+                            {/* Character count */}
+                            <div className="flex justify-between items-center text-xs text-gray-500">
+                              <span>You can add any relevant information about the data collection process</span>
+                              <span>{(dataCollectionFormData.additionalNotes || '').length} characters</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2878,6 +3197,229 @@ export function PatientProfilePage() {
                 </div>
               </div>
             </form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Data Collection Sheet Preview Dialog */}
+      <Dialog open={showDataCollectionPreview} onOpenChange={handleDataCollectionPreviewClose}>
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0 pb-2">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+              <FileText className="h-5 w-5 text-emerald-600" />
+              Data Collection Sheet Preview
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedDataCollectionSheet && (
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Header Information */}
+              <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-emerald-800 mb-1">Patient Name</h3>
+                    <p className="text-base font-semibold text-emerald-900">{selectedDataCollectionSheet.patient_name}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-emerald-800 mb-1">Collection Date</h3>
+                    <p className="text-base font-semibold text-emerald-900">
+                      {new Date(selectedDataCollectionSheet.collection_date).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-emerald-800 mb-1">Submitted</h3>
+                    <p className="text-base font-semibold text-emerald-900">
+                      {new Date(selectedDataCollectionSheet.created_at).toLocaleDateString()} at{' '}
+                      {new Date(selectedDataCollectionSheet.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reasons for Collection */}
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  Reasons for Collection
+                </h3>
+                <div className="space-y-2">
+                  {selectedDataCollectionSheet.reasons_for_collection?.map((reason: string, index: number) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                      <span className="text-sm text-gray-700">{reason}</span>
+                    </div>
+                  ))}
+                  {selectedDataCollectionSheet.custom_reason && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
+                      <div className="w-1.5 h-1.5 bg-orange-400 rounded-full"></div>
+                      <span className="text-sm text-gray-700 font-medium">Custom: {selectedDataCollectionSheet.custom_reason}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Current Appliances */}
+              {(selectedDataCollectionSheet.current_upper_appliance || selectedDataCollectionSheet.current_lower_appliance) && (
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    Current Appliances
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedDataCollectionSheet.current_upper_appliance && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-600 mb-1">Upper Appliance</h4>
+                        <p className="text-base text-gray-900">{selectedDataCollectionSheet.current_upper_appliance}</p>
+                      </div>
+                    )}
+                    {selectedDataCollectionSheet.current_lower_appliance && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-600 mb-1">Lower Appliance</h4>
+                        <p className="text-base text-gray-900">{selectedDataCollectionSheet.current_lower_appliance}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Data Collection Status */}
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  Data Collection Status
+                </h3>
+                <div className="space-y-4">
+                  {/* Pictures */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">Pictures</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {selectedDataCollectionSheet.data_collected?.preSurgicalPictures !== null && (
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-sm text-gray-700">Pre-Surgical Pictures</span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            selectedDataCollectionSheet.data_collected.preSurgicalPictures
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {selectedDataCollectionSheet.data_collected.preSurgicalPictures ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      )}
+                      {selectedDataCollectionSheet.data_collected?.surgicalPictures !== null && (
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-sm text-gray-700">Surgical Pictures</span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            selectedDataCollectionSheet.data_collected.surgicalPictures
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {selectedDataCollectionSheet.data_collected.surgicalPictures ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      )}
+                      {selectedDataCollectionSheet.data_collected?.followUpPictures !== null && (
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-sm text-gray-700">Follow-Up Pictures</span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            selectedDataCollectionSheet.data_collected.followUpPictures
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {selectedDataCollectionSheet.data_collected.followUpPictures ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      )}
+                      {selectedDataCollectionSheet.data_collected?.fracturedAppliancePictures !== null && (
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-sm text-gray-700">Fractured Appliance Pictures</span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            selectedDataCollectionSheet.data_collected.fracturedAppliancePictures
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {selectedDataCollectionSheet.data_collected.fracturedAppliancePictures ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3D Scans */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-600 mb-2">3D Scans & Data Collection</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Helper function to render scan status */}
+                      {(() => {
+                        const renderScanStatus = (label: string, data: any) => {
+                          if (!data) return null;
+
+                          if (typeof data === 'boolean') {
+                            return data ? (
+                              <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                <span className="text-sm text-gray-700">{label}</span>
+                                <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">Collected</span>
+                              </div>
+                            ) : null;
+                          }
+
+                          if (typeof data === 'object' && (data.upper || data.lower)) {
+                            return (
+                              <div className="p-2 bg-gray-50 rounded">
+                                <div className="text-sm text-gray-700 mb-1">{label}</div>
+                                <div className="flex gap-2">
+                                  {data.upper && <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800">Upper</span>}
+                                  {data.lower && <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">Lower</span>}
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return null;
+                        };
+
+                        const scans = [
+                          { label: 'Pre-Surgical Jaw Records', data: selectedDataCollectionSheet.data_collected?.preSurgicalJawRecords },
+                          { label: 'Facial Scan', data: selectedDataCollectionSheet.data_collected?.facialScan },
+                          { label: 'Jaw Records (IOS)', data: selectedDataCollectionSheet.data_collected?.jawRecords },
+                          { label: 'Tissue Scan', data: selectedDataCollectionSheet.data_collected?.tissueScan },
+                          { label: 'Photogrammetry (ICAM)', data: selectedDataCollectionSheet.data_collected?.photogrammetry },
+                          { label: 'DC-REF Scan', data: selectedDataCollectionSheet.data_collected?.dcRefScan },
+                          { label: 'Appliance 360', data: selectedDataCollectionSheet.data_collected?.appliance360 },
+                          { label: 'Surgical Jaw Records', data: selectedDataCollectionSheet.data_collected?.surgicalJawRecords },
+                          { label: 'Surgical Tissue Scan', data: selectedDataCollectionSheet.data_collected?.surgicalTissueScan }
+                        ];
+
+                        return scans.map((scan) => renderScanStatus(scan.label, scan.data)).filter(Boolean);
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Notes */}
+              {selectedDataCollectionSheet.additional_notes && (
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    Additional Notes
+                  </h3>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedDataCollectionSheet.additional_notes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="flex-shrink-0 flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+            <Button
+              variant="outline"
+              onClick={handleDataCollectionPreviewClose}
+              className="px-6"
+            >
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
