@@ -128,12 +128,34 @@ export function Sidebar({
     document.body.style.userSelect = 'none';
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (collapsed) return;
+    e.preventDefault(); // Prevent scrolling
+    setIsResizing(true);
+    onResizeStart();
+    setStartX(e.touches[0].clientX);
+    setStartWidth(width);
+    document.body.style.userSelect = 'none';
+  };
+
   const handleMouseMove = (e: MouseEvent) => {
     if (!isResizing) return;
 
     // Use requestAnimationFrame for smooth animation
     requestAnimationFrame(() => {
       const deltaX = e.clientX - startX;
+      const newWidth = Math.max(208, Math.min(400, startWidth + deltaX)); // Min 208px (w-52), Max 400px
+      onWidthChange(newWidth);
+    });
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isResizing) return;
+    e.preventDefault(); // Prevent scrolling
+
+    // Use requestAnimationFrame for smooth animation
+    requestAnimationFrame(() => {
+      const deltaX = e.touches[0].clientX - startX;
       const newWidth = Math.max(208, Math.min(400, startWidth + deltaX)); // Min 208px (w-52), Max 400px
       onWidthChange(newWidth);
     });
@@ -146,13 +168,30 @@ export function Sidebar({
     document.body.style.userSelect = '';
   };
 
+  const handleTouchEnd = () => {
+    setIsResizing(false);
+    onResizeEnd();
+    document.body.style.userSelect = '';
+  };
+
   useEffect(() => {
     if (isResizing) {
+      // Mouse events
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+
+      // Touch events
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
+
       return () => {
+        // Remove mouse events
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+
+        // Remove touch events
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
   }, [isResizing, startX, startWidth, width]);
@@ -300,8 +339,9 @@ export function Sidebar({
       {/* Resize Handle - Only visible when expanded */}
       {!collapsed && (
         <div
-          className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 cursor-col-resize bg-gray-100 hover:bg-gray-200 rounded-md px-1 py-3 transition-colors duration-200 shadow-sm border border-gray-300"
+          className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 cursor-col-resize bg-gray-100 hover:bg-gray-200 rounded-md px-1 py-3 transition-colors duration-200 shadow-sm border border-gray-300 touch-none"
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           title="Drag to resize sidebar"
         >
           {/* Dots pattern for grip */}
