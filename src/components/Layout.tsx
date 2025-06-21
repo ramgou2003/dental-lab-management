@@ -13,6 +13,21 @@ const Layout = () => {
       return false;
     }
   });
+
+  // Initialize sidebar width from localStorage or default to 208px (w-52)
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sidebar-width');
+      return saved ? parseInt(saved, 10) : 208;
+    } catch (error) {
+      console.warn('Failed to load sidebar width from localStorage:', error);
+      return 208;
+    }
+  });
+
+  // Track if sidebar is being resized to disable transitions
+  const [isResizing, setIsResizing] = useState(false);
+
   const location = useLocation();
 
   // Save sidebar state to localStorage whenever it changes
@@ -23,6 +38,15 @@ const Layout = () => {
       console.warn('Failed to save sidebar state to localStorage:', error);
     }
   }, [sidebarCollapsed]);
+
+  // Save sidebar width to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebar-width', sidebarWidth.toString());
+    } catch (error) {
+      console.warn('Failed to save sidebar width to localStorage:', error);
+    }
+  }, [sidebarWidth]);
 
   // Extract the current section from the pathname
   const getCurrentSection = () => {
@@ -39,14 +63,42 @@ const Layout = () => {
     return "dashboard";
   };
 
+  const mainMarginLeft = sidebarCollapsed ? 64 : sidebarWidth; // 64px = w-16
+
+  const handleWidthChange = (newWidth: number) => {
+    if (!isResizing) {
+      setIsResizing(true);
+    }
+    setSidebarWidth(newWidth);
+  };
+
+  const handleResizeStart = () => {
+    setIsResizing(true);
+  };
+
+  const handleResizeEnd = () => {
+    // Reset resizing state after a short delay
+    setTimeout(() => setIsResizing(false), 100);
+  };
+
   return (
-    <div className="min-h-screen flex w-full bg-gray-50">
-      <Sidebar 
-        activeSection={getCurrentSection()} 
+    <div className={`min-h-screen flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}>
+      <Sidebar
+        activeSection={getCurrentSection()}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        width={sidebarWidth}
+        onWidthChange={handleWidthChange}
+        onResizeStart={handleResizeStart}
+        onResizeEnd={handleResizeEnd}
       />
-      <main className={`flex-1 bg-white overflow-auto transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-52'}`}>
+      <main
+        className="flex-1 bg-white overflow-auto"
+        style={{
+          marginLeft: `${mainMarginLeft}px`,
+          transition: 'none' // Remove all transitions for smooth real-time resizing
+        }}
+      >
         <Outlet />
       </main>
     </div>

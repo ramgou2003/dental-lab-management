@@ -1,11 +1,16 @@
-import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 
 interface SidebarProps {
   activeSection: string;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  width: number;
+  onWidthChange: (width: number) => void;
+  onResizeStart: () => void;
+  onResizeEnd: () => void;
 }
 const navigation = [
   {
@@ -53,9 +58,18 @@ const navigation = [
 export function Sidebar({
   activeSection,
   collapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  width,
+  onWidthChange,
+  onResizeStart,
+  onResizeEnd
 }: SidebarProps) {
   const navigate = useNavigate();
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [startWidth, setStartWidth] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const handleLogout = () => {
     console.log("Logging out...");
@@ -64,7 +78,104 @@ export function Sidebar({
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
-  return <div className={`fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col transition-all duration-300 z-10 shadow-sm ${collapsed ? 'w-16' : 'w-52'}`}>
+
+  // Format time for expanded mode (24-hour format HH:MM:SS with day)
+  const formatTimeExpanded = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = {
+      timeZone: 'America/New_York', // EST timezone
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false // 24-hour format
+    };
+    const timeString = date.toLocaleTimeString('en-US', options);
+
+    const dayOptions: Intl.DateTimeFormatOptions = {
+      timeZone: 'America/New_York',
+      weekday: 'long'
+    };
+    const dayString = date.toLocaleDateString('en-US', dayOptions);
+
+    return { time: timeString, day: dayString };
+  };
+
+  // Format time for collapsed mode (24-hour format HH:MM with abbreviated day)
+  const formatTimeCollapsed = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = {
+      timeZone: 'America/New_York', // EST timezone
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false // 24-hour format
+    };
+    const timeString = date.toLocaleTimeString('en-US', options);
+
+    const dayOptions: Intl.DateTimeFormatOptions = {
+      timeZone: 'America/New_York',
+      weekday: 'short'
+    };
+    const dayString = date.toLocaleDateString('en-US', dayOptions);
+
+    return { time: timeString, day: dayString };
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (collapsed) return;
+    setIsResizing(true);
+    onResizeStart();
+    setStartX(e.clientX);
+    setStartWidth(width);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizing) return;
+
+    // Use requestAnimationFrame for smooth animation
+    requestAnimationFrame(() => {
+      const deltaX = e.clientX - startX;
+      const newWidth = Math.max(208, Math.min(400, startWidth + deltaX)); // Min 208px (w-52), Max 400px
+      onWidthChange(newWidth);
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+    onResizeEnd();
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isResizing, startX, startWidth, width]);
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const sidebarWidth = collapsed ? 64 : width; // 64px = w-16
+
+  return <div
+    ref={sidebarRef}
+    className="fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm"
+    style={{
+      width: `${sidebarWidth}px`,
+      transition: isResizing ? 'none' : 'width 0.3s ease-in-out'
+    }}
+  >
       {/* Header - Clinic Logo */}
       <div className="border-b border-gray-200 py-1.5 px-[4px]">
         <button
@@ -133,6 +244,31 @@ export function Sidebar({
       
       {/* Footer */}
       <div className="p-4 border-t border-gray-100 space-y-1 px-[11px]">
+        {/* Time Display Container */}
+        <div className="mb-2">
+          {collapsed ? (
+            // Collapsed mode: Clean elegant container with proper text visibility for narrow width
+            <div className="bg-white border-2 border-blue-300 rounded-lg h-16 flex flex-col justify-center px-1 transition-all duration-300 ease-in-out hover:border-blue-400 hover:shadow-lg shadow-sm">
+              <div className="text-blue-800 text-xs font-bold leading-tight text-center">
+                {formatTimeCollapsed(currentTime).time}
+              </div>
+              <div className="text-blue-600 text-xs font-medium leading-tight mt-0.5 text-center">
+                {formatTimeCollapsed(currentTime).day}
+              </div>
+            </div>
+          ) : (
+            // Expanded mode: Clean elegant container with enhanced spacing
+            <div className="bg-white border-2 border-blue-300 rounded-lg h-16 flex flex-col justify-center px-3 transition-all duration-300 ease-in-out hover:border-blue-400 hover:shadow-lg shadow-sm">
+              <div className="text-blue-800 text-base font-bold leading-tight">
+                {formatTimeExpanded(currentTime).time}
+              </div>
+              <div className="text-blue-600 text-sm font-medium leading-tight mt-1">
+                {formatTimeExpanded(currentTime).day}
+              </div>
+            </div>
+          )}
+        </div>
+
         <button onClick={onToggleCollapse} className="flex items-center w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200" title={collapsed ? "Expand" : "Collapse"}>
           {collapsed ? <ChevronRight className="h-5 w-5 flex-shrink-0" /> : <ChevronLeft className="h-5 w-5 flex-shrink-0" />}
           <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
@@ -160,5 +296,24 @@ export function Sidebar({
           </button>
         </div>
       </div>
+
+      {/* Resize Handle - Only visible when expanded */}
+      {!collapsed && (
+        <div
+          className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 cursor-col-resize bg-gray-100 hover:bg-gray-200 rounded-md px-1 py-3 transition-colors duration-200 shadow-sm border border-gray-300"
+          onMouseDown={handleMouseDown}
+          title="Drag to resize sidebar"
+        >
+          {/* Dots pattern for grip */}
+          <div className="flex flex-col space-y-1">
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+          </div>
+        </div>
+      )}
     </div>;
 }

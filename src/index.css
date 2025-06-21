@@ -351,3 +351,18 @@ input[type="date"]::-moz-calendar-picker-indicator {
   height: 0;
   display: none; /* Chrome, Safari, Opera */
 }
+
+/* Disable transitions during sidebar resize for smooth real-time animation */
+.resize-active * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Ensure smooth real-time updates without any transition delays */
+.resize-active .sidebar-element {
+  transition: none !important;
+}
+
+.resize-active .main-content {
+  transition: none !important;
+}
