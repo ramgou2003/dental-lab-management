@@ -1,6 +1,7 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import SignatureCanvas from "react-signature-canvas";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -151,12 +152,19 @@ export function PatientProfilePage() {
   // State for IV Sedation Flow Chart
   const [showIVSedationForm, setShowIVSedationForm] = useState(false);
   const [ivSedationCurrentStep, setIVSedationCurrentStep] = useState(1);
-  const ivSedationTotalSteps = 6; // Define total number of steps for IV sedation
+  const ivSedationTotalSteps = 5; // Define total number of steps for IV sedation
   const [ivSedationSheets, setIVSedationSheets] = useState<any[]>([]);
   const [showIVSedationPreview, setShowIVSedationPreview] = useState(false);
   const [selectedIVSedationSheet, setSelectedIVSedationSheet] = useState<any | null>(null);
   const [ivSedationFormMessage, setIVSedationFormMessage] = useState<{ type: 'error' | 'success' | null; text: string }>({ type: null, text: '' });
   const [showIVSedationToast, setShowIVSedationToast] = useState(false);
+  const [showIVSedationSummary, setShowIVSedationSummary] = useState(false);
+  const [signatureData, setSignatureData] = useState<string>('');
+  const [signatureName, setSignatureName] = useState<string>('');
+  const [signatureTitle, setSignatureTitle] = useState<string>('');
+  const [signatureDate, setSignatureDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const signatureRef = useRef<SignatureCanvas>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 600, height: 200 });
   const [ivSedationActiveDropdown, setIVSedationActiveDropdown] = useState<string | null>(null);
   const [editingIVSedationSheet, setEditingIVSedationSheet] = useState<any | null>(null);
   const [isIVSedationEditMode, setIsIVSedationEditMode] = useState(false);
@@ -167,8 +175,7 @@ export function PatientProfilePage() {
   const [showFlowEntryDialog, setShowFlowEntryDialog] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [newFlowEntry, setNewFlowEntry] = useState({
-    hour: '',
-    minute: '',
+    time: '',
     systolic: '',
     diastolic: '',
     heartRate: '',
@@ -308,6 +315,8 @@ export function PatientProfilePage() {
     // IV Sedation Flow Chart fields
     timeInRoom: "",
     sedationStartTime: "",
+    sedationEndTime: "",
+    outOfRoomTime: "",
     // Flow monitoring entries
     flowEntries: [] as Array<{
       id: string;
@@ -318,6 +327,24 @@ export function PatientProfilePage() {
       spo2: string;
       medications: string[];
     }>,
+    // Level of Sedation
+    levelOfSedation: "",
+    // Recovery Assessment fields
+    alertOriented: "",
+    protectiveReflexes: "",
+    breathingSpontaneously: "",
+    postOpNausea: "",
+    caregiverPresent: "",
+    baselineMentalStatus: "",
+    responsiveVerbalCommands: "",
+    saturatingRoomAir: "",
+    vitalSignsBaseline: "",
+    painDuringRecovery: "",
+    postOpInstructionsGivenTo: "",
+    followUpInstructionsGivenTo: "",
+    dischargedTo: "",
+    painLevelDischarge: "",
+    otherRemarks: "",
   });
 
   // Close dropdown when clicking outside
@@ -783,8 +810,28 @@ export function PatientProfilePage() {
       // IV Sedation Flow Chart fields
       timeInRoom: "",
       sedationStartTime: "",
+      sedationEndTime: "",
+      outOfRoomTime: "",
       // Flow monitoring entries
       flowEntries: [],
+      // Level of Sedation
+      levelOfSedation: "",
+      // Recovery Assessment fields
+      alertOriented: "",
+      protectiveReflexes: "",
+      breathingSpontaneously: "",
+      postOpNausea: "",
+      caregiverPresent: "",
+      baselineMentalStatus: "",
+      responsiveVerbalCommands: "",
+      saturatingRoomAir: "",
+      vitalSignsBaseline: "",
+      painDuringRecovery: "",
+      postOpInstructionsGivenTo: "",
+      followUpInstructionsGivenTo: "",
+      dischargedTo: "",
+      painLevelDischarge: "",
+      otherRemarks: "",
     });
     setIVSedationCurrentStep(1); // Reset to first step
     setShowIVSedationForm(true);
@@ -1078,6 +1125,252 @@ export function PatientProfilePage() {
       setIVSedationCurrentStep(ivSedationCurrentStep + 1);
       setIVSedationFormMessage({ type: null, text: '' }); // Clear messages when moving to next step
       setShowIVSedationToast(false); // Clear toast when moving to next step
+    } else {
+      // Final step - submit the form
+      handleSubmitIVSedationForm();
+    }
+  };
+
+  // Show IV Sedation form summary for review and signature
+  const handleSubmitIVSedationForm = () => {
+    // Show the summary dialog instead of directly submitting
+    setShowIVSedationSummary(true);
+  };
+
+  // Final submission after signature
+  const handleFinalIVSedationSubmit = async () => {
+    if (!signatureData || !signatureName || !signatureTitle) {
+      setIVSedationFormMessage({
+        type: 'error',
+        text: 'Please complete the signature section before submitting.'
+      });
+      setShowIVSedationToast(true);
+      setTimeout(() => setShowIVSedationToast(false), 5000);
+      return;
+    }
+
+    try {
+      const ivSedationData = {
+        patient_id: patientId,
+        patient_name: ivSedationFormData.patientName,
+        sedation_date: ivSedationFormData.date,
+        upper_treatment: ivSedationFormData.upperTreatment,
+        lower_treatment: ivSedationFormData.lowerTreatment,
+        height_feet: ivSedationFormData.heightFeet,
+        height_inches: ivSedationFormData.heightInches,
+        weight: ivSedationFormData.weight,
+
+        // Pre-Assessment fields
+        npo_status: ivSedationFormData.npoStatus,
+        morning_medications: ivSedationFormData.morningMedications,
+        allergies: ivSedationFormData.allergies,
+        allergies_other: ivSedationFormData.allergiesOther,
+        pregnancy_risk: ivSedationFormData.pregnancyRisk,
+        last_menstrual_cycle: ivSedationFormData.lastMenstrualCycle,
+        anesthesia_history: ivSedationFormData.anesthesiaHistory,
+        anesthesia_history_other: ivSedationFormData.anesthesiaHistoryOther,
+        respiratory_problems: ivSedationFormData.respiratoryProblems,
+        respiratory_problems_other: ivSedationFormData.respiratoryProblemsOther,
+        cardiovascular_problems: ivSedationFormData.cardiovascularProblems,
+        cardiovascular_problems_other: ivSedationFormData.cardiovascularProblemsOther,
+        gastrointestinal_problems: ivSedationFormData.gastrointestinalProblems,
+        gastrointestinal_problems_other: ivSedationFormData.gastrointestinalProblemsOther,
+        neurologic_problems: ivSedationFormData.neurologicProblems,
+        neurologic_problems_other: ivSedationFormData.neurologicProblemsOther,
+        endocrine_renal_problems: ivSedationFormData.endocrineRenalProblems,
+        endocrine_renal_problems_other: ivSedationFormData.endocrineRenalProblemsOther,
+        last_a1c_level: ivSedationFormData.lastA1CLevel,
+        miscellaneous: ivSedationFormData.miscellaneous,
+        miscellaneous_other: ivSedationFormData.miscellaneousOther,
+        social_history: ivSedationFormData.socialHistory,
+        social_history_other: ivSedationFormData.socialHistoryOther,
+
+        // Additional Assessment fields
+        well_developed_nourished: ivSedationFormData.wellDevelopedNourished,
+        patient_anxious: ivSedationFormData.patientAnxious,
+        asa_classification: ivSedationFormData.asaClassification,
+        airway_evaluation: ivSedationFormData.airwayEvaluation,
+        airway_evaluation_other: ivSedationFormData.airwayEvaluationOther,
+        mallampati_score: ivSedationFormData.mallampatiScore,
+        heart_lung_evaluation: ivSedationFormData.heartLungEvaluation,
+        heart_lung_evaluation_other: ivSedationFormData.heartLungEvaluationOther,
+
+        // Sedation Plan fields
+        instruments_checklist: ivSedationFormData.instrumentsChecklist,
+        sedation_type: ivSedationFormData.sedationType,
+        medications_planned: ivSedationFormData.medicationsPlanned,
+        medications_other: ivSedationFormData.medicationsOther,
+        administration_route: ivSedationFormData.administrationRoute,
+        emergency_protocols: ivSedationFormData.emergencyProtocols,
+
+        // IV Sedation Flow Chart fields
+        time_in_room: ivSedationFormData.timeInRoom,
+        sedation_start_time: ivSedationFormData.sedationStartTime,
+        sedation_end_time: ivSedationFormData.sedationEndTime,
+        out_of_room_time: ivSedationFormData.outOfRoomTime,
+        flow_entries: ivSedationFormData.flowEntries,
+        level_of_sedation: ivSedationFormData.levelOfSedation,
+
+        // Recovery Assessment fields
+        alert_oriented: ivSedationFormData.alertOriented,
+        protective_reflexes: ivSedationFormData.protectiveReflexes,
+        breathing_spontaneously: ivSedationFormData.breathingSpontaneously,
+        post_op_nausea: ivSedationFormData.postOpNausea,
+        caregiver_present: ivSedationFormData.caregiverPresent,
+        baseline_mental_status: ivSedationFormData.baselineMentalStatus,
+        responsive_verbal_commands: ivSedationFormData.responsiveVerbalCommands,
+        saturating_room_air: ivSedationFormData.saturatingRoomAir,
+        vital_signs_baseline: ivSedationFormData.vitalSignsBaseline,
+        pain_during_recovery: ivSedationFormData.painDuringRecovery,
+        post_op_instructions_given_to: ivSedationFormData.postOpInstructionsGivenTo,
+        follow_up_instructions_given_to: ivSedationFormData.followUpInstructionsGivenTo,
+        discharged_to: ivSedationFormData.dischargedTo,
+        pain_level_discharge: ivSedationFormData.painLevelDischarge,
+        other_remarks: ivSedationFormData.otherRemarks,
+
+        // Signature data
+        signature_data: signatureData,
+        signature_name: signatureName,
+        signature_title: signatureTitle,
+        signature_date: signatureDate,
+      };
+
+      // For now, just show success message since we don't have a database table yet
+      // TODO: Create iv_sedation_forms table in Supabase and implement actual save
+      console.log('IV Sedation Form Data:', ivSedationData);
+
+      setIVSedationFormMessage({
+        type: 'success',
+        text: 'IV Sedation form completed and signed successfully!'
+      });
+      setShowIVSedationToast(true);
+
+      // Close summary and form
+      setShowIVSedationSummary(false);
+
+      // Auto-hide toast and close form after 3 seconds
+      setTimeout(() => {
+        setShowIVSedationToast(false);
+        handleIVSedationFormClose();
+        // Reset signature data
+        setSignatureData('');
+        setSignatureName('');
+        setSignatureTitle('');
+        setSignatureDate(new Date().toISOString().split('T')[0]);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error saving IV sedation form:', error);
+      setIVSedationFormMessage({
+        type: 'error',
+        text: 'Failed to save IV sedation form'
+      });
+      setShowIVSedationToast(true);
+      setTimeout(() => setShowIVSedationToast(false), 5000);
+    }
+  };
+
+  // Canvas size effect for responsive signature
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      const isMobile = window.innerWidth < 768;
+      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+
+      if (isMobile) {
+        setCanvasSize({ width: 350, height: 150 });
+      } else if (isTablet) {
+        setCanvasSize({ width: 450, height: 180 });
+      } else {
+        setCanvasSize({ width: 550, height: 200 });
+      }
+    };
+
+    updateCanvasSize();
+    window.addEventListener('resize', updateCanvasSize);
+    return () => window.removeEventListener('resize', updateCanvasSize);
+  }, []);
+
+  // Initialize canvas when summary dialog opens
+  useEffect(() => {
+    if (showIVSedationSummary && signatureRef.current) {
+      // Small delay to ensure canvas is rendered
+      setTimeout(() => {
+        initializeCanvas();
+      }, 100);
+    }
+  }, [showIVSedationSummary, canvasSize]);
+
+  // Initialize canvas with proper scaling for high DPI displays
+  const initializeCanvas = () => {
+    if (signatureRef.current) {
+      const canvas = signatureRef.current.getCanvas();
+      const ctx = canvas.getContext('2d');
+      const devicePixelRatio = window.devicePixelRatio || 1;
+
+      // Get the display size (CSS pixels)
+      const displayWidth = canvasSize.width;
+      const displayHeight = canvasSize.height;
+
+      // Set the actual size in memory (scaled to account for extra pixel density)
+      canvas.width = displayWidth * devicePixelRatio;
+      canvas.height = displayHeight * devicePixelRatio;
+
+      // Scale the drawing context so everything will work at the higher ratio
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+
+      // Scale back down using CSS
+      canvas.style.width = displayWidth + 'px';
+      canvas.style.height = displayHeight + 'px';
+
+      // Enable smooth lines
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Clear the canvas
+      signatureRef.current.clear();
+    }
+  };
+
+  // Signature handling functions
+  const handleClearSignature = () => {
+    if (signatureRef.current) {
+      signatureRef.current.clear();
+      setSignatureData('');
+    }
+  };
+
+  const handleSaveSignature = () => {
+    if (signatureRef.current) {
+      // Use high quality settings for smooth lines
+      const signatureDataURL = signatureRef.current.toDataURL('image/png', 1.0);
+      setSignatureData(signatureDataURL);
+    }
+  };
+
+  // Handle signature canvas ready
+  const handleSignatureBegin = () => {
+    // Ensure canvas is properly initialized when user starts signing
+    if (signatureRef.current) {
+      const canvas = signatureRef.current.getCanvas();
+      const ctx = canvas.getContext('2d');
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
+  };
+
+  const handleCloseSummary = () => {
+    setShowIVSedationSummary(false);
+    // Reset signature data
+    setSignatureData('');
+    setSignatureName('');
+    setSignatureTitle('');
+    setSignatureDate(new Date().toISOString().split('T')[0]);
+    if (signatureRef.current) {
+      signatureRef.current.clear();
     }
   };
 
@@ -4141,7 +4434,7 @@ export function PatientProfilePage() {
                   <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
                     ivSedationCurrentStep >= 4 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
-                    Time Tracking
+                    Flow
                   </span>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 4 ? 'bg-blue-600' : 'bg-gray-300'
@@ -4153,22 +4446,10 @@ export function PatientProfilePage() {
                   <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
                     ivSedationCurrentStep >= 5 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
-                    Flow
+                    Recovery
                   </span>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 5 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
-                </div>
-
-                {/* Step 6 */}
-                <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
-                    ivSedationCurrentStep >= 6 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
-                    Discharge
-                  </span>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
-                    ivSedationCurrentStep >= 6 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
                 </div>
               </div>
@@ -5452,7 +5733,9 @@ export function PatientProfilePage() {
                   </div>
                 )}
 
-                {/* Step 4: IV Sedation Flow Chart */}
+
+
+                {/* Step 4: Flow - Monitoring During Surgery */}
                 {ivSedationCurrentStep === 4 && (
                   <div className="space-y-4">
                     {/* Time Tracking Section */}
@@ -5536,65 +5819,9 @@ export function PatientProfilePage() {
                         </div>
                       </div>
 
-                      {/* Time Summary Cards */}
-                      {ivSedationFormData.timeInRoom && ivSedationFormData.sedationStartTime && (
-                        <div className="mt-4">
-                          <h4 className="text-sm font-semibold text-green-900 mb-3">Time Summary</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            {/* Room Entry Card */}
-                            <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span className="text-xs font-medium text-gray-700">Room Entry</span>
-                              </div>
-                              <div className="text-lg font-bold text-blue-600">{ivSedationFormData.timeInRoom}</div>
-                              <div className="text-xs text-gray-500">EST</div>
-                            </div>
 
-                            {/* Sedation Start Card */}
-                            <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-xs font-medium text-gray-700">Sedation Start</span>
-                              </div>
-                              <div className="text-lg font-bold text-green-600">{ivSedationFormData.sedationStartTime}</div>
-                              <div className="text-xs text-gray-500">EST</div>
-                            </div>
-
-                            {/* Preparation Time Card */}
-                            <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                <span className="text-xs font-medium text-gray-700">Preparation Time</span>
-                              </div>
-                              <div className="text-lg font-bold text-orange-600">
-                                {(() => {
-                                  const roomTime = ivSedationFormData.timeInRoom.split(':');
-                                  const sedationTime = ivSedationFormData.sedationStartTime.split(':');
-                                  const roomMinutes = parseInt(roomTime[0]) * 60 + parseInt(roomTime[1]);
-                                  const sedationMinutes = parseInt(sedationTime[0]) * 60 + parseInt(sedationTime[1]);
-                                  const diffMinutes = sedationMinutes - roomMinutes;
-
-                                  if (diffMinutes >= 0) {
-                                    return `${diffMinutes}`;
-                                  }
-                                  return '--';
-                                })()}
-                              </div>
-                              <div className="text-xs text-gray-500">minutes</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
 
-
-                  </div>
-                )}
-
-                {/* Step 5: Flow - Monitoring During Surgery */}
-                {ivSedationCurrentStep === 5 && (
-                  <div className="space-y-4">
                     {/* Add Entry Button */}
                     <div className="flex justify-between items-center">
                       <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -5674,12 +5901,10 @@ export function PatientProfilePage() {
                                         type="button"
                                         onClick={() => {
                                           // Parse the existing entry data
-                                          const [hour, minute] = entry.time.split(':');
                                           const [systolic, diastolic] = entry.bp ? entry.bp.split('/') : ['', ''];
 
                                           setNewFlowEntry({
-                                            hour: hour || '',
-                                            minute: minute || '',
+                                            time: entry.time || '',
                                             systolic: systolic || '',
                                             diastolic: diastolic || '',
                                             heartRate: entry.heartRate || '',
@@ -5730,15 +5955,755 @@ export function PatientProfilePage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Sedation End Time & Out of Room Time Section */}
+                    <div className="bg-gradient-to-r from-red-50 to-purple-50 rounded-lg p-4 border border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Procedure Completion Times
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Sedation End Time */}
+                        <div className="bg-white rounded-lg p-4 border border-red-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-red-900">Sedation End Time</h4>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const now = new Date();
+                                const estTime = new Intl.DateTimeFormat('en-US', {
+                                  timeZone: 'America/New_York',
+                                  hour12: false,
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }).format(now);
+                                setIVSedationFormData({...ivSedationFormData, sedationEndTime: estTime});
+                              }}
+                              className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition-colors"
+                            >
+                              Current Time
+                            </button>
+                          </div>
+                          <p className="text-xs text-red-700 mb-2">When sedation administration ends</p>
+                          <input
+                            type="time"
+                            value={ivSedationFormData.sedationEndTime}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, sedationEndTime: e.target.value})}
+                            className="w-full px-3 py-2 border border-red-300 rounded-md focus:border-red-500 focus:outline-none text-sm"
+                          />
+                          {ivSedationFormData.sedationEndTime && (
+                            <div className="mt-2 text-xs text-green-600 font-medium">
+                              ✓ Sedation ended at {ivSedationFormData.sedationEndTime} EST
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Out of Room Time */}
+                        <div className="bg-white rounded-lg p-4 border border-purple-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-purple-900">Out of Room Time</h4>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const now = new Date();
+                                const estTime = new Intl.DateTimeFormat('en-US', {
+                                  timeZone: 'America/New_York',
+                                  hour12: false,
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }).format(now);
+                                setIVSedationFormData({...ivSedationFormData, outOfRoomTime: estTime});
+                              }}
+                              className="px-3 py-1 bg-purple-600 text-white text-xs rounded-md hover:bg-purple-700 transition-colors"
+                            >
+                              Current Time
+                            </button>
+                          </div>
+                          <p className="text-xs text-purple-700 mb-2">When patient leaves the operation room</p>
+                          <input
+                            type="time"
+                            value={ivSedationFormData.outOfRoomTime}
+                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, outOfRoomTime: e.target.value})}
+                            className="w-full px-3 py-2 border border-purple-300 rounded-md focus:border-purple-500 focus:outline-none text-sm"
+                          />
+                          {ivSedationFormData.outOfRoomTime && (
+                            <div className="mt-2 text-xs text-green-600 font-medium">
+                              ✓ Patient left room at {ivSedationFormData.outOfRoomTime} EST
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+
+                    </div>
+
+                    {/* Complete Time Summary - Separate Card */}
+                    {ivSedationFormData.timeInRoom && ivSedationFormData.sedationStartTime && ivSedationFormData.sedationEndTime && ivSedationFormData.outOfRoomTime && (
+                      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border border-gray-200">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          Complete Time Summary
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                          {/* Room Entry Card */}
+                          <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-xs font-medium text-gray-700">Room Entry</span>
+                            </div>
+                            <div className="text-lg font-bold text-blue-600">{ivSedationFormData.timeInRoom}</div>
+                            <div className="text-xs text-gray-500">EST</div>
+                          </div>
+
+                          {/* Sedation Start Card */}
+                          <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs font-medium text-gray-700">Sedation Start</span>
+                            </div>
+                            <div className="text-lg font-bold text-green-600">{ivSedationFormData.sedationStartTime}</div>
+                            <div className="text-xs text-gray-500">EST</div>
+                          </div>
+
+                          {/* Preparation Time Card */}
+                          <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <span className="text-xs font-medium text-gray-700">Preparation Time</span>
+                            </div>
+                            <div className="text-lg font-bold text-orange-600">
+                              {(() => {
+                                if (ivSedationFormData.timeInRoom && ivSedationFormData.sedationStartTime) {
+                                  const roomTime = ivSedationFormData.timeInRoom.split(':');
+                                  const sedationTime = ivSedationFormData.sedationStartTime.split(':');
+                                  const roomMinutes = parseInt(roomTime[0]) * 60 + parseInt(roomTime[1]);
+                                  const sedationMinutes = parseInt(sedationTime[0]) * 60 + parseInt(sedationTime[1]);
+                                  const diffMinutes = sedationMinutes - roomMinutes;
+
+                                  if (diffMinutes >= 0) {
+                                    const hours = Math.floor(diffMinutes / 60);
+                                    const minutes = diffMinutes % 60;
+                                    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                                  }
+                                }
+                                return '--';
+                              })()}
+                            </div>
+                            <div className="text-xs text-gray-500">duration</div>
+                          </div>
+
+                          {/* Sedation End Card */}
+                          <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-xs font-medium text-gray-700">Sedation End</span>
+                            </div>
+                            <div className="text-lg font-bold text-red-600">{ivSedationFormData.sedationEndTime}</div>
+                            <div className="text-xs text-gray-500">EST</div>
+                          </div>
+
+                          {/* Out of Room Card */}
+                          <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                              <span className="text-xs font-medium text-gray-700">Out of Room</span>
+                            </div>
+                            <div className="text-lg font-bold text-purple-600">{ivSedationFormData.outOfRoomTime}</div>
+                            <div className="text-xs text-gray-500">EST</div>
+                          </div>
+
+                          {/* Sedation Duration Card */}
+                          <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                              <span className="text-xs font-medium text-gray-700">Sedation Duration</span>
+                            </div>
+                            <div className="text-lg font-bold text-indigo-600">
+                              {(() => {
+                                if (ivSedationFormData.sedationStartTime && ivSedationFormData.sedationEndTime) {
+                                  const startTime = ivSedationFormData.sedationStartTime.split(':');
+                                  const endTime = ivSedationFormData.sedationEndTime.split(':');
+
+                                  if (startTime.length === 2 && endTime.length === 2) {
+                                    const startMinutes = parseInt(startTime[0]) * 60 + parseInt(startTime[1]);
+                                    const endMinutes = parseInt(endTime[0]) * 60 + parseInt(endTime[1]);
+                                    const diffMinutes = endMinutes - startMinutes;
+
+                                    if (diffMinutes >= 0) {
+                                      const hours = Math.floor(diffMinutes / 60);
+                                      const minutes = diffMinutes % 60;
+                                      return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                                    }
+                                  }
+                                }
+                                return '--';
+                              })()}
+                            </div>
+                            <div className="text-xs text-gray-500">duration</div>
+                          </div>
+                        </div>
+
+                        {/* Second Row for Total Room Time */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
+                          {/* Total Room Time Card */}
+                          <div className="bg-white rounded-lg p-3 border border-green-200 shadow-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                              <span className="text-xs font-medium text-gray-700">Total Room Time</span>
+                            </div>
+                            <div className="text-lg font-bold text-amber-600">
+                              {(() => {
+                                const roomTime = ivSedationFormData.timeInRoom.split(':');
+                                const outTime = ivSedationFormData.outOfRoomTime.split(':');
+                                const roomMinutes = parseInt(roomTime[0]) * 60 + parseInt(roomTime[1]);
+                                const outMinutes = parseInt(outTime[0]) * 60 + parseInt(outTime[1]);
+                                const diffMinutes = outMinutes - roomMinutes;
+
+                                if (diffMinutes >= 0) {
+                                  const hours = Math.floor(diffMinutes / 60);
+                                  const minutes = diffMinutes % 60;
+                                  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                                }
+                                return '--';
+                              })()}
+                            </div>
+                            <div className="text-xs text-gray-500">total time</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Level of Sedation Card */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Level of Sedation
+                      </h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {[
+                          {
+                            id: 'minimal',
+                            label: 'Minimal Sedation',
+                            description: 'Anxiolysis - Normal response to verbal stimulation',
+                            color: 'bg-green-100 border-green-300 text-green-800'
+                          },
+                          {
+                            id: 'moderate',
+                            label: 'Moderate Sedation',
+                            description: 'Conscious sedation - Purposeful response to verbal/tactile stimulation',
+                            color: 'bg-yellow-100 border-yellow-300 text-yellow-800'
+                          },
+                          {
+                            id: 'deep',
+                            label: 'Deep Sedation',
+                            description: 'Purposeful response following repeated/painful stimulation',
+                            color: 'bg-orange-100 border-orange-300 text-orange-800'
+                          },
+                          {
+                            id: 'general',
+                            label: 'General Anesthesia',
+                            description: 'Loss of consciousness - Not arousable even with painful stimulation',
+                            color: 'bg-red-100 border-red-300 text-red-800'
+                          }
+                        ].map((level) => (
+                          <button
+                            key={level.id}
+                            type="button"
+                            className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
+                              ivSedationFormData.levelOfSedation === level.id
+                                ? level.color + ' ring-2 ring-offset-2 ring-indigo-500'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, levelOfSedation: level.id})}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`w-3 h-3 rounded-full ${
+                                ivSedationFormData.levelOfSedation === level.id
+                                  ? 'bg-indigo-600'
+                                  : 'bg-gray-300'
+                              }`}></div>
+                              <span className="font-semibold text-sm">{level.label}</span>
+                            </div>
+                            <p className="text-xs leading-relaxed">{level.description}</p>
+                          </button>
+                        ))}
+                      </div>
+
+                      {ivSedationFormData.levelOfSedation && (
+                        <div className="mt-4 p-3 bg-white rounded-lg border border-indigo-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <svg className="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span className="text-sm font-semibold text-indigo-900">Selected Level:</span>
+                          </div>
+                          <div className="text-sm text-indigo-800">
+                            {(() => {
+                              const selectedLevel = [
+                                { id: 'minimal', label: 'Minimal Sedation (Anxiolysis)' },
+                                { id: 'moderate', label: 'Moderate Sedation (Conscious Sedation)' },
+                                { id: 'deep', label: 'Deep Sedation' },
+                                { id: 'general', label: 'General Anesthesia' }
+                              ].find(level => level.id === ivSedationFormData.levelOfSedation);
+                              return selectedLevel ? selectedLevel.label : '';
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {/* Placeholder for other steps */}
-                {ivSedationCurrentStep > 5 && (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <Activity className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Step {ivSedationCurrentStep} content will be implemented here</p>
+                {/* Step 5: Recovery */}
+                {ivSedationCurrentStep === 5 && (
+                  <div className="space-y-6">
+                    <div className="text-center mb-6">
+                      <h2 className="text-xl font-bold text-blue-900 mb-2">Recovery Assessment</h2>
+                      <p className="text-sm text-gray-600">Complete the recovery assessment before discharge</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Alert and Oriented */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Alert and Oriented</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.alertOriented === 'yes'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, alertOriented: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.alertOriented === 'no'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, alertOriented: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Protective Reflexes Intact */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Protective Reflexes Intact</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.protectiveReflexes === 'yes'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, protectiveReflexes: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.protectiveReflexes === 'no'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, protectiveReflexes: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Breathing Spontaneously */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Breathing Spontaneously</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.breathingSpontaneously === 'yes'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, breathingSpontaneously: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.breathingSpontaneously === 'no'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, breathingSpontaneously: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Post-Op Nausea/Vomiting */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Post-Op Nausea/Vomiting</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.postOpNausea === 'yes'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpNausea: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.postOpNausea === 'no'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpNausea: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Patient Caregiver Present */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Patient Caregiver Present</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.caregiverPresent === 'yes'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, caregiverPresent: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.caregiverPresent === 'no'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, caregiverPresent: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Return To Baseline Mental Status */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Return To Baseline Mental Status</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.baselineMentalStatus === 'yes'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, baselineMentalStatus: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.baselineMentalStatus === 'no'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, baselineMentalStatus: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Second Row of Assessment Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Responsive To Verbal Commands */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Responsive To Verbal Commands</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.responsiveVerbalCommands === 'yes'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, responsiveVerbalCommands: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.responsiveVerbalCommands === 'no'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, responsiveVerbalCommands: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Saturating Appropriately on Room Air */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Saturating Appropriately on Room Air</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.saturatingRoomAir === 'yes'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, saturatingRoomAir: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.saturatingRoomAir === 'no'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, saturatingRoomAir: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Vital Signs Returned to Baseline */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Vital Signs Returned to Baseline</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.vitalSignsBaseline === 'yes'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, vitalSignsBaseline: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.vitalSignsBaseline === 'no'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, vitalSignsBaseline: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Pain During Recovery */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Pain During Recovery</h3>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.painDuringRecovery === 'yes'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, painDuringRecovery: 'yes'})}
+                          >
+                            YES
+                          </button>
+                          <button
+                            type="button"
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                              ivSedationFormData.painDuringRecovery === 'no'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, painDuringRecovery: 'no'})}
+                          >
+                            NO
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Button Selection Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Post-Op Instructions Given To */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Post-Op Instructions Given To</h3>
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                              ivSedationFormData.postOpInstructionsGivenTo === 'Patient and Escort'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpInstructionsGivenTo: 'Patient and Escort'})}
+                          >
+                            Patient and Escort
+                          </button>
+                          <button
+                            type="button"
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                              ivSedationFormData.postOpInstructionsGivenTo === 'Patient'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpInstructionsGivenTo: 'Patient'})}
+                          >
+                            Patient
+                          </button>
+                          <button
+                            type="button"
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                              ivSedationFormData.postOpInstructionsGivenTo === 'Escort'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpInstructionsGivenTo: 'Escort'})}
+                          >
+                            Escort
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Follow Up Instructions Given To */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Follow Up Instructions Given To</h3>
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                              ivSedationFormData.followUpInstructionsGivenTo === 'Patient and Escort'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, followUpInstructionsGivenTo: 'Patient and Escort'})}
+                          >
+                            Patient and Escort
+                          </button>
+                          <button
+                            type="button"
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                              ivSedationFormData.followUpInstructionsGivenTo === 'Patient'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, followUpInstructionsGivenTo: 'Patient'})}
+                          >
+                            Patient
+                          </button>
+                          <button
+                            type="button"
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                              ivSedationFormData.followUpInstructionsGivenTo === 'Escort'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, followUpInstructionsGivenTo: 'Escort'})}
+                          >
+                            Escort
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Discharged To */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Discharged To</h3>
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                              ivSedationFormData.dischargedTo === 'Home'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, dischargedTo: 'Home'})}
+                          >
+                            Home
+                          </button>
+                          <button
+                            type="button"
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
+                              ivSedationFormData.dischargedTo === 'Office'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                            }`}
+                            onClick={() => setIVSedationFormData({...ivSedationFormData, dischargedTo: 'Office'})}
+                          >
+                            Office
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Level of Pain At Discharge */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <Label htmlFor="painLevelDischarge" className="text-sm font-semibold text-blue-900">Level of Pain At Discharge (0-10)</Label>
+                        <Input
+                          id="painLevelDischarge"
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={ivSedationFormData.painLevelDischarge}
+                          onChange={(e) => setIVSedationFormData({...ivSedationFormData, painLevelDischarge: e.target.value})}
+                          placeholder="0-10"
+                          className="mt-2 text-sm h-8 border-blue-300 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Other Remarks */}
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <Label htmlFor="otherRemarks" className="text-sm font-semibold text-blue-900">Other Remarks</Label>
+                      <textarea
+                        id="otherRemarks"
+                        value={ivSedationFormData.otherRemarks}
+                        onChange={(e) => setIVSedationFormData({...ivSedationFormData, otherRemarks: e.target.value})}
+                        placeholder="Enter any additional remarks or observations..."
+                        rows={4}
+                        className="mt-2 w-full px-3 py-2 border border-blue-300 rounded-md focus:border-blue-500 focus:outline-none text-sm resize-none"
+                      />
                     </div>
                   </div>
                 )}
@@ -5756,23 +6721,13 @@ export function PatientProfilePage() {
                   Previous
                 </Button>
 
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleIVSedationFormClose}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleIVSedationNextStep}
-                    disabled={ivSedationCurrentStep === ivSedationTotalSteps}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {ivSedationCurrentStep === ivSedationTotalSteps ? 'Complete' : 'Next'}
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  onClick={handleIVSedationNextStep}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {ivSedationCurrentStep === ivSedationTotalSteps ? 'Complete' : 'Next'}
+                </Button>
               </div>
             </form>
           </div>
@@ -5841,33 +6796,8 @@ export function PatientProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Time */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Time</label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={newFlowEntry.hour}
-                    onChange={(e) => setNewFlowEntry({...newFlowEntry, hour: e.target.value})}
-                    className="w-16 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
-                  >
-                    <option value="">HH</option>
-                    {Array.from({length: 24}, (_, i) => (
-                      <option key={i} value={i.toString().padStart(2, '0')}>
-                        {i.toString().padStart(2, '0')}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-blue-600 font-medium">:</span>
-                  <select
-                    value={newFlowEntry.minute}
-                    onChange={(e) => setNewFlowEntry({...newFlowEntry, minute: e.target.value})}
-                    className="w-16 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
-                  >
-                    <option value="">MM</option>
-                    {Array.from({length: 60}, (_, i) => (
-                      <option key={i} value={i.toString().padStart(2, '0')}>
-                        {i.toString().padStart(2, '0')}
-                      </option>
-                    ))}
-                  </select>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">Time</label>
                   <button
                     type="button"
                     onClick={() => {
@@ -5878,14 +6808,24 @@ export function PatientProfilePage() {
                         hour: '2-digit',
                         minute: '2-digit'
                       }).format(now);
-                      const [hours, minutes] = estTime.split(':');
-                      setNewFlowEntry({...newFlowEntry, hour: hours, minute: minutes});
+                      setNewFlowEntry({...newFlowEntry, time: estTime});
                     }}
-                    className="px-2 py-2 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
                   >
                     Current Time
                   </button>
                 </div>
+                <input
+                  type="time"
+                  value={newFlowEntry.time}
+                  onChange={(e) => setNewFlowEntry({...newFlowEntry, time: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
+                />
+                {newFlowEntry.time && (
+                  <div className="mt-2 text-xs text-green-600 font-medium">
+                    ✓ Entry time: {newFlowEntry.time} EST
+                  </div>
+                )}
               </div>
 
               {/* BP */}
@@ -6043,8 +6983,7 @@ export function PatientProfilePage() {
                 setShowFlowEntryDialog(false);
                 setEditingEntryId(null);
                 setNewFlowEntry({
-                  hour: '',
-                  minute: '',
+                  time: '',
                   systolic: '',
                   diastolic: '',
                   heartRate: '',
@@ -6058,8 +6997,7 @@ export function PatientProfilePage() {
             </Button>
             <Button
               onClick={() => {
-                if (newFlowEntry.hour && newFlowEntry.minute) {
-                  const timeValue = `${newFlowEntry.hour}:${newFlowEntry.minute}`;
+                if (newFlowEntry.time) {
                   const bpValue = newFlowEntry.systolic && newFlowEntry.diastolic
                     ? `${newFlowEntry.systolic}/${newFlowEntry.diastolic}`
                     : '';
@@ -6070,7 +7008,7 @@ export function PatientProfilePage() {
                       entry.id === editingEntryId
                         ? {
                             ...entry,
-                            time: timeValue,
+                            time: newFlowEntry.time,
                             bp: bpValue,
                             heartRate: newFlowEntry.heartRate,
                             rr: newFlowEntry.rr,
@@ -6088,7 +7026,7 @@ export function PatientProfilePage() {
                     // Add new entry
                     const newEntry = {
                       id: Date.now().toString(),
-                      time: timeValue,
+                      time: newFlowEntry.time,
                       bp: bpValue,
                       heartRate: newFlowEntry.heartRate,
                       rr: newFlowEntry.rr,
@@ -6105,8 +7043,7 @@ export function PatientProfilePage() {
                   setShowFlowEntryDialog(false);
                   setEditingEntryId(null);
                   setNewFlowEntry({
-                    hour: '',
-                    minute: '',
+                    time: '',
                     systolic: '',
                     diastolic: '',
                     heartRate: '',
@@ -6116,7 +7053,7 @@ export function PatientProfilePage() {
                   });
                 }
               }}
-              disabled={!newFlowEntry.hour || !newFlowEntry.minute}
+              disabled={!newFlowEntry.time}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {editingEntryId ? 'Update Entry' : 'Add Entry'}
@@ -6160,6 +7097,309 @@ export function PatientProfilePage() {
           </div>
         </div>
       )}
+
+      {/* IV Sedation Summary Dialog */}
+      <Dialog open={showIVSedationSummary} onOpenChange={handleCloseSummary}>
+        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+              <Activity className="h-6 w-6 text-blue-600" />
+              IV Sedation Form Summary & Signature
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-8">
+              {/* Patient Information */}
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h3 className="text-lg font-semibold text-blue-900 mb-3">Patient Information</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div><strong>Patient:</strong> {ivSedationFormData.patientName}</div>
+                  <div><strong>Date:</strong> {new Date(ivSedationFormData.date).toLocaleDateString()}</div>
+                  <div><strong>Height:</strong> {ivSedationFormData.heightFeet}' {ivSedationFormData.heightInches}"</div>
+                  <div><strong>Weight:</strong> {ivSedationFormData.weight} lbs</div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-sm">
+                  <div><strong>Upper Treatment:</strong> {ivSedationFormData.upperTreatment}</div>
+                  <div><strong>Lower Treatment:</strong> {ivSedationFormData.lowerTreatment}</div>
+                </div>
+              </div>
+
+              {/* Pre-Assessment Summary */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Pre-Assessment</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div><strong>NPO Status:</strong> {ivSedationFormData.npoStatus}</div>
+                  <div><strong>Morning Medications:</strong> {ivSedationFormData.morningMedications}</div>
+                  <div><strong>Pregnancy Risk:</strong> {ivSedationFormData.pregnancyRisk}</div>
+                  <div><strong>ASA Classification:</strong> {ivSedationFormData.asaClassification}</div>
+                </div>
+                {ivSedationFormData.allergies.length > 0 && (
+                  <div className="mt-3 text-sm">
+                    <strong>Allergies:</strong> {ivSedationFormData.allergies.join(', ')}
+                    {ivSedationFormData.allergiesOther && ` (${ivSedationFormData.allergiesOther})`}
+                  </div>
+                )}
+              </div>
+
+              {/* Sedation Plan */}
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <h3 className="text-lg font-semibold text-green-900 mb-3">Sedation Plan</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div><strong>Sedation Type:</strong> {ivSedationFormData.sedationType}</div>
+                  <div><strong>Level of Sedation:</strong> {ivSedationFormData.levelOfSedation}</div>
+                </div>
+                {ivSedationFormData.medicationsPlanned.length > 0 && (
+                  <div className="mt-3 text-sm">
+                    <strong>Planned Medications:</strong> {ivSedationFormData.medicationsPlanned.join(', ')}
+                  </div>
+                )}
+              </div>
+
+              {/* Time Summary */}
+              <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                <h3 className="text-lg font-semibold text-yellow-900 mb-3">Time Summary</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div><strong>Time in Room:</strong> {ivSedationFormData.timeInRoom}</div>
+                  <div><strong>Sedation Start:</strong> {ivSedationFormData.sedationStartTime}</div>
+                  <div><strong>Sedation End:</strong> {ivSedationFormData.sedationEndTime}</div>
+                  <div><strong>Out of Room:</strong> {ivSedationFormData.outOfRoomTime}</div>
+                </div>
+              </div>
+
+              {/* Monitoring Entries */}
+              {ivSedationFormData.flowEntries && ivSedationFormData.flowEntries.length > 0 && (
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <h3 className="text-lg font-semibold text-purple-900 mb-3">Monitoring Log</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-purple-200">
+                          <th className="text-left p-2">Time</th>
+                          <th className="text-left p-2">BP</th>
+                          <th className="text-left p-2">HR</th>
+                          <th className="text-left p-2">RR</th>
+                          <th className="text-left p-2">SpO2</th>
+                          <th className="text-left p-2">Medications</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ivSedationFormData.flowEntries.map((entry, index) => (
+                          <tr key={index} className="border-b border-purple-100">
+                            <td className="p-2">{entry.time}</td>
+                            <td className="p-2">{entry.bp}</td>
+                            <td className="p-2">{entry.heartRate}</td>
+                            <td className="p-2">{entry.rr}</td>
+                            <td className="p-2">{entry.spo2}</td>
+                            <td className="p-2">
+                              {entry.medications.map(medId => {
+                                const med = medicationOptions.find(m => m.id === medId);
+                                return med ? med.name.split(' | ')[0] : medId;
+                              }).join(', ')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Recovery Assessment */}
+              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                <h3 className="text-lg font-semibold text-red-900 mb-3">Recovery Assessment</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  <div className="flex justify-between">
+                    <span>Alert and Oriented:</span>
+                    <span className={`font-medium ${ivSedationFormData.alertOriented === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                      {ivSedationFormData.alertOriented?.toUpperCase() || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Protective Reflexes:</span>
+                    <span className={`font-medium ${ivSedationFormData.protectiveReflexes === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                      {ivSedationFormData.protectiveReflexes?.toUpperCase() || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Breathing Spontaneously:</span>
+                    <span className={`font-medium ${ivSedationFormData.breathingSpontaneously === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                      {ivSedationFormData.breathingSpontaneously?.toUpperCase() || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Post-Op Nausea:</span>
+                    <span className={`font-medium ${ivSedationFormData.postOpNausea === 'no' ? 'text-green-600' : 'text-red-600'}`}>
+                      {ivSedationFormData.postOpNausea?.toUpperCase() || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Caregiver Present:</span>
+                    <span className={`font-medium ${ivSedationFormData.caregiverPresent === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                      {ivSedationFormData.caregiverPresent?.toUpperCase() || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Baseline Mental Status:</span>
+                    <span className={`font-medium ${ivSedationFormData.baselineMentalStatus === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                      {ivSedationFormData.baselineMentalStatus?.toUpperCase() || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-sm">
+                  <div><strong>Post-Op Instructions Given To:</strong> {ivSedationFormData.postOpInstructionsGivenTo}</div>
+                  <div><strong>Follow-Up Instructions Given To:</strong> {ivSedationFormData.followUpInstructionsGivenTo}</div>
+                  <div><strong>Discharged To:</strong> {ivSedationFormData.dischargedTo}</div>
+                  <div><strong>Pain Level at Discharge:</strong> {ivSedationFormData.painLevelDischarge}/10</div>
+                </div>
+
+                {ivSedationFormData.otherRemarks && (
+                  <div className="mt-4 text-sm">
+                    <strong>Other Remarks:</strong> {ivSedationFormData.otherRemarks}
+                  </div>
+                )}
+              </div>
+
+              {/* Signature Section */}
+              <div className="bg-gray-100 rounded-lg p-6 border border-gray-300">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Electronic Signature</h3>
+
+                {/* Signature Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <Label htmlFor="signatureName" className="text-sm font-medium text-gray-700">Full Name</Label>
+                    <Input
+                      id="signatureName"
+                      value={signatureName}
+                      onChange={(e) => setSignatureName(e.target.value)}
+                      placeholder="Enter full name"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="signatureTitle" className="text-sm font-medium text-gray-700">Title/Position</Label>
+                    <Input
+                      id="signatureTitle"
+                      value={signatureTitle}
+                      onChange={(e) => setSignatureTitle(e.target.value)}
+                      placeholder="Enter title"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="signatureDate" className="text-sm font-medium text-gray-700">Date</Label>
+                    <Input
+                      id="signatureDate"
+                      type="date"
+                      value={signatureDate}
+                      onChange={(e) => setSignatureDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                {/* Signature Canvas and Preview Side by Side */}
+                <div className="mb-4">
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Digital Signature</Label>
+                  <div className="flex gap-4 items-start">
+                    {/* Signature Canvas */}
+                    <div className="flex-shrink-0">
+                      <div
+                        className="border-2 border-solid border-gray-300 rounded-lg bg-white relative"
+                        style={{
+                          width: `${canvasSize.width}px`,
+                          height: `${canvasSize.height}px`,
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <SignatureCanvas
+                          ref={signatureRef}
+                          canvasProps={{
+                            width: canvasSize.width,
+                            height: canvasSize.height,
+                            className: 'signature-canvas-element',
+                            style: {
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: `${canvasSize.width}px`,
+                              height: `${canvasSize.height}px`,
+                              display: 'block',
+                              touchAction: 'none',
+                              border: 'none',
+                              margin: 0,
+                              padding: 0,
+                              boxSizing: 'border-box'
+                            }
+                          }}
+                          backgroundColor="rgba(255,255,255,1)"
+                          penColor="#000000"
+                          minWidth={1.5}
+                          maxWidth={2.5}
+                          velocityFilterWeight={0.7}
+                          dotSize={1.5}
+                          throttle={16}
+                          onBegin={handleSignatureBegin}
+                          onEnd={handleSaveSignature}
+                        />
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearSignature}
+                          className="text-xs"
+                        >
+                          Clear Signature
+                        </Button>
+                        <p className="text-xs text-gray-500 flex items-center">
+                          Sign above using mouse, touch, or stylus
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Signature Preview */}
+                    {signatureData && (
+                      <div className="flex-1 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800 font-medium mb-2">✓ Signature Captured</p>
+                        <div className="text-xs text-green-700">
+                          <p><strong>Signed by:</strong> {signatureName}</p>
+                          <p><strong>Title:</strong> {signatureTitle}</p>
+                          <p><strong>Date:</strong> {new Date(signatureDate).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Dialog Footer */}
+          <div className="flex-shrink-0 flex justify-between items-center px-6 py-4 border-t bg-gray-50">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseSummary}
+              className="flex items-center gap-2"
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="button"
+              onClick={handleFinalIVSedationSubmit}
+              disabled={!signatureData || !signatureName || !signatureTitle}
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Submit Form
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
