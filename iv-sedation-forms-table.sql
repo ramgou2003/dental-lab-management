@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS iv_sedation_forms (
   allergies TEXT[], -- Array of allergy strings
   allergies_other TEXT,
   pregnancy_risk TEXT,
-  last_menstrual_cycle DATE,
+  last_menstrual_cycle DATE NULL, -- Optional field for female patients only
   anesthesia_history TEXT,
   anesthesia_history_other TEXT,
   respiratory_problems TEXT[], -- Array of respiratory problem strings
