@@ -318,6 +318,215 @@ export type Database = {
           }
         ]
       }
+      iv_sedation_forms: {
+        Row: {
+          id: string
+          patient_id: string | null
+          patient_name: string
+          sedation_date: string
+          status: string
+          upper_treatment: string | null
+          lower_treatment: string | null
+          upper_surgery_type: string | null
+          lower_surgery_type: string | null
+          height_feet: number | null
+          height_inches: number | null
+          weight: number | null
+          npo_status: string | null
+          morning_medications: string | null
+          allergies: string[] | null
+          allergies_other: string | null
+          pregnancy_risk: string | null
+          last_menstrual_cycle: string | null
+          anesthesia_history: string | null
+          anesthesia_history_other: string | null
+          respiratory_problems: string[] | null
+          respiratory_problems_other: string | null
+          cardiovascular_problems: string[] | null
+          cardiovascular_problems_other: string | null
+          gastrointestinal_problems: string[] | null
+          gastrointestinal_problems_other: string | null
+          neurologic_problems: string[] | null
+          neurologic_problems_other: string | null
+          endocrine_renal_problems: string[] | null
+          endocrine_renal_problems_other: string | null
+          last_a1c_level: string | null
+          miscellaneous: string[] | null
+          miscellaneous_other: string | null
+          social_history: string[] | null
+          social_history_other: string | null
+          well_developed_nourished: string | null
+          patient_anxious: string | null
+          asa_classification: string | null
+          airway_evaluation: string[] | null
+          airway_evaluation_other: string | null
+          mallampati_score: string | null
+          heart_lung_evaluation: string[] | null
+          heart_lung_evaluation_other: string | null
+          instruments_checklist: Json | null
+          sedation_type: string | null
+          medications_planned: string[] | null
+          medications_other: string | null
+          administration_route: string[] | null
+          emergency_protocols: Json | null
+          level_of_sedation: string | null
+          time_in_room: string | null
+          sedation_start_time: string | null
+          monitoring_log: Json | null
+          sedation_end_time: string | null
+          out_of_room_time: string | null
+          post_procedure_notes: string | null
+          discharge_criteria_met: Json | null
+          follow_up_instructions: string | null
+          follow_up_instructions_given_to: string | null
+          discharged_to: string | null
+          pain_level_discharge: string | null
+          other_remarks: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          patient_id?: string | null
+          patient_name: string
+          sedation_date: string
+          status?: string
+          upper_treatment?: string | null
+          lower_treatment?: string | null
+          upper_surgery_type?: string | null
+          lower_surgery_type?: string | null
+          height_feet?: number | null
+          height_inches?: number | null
+          weight?: number | null
+          npo_status?: string | null
+          morning_medications?: string | null
+          allergies?: string[] | null
+          allergies_other?: string | null
+          pregnancy_risk?: string | null
+          last_menstrual_cycle?: string | null
+          anesthesia_history?: string | null
+          anesthesia_history_other?: string | null
+          respiratory_problems?: string[] | null
+          respiratory_problems_other?: string | null
+          cardiovascular_problems?: string[] | null
+          cardiovascular_problems_other?: string | null
+          gastrointestinal_problems?: string[] | null
+          gastrointestinal_problems_other?: string | null
+          neurologic_problems?: string[] | null
+          neurologic_problems_other?: string | null
+          endocrine_renal_problems?: string[] | null
+          endocrine_renal_problems_other?: string | null
+          last_a1c_level?: string | null
+          miscellaneous?: string[] | null
+          miscellaneous_other?: string | null
+          social_history?: string[] | null
+          social_history_other?: string | null
+          well_developed_nourished?: string | null
+          patient_anxious?: string | null
+          asa_classification?: string | null
+          airway_evaluation?: string[] | null
+          airway_evaluation_other?: string | null
+          mallampati_score?: string | null
+          heart_lung_evaluation?: string[] | null
+          heart_lung_evaluation_other?: string | null
+          instruments_checklist?: Json | null
+          sedation_type?: string | null
+          medications_planned?: string[] | null
+          medications_other?: string | null
+          administration_route?: string[] | null
+          emergency_protocols?: Json | null
+          level_of_sedation?: string | null
+          time_in_room?: string | null
+          sedation_start_time?: string | null
+          monitoring_log?: Json | null
+          sedation_end_time?: string | null
+          out_of_room_time?: string | null
+          post_procedure_notes?: string | null
+          discharge_criteria_met?: Json | null
+          follow_up_instructions?: string | null
+          follow_up_instructions_given_to?: string | null
+          discharged_to?: string | null
+          pain_level_discharge?: string | null
+          other_remarks?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          patient_id?: string | null
+          patient_name?: string
+          sedation_date?: string
+          status?: string
+          upper_treatment?: string | null
+          lower_treatment?: string | null
+          upper_surgery_type?: string | null
+          lower_surgery_type?: string | null
+          height_feet?: number | null
+          height_inches?: number | null
+          weight?: number | null
+          npo_status?: string | null
+          morning_medications?: string | null
+          allergies?: string[] | null
+          allergies_other?: string | null
+          pregnancy_risk?: string | null
+          last_menstrual_cycle?: string | null
+          anesthesia_history?: string | null
+          anesthesia_history_other?: string | null
+          respiratory_problems?: string[] | null
+          respiratory_problems_other?: string | null
+          cardiovascular_problems?: string[] | null
+          cardiovascular_problems_other?: string | null
+          gastrointestinal_problems?: string[] | null
+          gastrointestinal_problems_other?: string | null
+          neurologic_problems?: string[] | null
+          neurologic_problems_other?: string | null
+          endocrine_renal_problems?: string[] | null
+          endocrine_renal_problems_other?: string | null
+          last_a1c_level?: string | null
+          miscellaneous?: string[] | null
+          miscellaneous_other?: string | null
+          social_history?: string[] | null
+          social_history_other?: string | null
+          well_developed_nourished?: string | null
+          patient_anxious?: string | null
+          asa_classification?: string | null
+          airway_evaluation?: string[] | null
+          airway_evaluation_other?: string | null
+          mallampati_score?: string | null
+          heart_lung_evaluation?: string[] | null
+          heart_lung_evaluation_other?: string | null
+          instruments_checklist?: Json | null
+          sedation_type?: string | null
+          medications_planned?: string[] | null
+          medications_other?: string | null
+          administration_route?: string[] | null
+          emergency_protocols?: Json | null
+          level_of_sedation?: string | null
+          time_in_room?: string | null
+          sedation_start_time?: string | null
+          monitoring_log?: Json | null
+          sedation_end_time?: string | null
+          out_of_room_time?: string | null
+          post_procedure_notes?: string | null
+          discharge_criteria_met?: Json | null
+          follow_up_instructions?: string | null
+          follow_up_instructions_given_to?: string | null
+          discharged_to?: string | null
+          pain_level_discharge?: string | null
+          other_remarks?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iv_sedation_forms_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       patients: {
         Row: {
           id: string

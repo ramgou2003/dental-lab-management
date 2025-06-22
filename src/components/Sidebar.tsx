@@ -287,7 +287,7 @@ export function Sidebar({
         <div className="mb-2">
           {collapsed ? (
             // Collapsed mode: Clean elegant container with proper text visibility for narrow width
-            <div className="bg-white border-2 border-blue-300 rounded-lg h-16 flex flex-col justify-center px-1 transition-all duration-300 ease-in-out hover:border-blue-400 hover:shadow-lg shadow-sm">
+            <div className="bg-white border-2 border-blue-300 rounded-lg h-12 flex flex-col justify-center px-1 transition-all duration-300 ease-in-out hover:border-blue-400 hover:shadow-lg shadow-sm">
               <div className="text-blue-800 text-xs font-bold leading-tight text-center">
                 {formatTimeCollapsed(currentTime).time}
               </div>
@@ -297,7 +297,7 @@ export function Sidebar({
             </div>
           ) : (
             // Expanded mode: Clean elegant container with enhanced spacing
-            <div className="bg-white border-2 border-blue-300 rounded-lg h-16 flex flex-col justify-center px-3 transition-all duration-300 ease-in-out hover:border-blue-400 hover:shadow-lg shadow-sm">
+            <div className="bg-white border-2 border-blue-300 rounded-lg h-12 flex flex-col justify-center px-3 transition-all duration-300 ease-in-out hover:border-blue-400 hover:shadow-lg shadow-sm">
               <div className="text-blue-800 text-base font-bold leading-tight">
                 {formatTimeExpanded(currentTime).time}
               </div>

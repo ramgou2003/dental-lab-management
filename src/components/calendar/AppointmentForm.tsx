@@ -3,6 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Patient {
+  id: string;
+  full_name: string;
+  first_name: string;
+  last_name: string;
+}
 
 interface AppointmentFormProps {
   isOpen: boolean;
@@ -30,20 +38,32 @@ export function AppointmentForm({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('09:30');
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
 
-  // Dummy patient data - replace with actual patient data
-  const patients = [
-    { id: '1', name: 'John Smith' },
-    { id: '2', name: 'Emily Johnson' },
-    { id: '3', name: 'Michael Chen' },
-    { id: '4', name: 'Sarah Williams' },
-    { id: '5', name: 'David Brown' },
-    { id: '6', name: 'Lisa Anderson' },
-    { id: '7', name: 'Robert Taylor' },
-    { id: '8', name: 'Jennifer Davis' },
-    { id: '9', name: 'Mark Wilson' },
-    { id: '10', name: 'Amanda Garcia' }
-  ];
+  // Fetch real patients from Supabase
+  const fetchPatients = async () => {
+    setLoadingPatients(true);
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('id, full_name, first_name, last_name')
+        .order('full_name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching patients:', error);
+        return;
+      }
+
+      if (data) {
+        setPatients(data);
+      }
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+    } finally {
+      setLoadingPatients(false);
+    }
+  };
 
   // Appointment types matching calendar columns
   const appointmentTypes = [
@@ -71,6 +91,13 @@ export function AppointmentForm({
   };
 
   const timeSlots = generateTimeSlots();
+
+  // Fetch patients when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchPatients();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (editingAppointment) {
@@ -126,19 +153,9 @@ export function AppointmentForm({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg font-semibold">
-              New Appointment
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-lg font-semibold">
+            New Appointment
+          </DialogTitle>
           <DialogDescription className="sr-only">
             Create a new appointment by selecting patient, date, time, and appointment type
           </DialogDescription>
@@ -150,16 +167,21 @@ export function AppointmentForm({
             <label className="text-sm font-medium text-gray-700">
               Patient *
             </label>
-            <Select value={selectedPatient} onValueChange={setSelectedPatient}>
+            <Select value={selectedPatient} onValueChange={setSelectedPatient} disabled={loadingPatients}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a patient" />
+                <SelectValue placeholder={loadingPatients ? "Loading patients..." : "Select a patient"} />
               </SelectTrigger>
               <SelectContent>
                 {patients.map((patient) => (
-                  <SelectItem key={patient.id} value={patient.name}>
-                    {patient.name}
+                  <SelectItem key={patient.id} value={patient.full_name}>
+                    {patient.full_name}
                   </SelectItem>
                 ))}
+                {patients.length === 0 && !loadingPatients && (
+                  <SelectItem value="" disabled>
+                    No patients found
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

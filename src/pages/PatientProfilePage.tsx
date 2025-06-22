@@ -1,7 +1,6 @@
 
-import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import SignatureCanvas from "react-signature-canvas";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +52,8 @@ import {
   Plus,
   MoreVertical,
   Edit2,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -66,6 +66,35 @@ import { useToast } from "@/hooks/use-toast";
 export function PatientProfilePage() {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Tab state management with URL persistence
+  const getInitialTab = () => {
+    const urlParams = new URLSearchParams(location.search);
+    const tabFromUrl = urlParams.get('tab');
+    const validTabs = ['basic', 'lab', 'reports', 'manufacturing', 'delivery', 'clinical'];
+    return validTabs.includes(tabFromUrl || '') ? tabFromUrl : 'basic';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  // Update URL when tab changes
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    const newUrl = `${location.pathname}?tab=${newTab}`;
+    navigate(newUrl, { replace: true });
+  };
+
+  // Update tab state when URL changes (e.g., browser back/forward)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const tabFromUrl = urlParams.get('tab');
+    const validTabs = ['basic', 'lab', 'reports', 'manufacturing', 'delivery', 'clinical'];
+    const newTab = validTabs.includes(tabFromUrl || '') ? tabFromUrl : 'basic';
+    if (newTab !== activeTab) {
+      setActiveTab(newTab);
+    }
+  }, [location.search, activeTab]);
 
   // Treatment options for IV sedation form
   const treatmentOptions = [
@@ -159,17 +188,94 @@ export function PatientProfilePage() {
   const [ivSedationFormMessage, setIVSedationFormMessage] = useState<{ type: 'error' | 'success' | null; text: string }>({ type: null, text: '' });
   const [showIVSedationToast, setShowIVSedationToast] = useState(false);
   const [showIVSedationSummary, setShowIVSedationSummary] = useState(false);
-  const [signatureData, setSignatureData] = useState<string>('');
-  const [signatureName, setSignatureName] = useState<string>('');
-  const [signatureTitle, setSignatureTitle] = useState<string>('');
-  const [signatureDate, setSignatureDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const signatureRef = useRef<SignatureCanvas>(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 600, height: 200 });
   const [ivSedationActiveDropdown, setIVSedationActiveDropdown] = useState<string | null>(null);
   const [editingIVSedationSheet, setEditingIVSedationSheet] = useState<any | null>(null);
   const [isIVSedationEditMode, setIsIVSedationEditMode] = useState(false);
   const [showIVSedationDeleteConfirmation, setShowIVSedationDeleteConfirmation] = useState(false);
   const [ivSedationSheetToDelete, setIVSedationSheetToDelete] = useState<any | null>(null);
+
+  // Auto-save state
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [currentIVSedationId, setCurrentIVSedationId] = useState<string | null>(null);
+  const [autoSaveMessage, setAutoSaveMessage] = useState<string>('');
+  const [lastSavedTime, setLastSavedTime] = useState<string>('');
+
+  // Helper functions to check step completion
+  const isStep1Complete = () => {
+    return !!(
+      ivSedationFormData.patientName &&
+      ivSedationFormData.date &&
+      ivSedationFormData.heightFeet &&
+      ivSedationFormData.heightInches &&
+      ivSedationFormData.weight &&
+      ivSedationFormData.upperTreatment &&
+      ivSedationFormData.lowerTreatment
+    );
+  };
+
+  const isStep2Complete = () => {
+    const basicFields = !!(
+      ivSedationFormData.npoStatus &&
+      ivSedationFormData.morningMedications &&
+      ivSedationFormData.asaClassification &&
+      ivSedationFormData.mallampatiScore &&
+      ivSedationFormData.allergies &&
+      ivSedationFormData.allergies.length > 0 &&
+      ivSedationFormData.anesthesiaHistory &&
+      ivSedationFormData.wellDevelopedNourished &&
+      ivSedationFormData.patientAnxious
+    );
+
+    // Check female-specific fields only if patient is female
+    const femaleFieldsComplete = patient && patient.gender && patient.gender.toLowerCase() === 'female'
+      ? !!(ivSedationFormData.pregnancyRisk)
+      : true;
+
+    return basicFields && femaleFieldsComplete;
+  };
+
+  const isStep3Complete = () => {
+    return !!(
+      ivSedationFormData.instrumentsChecklist &&
+      ivSedationFormData.instrumentsChecklist.length > 0 &&
+      ivSedationFormData.sedationType &&
+      ivSedationFormData.levelOfSedation &&
+      ivSedationFormData.medicationsPlanned &&
+      ivSedationFormData.medicationsPlanned.length > 0 &&
+      ivSedationFormData.administrationRoute &&
+      ivSedationFormData.administrationRoute.length > 0 &&
+      ivSedationFormData.emergencyProtocols &&
+      ivSedationFormData.emergencyProtocols.length > 0
+    );
+  };
+
+  const isStep4Complete = () => {
+    return !!(
+      ivSedationFormData.timeInRoom &&
+      ivSedationFormData.sedationStartTime &&
+      ivSedationFormData.sedationEndTime &&
+      ivSedationFormData.outOfRoomTime
+    );
+  };
+
+  const isStep5Complete = () => {
+    return !!(
+      ivSedationFormData.alertOriented &&
+      ivSedationFormData.protectiveReflexes &&
+      ivSedationFormData.breathingSpontaneously &&
+      ivSedationFormData.postOpNausea &&
+      ivSedationFormData.caregiverPresent &&
+      ivSedationFormData.baselineMentalStatus &&
+      ivSedationFormData.responsiveVerbalCommands &&
+      ivSedationFormData.saturatingRoomAir &&
+      ivSedationFormData.vitalSignsBaseline &&
+      ivSedationFormData.painDuringRecovery &&
+      ivSedationFormData.postOpInstructionsGivenTo &&
+      ivSedationFormData.followUpInstructionsGivenTo &&
+      ivSedationFormData.dischargedTo &&
+      ivSedationFormData.painLevelDischarge
+    );
+  };
 
   // State for Flow Entry Dialog
   const [showFlowEntryDialog, setShowFlowEntryDialog] = useState(false);
@@ -269,6 +375,8 @@ export function PatientProfilePage() {
     date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
     upperTreatment: "",
     lowerTreatment: "",
+    upperSurgeryType: "",
+    lowerSurgeryType: "",
     heightFeet: "",
     heightInches: "",
     weight: "",
@@ -351,18 +459,20 @@ export function PatientProfilePage() {
   useEffect(() => {
     const handleClickOutside = () => {
       setActiveDropdown(null);
+      setIVSedationActiveDropdown(null);
     };
 
-    if (activeDropdown) {
+    if (activeDropdown || ivSedationActiveDropdown) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [activeDropdown]);
+  }, [activeDropdown, ivSedationActiveDropdown]);
 
   useEffect(() => {
     if (patientId) {
       fetchPatientData();
       fetchDataCollectionSheets();
+      fetchIVSedationSheets();
     } else {
       // Use mock data if no patientId provided
       setPatient({
@@ -433,6 +543,27 @@ export function PatientProfilePage() {
       setDataCollectionSheets(data || []);
     } catch (error) {
       console.error('Error:', error);
+    }
+  };
+
+  const fetchIVSedationSheets = async () => {
+    if (!patientId) return;
+
+    try {
+      const { data, error } = await (supabase as any)
+        .from('iv_sedation_forms')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching IV sedation forms:', error);
+        return;
+      }
+
+      setIVSedationSheets(data || []);
+    } catch (error) {
+      console.error('Error fetching IV sedation forms:', error);
     }
   };
 
@@ -764,6 +895,8 @@ export function PatientProfilePage() {
       date: new Date().toISOString().split('T')[0], // Reset to current date each time
       upperTreatment: "",
       lowerTreatment: "",
+      upperSurgeryType: "",
+      lowerSurgeryType: "",
       heightFeet: "",
       heightInches: "",
       weight: "",
@@ -838,12 +971,478 @@ export function PatientProfilePage() {
   };
 
   const handleIVSedationFormClose = () => {
+    // Check if we should show draft toast before clearing state
+    const shouldShowDraftToast = currentIVSedationId && (
+      (!isIVSedationEditMode) || // New form that was auto-saved
+      (isIVSedationEditMode && editingIVSedationSheet?.status === 'draft') // Editing a draft
+    );
+
+    // Clear form state first
     setShowIVSedationForm(false);
     setIVSedationCurrentStep(1);
     setIsIVSedationEditMode(false);
     setEditingIVSedationSheet(null);
-    setIVSedationFormMessage({ type: null, text: '' });
-    setShowIVSedationToast(false);
+    setCurrentIVSedationId(null);
+    setAutoSaveStatus('idle');
+    setAutoSaveMessage('');
+    setLastSavedTime('');
+
+    // Show draft toast if applicable (after clearing state)
+    if (shouldShowDraftToast) {
+      setIVSedationFormMessage({
+        type: 'info',
+        text: 'Form saved as draft. Complete the form fully by using "Review and Submit" to finalize it.'
+      });
+      setShowIVSedationToast(true);
+
+      // Auto-hide toast after 5 seconds
+      setTimeout(() => {
+        setShowIVSedationToast(false);
+        setIVSedationFormMessage({ type: null, text: '' });
+      }, 5000);
+    } else {
+      // Clear toast immediately if no draft toast needed
+      setIVSedationFormMessage({ type: null, text: '' });
+      setShowIVSedationToast(false);
+    }
+  };
+
+  // Auto-save function for IV sedation form
+  const autoSaveIVSedationForm = async (fieldUpdates: Partial<typeof ivSedationFormData>) => {
+    if (!patientId) return;
+
+    setAutoSaveStatus('saving');
+    setAutoSaveMessage('Saving...');
+    setLastSavedTime(''); // Clear previous timestamp when starting new save
+
+    try {
+      // Create a minimal data object with only the essential fields
+      const baseData = {
+        patient_id: patientId,
+        patient_name: ivSedationFormData.patientName || `Patient ${patientId.slice(0, 8)}`,
+        sedation_date: ivSedationFormData.date || new Date().toISOString().split('T')[0],
+        status: 'draft', // Always save as draft during auto-save
+      };
+
+      // Add only the fields that are being updated or have values
+      const updateData: any = { ...baseData };
+
+      // Only add fields that are actually being updated to avoid sending unnecessary data
+      Object.keys(fieldUpdates).forEach(key => {
+        const value = fieldUpdates[key as keyof typeof fieldUpdates];
+
+        switch (key) {
+          // Step 1 fields
+          case 'upperTreatment':
+            updateData.upper_treatment = value;
+            break;
+          case 'lowerTreatment':
+            updateData.lower_treatment = value;
+            break;
+          case 'upperSurgeryType':
+            updateData.upper_surgery_type = value;
+            break;
+          case 'lowerSurgeryType':
+            updateData.lower_surgery_type = value;
+            break;
+          case 'heightFeet':
+            updateData.height_feet = value ? parseInt(value as string) : null;
+            break;
+          case 'heightInches':
+            updateData.height_inches = value ? parseInt(value as string) : null;
+            break;
+          case 'weight':
+            updateData.weight = value ? parseInt(value as string) : null;
+            break;
+          case 'date':
+            updateData.sedation_date = value;
+            break;
+
+          // Step 2 fields - NPO Status
+          case 'npoStatus':
+            updateData.npo_status = value;
+            break;
+          case 'morningMedications':
+            updateData.morning_medications = value;
+            break;
+
+          // Step 2 fields - Allergies
+          case 'allergies':
+            updateData.allergies = Array.isArray(value) ? value : [];
+            break;
+          case 'allergiesOther':
+            updateData.allergies_other = value;
+            break;
+
+          // Step 2 fields - Female-specific
+          case 'pregnancyRisk':
+            updateData.pregnancy_risk = value;
+            break;
+          case 'lastMenstrualCycle':
+            updateData.last_menstrual_cycle = value;
+            break;
+
+          // Step 2 fields - Anesthesia History (database expects array)
+          case 'anesthesiaHistory':
+            updateData.anesthesia_history = value ? [value] : [];
+            break;
+          case 'anesthesiaHistoryOther':
+            updateData.anesthesia_history_other = value;
+            break;
+
+          // Step 2 fields - Medical Problems
+          case 'respiratoryProblems':
+            updateData.respiratory_problems = Array.isArray(value) ? value : [];
+            break;
+          case 'respiratoryProblemsOther':
+            updateData.respiratory_problems_other = value;
+            break;
+          case 'cardiovascularProblems':
+            updateData.cardiovascular_problems = Array.isArray(value) ? value : [];
+            break;
+          case 'cardiovascularProblemsOther':
+            updateData.cardiovascular_problems_other = value;
+            break;
+          case 'gastrointestinalProblems':
+            updateData.gastrointestinal_problems = Array.isArray(value) ? value : [];
+            break;
+          case 'gastrointestinalProblemsOther':
+            updateData.gastrointestinal_problems_other = value;
+            break;
+          case 'neurologicProblems':
+            updateData.neurologic_problems = Array.isArray(value) ? value : [];
+            break;
+          case 'neurologicProblemsOther':
+            updateData.neurologic_problems_other = value;
+            break;
+          case 'endocrineRenalProblems':
+            updateData.endocrine_renal_problems = Array.isArray(value) ? value : [];
+            break;
+          case 'endocrineRenalProblemsOther':
+            updateData.endocrine_renal_problems_other = value;
+            break;
+          case 'lastA1CLevel':
+            updateData.last_a1c_level = value;
+            break;
+
+          // Step 2 fields - Miscellaneous
+          case 'miscellaneous':
+            updateData.miscellaneous = Array.isArray(value) ? value : [];
+            break;
+          case 'miscellaneousOther':
+            updateData.miscellaneous_other = value;
+            break;
+
+          // Step 2 fields - Social History
+          case 'socialHistory':
+            updateData.social_history = Array.isArray(value) ? value : [];
+            break;
+          case 'socialHistoryOther':
+            updateData.social_history_other = value;
+            break;
+
+          // Step 2 fields - Patient Assessment
+          case 'wellDevelopedNourished':
+            updateData.well_developed_nourished = value;
+            break;
+          case 'patientAnxious':
+            updateData.patient_anxious = value;
+            break;
+
+          // Step 2 fields - ASA Classification
+          case 'asaClassification':
+            console.log('Auto-saving ASA Classification:', value);
+            updateData.asa_classification = value;
+            break;
+
+          // Step 2 fields - Airway Evaluation
+          case 'airwayEvaluation':
+            console.log('Auto-saving Airway Evaluation:', value);
+            updateData.airway_evaluation = Array.isArray(value) ? value : [];
+            break;
+          case 'airwayEvaluationOther':
+            console.log('Auto-saving Airway Evaluation Other:', value);
+            updateData.airway_evaluation_other = value;
+            break;
+
+          // Step 2 fields - Mallampati Score
+          case 'mallampatiScore':
+            console.log('Auto-saving Mallampati Score:', value);
+            updateData.mallampati_score = value;
+            break;
+
+          // Step 2 fields - Heart and Lung Evaluation
+          case 'heartLungEvaluation':
+            console.log('Auto-saving Heart Lung Evaluation:', value);
+            updateData.heart_lung_evaluation = Array.isArray(value) ? value : [];
+            break;
+          case 'heartLungEvaluationOther':
+            console.log('Auto-saving Heart Lung Evaluation Other:', value);
+            updateData.heart_lung_evaluation_other = value;
+            break;
+
+          // Step 3 fields - Instruments Checklist
+          case 'instrumentsChecklist':
+            console.log('Auto-saving Instruments Checklist:', value);
+            updateData.instruments_checklist = Array.isArray(value) ? value : [];
+            break;
+
+          // Step 3 fields - Sedation Type
+          case 'sedationType':
+            console.log('Auto-saving Sedation Type:', value);
+            updateData.sedation_type = value;
+            break;
+
+          // Step 3 fields - Medications Planned
+          case 'medicationsPlanned':
+            console.log('Auto-saving Medications Planned:', value);
+            updateData.medications_planned = Array.isArray(value) ? value : [];
+            break;
+          case 'medicationsOther':
+            console.log('Auto-saving Medications Other:', value);
+            updateData.medications_other = value;
+            break;
+
+          // Step 3 fields - Route of Administration
+          case 'administrationRoute':
+            console.log('Auto-saving Administration Route:', value);
+            updateData.administration_route = Array.isArray(value) ? value : [];
+            break;
+
+          // Step 3 fields - Emergency Protocols
+          case 'emergencyProtocols':
+            console.log('Auto-saving Emergency Protocols:', value);
+            updateData.emergency_protocols = Array.isArray(value) ? value : [];
+            break;
+
+          // Step 4 fields - Time Tracking
+          case 'timeInRoom':
+            console.log('Auto-saving Time in Room:', value);
+            updateData.time_in_room = value;
+            break;
+          case 'sedationStartTime':
+            console.log('Auto-saving Sedation Start Time:', value);
+            updateData.sedation_start_time = value;
+            break;
+          case 'sedationEndTime':
+            console.log('Auto-saving Sedation End Time:', value);
+            updateData.sedation_end_time = value;
+            break;
+          case 'outOfRoomTime':
+            console.log('Auto-saving Out of Room Time:', value);
+            updateData.out_of_room_time = value;
+            break;
+
+          // Step 4 fields - Flow Entries
+          case 'flowEntries':
+            console.log('Auto-saving Flow Entries:', value);
+            updateData.flow_entries = Array.isArray(value) ? value : [];
+            break;
+
+          // Step 4 fields - Level of Sedation
+          case 'levelOfSedation':
+            console.log('Auto-saving Level of Sedation:', value);
+            updateData.level_of_sedation = value;
+            break;
+
+          // Step 5 fields - Recovery Assessment (YES/NO fields)
+          case 'alertOriented':
+            console.log('Auto-saving Alert Oriented:', value);
+            updateData.alert_oriented = value;
+            break;
+          case 'protectiveReflexes':
+            console.log('Auto-saving Protective Reflexes:', value);
+            updateData.protective_reflexes = value;
+            break;
+          case 'breathingSpontaneously':
+            console.log('Auto-saving Breathing Spontaneously:', value);
+            updateData.breathing_spontaneously = value;
+            break;
+          case 'postOpNausea':
+            console.log('Auto-saving Post-Op Nausea:', value);
+            updateData.post_op_nausea = value;
+            break;
+          case 'caregiverPresent':
+            console.log('Auto-saving Caregiver Present:', value);
+            updateData.caregiver_present = value;
+            break;
+          case 'baselineMentalStatus':
+            console.log('Auto-saving Baseline Mental Status:', value);
+            updateData.baseline_mental_status = value;
+            break;
+          case 'responsiveVerbalCommands':
+            console.log('Auto-saving Responsive Verbal Commands:', value);
+            updateData.responsive_verbal_commands = value;
+            break;
+          case 'saturatingRoomAir':
+            console.log('Auto-saving Saturating Room Air:', value);
+            updateData.saturating_room_air = value;
+            break;
+          case 'vitalSignsBaseline':
+            console.log('Auto-saving Vital Signs Baseline:', value);
+            updateData.vital_signs_baseline = value;
+            break;
+          case 'painDuringRecovery':
+            console.log('Auto-saving Pain During Recovery:', value);
+            updateData.pain_during_recovery = value;
+            break;
+
+          // Step 5 fields - Instructions and Discharge
+          case 'postOpInstructionsGivenTo':
+            console.log('Auto-saving Post-Op Instructions Given To:', value);
+            updateData.post_op_instructions_given_to = value;
+            break;
+          case 'followUpInstructionsGivenTo':
+            console.log('Auto-saving Follow-Up Instructions Given To:', value);
+            updateData.follow_up_instructions_given_to = value;
+            break;
+          case 'dischargedTo':
+            console.log('Auto-saving Discharged To:', value);
+            updateData.discharged_to = value;
+            break;
+          case 'painLevelDischarge':
+            console.log('Auto-saving Pain Level Discharge:', value);
+            updateData.pain_level_discharge = value;
+            break;
+          case 'otherRemarks':
+            console.log('Auto-saving Other Remarks:', value);
+            updateData.other_remarks = value;
+            break;
+
+          default:
+            // Log unknown fields for debugging
+            console.warn('Unknown field in auto-save:', key, value);
+            break;
+        }
+      });
+
+      console.log('Auto-save data:', updateData);
+      console.log('Field updates:', fieldUpdates);
+      console.log('Current IV sedation form data:', ivSedationFormData);
+      console.log('Current IV sedation ID:', currentIVSedationId);
+
+      let data, error;
+
+      if (currentIVSedationId) {
+        // Update existing record
+        const result = await (supabase as any)
+          .from('iv_sedation_forms')
+          .update(updateData)
+          .eq('id', currentIVSedationId)
+          .select()
+          .single();
+
+        data = result.data;
+        error = result.error;
+      } else {
+        // Create new record
+        const result = await (supabase as any)
+          .from('iv_sedation_forms')
+          .insert([updateData])
+          .select()
+          .single();
+
+        data = result.data;
+        error = result.error;
+
+        if (data && !error) {
+          setCurrentIVSedationId(data.id);
+          setIsIVSedationEditMode(true);
+          setEditingIVSedationSheet(data);
+          // Add to local state if it's a new record
+          setIVSedationSheets(prev => {
+            const exists = prev.some(sheet => sheet.id === data.id);
+            return exists ? prev.map(sheet => sheet.id === data.id ? data : sheet) : [data, ...prev];
+          });
+        }
+      }
+
+      if (error) {
+        console.error('Auto-save error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        console.error('Failed update data:', updateData);
+        setAutoSaveStatus('error');
+        setAutoSaveMessage('Failed to save');
+        setTimeout(() => {
+          setAutoSaveStatus('idle');
+          setAutoSaveMessage('');
+          // Don't clear lastSavedTime on error - keep previous successful save time
+        }, 3000);
+        return;
+      }
+
+      // Update local state
+      if (currentIVSedationId) {
+        setIVSedationSheets(prev =>
+          prev.map(sheet =>
+            sheet.id === currentIVSedationId ? data : sheet
+          )
+        );
+      }
+
+      setAutoSaveStatus('saved');
+      setAutoSaveMessage('Saved');
+
+      // Set the saved timestamp
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      setLastSavedTime(timeString);
+
+      // Keep the saved status visible until next save (don't auto-clear)
+      // The status will be cleared when the next save operation starts
+
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      setAutoSaveStatus('error');
+      setAutoSaveMessage('Failed to save');
+      setTimeout(() => {
+        setAutoSaveStatus('idle');
+        setAutoSaveMessage('');
+        // Don't clear lastSavedTime on error - keep previous successful save time
+      }, 3000);
+    }
+  };
+
+  // Helper function to update form data and trigger auto-save
+  const updateIVSedationFormField = (fieldName: keyof typeof ivSedationFormData, value: any) => {
+    let updates = { [fieldName]: value };
+
+    // Special handling for treatment type changes - reset surgery type
+    if (fieldName === 'upperTreatment') {
+      updates = { ...updates, upperSurgeryType: "" };
+    }
+    if (fieldName === 'lowerTreatment') {
+      updates = { ...updates, lowerSurgeryType: "" };
+    }
+
+    // Update local form state
+    setIVSedationFormData(prev => ({
+      ...prev,
+      ...updates
+    }));
+
+    // Trigger auto-save
+    autoSaveIVSedationForm(updates);
+  };
+
+  const handleViewIVSedationSheet = (sheet: any) => {
+    setSelectedIVSedationSheet(sheet);
+    setShowIVSedationPreview(true);
+  };
+
+  const handleIVSedationPreviewClose = () => {
+    setShowIVSedationPreview(false);
+    setSelectedIVSedationSheet(null);
   };
 
   // Data Collection Form Handlers
@@ -1126,89 +1725,107 @@ export function PatientProfilePage() {
       setIVSedationFormMessage({ type: null, text: '' }); // Clear messages when moving to next step
       setShowIVSedationToast(false); // Clear toast when moving to next step
     } else {
-      // Final step - submit the form
-      handleSubmitIVSedationForm();
+      // Final step - open review dialog
+      handleReviewAndSubmit();
     }
   };
 
-  // Show IV Sedation form summary for review and signature
+  // Open review dialog and close the form
+  const handleReviewAndSubmit = () => {
+    setShowIVSedationForm(false); // Close the form first
+    setShowIVSedationSummary(true); // Then open the review dialog
+  };
+
+  // Handle edit from summary dialog
+  const handleEditFromSummary = () => {
+    setShowIVSedationSummary(false); // Close summary dialog
+    setShowIVSedationForm(true); // Reopen the form for editing
+  };
+
+  // Show IV Sedation form summary for review
   const handleSubmitIVSedationForm = () => {
     // Show the summary dialog instead of directly submitting
     setShowIVSedationSummary(true);
   };
 
-  // Final submission after signature
+  // Final submission
   const handleFinalIVSedationSubmit = async () => {
-    if (!signatureData || !signatureName || !signatureTitle) {
-      setIVSedationFormMessage({
-        type: 'error',
-        text: 'Please complete the signature section before submitting.'
-      });
-      setShowIVSedationToast(true);
-      setTimeout(() => setShowIVSedationToast(false), 5000);
-      return;
-    }
+    console.log('Starting IV sedation form submission...');
+    console.log('Form data:', ivSedationFormData);
 
     try {
+      // Validate required fields
+      if (!ivSedationFormData.date || ivSedationFormData.date.trim() === '') {
+        setIVSedationFormMessage({
+          type: 'error',
+          text: 'Please select a sedation date before submitting the form.'
+        });
+        setShowIVSedationToast(true);
+        setTimeout(() => setShowIVSedationToast(false), 5000);
+        return;
+      }
+
       const ivSedationData = {
         patient_id: patientId,
-        patient_name: ivSedationFormData.patientName,
-        sedation_date: ivSedationFormData.date,
+        patient_name: ivSedationFormData.patientName || `Patient ${patientId.slice(0, 8)}`,
+        sedation_date: ivSedationFormData.date || new Date().toISOString().split('T')[0],
         upper_treatment: ivSedationFormData.upperTreatment,
         lower_treatment: ivSedationFormData.lowerTreatment,
-        height_feet: ivSedationFormData.heightFeet,
-        height_inches: ivSedationFormData.heightInches,
-        weight: ivSedationFormData.weight,
+        upper_surgery_type: ivSedationFormData.upperSurgeryType,
+        lower_surgery_type: ivSedationFormData.lowerSurgeryType,
+        height_feet: ivSedationFormData.heightFeet ? parseInt(ivSedationFormData.heightFeet) : null,
+        height_inches: ivSedationFormData.heightInches ? parseInt(ivSedationFormData.heightInches) : null,
+        weight: ivSedationFormData.weight ? parseInt(ivSedationFormData.weight) : null,
 
         // Pre-Assessment fields
         npo_status: ivSedationFormData.npoStatus,
         morning_medications: ivSedationFormData.morningMedications,
-        allergies: ivSedationFormData.allergies,
+        allergies: Array.isArray(ivSedationFormData.allergies) ? ivSedationFormData.allergies : [],
         allergies_other: ivSedationFormData.allergiesOther,
         pregnancy_risk: ivSedationFormData.pregnancyRisk,
         last_menstrual_cycle: ivSedationFormData.lastMenstrualCycle,
-        anesthesia_history: ivSedationFormData.anesthesiaHistory,
+        anesthesia_history: ivSedationFormData.anesthesiaHistory ? [ivSedationFormData.anesthesiaHistory] : [],
         anesthesia_history_other: ivSedationFormData.anesthesiaHistoryOther,
-        respiratory_problems: ivSedationFormData.respiratoryProblems,
+        respiratory_problems: Array.isArray(ivSedationFormData.respiratoryProblems) ? ivSedationFormData.respiratoryProblems : [],
         respiratory_problems_other: ivSedationFormData.respiratoryProblemsOther,
-        cardiovascular_problems: ivSedationFormData.cardiovascularProblems,
+        cardiovascular_problems: Array.isArray(ivSedationFormData.cardiovascularProblems) ? ivSedationFormData.cardiovascularProblems : [],
         cardiovascular_problems_other: ivSedationFormData.cardiovascularProblemsOther,
-        gastrointestinal_problems: ivSedationFormData.gastrointestinalProblems,
+        gastrointestinal_problems: Array.isArray(ivSedationFormData.gastrointestinalProblems) ? ivSedationFormData.gastrointestinalProblems : [],
         gastrointestinal_problems_other: ivSedationFormData.gastrointestinalProblemsOther,
-        neurologic_problems: ivSedationFormData.neurologicProblems,
+        neurologic_problems: Array.isArray(ivSedationFormData.neurologicProblems) ? ivSedationFormData.neurologicProblems : [],
         neurologic_problems_other: ivSedationFormData.neurologicProblemsOther,
-        endocrine_renal_problems: ivSedationFormData.endocrineRenalProblems,
+        endocrine_renal_problems: Array.isArray(ivSedationFormData.endocrineRenalProblems) ? ivSedationFormData.endocrineRenalProblems : [],
         endocrine_renal_problems_other: ivSedationFormData.endocrineRenalProblemsOther,
         last_a1c_level: ivSedationFormData.lastA1CLevel,
-        miscellaneous: ivSedationFormData.miscellaneous,
+        miscellaneous: Array.isArray(ivSedationFormData.miscellaneous) ? ivSedationFormData.miscellaneous : [],
         miscellaneous_other: ivSedationFormData.miscellaneousOther,
-        social_history: ivSedationFormData.socialHistory,
+        social_history: Array.isArray(ivSedationFormData.socialHistory) ? ivSedationFormData.socialHistory : [],
         social_history_other: ivSedationFormData.socialHistoryOther,
 
         // Additional Assessment fields
         well_developed_nourished: ivSedationFormData.wellDevelopedNourished,
         patient_anxious: ivSedationFormData.patientAnxious,
         asa_classification: ivSedationFormData.asaClassification,
-        airway_evaluation: ivSedationFormData.airwayEvaluation,
+        airway_evaluation: Array.isArray(ivSedationFormData.airwayEvaluation) ? ivSedationFormData.airwayEvaluation : [],
         airway_evaluation_other: ivSedationFormData.airwayEvaluationOther,
         mallampati_score: ivSedationFormData.mallampatiScore,
-        heart_lung_evaluation: ivSedationFormData.heartLungEvaluation,
+        heart_lung_evaluation: Array.isArray(ivSedationFormData.heartLungEvaluation) ? ivSedationFormData.heartLungEvaluation : [],
         heart_lung_evaluation_other: ivSedationFormData.heartLungEvaluationOther,
 
         // Sedation Plan fields
-        instruments_checklist: ivSedationFormData.instrumentsChecklist,
+        instruments_checklist: Array.isArray(ivSedationFormData.instrumentsChecklist) ? ivSedationFormData.instrumentsChecklist : [],
         sedation_type: ivSedationFormData.sedationType,
-        medications_planned: ivSedationFormData.medicationsPlanned,
+        medications_planned: Array.isArray(ivSedationFormData.medicationsPlanned) ? ivSedationFormData.medicationsPlanned : [],
         medications_other: ivSedationFormData.medicationsOther,
         administration_route: ivSedationFormData.administrationRoute,
-        emergency_protocols: ivSedationFormData.emergencyProtocols,
+        emergency_protocols: Array.isArray(ivSedationFormData.emergencyProtocols) ? ivSedationFormData.emergencyProtocols : [],
 
         // IV Sedation Flow Chart fields
         time_in_room: ivSedationFormData.timeInRoom,
         sedation_start_time: ivSedationFormData.sedationStartTime,
         sedation_end_time: ivSedationFormData.sedationEndTime,
         out_of_room_time: ivSedationFormData.outOfRoomTime,
-        flow_entries: ivSedationFormData.flowEntries,
+        flow_entries: ivSedationFormData.flowEntries || [],
         level_of_sedation: ivSedationFormData.levelOfSedation,
 
         // Recovery Assessment fields
@@ -1227,36 +1844,90 @@ export function PatientProfilePage() {
         discharged_to: ivSedationFormData.dischargedTo,
         pain_level_discharge: ivSedationFormData.painLevelDischarge,
         other_remarks: ivSedationFormData.otherRemarks,
-
-        // Signature data
-        signature_data: signatureData,
-        signature_name: signatureName,
-        signature_title: signatureTitle,
-        signature_date: signatureDate,
+        status: 'completed', // Mark as completed when final submit is clicked
       };
 
-      // For now, just show success message since we don't have a database table yet
-      // TODO: Create iv_sedation_forms table in Supabase and implement actual save
-      console.log('IV Sedation Form Data:', ivSedationData);
+      // Save to Supabase database
+      console.log('Submitting to database:', ivSedationData);
+      console.log('Date field specifically:', ivSedationData.sedation_date);
+      console.log('Date field type:', typeof ivSedationData.sedation_date);
+      console.log('Date field length:', ivSedationData.sedation_date?.length);
 
+      let data, error;
+
+      if (currentIVSedationId) {
+        // Update existing record (either from edit mode or auto-save)
+        const result = await (supabase as any)
+          .from('iv_sedation_forms')
+          .update(ivSedationData)
+          .eq('id', currentIVSedationId)
+          .select()
+          .single();
+
+        data = result.data;
+        error = result.error;
+      } else if (isIVSedationEditMode && editingIVSedationSheet) {
+        // Update existing record using editingIVSedationSheet ID
+        const result = await (supabase as any)
+          .from('iv_sedation_forms')
+          .update(ivSedationData)
+          .eq('id', editingIVSedationSheet.id)
+          .select()
+          .single();
+
+        data = result.data;
+        error = result.error;
+      } else {
+        // Insert new record
+        const result = await (supabase as any)
+          .from('iv_sedation_forms')
+          .insert([ivSedationData])
+          .select()
+          .single();
+
+        data = result.data;
+        error = result.error;
+      }
+
+      console.log('Database response:', { data, error });
+
+      if (error) {
+        console.error('Error saving IV sedation form:', error);
+        setIVSedationFormMessage({
+          type: 'error',
+          text: `Failed to ${isIVSedationEditMode ? 'update' : 'save'} IV sedation form: ${error.message}`
+        });
+        setShowIVSedationToast(true);
+        setTimeout(() => setShowIVSedationToast(false), 5000);
+        return;
+      }
+
+      // Update local state
+      if (isIVSedationEditMode && editingIVSedationSheet) {
+        // Update existing record in local state
+        setIVSedationSheets(prev =>
+          prev.map(sheet =>
+            sheet.id === editingIVSedationSheet.id ? data : sheet
+          )
+        );
+      } else {
+        // Add new record to local state
+        setIVSedationSheets(prev => [data, ...prev]);
+      }
+
+      // Close summary dialog immediately
+      setShowIVSedationSummary(false);
+
+      // Show success toast
       setIVSedationFormMessage({
         type: 'success',
-        text: 'IV Sedation form completed and signed successfully!'
+        text: `IV Sedation form ${isIVSedationEditMode ? 'updated' : 'completed'} successfully!`
       });
       setShowIVSedationToast(true);
 
-      // Close summary and form
-      setShowIVSedationSummary(false);
-
-      // Auto-hide toast and close form after 3 seconds
+      // Auto-hide toast after 3 seconds
       setTimeout(() => {
         setShowIVSedationToast(false);
-        handleIVSedationFormClose();
-        // Reset signature data
-        setSignatureData('');
-        setSignatureName('');
-        setSignatureTitle('');
-        setSignatureDate(new Date().toISOString().split('T')[0]);
       }, 3000);
 
     } catch (error) {
@@ -1270,108 +1941,8 @@ export function PatientProfilePage() {
     }
   };
 
-  // Canvas size effect for responsive signature
-  useEffect(() => {
-    const updateCanvasSize = () => {
-      const isMobile = window.innerWidth < 768;
-      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-
-      if (isMobile) {
-        setCanvasSize({ width: 350, height: 150 });
-      } else if (isTablet) {
-        setCanvasSize({ width: 450, height: 180 });
-      } else {
-        setCanvasSize({ width: 550, height: 200 });
-      }
-    };
-
-    updateCanvasSize();
-    window.addEventListener('resize', updateCanvasSize);
-    return () => window.removeEventListener('resize', updateCanvasSize);
-  }, []);
-
-  // Initialize canvas when summary dialog opens
-  useEffect(() => {
-    if (showIVSedationSummary && signatureRef.current) {
-      // Small delay to ensure canvas is rendered
-      setTimeout(() => {
-        initializeCanvas();
-      }, 100);
-    }
-  }, [showIVSedationSummary, canvasSize]);
-
-  // Initialize canvas with proper scaling for high DPI displays
-  const initializeCanvas = () => {
-    if (signatureRef.current) {
-      const canvas = signatureRef.current.getCanvas();
-      const ctx = canvas.getContext('2d');
-      const devicePixelRatio = window.devicePixelRatio || 1;
-
-      // Get the display size (CSS pixels)
-      const displayWidth = canvasSize.width;
-      const displayHeight = canvasSize.height;
-
-      // Set the actual size in memory (scaled to account for extra pixel density)
-      canvas.width = displayWidth * devicePixelRatio;
-      canvas.height = displayHeight * devicePixelRatio;
-
-      // Scale the drawing context so everything will work at the higher ratio
-      ctx.scale(devicePixelRatio, devicePixelRatio);
-
-      // Scale back down using CSS
-      canvas.style.width = displayWidth + 'px';
-      canvas.style.height = displayHeight + 'px';
-
-      // Enable smooth lines
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      // Clear the canvas
-      signatureRef.current.clear();
-    }
-  };
-
-  // Signature handling functions
-  const handleClearSignature = () => {
-    if (signatureRef.current) {
-      signatureRef.current.clear();
-      setSignatureData('');
-    }
-  };
-
-  const handleSaveSignature = () => {
-    if (signatureRef.current) {
-      // Use high quality settings for smooth lines
-      const signatureDataURL = signatureRef.current.toDataURL('image/png', 1.0);
-      setSignatureData(signatureDataURL);
-    }
-  };
-
-  // Handle signature canvas ready
-  const handleSignatureBegin = () => {
-    // Ensure canvas is properly initialized when user starts signing
-    if (signatureRef.current) {
-      const canvas = signatureRef.current.getCanvas();
-      const ctx = canvas.getContext('2d');
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-    }
-  };
-
   const handleCloseSummary = () => {
     setShowIVSedationSummary(false);
-    // Reset signature data
-    setSignatureData('');
-    setSignatureName('');
-    setSignatureTitle('');
-    setSignatureDate(new Date().toISOString().split('T')[0]);
-    if (signatureRef.current) {
-      signatureRef.current.clear();
-    }
   };
 
   const handleIVSedationPreviousStep = () => {
@@ -1380,6 +1951,147 @@ export function PatientProfilePage() {
       setIVSedationFormMessage({ type: null, text: '' }); // Clear messages when moving to previous step
       setShowIVSedationToast(false); // Clear toast when moving to previous step
     }
+  };
+
+  // IV Sedation Edit and Delete Handlers
+  const handleEditIVSedationSheet = (sheet: any) => {
+    setEditingIVSedationSheet(sheet);
+    setIsIVSedationEditMode(true);
+    setCurrentIVSedationId(sheet.id);
+    setAutoSaveStatus('idle');
+    setAutoSaveMessage('');
+    setLastSavedTime('');
+
+    // Pre-fill form with existing data
+    setIVSedationFormData({
+      patientName: sheet.patient_name,
+      date: sheet.sedation_date,
+      upperTreatment: sheet.upper_treatment || "",
+      lowerTreatment: sheet.lower_treatment || "",
+      upperSurgeryType: sheet.upper_surgery_type || "",
+      lowerSurgeryType: sheet.lower_surgery_type || "",
+      heightFeet: sheet.height_feet?.toString() || "",
+      heightInches: sheet.height_inches?.toString() || "",
+      weight: sheet.weight?.toString() || "",
+      // Add other fields as needed...
+      npoStatus: sheet.npo_status || "",
+      morningMedications: sheet.morning_medications || "",
+      allergies: sheet.allergies || [],
+      allergiesOther: sheet.allergies_other || "",
+      pregnancyRisk: sheet.pregnancy_risk || "",
+      lastMenstrualCycle: sheet.last_menstrual_cycle || "",
+      anesthesiaHistory: Array.isArray(sheet.anesthesia_history) && sheet.anesthesia_history.length > 0 ? sheet.anesthesia_history[0] : "",
+      anesthesiaHistoryOther: sheet.anesthesia_history_other || "",
+      respiratoryProblems: sheet.respiratory_problems || [],
+      respiratoryProblemsOther: sheet.respiratory_problems_other || "",
+      cardiovascularProblems: sheet.cardiovascular_problems || [],
+      cardiovascularProblemsOther: sheet.cardiovascular_problems_other || "",
+      gastrointestinalProblems: sheet.gastrointestinal_problems || [],
+      gastrointestinalProblemsOther: sheet.gastrointestinal_problems_other || "",
+      neurologicProblems: sheet.neurologic_problems || [],
+      neurologicProblemsOther: sheet.neurologic_problems_other || "",
+      endocrineRenalProblems: sheet.endocrine_renal_problems || [],
+      endocrineRenalProblemsOther: sheet.endocrine_renal_problems_other || "",
+      lastA1CLevel: sheet.last_a1c_level || "",
+      miscellaneous: sheet.miscellaneous || [],
+      miscellaneousOther: sheet.miscellaneous_other || "",
+      socialHistory: sheet.social_history || [],
+      socialHistoryOther: sheet.social_history_other || "",
+      wellDevelopedNourished: sheet.well_developed_nourished || "",
+      patientAnxious: sheet.patient_anxious || "",
+      asaClassification: sheet.asa_classification || "",
+      airwayEvaluation: sheet.airway_evaluation || [],
+      airwayEvaluationOther: sheet.airway_evaluation_other || "",
+      mallampatiScore: sheet.mallampati_score || "",
+      heartLungEvaluation: sheet.heart_lung_evaluation || [],
+      heartLungEvaluationOther: sheet.heart_lung_evaluation_other || "",
+      instrumentsChecklist: sheet.instruments_checklist || [],
+      sedationType: sheet.sedation_type || "",
+      medicationsPlanned: sheet.medications_planned || [],
+      medicationsOther: sheet.medications_other || "",
+      administrationRoute: sheet.administration_route || "",
+      emergencyProtocols: sheet.emergency_protocols || [],
+      timeInRoom: sheet.time_in_room || "",
+      sedationStartTime: sheet.sedation_start_time || "",
+      sedationEndTime: sheet.sedation_end_time || "",
+      outOfRoomTime: sheet.out_of_room_time || "",
+      flowEntries: sheet.flow_entries || [],
+      levelOfSedation: sheet.level_of_sedation || "",
+      alertOriented: sheet.alert_oriented || "",
+      protectiveReflexes: sheet.protective_reflexes || "",
+      breathingSpontaneously: sheet.breathing_spontaneously || "",
+      postOpNausea: sheet.post_op_nausea || "",
+      caregiverPresent: sheet.caregiver_present || "",
+      baselineMentalStatus: sheet.baseline_mental_status || "",
+      responsiveVerbalCommands: sheet.responsive_verbal_commands || "",
+      saturatingRoomAir: sheet.saturating_room_air || "",
+      vitalSignsBaseline: sheet.vital_signs_baseline || "",
+      painDuringRecovery: sheet.pain_during_recovery || "",
+      postOpInstructionsGivenTo: sheet.post_op_instructions_given_to || "",
+      followUpInstructionsGivenTo: sheet.follow_up_instructions_given_to || "",
+      dischargedTo: sheet.discharged_to || "",
+      painLevelDischarge: sheet.pain_level_discharge || "",
+      otherRemarks: sheet.other_remarks || "",
+    });
+
+    // Set the current status when editing
+    if (sheet.status) {
+      // If it's already completed, keep it as completed during editing
+      // If it's draft, it will remain draft until final submit
+    }
+
+    setIVSedationCurrentStep(1);
+    setShowIVSedationForm(true);
+  };
+
+  const handleDeleteIVSedationSheet = (sheet: any) => {
+    setIVSedationSheetToDelete(sheet);
+    setShowIVSedationDeleteConfirmation(true);
+    setIVSedationActiveDropdown(null); // Close the dropdown
+  };
+
+  const handleConfirmIVSedationDelete = async () => {
+    if (!ivSedationSheetToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('iv_sedation_forms')
+        .delete()
+        .eq('id', ivSedationSheetToDelete.id);
+
+      if (error) {
+        console.error('Error deleting IV sedation sheet:', error);
+        setIVSedationFormMessage({
+          type: 'error',
+          text: `Failed to delete IV sedation sheet: ${error.message}`
+        });
+        setShowIVSedationToast(true);
+        setTimeout(() => setShowIVSedationToast(false), 5000);
+        return;
+      }
+
+      // Remove from local state
+      setIVSedationSheets(prev => prev.filter(sheet => sheet.id !== ivSedationSheetToDelete.id));
+
+      setIVSedationFormMessage({
+        type: 'success',
+        text: 'IV sedation sheet deleted successfully!'
+      });
+      setShowIVSedationToast(true);
+      setTimeout(() => setShowIVSedationToast(false), 3000);
+
+    } catch (error) {
+      console.error('Error deleting IV sedation sheet:', error);
+      setIVSedationFormMessage({
+        type: 'error',
+        text: 'Failed to delete IV sedation sheet'
+      });
+      setShowIVSedationToast(true);
+      setTimeout(() => setShowIVSedationToast(false), 5000);
+    }
+
+    setShowIVSedationDeleteConfirmation(false);
+    setIVSedationSheetToDelete(null);
   };
 
   const handleDataCollectionFormSubmit = (e: React.FormEvent) => {
@@ -1739,7 +2451,7 @@ export function PatientProfilePage() {
 
         {/* Fixed Tabs Navigation and Content */}
         <div className="flex-1 flex flex-col min-h-0">
-          <Tabs defaultValue="basic" className="w-full flex flex-col h-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col h-full">
             <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200 p-0.5 rounded-xl shadow-sm flex-shrink-0">
               <TabsTrigger value="basic" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
                 <User className="h-3.5 w-3.5" />
@@ -2758,7 +3470,9 @@ export function PatientProfilePage() {
                       <div className="p-1.5 bg-blue-100 rounded-lg">
                         <Activity className="h-4 w-4 text-blue-600" />
                       </div>
-                      <h3 className="text-base font-semibold text-gray-900">IV Sedation Flow Chart (0)</h3>
+                      <h3 className="text-base font-semibold text-gray-900">
+                        IV Sedation Flow Chart ({ivSedationSheets.length})
+                      </h3>
                     </div>
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
@@ -2772,12 +3486,126 @@ export function PatientProfilePage() {
                           <span className="text-sm font-medium">Add IV Sedation Flow Chart</span>
                         </button>
 
-                        {/* Empty State */}
-                        <div className="text-center py-8">
-                          <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm font-medium text-gray-500 mb-1">No IV sedation flow charts</p>
-                          <p className="text-xs text-gray-400">Use the button above to create your first flow chart</p>
-                        </div>
+                        {/* IV Sedation Forms */}
+                        {ivSedationSheets.length > 0 ? (
+                          ivSedationSheets.map((sheet) => (
+                            <div key={sheet.id} className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                 onClick={() => handleViewIVSedationSheet(sheet)}>
+                              {/* Header with date and status */}
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    sheet.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                  }`}></div>
+                                  <span className="text-sm font-semibold text-gray-900">
+                                    {new Date(sheet.sedation_date).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+
+                                {/* Status Badge */}
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  sheet.status === 'completed'
+                                    ? 'bg-green-100 text-green-800 border border-green-200'
+                                    : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                }`}>
+                                  {sheet.status === 'completed' ? 'Completed' : 'Draft'}
+                                </span>
+                              </div>
+
+                              {/* Content preview */}
+                              <div className="space-y-1">
+                                {sheet.upper_treatment && sheet.upper_treatment !== 'NO TREATMENT' && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-500">Upper:</span>
+                                    <div className="text-right">
+                                      <span className="text-xs text-gray-700">{sheet.upper_treatment}</span>
+                                      {sheet.upper_surgery_type && (
+                                        <span className="block text-xs text-blue-600 font-medium">
+                                          {sheet.upper_surgery_type}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                {sheet.lower_treatment && sheet.lower_treatment !== 'NO TREATMENT' && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-500">Lower:</span>
+                                    <div className="text-right">
+                                      <span className="text-xs text-gray-700">{sheet.lower_treatment}</span>
+                                      {sheet.lower_surgery_type && (
+                                        <span className="block text-xs text-blue-600 font-medium">
+                                          {sheet.lower_surgery_type}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Footer with timestamp */}
+                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                                <span className="text-xs text-gray-400">
+                                  {new Date(sheet.created_at).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+
+                                {/* Three dots menu */}
+                                <div className="relative">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setIVSedationActiveDropdown(ivSedationActiveDropdown === sheet.id ? null : sheet.id);
+                                    }}
+                                    className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                  >
+                                    <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                  </button>
+
+                                  {/* Dropdown menu */}
+                                  {ivSedationActiveDropdown === sheet.id && (
+                                    <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setIVSedationActiveDropdown(null);
+                                          handleEditIVSedationSheet(sheet);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
+                                      >
+                                        <Edit2 className="h-3.5 w-3.5" />
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteIVSedationSheet(sheet);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-sm font-medium text-gray-500 mb-1">No IV sedation flow charts</p>
+                            <p className="text-xs text-gray-400">Use the button above to create your first flow chart</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -4381,11 +5209,46 @@ export function PatientProfilePage() {
       {/* IV Sedation Flow Chart Form Dialog */}
       <Dialog open={showIVSedationForm} onOpenChange={handleIVSedationFormClose}>
         <DialogContent className="max-w-4xl h-[85vh] flex flex-col overflow-hidden p-0">
-          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3">
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
-              <Activity className="h-5 w-5 text-blue-600" />
-              IV Sedation Flow Chart - Step {ivSedationCurrentStep} of {ivSedationTotalSteps}
-            </DialogTitle>
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3 relative">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                <Activity className="h-5 w-5 text-blue-600" />
+                IV Sedation Flow Chart - Step {ivSedationCurrentStep} of {ivSedationTotalSteps}
+              </DialogTitle>
+            </div>
+
+            {/* Auto-save status indicator - Compact bordered capsule positioned to avoid overlap */}
+            <div className="absolute top-4 right-16 z-10">
+              {autoSaveStatus === 'saving' && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-500 text-blue-600 rounded-full shadow-md">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-3 w-3 border border-blue-200 border-t-blue-600"></div>
+                  </div>
+                  <span className="text-xs font-medium">Saving...</span>
+                </div>
+              )}
+              {(autoSaveStatus === 'saved' || (autoSaveStatus === 'idle' && lastSavedTime)) && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-green-500 text-green-600 rounded-full shadow-md whitespace-nowrap">
+                  <div className="relative">
+                    <CheckCircle className="h-3 w-3 text-green-600" />
+                    {autoSaveStatus === 'saved' && (
+                      <div className="absolute inset-0 rounded-full bg-green-200 opacity-30 animate-ping"></div>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium">
+                    Saved{lastSavedTime && ` at ${lastSavedTime}`}
+                  </span>
+                </div>
+              )}
+              {autoSaveStatus === 'error' && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-500 text-red-600 rounded-full shadow-md animate-pulse">
+                  <div className="relative">
+                    <AlertCircle className="h-3 w-3 text-red-600" />
+                  </div>
+                  <span className="text-xs font-medium">Failed to save</span>
+                </div>
+              )}
+            </div>
           </DialogHeader>
 
           {/* Progress Bar - Full Width with Separated Segments */}
@@ -4395,11 +5258,24 @@ export function PatientProfilePage() {
               <div className="flex items-center gap-2 w-full">
                 {/* Step 1 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
-                    ivSedationCurrentStep >= 1 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
-                    Basic Info
-                  </span>
+                  <div className="flex items-center gap-1 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setIVSedationCurrentStep(1)}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
+                        ivSedationCurrentStep >= 1 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      Basic Info
+                    </button>
+                    {isStep1Complete() && (
+                      <div className="flex items-center justify-center w-4 h-4 bg-blue-600 rounded-full ml-1">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
@@ -4407,11 +5283,24 @@ export function PatientProfilePage() {
 
                 {/* Step 2 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
-                    ivSedationCurrentStep >= 2 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
-                    Pre-Assessment
-                  </span>
+                  <div className="flex items-center gap-1 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setIVSedationCurrentStep(2)}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
+                        ivSedationCurrentStep >= 2 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      Pre-Assessment
+                    </button>
+                    {isStep2Complete() && (
+                      <div className="flex items-center justify-center w-4 h-4 bg-blue-600 rounded-full ml-1">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
@@ -4419,11 +5308,24 @@ export function PatientProfilePage() {
 
                 {/* Step 3 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
-                    ivSedationCurrentStep >= 3 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
-                    Sedation Plan
-                  </span>
+                  <div className="flex items-center gap-1 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setIVSedationCurrentStep(3)}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
+                        ivSedationCurrentStep >= 3 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      Sedation Plan
+                    </button>
+                    {isStep3Complete() && (
+                      <div className="flex items-center justify-center w-4 h-4 bg-blue-600 rounded-full ml-1">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
@@ -4431,11 +5333,24 @@ export function PatientProfilePage() {
 
                 {/* Step 4 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
-                    ivSedationCurrentStep >= 4 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
-                    Flow
-                  </span>
+                  <div className="flex items-center gap-1 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setIVSedationCurrentStep(4)}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
+                        ivSedationCurrentStep >= 4 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      Flow
+                    </button>
+                    {isStep4Complete() && (
+                      <div className="flex items-center justify-center w-4 h-4 bg-blue-600 rounded-full ml-1">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 4 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
@@ -4443,11 +5358,24 @@ export function PatientProfilePage() {
 
                 {/* Step 5 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-xs font-medium transition-colors duration-300 mb-2 ${
-                    ivSedationCurrentStep >= 5 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
-                    Recovery
-                  </span>
+                  <div className="flex items-center gap-1 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setIVSedationCurrentStep(5)}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
+                        ivSedationCurrentStep >= 5 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      Recovery
+                    </button>
+                    {isStep5Complete() && (
+                      <div className="flex items-center justify-center w-4 h-4 bg-blue-600 rounded-full ml-1">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
                     ivSedationCurrentStep >= 5 ? 'bg-blue-600' : 'bg-gray-300'
                   }`} />
@@ -4485,7 +5413,7 @@ export function PatientProfilePage() {
                             id="ivDate"
                             type="date"
                             value={ivSedationFormData.date}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, date: e.target.value})}
+                            onChange={(e) => updateIVSedationFormField('date', e.target.value)}
                             className="text-sm h-8"
                           />
                         </div>
@@ -4501,21 +5429,57 @@ export function PatientProfilePage() {
                           <h3 className="text-base font-semibold text-blue-900">Upper Arch Treatment</h3>
                         </div>
 
-                        <Select
-                          value={ivSedationFormData.upperTreatment}
-                          onValueChange={(value) => setIVSedationFormData({...ivSedationFormData, upperTreatment: value})}
-                        >
-                          <SelectTrigger className="border-blue-300 focus:border-blue-500">
-                            <SelectValue placeholder="Select upper treatment type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {treatmentOptions.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-3">
+                          <div>
+                            <Label className="text-sm text-blue-800 font-medium">Treatment Type</Label>
+                            <Select
+                              value={ivSedationFormData.upperTreatment}
+                              onValueChange={(value) => updateIVSedationFormField('upperTreatment', value)}
+                            >
+                              <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                                <SelectValue placeholder="Select upper treatment type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {treatmentOptions.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Surgery Type Selection - Only show if treatment is selected and not "NO TREATMENT" */}
+                          {ivSedationFormData.upperTreatment && ivSedationFormData.upperTreatment !== "NO TREATMENT" && (
+                            <div>
+                              <Label className="text-sm text-blue-800 font-medium mb-2 block">Surgery Type</Label>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    ivSedationFormData.upperSurgeryType === "Surgery"
+                                      ? 'bg-blue-600 text-white shadow-md'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
+                                  }`}
+                                  onClick={() => updateIVSedationFormField('upperSurgeryType', 'Surgery')}
+                                >
+                                  Surgery
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    ivSedationFormData.upperSurgeryType === "Surgical Revision"
+                                      ? 'bg-blue-600 text-white shadow-md'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
+                                  }`}
+                                  onClick={() => updateIVSedationFormField('upperSurgeryType', 'Surgical Revision')}
+                                >
+                                  Surgical Revision
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Lower Treatment Section */}
@@ -4525,21 +5489,57 @@ export function PatientProfilePage() {
                           <h3 className="text-base font-semibold text-blue-900">Lower Arch Treatment</h3>
                         </div>
 
-                        <Select
-                          value={ivSedationFormData.lowerTreatment}
-                          onValueChange={(value) => setIVSedationFormData({...ivSedationFormData, lowerTreatment: value})}
-                        >
-                          <SelectTrigger className="border-blue-300 focus:border-blue-500">
-                            <SelectValue placeholder="Select lower treatment type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {treatmentOptions.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-3">
+                          <div>
+                            <Label className="text-sm text-blue-800 font-medium">Treatment Type</Label>
+                            <Select
+                              value={ivSedationFormData.lowerTreatment}
+                              onValueChange={(value) => updateIVSedationFormField('lowerTreatment', value)}
+                            >
+                              <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                                <SelectValue placeholder="Select lower treatment type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {treatmentOptions.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Surgery Type Selection - Only show if treatment is selected and not "NO TREATMENT" */}
+                          {ivSedationFormData.lowerTreatment && ivSedationFormData.lowerTreatment !== "NO TREATMENT" && (
+                            <div>
+                              <Label className="text-sm text-blue-800 font-medium mb-2 block">Surgery Type</Label>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    ivSedationFormData.lowerSurgeryType === "Surgery"
+                                      ? 'bg-blue-600 text-white shadow-md'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
+                                  }`}
+                                  onClick={() => updateIVSedationFormField('lowerSurgeryType', 'Surgery')}
+                                >
+                                  Surgery
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    ivSedationFormData.lowerSurgeryType === "Surgical Revision"
+                                      ? 'bg-blue-600 text-white shadow-md'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
+                                  }`}
+                                  onClick={() => updateIVSedationFormField('lowerSurgeryType', 'Surgical Revision')}
+                                >
+                                  Surgical Revision
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -4563,7 +5563,7 @@ export function PatientProfilePage() {
                             <div className="flex-1">
                               <Select
                                 value={ivSedationFormData.heightFeet}
-                                onValueChange={(value) => setIVSedationFormData({...ivSedationFormData, heightFeet: value})}
+                                onValueChange={(value) => updateIVSedationFormField('heightFeet', value)}
                               >
                                 <SelectTrigger className="border-blue-300 focus:border-blue-500">
                                   <SelectValue placeholder="Feet" />
@@ -4584,7 +5584,7 @@ export function PatientProfilePage() {
                             <div className="flex-1">
                               <Select
                                 value={ivSedationFormData.heightInches}
-                                onValueChange={(value) => setIVSedationFormData({...ivSedationFormData, heightInches: value})}
+                                onValueChange={(value) => updateIVSedationFormField('heightInches', value)}
                               >
                                 <SelectTrigger className="border-blue-300 focus:border-blue-500">
                                   <SelectValue placeholder="Inches" />
@@ -4623,7 +5623,7 @@ export function PatientProfilePage() {
                               <Input
                                 type="number"
                                 value={ivSedationFormData.weight}
-                                onChange={(e) => setIVSedationFormData({...ivSedationFormData, weight: e.target.value})}
+                                onChange={(e) => updateIVSedationFormField('weight', e.target.value)}
                                 placeholder="Enter weight"
                                 min="50"
                                 max="500"
@@ -4641,7 +5641,7 @@ export function PatientProfilePage() {
                               max="500"
                               step="5"
                               value={ivSedationFormData.weight || "150"}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, weight: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('weight', e.target.value)}
                               className="w-full h-2 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-600 rounded-lg appearance-none cursor-pointer accent-blue-600"
                               style={{
                                 background: `linear-gradient(to right, #dbeafe 0%, #60a5fa 50%, #2563eb 100%)`
@@ -4787,7 +5787,7 @@ export function PatientProfilePage() {
                                   ? 'bg-green-600 text-white'
                                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
-                              onClick={() => setIVSedationFormData({...ivSedationFormData, npoStatus: 'yes'})}
+                              onClick={() => updateIVSedationFormField('npoStatus', 'yes')}
                             >
                               YES
                             </button>
@@ -4798,7 +5798,7 @@ export function PatientProfilePage() {
                                   ? 'bg-red-600 text-white'
                                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
-                              onClick={() => setIVSedationFormData({...ivSedationFormData, npoStatus: 'no'})}
+                              onClick={() => updateIVSedationFormField('npoStatus', 'no')}
                             >
                               NO
                             </button>
@@ -4815,7 +5815,7 @@ export function PatientProfilePage() {
                                   ? 'bg-red-600 text-white'
                                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
-                              onClick={() => setIVSedationFormData({...ivSedationFormData, morningMedications: 'yes'})}
+                              onClick={() => updateIVSedationFormField('morningMedications', 'yes')}
                             >
                               YES
                             </button>
@@ -4826,7 +5826,7 @@ export function PatientProfilePage() {
                                   ? 'bg-green-600 text-white'
                                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
-                              onClick={() => setIVSedationFormData({...ivSedationFormData, morningMedications: 'no'})}
+                              onClick={() => updateIVSedationFormField('morningMedications', 'no')}
                             >
                               NO
                             </button>
@@ -4843,26 +5843,49 @@ export function PatientProfilePage() {
                           'N/A', 'Penicillin', 'Sulfa', 'Codeine', 'Aspirin', 'Ibuprofen',
                           'Latex', 'Iodine', 'Shellfish', 'Nuts', 'Eggs', 'Dairy',
                           'Environmental', 'Seasonal', 'Other'
-                        ].map((allergy) => (
-                          <button
-                            key={allergy}
-                            type="button"
-                            className={`px-3 py-2 rounded text-xs font-medium transition-colors ${
-                              ivSedationFormData.allergies?.includes(allergy)
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
-                            onClick={() => {
-                              const currentAllergies = ivSedationFormData.allergies || [];
-                              const updatedAllergies = currentAllergies.includes(allergy)
-                                ? currentAllergies.filter(a => a !== allergy)
-                                : [...currentAllergies, allergy];
-                              setIVSedationFormData({...ivSedationFormData, allergies: updatedAllergies});
-                            }}
-                          >
-                            {allergy}
-                          </button>
-                        ))}
+                        ].map((allergy) => {
+                          const isNA = ivSedationFormData.allergies?.includes('N/A');
+                          const isDisabled = isNA && allergy !== 'N/A';
+
+                          return (
+                            <button
+                              key={allergy}
+                              type="button"
+                              disabled={isDisabled}
+                              className={`px-3 py-2 rounded text-xs font-medium transition-colors ${
+                                ivSedationFormData.allergies?.includes(allergy)
+                                  ? 'bg-blue-600 text-white'
+                                  : isDisabled
+                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const currentAllergies = ivSedationFormData.allergies || [];
+                                let updatedAllergies;
+
+                                if (allergy === 'N/A') {
+                                  // If clicking N/A, clear all other allergies and set only N/A
+                                  updatedAllergies = currentAllergies.includes('N/A') ? [] : ['N/A'];
+                                } else {
+                                  // If clicking any other allergy, remove N/A if it exists and toggle the clicked allergy
+                                  const allergiesWithoutNA = currentAllergies.filter(a => a !== 'N/A');
+                                  updatedAllergies = allergiesWithoutNA.includes(allergy)
+                                    ? allergiesWithoutNA.filter(a => a !== allergy)
+                                    : [...allergiesWithoutNA, allergy];
+                                }
+
+                                updateIVSedationFormField('allergies', updatedAllergies);
+
+                                // Clear "Other" text field if "Other" option is unselected
+                                if (allergy === 'Other' && currentAllergies.includes('Other') && !updatedAllergies.includes('Other')) {
+                                  updateIVSedationFormField('allergiesOther', '');
+                                }
+                              }}
+                            >
+                              {allergy}
+                            </button>
+                          );
+                        })}
                       </div>
 
                       {/* Other Allergies Text Field */}
@@ -4873,7 +5896,7 @@ export function PatientProfilePage() {
                             id="allergiesOther"
                             type="text"
                             value={ivSedationFormData.allergiesOther || ''}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, allergiesOther: e.target.value})}
+                            onChange={(e) => updateIVSedationFormField('allergiesOther', e.target.value)}
                             placeholder="Enter other allergies"
                             className="text-sm h-8 border-blue-300 focus:border-blue-500"
                           />
@@ -4881,50 +5904,52 @@ export function PatientProfilePage() {
                       )}
                     </div>
 
-                    {/* Female-specific Questions */}
-                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                      <h3 className="text-sm font-semibold text-blue-900 mb-3">Female Patients Only</h3>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm text-blue-800 mb-2">Any chance patient might be pregnant today?</p>
-                          <div className="flex gap-3">
-                            <button
-                              type="button"
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                ivSedationFormData.pregnancyRisk === 'yes'
-                                  ? 'bg-red-600 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
-                              onClick={() => setIVSedationFormData({...ivSedationFormData, pregnancyRisk: 'yes'})}
-                            >
-                              YES
-                            </button>
-                            <button
-                              type="button"
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                ivSedationFormData.pregnancyRisk === 'no'
-                                  ? 'bg-green-600 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
-                              onClick={() => setIVSedationFormData({...ivSedationFormData, pregnancyRisk: 'no'})}
-                            >
-                              NO
-                            </button>
+                    {/* Female-specific Questions - Only show for female patients */}
+                    {patient && patient.gender && patient.gender.toLowerCase() === 'female' && (
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <h3 className="text-sm font-semibold text-blue-900 mb-3">Female Patients Only</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm text-blue-800 mb-2">Any chance patient might be pregnant today?</p>
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  ivSedationFormData.pregnancyRisk === 'yes'
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                                onClick={() => updateIVSedationFormField('pregnancyRisk', 'yes')}
+                              >
+                                YES
+                              </button>
+                              <button
+                                type="button"
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  ivSedationFormData.pregnancyRisk === 'no'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                                onClick={() => updateIVSedationFormField('pregnancyRisk', 'no')}
+                              >
+                                NO
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="lastMenstrualCycle" className="text-sm text-blue-800">Last Menstrual Cycle Date</Label>
+                            <Input
+                              id="lastMenstrualCycle"
+                              type="date"
+                              value={ivSedationFormData.lastMenstrualCycle || ''}
+                              onChange={(e) => updateIVSedationFormField('lastMenstrualCycle', e.target.value)}
+                              className="text-sm h-8 border-blue-300 focus:border-blue-500"
+                            />
                           </div>
                         </div>
-
-                        <div>
-                          <Label htmlFor="lastMenstrualCycle" className="text-sm text-blue-800">Last Menstrual Cycle Date</Label>
-                          <Input
-                            id="lastMenstrualCycle"
-                            type="date"
-                            value={ivSedationFormData.lastMenstrualCycle || ''}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, lastMenstrualCycle: e.target.value})}
-                            className="text-sm h-8 border-blue-300 focus:border-blue-500"
-                          />
-                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Medical History Sections */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4947,7 +5972,13 @@ export function PatientProfilePage() {
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
-                              onClick={() => setIVSedationFormData({...ivSedationFormData, anesthesiaHistory: option})}
+                              onClick={() => {
+                                updateIVSedationFormField('anesthesiaHistory', option);
+                                // Clear "Others" text field if a different option is selected
+                                if (option !== 'Others' && ivSedationFormData.anesthesiaHistory === 'Others') {
+                                  updateIVSedationFormField('anesthesiaHistoryOther', '');
+                                }
+                              }}
                             >
                               {option}
                             </button>
@@ -4962,7 +5993,7 @@ export function PatientProfilePage() {
                               id="anesthesiaHistoryOther"
                               type="text"
                               value={ivSedationFormData.anesthesiaHistoryOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, anesthesiaHistoryOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('anesthesiaHistoryOther', e.target.value)}
                               placeholder="Enter anesthesia history details"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -4977,26 +6008,47 @@ export function PatientProfilePage() {
                           {[
                             'N/A', 'Asthma', 'Anemia', 'Reactive Airway', 'Bronchitis', 'COPD',
                             'Dyspnea', 'Orthopnea', 'Recent URI', 'SOB', 'Tuberculosis', 'Others'
-                          ].map((problem) => (
-                            <button
-                              key={problem}
-                              type="button"
-                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                ivSedationFormData.respiratoryProblems?.includes(problem)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
-                              onClick={() => {
-                                const current = ivSedationFormData.respiratoryProblems || [];
-                                const updated = current.includes(problem)
-                                  ? current.filter(p => p !== problem)
-                                  : [...current, problem];
-                                setIVSedationFormData({...ivSedationFormData, respiratoryProblems: updated});
-                              }}
-                            >
-                              {problem}
-                            </button>
-                          ))}
+                          ].map((problem) => {
+                            const isNA = ivSedationFormData.respiratoryProblems?.includes('N/A');
+                            const isDisabled = isNA && problem !== 'N/A';
+
+                            return (
+                              <button
+                                key={problem}
+                                type="button"
+                                disabled={isDisabled}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                  ivSedationFormData.respiratoryProblems?.includes(problem)
+                                    ? 'bg-blue-600 text-white'
+                                    : isDisabled
+                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                }`}
+                                onClick={() => {
+                                  const current = ivSedationFormData.respiratoryProblems || [];
+                                  let updated: string[];
+
+                                  if (problem === 'N/A') {
+                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  } else {
+                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    updated = problemsWithoutNA.includes(problem)
+                                      ? problemsWithoutNA.filter(p => p !== problem)
+                                      : [...problemsWithoutNA, problem];
+                                  }
+
+                                  updateIVSedationFormField('respiratoryProblems', updated);
+
+                                  // Clear "Others" text field if "Others" option is unselected
+                                  if (problem === 'Others' && current.includes('Others') && !updated.includes('Others')) {
+                                    updateIVSedationFormField('respiratoryProblemsOther', '');
+                                  }
+                                }}
+                              >
+                                {problem}
+                              </button>
+                            );
+                          })}
                         </div>
 
                         {/* Others Respiratory Problems Text Field */}
@@ -5007,7 +6059,7 @@ export function PatientProfilePage() {
                               id="respiratoryProblemsOther"
                               type="text"
                               value={ivSedationFormData.respiratoryProblemsOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, respiratoryProblemsOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('respiratoryProblemsOther', e.target.value)}
                               placeholder="Enter other respiratory problems"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -5022,26 +6074,47 @@ export function PatientProfilePage() {
                           {[
                             'N/A', 'Anemia', 'Congestive Heart Failure (CHF)', 'Dysrhythmia', 'Murmur', 'Hypertension (HTN)',
                             'Myocardial Infarction (MI)', 'Valvular DX', 'Rheumatic Fever', 'Sickle Cell Disease', 'Congenital Heart DX', 'Pacemaker', 'Other'
-                          ].map((problem) => (
-                            <button
-                              key={problem}
-                              type="button"
-                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                ivSedationFormData.cardiovascularProblems?.includes(problem)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
-                              onClick={() => {
-                                const current = ivSedationFormData.cardiovascularProblems || [];
-                                const updated = current.includes(problem)
-                                  ? current.filter(p => p !== problem)
-                                  : [...current, problem];
-                                setIVSedationFormData({...ivSedationFormData, cardiovascularProblems: updated});
-                              }}
-                            >
-                              {problem}
-                            </button>
-                          ))}
+                          ].map((problem) => {
+                            const isNA = ivSedationFormData.cardiovascularProblems?.includes('N/A');
+                            const isDisabled = isNA && problem !== 'N/A';
+
+                            return (
+                              <button
+                                key={problem}
+                                type="button"
+                                disabled={isDisabled}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                  ivSedationFormData.cardiovascularProblems?.includes(problem)
+                                    ? 'bg-blue-600 text-white'
+                                    : isDisabled
+                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                }`}
+                                onClick={() => {
+                                  const current = ivSedationFormData.cardiovascularProblems || [];
+                                  let updated: string[];
+
+                                  if (problem === 'N/A') {
+                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  } else {
+                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    updated = problemsWithoutNA.includes(problem)
+                                      ? problemsWithoutNA.filter(p => p !== problem)
+                                      : [...problemsWithoutNA, problem];
+                                  }
+
+                                  updateIVSedationFormField('cardiovascularProblems', updated);
+
+                                  // Clear "Other" text field if "Other" option is unselected
+                                  if (problem === 'Other' && current.includes('Other') && !updated.includes('Other')) {
+                                    updateIVSedationFormField('cardiovascularProblemsOther', '');
+                                  }
+                                }}
+                              >
+                                {problem}
+                              </button>
+                            );
+                          })}
                         </div>
 
                         {/* Other Cardiovascular Problems Text Field */}
@@ -5052,7 +6125,7 @@ export function PatientProfilePage() {
                               id="cardiovascularProblemsOther"
                               type="text"
                               value={ivSedationFormData.cardiovascularProblemsOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, cardiovascularProblemsOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('cardiovascularProblemsOther', e.target.value)}
                               placeholder="Enter other cardiovascular problems"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -5066,26 +6139,47 @@ export function PatientProfilePage() {
                         <div className="grid grid-cols-2 gap-1">
                           {[
                             'N/A', 'Cirrhosis', 'Hepatitis', 'Reflux', 'Ulcers', 'Oesophageal Issues', 'Other'
-                          ].map((problem) => (
-                            <button
-                              key={problem}
-                              type="button"
-                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                ivSedationFormData.gastrointestinalProblems?.includes(problem)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
-                              onClick={() => {
-                                const current = ivSedationFormData.gastrointestinalProblems || [];
-                                const updated = current.includes(problem)
-                                  ? current.filter(p => p !== problem)
-                                  : [...current, problem];
-                                setIVSedationFormData({...ivSedationFormData, gastrointestinalProblems: updated});
-                              }}
-                            >
-                              {problem}
-                            </button>
-                          ))}
+                          ].map((problem) => {
+                            const isNA = ivSedationFormData.gastrointestinalProblems?.includes('N/A');
+                            const isDisabled = isNA && problem !== 'N/A';
+
+                            return (
+                              <button
+                                key={problem}
+                                type="button"
+                                disabled={isDisabled}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                  ivSedationFormData.gastrointestinalProblems?.includes(problem)
+                                    ? 'bg-blue-600 text-white'
+                                    : isDisabled
+                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                }`}
+                                onClick={() => {
+                                  const current = ivSedationFormData.gastrointestinalProblems || [];
+                                  let updated: string[];
+
+                                  if (problem === 'N/A') {
+                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  } else {
+                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    updated = problemsWithoutNA.includes(problem)
+                                      ? problemsWithoutNA.filter(p => p !== problem)
+                                      : [...problemsWithoutNA, problem];
+                                  }
+
+                                  updateIVSedationFormField('gastrointestinalProblems', updated);
+
+                                  // Clear "Other" text field if "Other" option is unselected
+                                  if (problem === 'Other' && current.includes('Other') && !updated.includes('Other')) {
+                                    updateIVSedationFormField('gastrointestinalProblemsOther', '');
+                                  }
+                                }}
+                              >
+                                {problem}
+                              </button>
+                            );
+                          })}
                         </div>
 
                         {/* Other Gastrointestinal Problems Text Field */}
@@ -5096,7 +6190,7 @@ export function PatientProfilePage() {
                               id="gastrointestinalProblemsOther"
                               type="text"
                               value={ivSedationFormData.gastrointestinalProblemsOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, gastrointestinalProblemsOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('gastrointestinalProblemsOther', e.target.value)}
                               placeholder="Enter other gastrointestinal problems"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -5113,26 +6207,47 @@ export function PatientProfilePage() {
                         <div className="grid grid-cols-2 gap-1">
                           {[
                             'N/A', 'Cerebral Vascular Accident (CVA)', 'Headaches', 'Transient Ischemic Attack (TIA)', 'Syncope', 'Seizures', 'Other'
-                          ].map((problem) => (
-                            <button
-                              key={problem}
-                              type="button"
-                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                ivSedationFormData.neurologicProblems?.includes(problem)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
-                              onClick={() => {
-                                const current = ivSedationFormData.neurologicProblems || [];
-                                const updated = current.includes(problem)
-                                  ? current.filter(p => p !== problem)
-                                  : [...current, problem];
-                                setIVSedationFormData({...ivSedationFormData, neurologicProblems: updated});
-                              }}
-                            >
-                              {problem}
-                            </button>
-                          ))}
+                          ].map((problem) => {
+                            const isNA = ivSedationFormData.neurologicProblems?.includes('N/A');
+                            const isDisabled = isNA && problem !== 'N/A';
+
+                            return (
+                              <button
+                                key={problem}
+                                type="button"
+                                disabled={isDisabled}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                  ivSedationFormData.neurologicProblems?.includes(problem)
+                                    ? 'bg-blue-600 text-white'
+                                    : isDisabled
+                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                }`}
+                                onClick={() => {
+                                  const current = ivSedationFormData.neurologicProblems || [];
+                                  let updated: string[];
+
+                                  if (problem === 'N/A') {
+                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  } else {
+                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    updated = problemsWithoutNA.includes(problem)
+                                      ? problemsWithoutNA.filter(p => p !== problem)
+                                      : [...problemsWithoutNA, problem];
+                                  }
+
+                                  updateIVSedationFormField('neurologicProblems', updated);
+
+                                  // Clear "Other" text field if "Other" option is unselected
+                                  if (problem === 'Other' && current.includes('Other') && !updated.includes('Other')) {
+                                    updateIVSedationFormField('neurologicProblemsOther', '');
+                                  }
+                                }}
+                              >
+                                {problem}
+                              </button>
+                            );
+                          })}
                         </div>
 
                         {/* Other Neurologic Problems Text Field */}
@@ -5143,7 +6258,7 @@ export function PatientProfilePage() {
                               id="neurologicProblemsOther"
                               type="text"
                               value={ivSedationFormData.neurologicProblemsOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, neurologicProblemsOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('neurologicProblemsOther', e.target.value)}
                               placeholder="Enter other neurologic problems"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -5157,26 +6272,47 @@ export function PatientProfilePage() {
                         <div className="grid grid-cols-2 gap-1">
                           {[
                             'N/A', 'Diabetes', 'Dialysis', 'Thyroid DX', 'Renal Failure', 'Other'
-                          ].map((problem) => (
-                            <button
-                              key={problem}
-                              type="button"
-                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                ivSedationFormData.endocrineRenalProblems?.includes(problem)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
-                              onClick={() => {
-                                const current = ivSedationFormData.endocrineRenalProblems || [];
-                                const updated = current.includes(problem)
-                                  ? current.filter(p => p !== problem)
-                                  : [...current, problem];
-                                setIVSedationFormData({...ivSedationFormData, endocrineRenalProblems: updated});
-                              }}
-                            >
-                              {problem}
-                            </button>
-                          ))}
+                          ].map((problem) => {
+                            const isNA = ivSedationFormData.endocrineRenalProblems?.includes('N/A');
+                            const isDisabled = isNA && problem !== 'N/A';
+
+                            return (
+                              <button
+                                key={problem}
+                                type="button"
+                                disabled={isDisabled}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                  ivSedationFormData.endocrineRenalProblems?.includes(problem)
+                                    ? 'bg-blue-600 text-white'
+                                    : isDisabled
+                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                }`}
+                                onClick={() => {
+                                  const current = ivSedationFormData.endocrineRenalProblems || [];
+                                  let updated: string[];
+
+                                  if (problem === 'N/A') {
+                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  } else {
+                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    updated = problemsWithoutNA.includes(problem)
+                                      ? problemsWithoutNA.filter(p => p !== problem)
+                                      : [...problemsWithoutNA, problem];
+                                  }
+
+                                  updateIVSedationFormField('endocrineRenalProblems', updated);
+
+                                  // Clear "Other" text field if "Other" option is unselected
+                                  if (problem === 'Other' && current.includes('Other') && !updated.includes('Other')) {
+                                    updateIVSedationFormField('endocrineRenalProblemsOther', '');
+                                  }
+                                }}
+                              >
+                                {problem}
+                              </button>
+                            );
+                          })}
                         </div>
 
                         {/* Other Endocrine/Renal Problems Text Field */}
@@ -5187,7 +6323,7 @@ export function PatientProfilePage() {
                               id="endocrineRenalProblemsOther"
                               type="text"
                               value={ivSedationFormData.endocrineRenalProblemsOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, endocrineRenalProblemsOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('endocrineRenalProblemsOther', e.target.value)}
                               placeholder="Enter other endocrine/renal problems"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -5201,7 +6337,7 @@ export function PatientProfilePage() {
                             id="lastA1CLevel"
                             type="text"
                             value={ivSedationFormData.lastA1CLevel || ''}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, lastA1CLevel: e.target.value})}
+                            onChange={(e) => updateIVSedationFormField('lastA1CLevel', e.target.value)}
                             placeholder="Enter A1C level"
                             className="text-sm h-8 border-blue-300 focus:border-blue-500"
                           />
@@ -5219,26 +6355,47 @@ export function PatientProfilePage() {
                           'HIV', 'AIDS', 'Rheumatoid Arthritis', 'Lupus', 'Fibromyalgia', 'Immunosuppressive Disease',
                           'Prolonged Bleeding', 'Platelet Disorder', 'Sickle Cell', 'Hemophilia', 'Chronic Kidney Disease',
                           'Osteoporosis', 'Artificial Joint', 'Muscle Weakness', 'Cancer', 'Chemotherapy', 'Other'
-                        ].map((condition) => (
-                          <button
-                            key={condition}
-                            type="button"
-                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                              ivSedationFormData.miscellaneous?.includes(condition)
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
-                            onClick={() => {
-                              const current = ivSedationFormData.miscellaneous || [];
-                              const updated = current.includes(condition)
-                                ? current.filter(c => c !== condition)
-                                : [...current, condition];
-                              setIVSedationFormData({...ivSedationFormData, miscellaneous: updated});
-                            }}
-                          >
-                            {condition}
-                          </button>
-                        ))}
+                        ].map((condition) => {
+                          const isNA = ivSedationFormData.miscellaneous?.includes('N/A');
+                          const isDisabled = isNA && condition !== 'N/A';
+
+                          return (
+                            <button
+                              key={condition}
+                              type="button"
+                              disabled={isDisabled}
+                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                ivSedationFormData.miscellaneous?.includes(condition)
+                                  ? 'bg-blue-600 text-white'
+                                  : isDisabled
+                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              onClick={() => {
+                                const current = ivSedationFormData.miscellaneous || [];
+                                let updated: string[];
+
+                                if (condition === 'N/A') {
+                                  updated = current.includes('N/A') ? [] : ['N/A'];
+                                } else {
+                                  const conditionsWithoutNA = current.filter(c => c !== 'N/A');
+                                  updated = conditionsWithoutNA.includes(condition)
+                                    ? conditionsWithoutNA.filter(c => c !== condition)
+                                    : [...conditionsWithoutNA, condition];
+                                }
+
+                                updateIVSedationFormField('miscellaneous', updated);
+
+                                // Clear "Other" text field if "Other" option is unselected
+                                if (condition === 'Other' && current.includes('Other') && !updated.includes('Other')) {
+                                  updateIVSedationFormField('miscellaneousOther', '');
+                                }
+                              }}
+                            >
+                              {condition}
+                            </button>
+                          );
+                        })}
                       </div>
 
                       {/* Other Miscellaneous Text Field */}
@@ -5249,7 +6406,7 @@ export function PatientProfilePage() {
                             id="miscellaneousOther"
                             type="text"
                             value={ivSedationFormData.miscellaneousOther || ''}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, miscellaneousOther: e.target.value})}
+                            onChange={(e) => updateIVSedationFormField('miscellaneousOther', e.target.value)}
                             placeholder="Enter other conditions"
                             className="text-sm h-8 border-blue-300 focus:border-blue-500"
                           />
@@ -5265,26 +6422,47 @@ export function PatientProfilePage() {
                         <div className="grid grid-cols-2 gap-1">
                           {[
                             'N/A', 'Tobacco', 'ETOH Consumption', 'Recreational Drugs', 'Other'
-                          ].map((habit) => (
-                            <button
-                              key={habit}
-                              type="button"
-                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                ivSedationFormData.socialHistory?.includes(habit)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
-                              onClick={() => {
-                                const current = ivSedationFormData.socialHistory || [];
-                                const updated = current.includes(habit)
-                                  ? current.filter(h => h !== habit)
-                                  : [...current, habit];
-                                setIVSedationFormData({...ivSedationFormData, socialHistory: updated});
-                              }}
-                            >
-                              {habit}
-                            </button>
-                          ))}
+                          ].map((habit) => {
+                            const isNA = ivSedationFormData.socialHistory?.includes('N/A');
+                            const isDisabled = isNA && habit !== 'N/A';
+
+                            return (
+                              <button
+                                key={habit}
+                                type="button"
+                                disabled={isDisabled}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                  ivSedationFormData.socialHistory?.includes(habit)
+                                    ? 'bg-blue-600 text-white'
+                                    : isDisabled
+                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                }`}
+                                onClick={() => {
+                                  const current = ivSedationFormData.socialHistory || [];
+                                  let updated: string[];
+
+                                  if (habit === 'N/A') {
+                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  } else {
+                                    const habitsWithoutNA = current.filter(h => h !== 'N/A');
+                                    updated = habitsWithoutNA.includes(habit)
+                                      ? habitsWithoutNA.filter(h => h !== habit)
+                                      : [...habitsWithoutNA, habit];
+                                  }
+
+                                  updateIVSedationFormField('socialHistory', updated);
+
+                                  // Clear "Other" text field if "Other" option is unselected
+                                  if (habit === 'Other' && current.includes('Other') && !updated.includes('Other')) {
+                                    updateIVSedationFormField('socialHistoryOther', '');
+                                  }
+                                }}
+                              >
+                                {habit}
+                              </button>
+                            );
+                          })}
                         </div>
 
                         {/* Other Social History Text Field */}
@@ -5295,7 +6473,7 @@ export function PatientProfilePage() {
                               id="socialHistoryOther"
                               type="text"
                               value={ivSedationFormData.socialHistoryOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, socialHistoryOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('socialHistoryOther', e.target.value)}
                               placeholder="Enter other social history"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -5317,7 +6495,7 @@ export function PatientProfilePage() {
                                     ? 'bg-green-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
-                                onClick={() => setIVSedationFormData({...ivSedationFormData, wellDevelopedNourished: 'yes'})}
+                                onClick={() => updateIVSedationFormField('wellDevelopedNourished', 'yes')}
                               >
                                 YES
                               </button>
@@ -5328,7 +6506,7 @@ export function PatientProfilePage() {
                                     ? 'bg-red-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
-                                onClick={() => setIVSedationFormData({...ivSedationFormData, wellDevelopedNourished: 'no'})}
+                                onClick={() => updateIVSedationFormField('wellDevelopedNourished', 'no')}
                               >
                                 NO
                               </button>
@@ -5345,7 +6523,7 @@ export function PatientProfilePage() {
                                     ? 'bg-red-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
-                                onClick={() => setIVSedationFormData({...ivSedationFormData, patientAnxious: 'yes'})}
+                                onClick={() => updateIVSedationFormField('patientAnxious', 'yes')}
                               >
                                 YES
                               </button>
@@ -5356,7 +6534,7 @@ export function PatientProfilePage() {
                                     ? 'bg-green-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
-                                onClick={() => setIVSedationFormData({...ivSedationFormData, patientAnxious: 'no'})}
+                                onClick={() => updateIVSedationFormField('patientAnxious', 'no')}
                               >
                                 NO
                               </button>
@@ -5383,7 +6561,7 @@ export function PatientProfilePage() {
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
-                                onClick={() => setIVSedationFormData({...ivSedationFormData, asaClassification: classification})}
+                                onClick={() => updateIVSedationFormField('asaClassification', classification)}
                               >
                                 {classification}
                               </button>
@@ -5415,7 +6593,12 @@ export function PatientProfilePage() {
                                 const updated = current.includes(evaluation)
                                   ? current.filter(e => e !== evaluation)
                                   : [...current, evaluation];
-                                setIVSedationFormData({...ivSedationFormData, airwayEvaluation: updated});
+                                updateIVSedationFormField('airwayEvaluation', updated);
+
+                                // Clear "Other" text field if "Other" option is unselected
+                                if (evaluation === 'Other' && current.includes('Other') && !updated.includes('Other')) {
+                                  updateIVSedationFormField('airwayEvaluationOther', '');
+                                }
                               }}
                             >
                               {evaluation}
@@ -5431,7 +6614,7 @@ export function PatientProfilePage() {
                               id="airwayEvaluationOther"
                               type="text"
                               value={ivSedationFormData.airwayEvaluationOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, airwayEvaluationOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('airwayEvaluationOther', e.target.value)}
                               placeholder="Enter other airway findings"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -5455,7 +6638,7 @@ export function PatientProfilePage() {
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
-                              onClick={() => setIVSedationFormData({...ivSedationFormData, mallampatiScore: score})}
+                              onClick={() => updateIVSedationFormField('mallampatiScore', score)}
                             >
                               {score}
                             </button>
@@ -5486,7 +6669,12 @@ export function PatientProfilePage() {
                                 const updated = current.includes(evaluation)
                                   ? current.filter(e => e !== evaluation)
                                   : [...current, evaluation];
-                                setIVSedationFormData({...ivSedationFormData, heartLungEvaluation: updated});
+                                updateIVSedationFormField('heartLungEvaluation', updated);
+
+                                // Clear "Other" text field if "Other" option is unselected
+                                if (evaluation === 'Other' && current.includes('Other') && !updated.includes('Other')) {
+                                  updateIVSedationFormField('heartLungEvaluationOther', '');
+                                }
                               }}
                             >
                               {evaluation}
@@ -5502,7 +6690,7 @@ export function PatientProfilePage() {
                               id="heartLungEvaluationOther"
                               type="text"
                               value={ivSedationFormData.heartLungEvaluationOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, heartLungEvaluationOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('heartLungEvaluationOther', e.target.value)}
                               placeholder="Enter other heart/lung findings"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -5542,22 +6730,20 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                  ivSedationFormData.instrumentsChecklist?.[instrument.key]
+                                  Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key)
                                     ? 'bg-green-500 border-green-500 text-white'
                                     : 'border-gray-300 hover:border-green-400'
                                 }`}
                                 onClick={() => {
-                                  const current = ivSedationFormData.instrumentsChecklist || {};
-                                  setIVSedationFormData({
-                                    ...ivSedationFormData,
-                                    instrumentsChecklist: {
-                                      ...current,
-                                      [instrument.key]: !current[instrument.key]
-                                    }
-                                  });
+                                  const current = Array.isArray(ivSedationFormData.instrumentsChecklist) ? ivSedationFormData.instrumentsChecklist : [];
+                                  const isChecked = current.includes(instrument.key);
+                                  const updated = isChecked
+                                    ? current.filter(item => item !== instrument.key)
+                                    : [...current, instrument.key];
+                                  updateIVSedationFormField('instrumentsChecklist', updated);
                                 }}
                               >
-                                {ivSedationFormData.instrumentsChecklist?.[instrument.key] && (
+                                {Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key) && (
                                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
@@ -5565,11 +6751,11 @@ export function PatientProfilePage() {
                               </button>
                             </div>
                             <div className={`text-xs mt-2 transition-colors ${
-                              ivSedationFormData.instrumentsChecklist?.[instrument.key]
+                              Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key)
                                 ? 'text-green-600 font-medium'
                                 : 'text-gray-500'
                             }`}>
-                              {ivSedationFormData.instrumentsChecklist?.[instrument.key] ? 'Checked' : 'Not Checked'}
+                              {Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key) ? 'Checked' : 'Not Checked'}
                             </div>
                           </div>
                         ))}
@@ -5596,7 +6782,7 @@ export function PatientProfilePage() {
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
-                              onClick={() => setIVSedationFormData({...ivSedationFormData, sedationType: type})}
+                              onClick={() => updateIVSedationFormField('sedationType', type)}
                             >
                               {type}
                             </button>
@@ -5629,7 +6815,12 @@ export function PatientProfilePage() {
                                 const updated = current.includes(medication)
                                   ? current.filter(m => m !== medication)
                                   : [...current, medication];
-                                setIVSedationFormData({...ivSedationFormData, medicationsPlanned: updated});
+                                updateIVSedationFormField('medicationsPlanned', updated);
+
+                                // Clear "Other" text field if "Other" option is unselected
+                                if (medication === 'Other' && current.includes('Other') && !updated.includes('Other')) {
+                                  updateIVSedationFormField('medicationsOther', '');
+                                }
                               }}
                             >
                               {medication}
@@ -5645,7 +6836,7 @@ export function PatientProfilePage() {
                               id="medicationsOther"
                               type="text"
                               value={ivSedationFormData.medicationsOther || ''}
-                              onChange={(e) => setIVSedationFormData({...ivSedationFormData, medicationsOther: e.target.value})}
+                              onChange={(e) => updateIVSedationFormField('medicationsOther', e.target.value)}
                               placeholder="Enter other medications"
                               className="text-sm h-8 border-blue-300 focus:border-blue-500"
                             />
@@ -5679,7 +6870,7 @@ export function PatientProfilePage() {
                                 const updated = current.includes(route)
                                   ? current.filter(r => r !== route)
                                   : [...current, route];
-                                setIVSedationFormData({...ivSedationFormData, administrationRoute: updated});
+                                updateIVSedationFormField('administrationRoute', updated);
                               }}
                             >
                               {route}
@@ -5703,23 +6894,20 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                                  ivSedationFormData.emergencyProtocols?.[protocol.toLowerCase().replace(/\s+/g, '')]
+                                  Array.isArray(ivSedationFormData.emergencyProtocols) && ivSedationFormData.emergencyProtocols.includes(protocol)
                                     ? 'bg-green-500 border-green-500 text-white'
                                     : 'border-gray-300 hover:border-green-400'
                                 }`}
                                 onClick={() => {
-                                  const key = protocol.toLowerCase().replace(/\s+/g, '');
-                                  const current = ivSedationFormData.emergencyProtocols || {};
-                                  setIVSedationFormData({
-                                    ...ivSedationFormData,
-                                    emergencyProtocols: {
-                                      ...current,
-                                      [key]: !current[key]
-                                    }
-                                  });
+                                  const current = Array.isArray(ivSedationFormData.emergencyProtocols) ? ivSedationFormData.emergencyProtocols : [];
+                                  const isChecked = current.includes(protocol);
+                                  const updated = isChecked
+                                    ? current.filter(item => item !== protocol)
+                                    : [...current, protocol];
+                                  updateIVSedationFormField('emergencyProtocols', updated);
                                 }}
                               >
-                                {ivSedationFormData.emergencyProtocols?.[protocol.toLowerCase().replace(/\s+/g, '')] && (
+                                {Array.isArray(ivSedationFormData.emergencyProtocols) && ivSedationFormData.emergencyProtocols.includes(protocol) && (
                                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
@@ -5762,7 +6950,7 @@ export function PatientProfilePage() {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 }).format(now);
-                                setIVSedationFormData({...ivSedationFormData, timeInRoom: estTime});
+                                updateIVSedationFormField('timeInRoom', estTime);
                               }}
                               className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
                             >
@@ -5773,7 +6961,7 @@ export function PatientProfilePage() {
                           <input
                             type="time"
                             value={ivSedationFormData.timeInRoom}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, timeInRoom: e.target.value})}
+                            onChange={(e) => updateIVSedationFormField('timeInRoom', e.target.value)}
                             className="w-full px-3 py-2 border border-blue-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
                           />
                           {ivSedationFormData.timeInRoom && (
@@ -5797,7 +6985,7 @@ export function PatientProfilePage() {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 }).format(now);
-                                setIVSedationFormData({...ivSedationFormData, sedationStartTime: estTime});
+                                updateIVSedationFormField('sedationStartTime', estTime);
                               }}
                               className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
                             >
@@ -5808,7 +6996,7 @@ export function PatientProfilePage() {
                           <input
                             type="time"
                             value={ivSedationFormData.sedationStartTime}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, sedationStartTime: e.target.value})}
+                            onChange={(e) => updateIVSedationFormField('sedationStartTime', e.target.value)}
                             className="w-full px-3 py-2 border border-blue-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
                           />
                           {ivSedationFormData.sedationStartTime && (
@@ -5926,10 +7114,7 @@ export function PatientProfilePage() {
                                         type="button"
                                         onClick={() => {
                                           const updatedEntries = ivSedationFormData.flowEntries?.filter(e => e.id !== entry.id) || [];
-                                          setIVSedationFormData({
-                                            ...ivSedationFormData,
-                                            flowEntries: updatedEntries
-                                          });
+                                          updateIVSedationFormField('flowEntries', updatedEntries);
                                         }}
                                         className="text-red-600 hover:text-red-800 text-xs"
                                         title="Delete entry"
@@ -5980,7 +7165,7 @@ export function PatientProfilePage() {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 }).format(now);
-                                setIVSedationFormData({...ivSedationFormData, sedationEndTime: estTime});
+                                updateIVSedationFormField('sedationEndTime', estTime);
                               }}
                               className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition-colors"
                             >
@@ -5991,7 +7176,7 @@ export function PatientProfilePage() {
                           <input
                             type="time"
                             value={ivSedationFormData.sedationEndTime}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, sedationEndTime: e.target.value})}
+                            onChange={(e) => updateIVSedationFormField('sedationEndTime', e.target.value)}
                             className="w-full px-3 py-2 border border-red-300 rounded-md focus:border-red-500 focus:outline-none text-sm"
                           />
                           {ivSedationFormData.sedationEndTime && (
@@ -6015,7 +7200,7 @@ export function PatientProfilePage() {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 }).format(now);
-                                setIVSedationFormData({...ivSedationFormData, outOfRoomTime: estTime});
+                                updateIVSedationFormField('outOfRoomTime', estTime);
                               }}
                               className="px-3 py-1 bg-purple-600 text-white text-xs rounded-md hover:bg-purple-700 transition-colors"
                             >
@@ -6026,7 +7211,7 @@ export function PatientProfilePage() {
                           <input
                             type="time"
                             value={ivSedationFormData.outOfRoomTime}
-                            onChange={(e) => setIVSedationFormData({...ivSedationFormData, outOfRoomTime: e.target.value})}
+                            onChange={(e) => updateIVSedationFormField('outOfRoomTime', e.target.value)}
                             className="w-full px-3 py-2 border border-purple-300 rounded-md focus:border-purple-500 focus:outline-none text-sm"
                           />
                           {ivSedationFormData.outOfRoomTime && (
@@ -6223,7 +7408,7 @@ export function PatientProfilePage() {
                                 ? level.color + ' ring-2 ring-offset-2 ring-indigo-500'
                                 : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, levelOfSedation: level.id})}
+                            onClick={() => updateIVSedationFormField('levelOfSedation', level.id)}
                           >
                             <div className="flex items-center gap-2 mb-2">
                               <div className={`w-3 h-3 rounded-full ${
@@ -6283,7 +7468,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, alertOriented: 'yes'})}
+                            onClick={() => updateIVSedationFormField('alertOriented', 'yes')}
                           >
                             YES
                           </button>
@@ -6294,7 +7479,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, alertOriented: 'no'})}
+                            onClick={() => updateIVSedationFormField('alertOriented', 'no')}
                           >
                             NO
                           </button>
@@ -6312,7 +7497,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, protectiveReflexes: 'yes'})}
+                            onClick={() => updateIVSedationFormField('protectiveReflexes', 'yes')}
                           >
                             YES
                           </button>
@@ -6323,7 +7508,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, protectiveReflexes: 'no'})}
+                            onClick={() => updateIVSedationFormField('protectiveReflexes', 'no')}
                           >
                             NO
                           </button>
@@ -6341,7 +7526,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, breathingSpontaneously: 'yes'})}
+                            onClick={() => updateIVSedationFormField('breathingSpontaneously', 'yes')}
                           >
                             YES
                           </button>
@@ -6352,7 +7537,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, breathingSpontaneously: 'no'})}
+                            onClick={() => updateIVSedationFormField('breathingSpontaneously', 'no')}
                           >
                             NO
                           </button>
@@ -6370,7 +7555,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpNausea: 'yes'})}
+                            onClick={() => updateIVSedationFormField('postOpNausea', 'yes')}
                           >
                             YES
                           </button>
@@ -6381,7 +7566,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpNausea: 'no'})}
+                            onClick={() => updateIVSedationFormField('postOpNausea', 'no')}
                           >
                             NO
                           </button>
@@ -6399,7 +7584,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, caregiverPresent: 'yes'})}
+                            onClick={() => updateIVSedationFormField('caregiverPresent', 'yes')}
                           >
                             YES
                           </button>
@@ -6410,7 +7595,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, caregiverPresent: 'no'})}
+                            onClick={() => updateIVSedationFormField('caregiverPresent', 'no')}
                           >
                             NO
                           </button>
@@ -6428,7 +7613,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, baselineMentalStatus: 'yes'})}
+                            onClick={() => updateIVSedationFormField('baselineMentalStatus', 'yes')}
                           >
                             YES
                           </button>
@@ -6439,7 +7624,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, baselineMentalStatus: 'no'})}
+                            onClick={() => updateIVSedationFormField('baselineMentalStatus', 'no')}
                           >
                             NO
                           </button>
@@ -6460,7 +7645,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, responsiveVerbalCommands: 'yes'})}
+                            onClick={() => updateIVSedationFormField('responsiveVerbalCommands', 'yes')}
                           >
                             YES
                           </button>
@@ -6471,7 +7656,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, responsiveVerbalCommands: 'no'})}
+                            onClick={() => updateIVSedationFormField('responsiveVerbalCommands', 'no')}
                           >
                             NO
                           </button>
@@ -6489,7 +7674,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, saturatingRoomAir: 'yes'})}
+                            onClick={() => updateIVSedationFormField('saturatingRoomAir', 'yes')}
                           >
                             YES
                           </button>
@@ -6500,7 +7685,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, saturatingRoomAir: 'no'})}
+                            onClick={() => updateIVSedationFormField('saturatingRoomAir', 'no')}
                           >
                             NO
                           </button>
@@ -6518,7 +7703,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, vitalSignsBaseline: 'yes'})}
+                            onClick={() => updateIVSedationFormField('vitalSignsBaseline', 'yes')}
                           >
                             YES
                           </button>
@@ -6529,7 +7714,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, vitalSignsBaseline: 'no'})}
+                            onClick={() => updateIVSedationFormField('vitalSignsBaseline', 'no')}
                           >
                             NO
                           </button>
@@ -6547,7 +7732,7 @@ export function PatientProfilePage() {
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, painDuringRecovery: 'yes'})}
+                            onClick={() => updateIVSedationFormField('painDuringRecovery', 'yes')}
                           >
                             YES
                           </button>
@@ -6558,7 +7743,7 @@ export function PatientProfilePage() {
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, painDuringRecovery: 'no'})}
+                            onClick={() => updateIVSedationFormField('painDuringRecovery', 'no')}
                           >
                             NO
                           </button>
@@ -6579,7 +7764,7 @@ export function PatientProfilePage() {
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpInstructionsGivenTo: 'Patient and Escort'})}
+                            onClick={() => updateIVSedationFormField('postOpInstructionsGivenTo', 'Patient and Escort')}
                           >
                             Patient and Escort
                           </button>
@@ -6590,7 +7775,7 @@ export function PatientProfilePage() {
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpInstructionsGivenTo: 'Patient'})}
+                            onClick={() => updateIVSedationFormField('postOpInstructionsGivenTo', 'Patient')}
                           >
                             Patient
                           </button>
@@ -6601,7 +7786,7 @@ export function PatientProfilePage() {
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, postOpInstructionsGivenTo: 'Escort'})}
+                            onClick={() => updateIVSedationFormField('postOpInstructionsGivenTo', 'Escort')}
                           >
                             Escort
                           </button>
@@ -6619,7 +7804,7 @@ export function PatientProfilePage() {
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, followUpInstructionsGivenTo: 'Patient and Escort'})}
+                            onClick={() => updateIVSedationFormField('followUpInstructionsGivenTo', 'Patient and Escort')}
                           >
                             Patient and Escort
                           </button>
@@ -6630,7 +7815,7 @@ export function PatientProfilePage() {
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, followUpInstructionsGivenTo: 'Patient'})}
+                            onClick={() => updateIVSedationFormField('followUpInstructionsGivenTo', 'Patient')}
                           >
                             Patient
                           </button>
@@ -6641,7 +7826,7 @@ export function PatientProfilePage() {
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, followUpInstructionsGivenTo: 'Escort'})}
+                            onClick={() => updateIVSedationFormField('followUpInstructionsGivenTo', 'Escort')}
                           >
                             Escort
                           </button>
@@ -6659,7 +7844,7 @@ export function PatientProfilePage() {
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, dischargedTo: 'Home'})}
+                            onClick={() => updateIVSedationFormField('dischargedTo', 'Home')}
                           >
                             Home
                           </button>
@@ -6670,7 +7855,7 @@ export function PatientProfilePage() {
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                             }`}
-                            onClick={() => setIVSedationFormData({...ivSedationFormData, dischargedTo: 'Office'})}
+                            onClick={() => updateIVSedationFormField('dischargedTo', 'Office')}
                           >
                             Office
                           </button>
@@ -6686,7 +7871,7 @@ export function PatientProfilePage() {
                           min="0"
                           max="10"
                           value={ivSedationFormData.painLevelDischarge}
-                          onChange={(e) => setIVSedationFormData({...ivSedationFormData, painLevelDischarge: e.target.value})}
+                          onChange={(e) => updateIVSedationFormField('painLevelDischarge', e.target.value)}
                           placeholder="0-10"
                           className="mt-2 text-sm h-8 border-blue-300 focus:border-blue-500"
                         />
@@ -6699,7 +7884,7 @@ export function PatientProfilePage() {
                       <textarea
                         id="otherRemarks"
                         value={ivSedationFormData.otherRemarks}
-                        onChange={(e) => setIVSedationFormData({...ivSedationFormData, otherRemarks: e.target.value})}
+                        onChange={(e) => updateIVSedationFormField('otherRemarks', e.target.value)}
                         placeholder="Enter any additional remarks or observations..."
                         rows={4}
                         className="mt-2 w-full px-3 py-2 border border-blue-300 rounded-md focus:border-blue-500 focus:outline-none text-sm resize-none"
@@ -6726,7 +7911,7 @@ export function PatientProfilePage() {
                   onClick={handleIVSedationNextStep}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  {ivSedationCurrentStep === ivSedationTotalSteps ? 'Complete' : 'Next'}
+                  {ivSedationCurrentStep === ivSedationTotalSteps ? 'Review and Submit' : 'Next'}
                 </Button>
               </div>
             </form>
@@ -6770,6 +7955,54 @@ export function PatientProfilePage() {
             </Button>
             <Button
               onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* IV Sedation Delete Confirmation Dialog */}
+      <Dialog open={showIVSedationDeleteConfirmation} onOpenChange={setShowIVSedationDeleteConfirmation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-lg font-bold text-gray-900">
+              <div className="p-2 bg-red-100 rounded-xl">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              Confirm Delete
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to delete this IV sedation form? This action cannot be undone.
+            </p>
+            {ivSedationSheetToDelete && (
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="text-sm text-gray-600">
+                  <strong>Patient:</strong> {ivSedationSheetToDelete.patient_name}
+                </div>
+                <div className="text-sm text-gray-600">
+                  <strong>Date:</strong> {new Date(ivSedationSheetToDelete.sedation_date).toLocaleDateString()}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowIVSedationDeleteConfirmation(false);
+                setIVSedationSheetToDelete(null);
+              }}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmIVSedationDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -7018,10 +8251,7 @@ export function PatientProfilePage() {
                         : entry
                     ) || [];
 
-                    setIVSedationFormData({
-                      ...ivSedationFormData,
-                      flowEntries: updatedEntries
-                    });
+                    updateIVSedationFormField('flowEntries', updatedEntries);
                   } else {
                     // Add new entry
                     const newEntry = {
@@ -7034,10 +8264,7 @@ export function PatientProfilePage() {
                       medications: newFlowEntry.medications
                     };
 
-                    setIVSedationFormData({
-                      ...ivSedationFormData,
-                      flowEntries: [...(ivSedationFormData.flowEntries || []), newEntry]
-                    });
+                    updateIVSedationFormField('flowEntries', [...(ivSedationFormData.flowEntries || []), newEntry]);
                   }
 
                   setShowFlowEntryDialog(false);
@@ -7098,304 +8325,1095 @@ export function PatientProfilePage() {
         </div>
       )}
 
+      {/* IV Sedation Toast Notification */}
+      {showIVSedationToast && ivSedationFormMessage.type && (
+        <div className="fixed bottom-4 right-4 z-[9999] w-80">
+          <div className={`px-4 py-4 rounded-md shadow-md border flex items-start gap-3 min-h-[60px] ${
+            ivSedationFormMessage.type === 'error'
+              ? 'bg-red-500 text-white border-red-600'
+              : ivSedationFormMessage.type === 'info'
+              ? 'bg-blue-500 text-white border-blue-600'
+              : 'bg-green-500 text-white border-green-600'
+            }`}>
+            {ivSedationFormMessage.type === 'error' ? (
+              <svg className="w-4 h-4 text-white flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : ivSedationFormMessage.type === 'info' ? (
+              <svg className="w-4 h-4 text-white flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-white flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            <div className="flex-1">
+              <p className="text-sm font-medium leading-relaxed">{ivSedationFormMessage.text}</p>
+            </div>
+            <button
+              onClick={() => setShowIVSedationToast(false)}
+              className={`flex-shrink-0 p-1 rounded-full transition-colors duration-200 ${
+                ivSedationFormMessage.type === 'error'
+                  ? 'hover:bg-red-600 text-red-100 hover:text-white'
+                  : ivSedationFormMessage.type === 'info'
+                  ? 'hover:bg-blue-600 text-blue-100 hover:text-white'
+                  : 'hover:bg-green-600 text-green-100 hover:text-white'
+              }`}
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* IV Sedation Summary Dialog */}
       <Dialog open={showIVSedationSummary} onOpenChange={handleCloseSummary}>
         <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden p-0">
           <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3 border-b">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
               <Activity className="h-6 w-6 text-blue-600" />
-              IV Sedation Form Summary & Signature
+              Review IV Sedation Form
             </DialogTitle>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-8">
               {/* Patient Information */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3">Patient Information</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div><strong>Patient:</strong> {ivSedationFormData.patientName}</div>
-                  <div><strong>Date:</strong> {new Date(ivSedationFormData.date).toLocaleDateString()}</div>
-                  <div><strong>Height:</strong> {ivSedationFormData.heightFeet}' {ivSedationFormData.heightInches}"</div>
-                  <div><strong>Weight:</strong> {ivSedationFormData.weight} lbs</div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-sm">
-                  <div><strong>Upper Treatment:</strong> {ivSedationFormData.upperTreatment}</div>
-                  <div><strong>Lower Treatment:</strong> {ivSedationFormData.lowerTreatment}</div>
-                </div>
-              </div>
-
-              {/* Pre-Assessment Summary */}
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Pre-Assessment</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div><strong>NPO Status:</strong> {ivSedationFormData.npoStatus}</div>
-                  <div><strong>Morning Medications:</strong> {ivSedationFormData.morningMedications}</div>
-                  <div><strong>Pregnancy Risk:</strong> {ivSedationFormData.pregnancyRisk}</div>
-                  <div><strong>ASA Classification:</strong> {ivSedationFormData.asaClassification}</div>
-                </div>
-                {ivSedationFormData.allergies.length > 0 && (
-                  <div className="mt-3 text-sm">
-                    <strong>Allergies:</strong> {ivSedationFormData.allergies.join(', ')}
-                    {ivSedationFormData.allergiesOther && ` (${ivSedationFormData.allergiesOther})`}
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-blue-600 rounded-lg">
+                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                   </div>
-                )}
-              </div>
-
-              {/* Sedation Plan */}
-              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                <h3 className="text-lg font-semibold text-green-900 mb-3">Sedation Plan</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div><strong>Sedation Type:</strong> {ivSedationFormData.sedationType}</div>
-                  <div><strong>Level of Sedation:</strong> {ivSedationFormData.levelOfSedation}</div>
+                  <h3 className="text-xl font-bold text-blue-900">Step 1: Patient Information</h3>
                 </div>
-                {ivSedationFormData.medicationsPlanned.length > 0 && (
-                  <div className="mt-3 text-sm">
-                    <strong>Planned Medications:</strong> {ivSedationFormData.medicationsPlanned.join(', ')}
-                  </div>
-                )}
-              </div>
 
-              {/* Time Summary */}
-              <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                <h3 className="text-lg font-semibold text-yellow-900 mb-3">Time Summary</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div><strong>Time in Room:</strong> {ivSedationFormData.timeInRoom}</div>
-                  <div><strong>Sedation Start:</strong> {ivSedationFormData.sedationStartTime}</div>
-                  <div><strong>Sedation End:</strong> {ivSedationFormData.sedationEndTime}</div>
-                  <div><strong>Out of Room:</strong> {ivSedationFormData.outOfRoomTime}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm">
+                    <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Patient Name</div>
+                    <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.patientName}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm">
+                    <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Date</div>
+                    <div className="text-lg font-semibold text-gray-900">{new Date(ivSedationFormData.date).toLocaleDateString()}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm">
+                    <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Height</div>
+                    <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.heightFeet}' {ivSedationFormData.heightInches}"</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm">
+                    <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Weight</div>
+                    <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.weight} lbs</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm">
+                    <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Upper Treatment</div>
+                    <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.upperTreatment}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-blue-200 shadow-sm">
+                    <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Lower Treatment</div>
+                    <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.lowerTreatment}</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Monitoring Entries */}
-              {ivSedationFormData.flowEntries && ivSedationFormData.flowEntries.length > 0 && (
-                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                  <h3 className="text-lg font-semibold text-purple-900 mb-3">Monitoring Log</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-purple-200">
-                          <th className="text-left p-2">Time</th>
-                          <th className="text-left p-2">BP</th>
-                          <th className="text-left p-2">HR</th>
-                          <th className="text-left p-2">RR</th>
-                          <th className="text-left p-2">SpO2</th>
-                          <th className="text-left p-2">Medications</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {ivSedationFormData.flowEntries.map((entry, index) => (
-                          <tr key={index} className="border-b border-purple-100">
-                            <td className="p-2">{entry.time}</td>
-                            <td className="p-2">{entry.bp}</td>
-                            <td className="p-2">{entry.heartRate}</td>
-                            <td className="p-2">{entry.rr}</td>
-                            <td className="p-2">{entry.spo2}</td>
-                            <td className="p-2">
-                              {entry.medications.map(medId => {
-                                const med = medicationOptions.find(m => m.id === medId);
-                                return med ? med.name.split(' | ')[0] : medId;
-                              }).join(', ')}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              {/* Step 2: Pre-Assessment & Medical History */}
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 shadow-lg">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-gray-600 rounded-lg">
+                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                   </div>
-                </div>
-              )}
-
-              {/* Recovery Assessment */}
-              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-                <h3 className="text-lg font-semibold text-red-900 mb-3">Recovery Assessment</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                  <div className="flex justify-between">
-                    <span>Alert and Oriented:</span>
-                    <span className={`font-medium ${ivSedationFormData.alertOriented === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
-                      {ivSedationFormData.alertOriented?.toUpperCase() || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Protective Reflexes:</span>
-                    <span className={`font-medium ${ivSedationFormData.protectiveReflexes === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
-                      {ivSedationFormData.protectiveReflexes?.toUpperCase() || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Breathing Spontaneously:</span>
-                    <span className={`font-medium ${ivSedationFormData.breathingSpontaneously === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
-                      {ivSedationFormData.breathingSpontaneously?.toUpperCase() || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Post-Op Nausea:</span>
-                    <span className={`font-medium ${ivSedationFormData.postOpNausea === 'no' ? 'text-green-600' : 'text-red-600'}`}>
-                      {ivSedationFormData.postOpNausea?.toUpperCase() || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Caregiver Present:</span>
-                    <span className={`font-medium ${ivSedationFormData.caregiverPresent === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
-                      {ivSedationFormData.caregiverPresent?.toUpperCase() || 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Baseline Mental Status:</span>
-                    <span className={`font-medium ${ivSedationFormData.baselineMentalStatus === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
-                      {ivSedationFormData.baselineMentalStatus?.toUpperCase() || 'N/A'}
-                    </span>
-                  </div>
+                  <h3 className="text-xl font-bold text-gray-900">Step 2: Pre-Assessment & Medical History</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-sm">
-                  <div><strong>Post-Op Instructions Given To:</strong> {ivSedationFormData.postOpInstructionsGivenTo}</div>
-                  <div><strong>Follow-Up Instructions Given To:</strong> {ivSedationFormData.followUpInstructionsGivenTo}</div>
-                  <div><strong>Discharged To:</strong> {ivSedationFormData.dischargedTo}</div>
-                  <div><strong>Pain Level at Discharge:</strong> {ivSedationFormData.painLevelDischarge}/10</div>
-                </div>
-
-                {ivSedationFormData.otherRemarks && (
-                  <div className="mt-4 text-sm">
-                    <strong>Other Remarks:</strong> {ivSedationFormData.otherRemarks}
-                  </div>
-                )}
-              </div>
-
-              {/* Signature Section */}
-              <div className="bg-gray-100 rounded-lg p-6 border border-gray-300">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Electronic Signature</h3>
-
-                {/* Signature Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <Label htmlFor="signatureName" className="text-sm font-medium text-gray-700">Full Name</Label>
-                    <Input
-                      id="signatureName"
-                      value={signatureName}
-                      onChange={(e) => setSignatureName(e.target.value)}
-                      placeholder="Enter full name"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="signatureTitle" className="text-sm font-medium text-gray-700">Title/Position</Label>
-                    <Input
-                      id="signatureTitle"
-                      value={signatureTitle}
-                      onChange={(e) => setSignatureTitle(e.target.value)}
-                      placeholder="Enter title"
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="signatureDate" className="text-sm font-medium text-gray-700">Date</Label>
-                    <Input
-                      id="signatureDate"
-                      type="date"
-                      value={signatureDate}
-                      onChange={(e) => setSignatureDate(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                {/* Signature Canvas and Preview Side by Side */}
-                <div className="mb-4">
-                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Digital Signature</Label>
-                  <div className="flex gap-4 items-start">
-                    {/* Signature Canvas */}
-                    <div className="flex-shrink-0">
-                      <div
-                        className="border-2 border-solid border-gray-300 rounded-lg bg-white relative"
-                        style={{
-                          width: `${canvasSize.width}px`,
-                          height: `${canvasSize.height}px`,
-                          overflow: 'hidden'
-                        }}
-                      >
-                        <SignatureCanvas
-                          ref={signatureRef}
-                          canvasProps={{
-                            width: canvasSize.width,
-                            height: canvasSize.height,
-                            className: 'signature-canvas-element',
-                            style: {
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: `${canvasSize.width}px`,
-                              height: `${canvasSize.height}px`,
-                              display: 'block',
-                              touchAction: 'none',
-                              border: 'none',
-                              margin: 0,
-                              padding: 0,
-                              boxSizing: 'border-box'
-                            }
-                          }}
-                          backgroundColor="rgba(255,255,255,1)"
-                          penColor="#000000"
-                          minWidth={1.5}
-                          maxWidth={2.5}
-                          velocityFilterWeight={0.7}
-                          dotSize={1.5}
-                          throttle={16}
-                          onBegin={handleSignatureBegin}
-                          onEnd={handleSaveSignature}
-                        />
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleClearSignature}
-                          className="text-xs"
-                        >
-                          Clear Signature
-                        </Button>
-                        <p className="text-xs text-gray-500 flex items-center">
-                          Sign above using mouse, touch, or stylus
-                        </p>
-                      </div>
+                {/* Pre-Assessment Cards */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-gray-600 rounded-full"></div>
+                    Pre-Assessment
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">NPO Status</div>
+                      <div className="text-sm font-semibold text-gray-900">{ivSedationFormData.npoStatus || 'Not specified'}</div>
                     </div>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Morning Medications</div>
+                      <div className="text-sm font-semibold text-gray-900">{ivSedationFormData.morningMedications || 'Not specified'}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">ASA Classification</div>
+                      <div className="text-sm font-semibold text-gray-900">{ivSedationFormData.asaClassification || 'Not specified'}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                      <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Mallampati Score</div>
+                      <div className="text-sm font-semibold text-gray-900">{ivSedationFormData.mallampatiScore || 'Not specified'}</div>
+                    </div>
+                  </div>
+                </div>
 
-                    {/* Signature Preview */}
-                    {signatureData && (
-                      <div className="flex-1 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm text-green-800 font-medium mb-2">✓ Signature Captured</p>
-                        <div className="text-xs text-green-700">
-                          <p><strong>Signed by:</strong> {signatureName}</p>
-                          <p><strong>Title:</strong> {signatureTitle}</p>
-                          <p><strong>Date:</strong> {new Date(signatureDate).toLocaleDateString()}</p>
+                {/* Allergies Card */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    Allergies
+                  </h4>
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                    {ivSedationFormData.allergies && ivSedationFormData.allergies.length > 0 ? (
+                      <div>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {ivSedationFormData.allergies.map((allergy, index) => (
+                            <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                              {allergy}
+                            </span>
+                          ))}
+                        </div>
+                        {ivSedationFormData.allergiesOther && (
+                          <div className="mt-2 p-2 bg-red-50 rounded border border-red-200">
+                            <span className="text-xs font-medium text-red-600">Other Details:</span>
+                            <span className="text-sm text-red-800 ml-2">{ivSedationFormData.allergiesOther}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500 italic">No allergies specified</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Female-specific Questions */}
+                {ivSedationFormData.pregnancyRisk && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                      Female Patients Only
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Pregnancy Risk</div>
+                        <div className={`text-sm font-semibold ${ivSedationFormData.pregnancyRisk === 'yes' ? 'text-red-600' : 'text-green-600'}`}>
+                          {ivSedationFormData.pregnancyRisk?.toUpperCase()}
+                        </div>
+                      </div>
+                      {ivSedationFormData.lastMenstrualCycle && (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Last Menstrual Cycle</div>
+                          <div className="text-sm font-semibold text-gray-900">{ivSedationFormData.lastMenstrualCycle}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Medical History */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    Medical History
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                    {/* Anesthesia History */}
+                    {ivSedationFormData.anesthesiaHistory && (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                          <h5 className="font-semibold text-gray-800">Anesthesia History</h5>
+                        </div>
+                        <div className="space-y-2">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                            {ivSedationFormData.anesthesiaHistory}
+                          </span>
+                          {ivSedationFormData.anesthesiaHistoryOther && (
+                            <div className="p-2 bg-purple-50 rounded border border-purple-200">
+                              <span className="text-xs font-medium text-purple-600">Details:</span>
+                              <span className="text-sm text-purple-800 ml-2">{ivSedationFormData.anesthesiaHistoryOther}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Respiratory Problems */}
+                    {ivSedationFormData.respiratoryProblems && ivSedationFormData.respiratoryProblems.length > 0 && (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
+                          <h5 className="font-semibold text-gray-800">Respiratory Problems</h5>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {ivSedationFormData.respiratoryProblems.map((problem, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                                {problem}
+                              </span>
+                            ))}
+                          </div>
+                          {ivSedationFormData.respiratoryProblemsOther && (
+                            <div className="p-2 bg-cyan-50 rounded border border-cyan-200">
+                              <span className="text-xs font-medium text-cyan-600">Other Details:</span>
+                              <span className="text-sm text-cyan-800 ml-2">{ivSedationFormData.respiratoryProblemsOther}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cardiovascular Problems */}
+                    {ivSedationFormData.cardiovascularProblems && ivSedationFormData.cardiovascularProblems.length > 0 && (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                          <h5 className="font-semibold text-gray-800">Cardiovascular Problems</h5>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {ivSedationFormData.cardiovascularProblems.map((problem, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                {problem}
+                              </span>
+                            ))}
+                          </div>
+                          {ivSedationFormData.cardiovascularProblemsOther && (
+                            <div className="p-2 bg-red-50 rounded border border-red-200">
+                              <span className="text-xs font-medium text-red-600">Other Details:</span>
+                              <span className="text-sm text-red-800 ml-2">{ivSedationFormData.cardiovascularProblemsOther}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Gastrointestinal Problems */}
+                    {ivSedationFormData.gastrointestinalProblems && ivSedationFormData.gastrointestinalProblems.length > 0 && (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                          <h5 className="font-semibold text-gray-800">Gastrointestinal Problems</h5>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {ivSedationFormData.gastrointestinalProblems.map((problem, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                                {problem}
+                              </span>
+                            ))}
+                          </div>
+                          {ivSedationFormData.gastrointestinalProblemsOther && (
+                            <div className="p-2 bg-orange-50 rounded border border-orange-200">
+                              <span className="text-xs font-medium text-orange-600">Other Details:</span>
+                              <span className="text-sm text-orange-800 ml-2">{ivSedationFormData.gastrointestinalProblemsOther}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Neurologic Problems */}
+                    {ivSedationFormData.neurologicProblems && ivSedationFormData.neurologicProblems.length > 0 && (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
+                          <h5 className="font-semibold text-gray-800">Neurologic Problems</h5>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {ivSedationFormData.neurologicProblems.map((problem, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                {problem}
+                              </span>
+                            ))}
+                          </div>
+                          {ivSedationFormData.neurologicProblemsOther && (
+                            <div className="p-2 bg-indigo-50 rounded border border-indigo-200">
+                              <span className="text-xs font-medium text-indigo-600">Other Details:</span>
+                              <span className="text-sm text-indigo-800 ml-2">{ivSedationFormData.neurologicProblemsOther}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Endocrine/Renal Problems */}
+                    {ivSedationFormData.endocrineRenalProblems && ivSedationFormData.endocrineRenalProblems.length > 0 && (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-teal-500 rounded-full"></div>
+                          <h5 className="font-semibold text-gray-800">Endocrine/Renal Problems</h5>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {ivSedationFormData.endocrineRenalProblems.map((problem, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
+                                {problem}
+                              </span>
+                            ))}
+                          </div>
+                          {ivSedationFormData.endocrineRenalProblemsOther && (
+                            <div className="p-2 bg-teal-50 rounded border border-teal-200">
+                              <span className="text-xs font-medium text-teal-600">Other Details:</span>
+                              <span className="text-sm text-teal-800 ml-2">{ivSedationFormData.endocrineRenalProblemsOther}</span>
+                            </div>
+                          )}
+                          {ivSedationFormData.lastA1CLevel && (
+                            <div className="p-2 bg-teal-50 rounded border border-teal-200">
+                              <span className="text-xs font-medium text-teal-600">Last A1C Level:</span>
+                              <span className="text-sm text-teal-800 ml-2">{ivSedationFormData.lastA1CLevel}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Miscellaneous */}
+                    {ivSedationFormData.miscellaneous && ivSedationFormData.miscellaneous.length > 0 && (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm lg:col-span-2">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                          <h5 className="font-semibold text-gray-800">Miscellaneous Conditions</h5>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {ivSedationFormData.miscellaneous.map((condition, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                {condition}
+                              </span>
+                            ))}
+                          </div>
+                          {ivSedationFormData.miscellaneousOther && (
+                            <div className="p-2 bg-yellow-50 rounded border border-yellow-200">
+                              <span className="text-xs font-medium text-yellow-600">Other Details:</span>
+                              <span className="text-sm text-yellow-800 ml-2">{ivSedationFormData.miscellaneousOther}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Social History */}
+                    {ivSedationFormData.socialHistory && ivSedationFormData.socialHistory.length > 0 && (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                          <h5 className="font-semibold text-gray-800">Social History</h5>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {ivSedationFormData.socialHistory.map((habit, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                {habit}
+                              </span>
+                            ))}
+                          </div>
+                          {ivSedationFormData.socialHistoryOther && (
+                            <div className="p-2 bg-emerald-50 rounded border border-emerald-200">
+                              <span className="text-xs font-medium text-emerald-600">Other Details:</span>
+                              <span className="text-sm text-emerald-800 ml-2">{ivSedationFormData.socialHistoryOther}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* Patient Assessment & Evaluations */}
+                <div className="space-y-6">
+                  {/* Patient Assessment */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      Patient Assessment
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {ivSedationFormData.wellDevelopedNourished && (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Well Developed and Nourished</div>
+                          <div className={`text-sm font-semibold ${ivSedationFormData.wellDevelopedNourished === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                            {ivSedationFormData.wellDevelopedNourished.toUpperCase()}
+                          </div>
+                        </div>
+                      )}
+                      {ivSedationFormData.patientAnxious && (
+                        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Patient Anxious</div>
+                          <div className={`text-sm font-semibold ${ivSedationFormData.patientAnxious === 'no' ? 'text-green-600' : 'text-red-600'}`}>
+                            {ivSedationFormData.patientAnxious.toUpperCase()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Airway Evaluation */}
+                  {ivSedationFormData.airwayEvaluation && ivSedationFormData.airwayEvaluation.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        Airway Evaluation
+                      </h4>
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {ivSedationFormData.airwayEvaluation.map((evaluation, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                {evaluation}
+                              </span>
+                            ))}
+                          </div>
+                          {ivSedationFormData.airwayEvaluationOther && (
+                            <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                              <span className="text-xs font-medium text-blue-600">Other Details:</span>
+                              <span className="text-sm text-blue-800 ml-2">{ivSedationFormData.airwayEvaluationOther}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Heart/Lung Evaluation */}
+                  {ivSedationFormData.heartLungEvaluation && ivSedationFormData.heartLungEvaluation.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                        Heart and Lung Evaluation
+                      </h4>
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {ivSedationFormData.heartLungEvaluation.map((evaluation, index) => (
+                              <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                {evaluation}
+                              </span>
+                            ))}
+                          </div>
+                          {ivSedationFormData.heartLungEvaluationOther && (
+                            <div className="p-2 bg-red-50 rounded border border-red-200">
+                              <span className="text-xs font-medium text-red-600">Other Details:</span>
+                              <span className="text-sm text-red-800 ml-2">{ivSedationFormData.heartLungEvaluationOther}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Step 3: Sedation Plan */}
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200 shadow-lg">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-green-600 rounded-lg">
+                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-green-900">Step 3: Sedation Plan</h3>
+                </div>
+
+                {/* Instruments Checklist */}
+                {ivSedationFormData.instrumentsChecklist && ivSedationFormData.instrumentsChecklist.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                      Instruments Checklist
+                    </h4>
+                    <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                      <div className="flex flex-wrap gap-2">
+                        {ivSedationFormData.instrumentsChecklist.map(key => {
+                          const instrumentNames = {
+                            'ecg': 'ECG',
+                            'bp': 'BP',
+                            'pulseOx': 'Pulse OX',
+                            'etco2': 'ETCO2',
+                            'supplementalO2': 'Supplemental O2',
+                            'ppvAvailable': 'PPV Available',
+                            'suctionAvailable': 'Suction Available'
+                          };
+                          return (
+                            <span key={key} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              {instrumentNames[key] || key}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sedation Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                    <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Sedation Type</div>
+                    <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.sedationType || 'Not specified'}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                    <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Level of Sedation</div>
+                    <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.levelOfSedation || 'Not specified'}</div>
+                  </div>
+                </div>
+
+                {/* Medications Planned */}
+                {ivSedationFormData.medicationsPlanned && ivSedationFormData.medicationsPlanned.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      Planned Medications
+                    </h4>
+                    <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          {ivSedationFormData.medicationsPlanned.map((medication, index) => (
+                            <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              {medication}
+                            </span>
+                          ))}
+                        </div>
+                        {ivSedationFormData.medicationsOther && (
+                          <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                            <span className="text-xs font-medium text-blue-600">Other Medications:</span>
+                            <span className="text-sm text-blue-800 ml-2">{ivSedationFormData.medicationsOther}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Administration Route */}
+                {ivSedationFormData.administrationRoute && ivSedationFormData.administrationRoute.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      Administration Route
+                    </h4>
+                    <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                      <div className="flex flex-wrap gap-2">
+                        {ivSedationFormData.administrationRoute.map((route, index) => (
+                          <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                            {route}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Emergency Protocols */}
+                {ivSedationFormData.emergencyProtocols && ivSedationFormData.emergencyProtocols.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      Emergency Protocols
+                    </h4>
+                    <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                      <div className="flex flex-wrap gap-2">
+                        {ivSedationFormData.emergencyProtocols.map((protocol, index) => (
+                          <span key={index} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            {protocol}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 4: Flow - Time Tracking & Monitoring */}
+              <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200 shadow-lg">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-yellow-600 rounded-lg">
+                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-yellow-900">Step 4: Flow - Time Tracking & Monitoring</h3>
+                </div>
+
+                {/* Time Summary */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
+                    Time Summary
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm">
+                      <div className="text-xs font-medium text-yellow-600 uppercase tracking-wide mb-1">Time in Room</div>
+                      <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.timeInRoom || 'Not recorded'}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm">
+                      <div className="text-xs font-medium text-yellow-600 uppercase tracking-wide mb-1">Sedation Start</div>
+                      <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.sedationStartTime || 'Not recorded'}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm">
+                      <div className="text-xs font-medium text-yellow-600 uppercase tracking-wide mb-1">Sedation End</div>
+                      <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.sedationEndTime || 'Not recorded'}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm">
+                      <div className="text-xs font-medium text-yellow-600 uppercase tracking-wide mb-1">Out of Room</div>
+                      <div className="text-lg font-semibold text-gray-900">{ivSedationFormData.outOfRoomTime || 'Not recorded'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Duration Calculations */}
+                {ivSedationFormData.timeInRoom && ivSedationFormData.sedationStartTime && ivSedationFormData.sedationEndTime && ivSedationFormData.outOfRoomTime && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      Duration Summary
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm">
+                        <div className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-1">Preparation Time</div>
+                        <div className="text-lg font-semibold text-gray-900">{(() => {
+                          const roomTime = ivSedationFormData.timeInRoom.split(':');
+                          const sedationTime = ivSedationFormData.sedationStartTime.split(':');
+                          const roomMinutes = parseInt(roomTime[0]) * 60 + parseInt(roomTime[1]);
+                          const sedationMinutes = parseInt(sedationTime[0]) * 60 + parseInt(sedationTime[1]);
+                          const diffMinutes = sedationMinutes - roomMinutes;
+                          if (diffMinutes >= 0) {
+                            const hours = Math.floor(diffMinutes / 60);
+                            const minutes = diffMinutes % 60;
+                            return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                          }
+                          return '--';
+                        })()}</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm">
+                        <div className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-1">Sedation Duration</div>
+                        <div className="text-lg font-semibold text-gray-900">{(() => {
+                          const startTime = ivSedationFormData.sedationStartTime.split(':');
+                          const endTime = ivSedationFormData.sedationEndTime.split(':');
+                          const startMinutes = parseInt(startTime[0]) * 60 + parseInt(startTime[1]);
+                          const endMinutes = parseInt(endTime[0]) * 60 + parseInt(endTime[1]);
+                          const diffMinutes = endMinutes - startMinutes;
+                          if (diffMinutes >= 0) {
+                            const hours = Math.floor(diffMinutes / 60);
+                            const minutes = diffMinutes % 60;
+                            return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                          }
+                          return '--';
+                        })()}</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm">
+                        <div className="text-xs font-medium text-orange-600 uppercase tracking-wide mb-1">Total Room Time</div>
+                        <div className="text-lg font-semibold text-gray-900">{(() => {
+                          const roomTime = ivSedationFormData.timeInRoom.split(':');
+                          const outTime = ivSedationFormData.outOfRoomTime.split(':');
+                          const roomMinutes = parseInt(roomTime[0]) * 60 + parseInt(roomTime[1]);
+                          const outMinutes = parseInt(outTime[0]) * 60 + parseInt(outTime[1]);
+                          const diffMinutes = outMinutes - roomMinutes;
+                          if (diffMinutes >= 0) {
+                            const hours = Math.floor(diffMinutes / 60);
+                            const minutes = diffMinutes % 60;
+                            return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                          }
+                          return '--';
+                        })()}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Monitoring Entries */}
+              {ivSedationFormData.flowEntries && ivSedationFormData.flowEntries.length > 0 && (
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-purple-600 rounded-lg">
+                      <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-purple-900">Monitoring Log</h3>
+                  </div>
+                  <div className="bg-white rounded-lg border border-purple-200 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-purple-50">
+                          <tr className="border-b border-purple-200">
+                            <th className="text-left p-3 font-semibold text-purple-900">Time</th>
+                            <th className="text-left p-3 font-semibold text-purple-900">BP</th>
+                            <th className="text-left p-3 font-semibold text-purple-900">HR</th>
+                            <th className="text-left p-3 font-semibold text-purple-900">RR</th>
+                            <th className="text-left p-3 font-semibold text-purple-900">SpO2</th>
+                            <th className="text-left p-3 font-semibold text-purple-900">Medications</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ivSedationFormData.flowEntries.map((entry, index) => (
+                            <tr key={index} className="border-b border-purple-100 hover:bg-purple-25">
+                              <td className="p-3 font-medium text-gray-900">{entry.time}</td>
+                              <td className="p-3 text-gray-700">{entry.bp}</td>
+                              <td className="p-3 text-gray-700">{entry.heartRate}</td>
+                              <td className="p-3 text-gray-700">{entry.rr}</td>
+                              <td className="p-3 text-gray-700">{entry.spo2}%</td>
+                              <td className="p-3">
+                                <div className="flex flex-wrap gap-1">
+                                  {Array.isArray(entry.medications) ? entry.medications.map((medId, medIndex) => {
+                                    const med = medicationOptions.find(m => m.id === medId);
+                                    const medName = med ? med.name.split(' | ')[0] : medId;
+                                    return (
+                                      <span key={medIndex} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                                        {medName}
+                                      </span>
+                                    );
+                                  }) : null}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Recovery Assessment */}
+              <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200 shadow-lg">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-red-600 rounded-lg">
+                    <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-red-900">Step 5: Recovery Assessment</h3>
+                </div>
+
+                {/* Recovery Criteria */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                    Recovery Criteria
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { key: 'alertOriented', label: 'Alert and Oriented' },
+                      { key: 'protectiveReflexes', label: 'Protective Reflexes Intact' },
+                      { key: 'breathingSpontaneously', label: 'Breathing Spontaneously' },
+                      { key: 'postOpNausea', label: 'Post-Op Nausea/Vomiting', reverse: true },
+                      { key: 'caregiverPresent', label: 'Patient Caregiver Present' },
+                      { key: 'baselineMentalStatus', label: 'Return to Baseline Mental Status' },
+                      { key: 'responsiveVerbalCommands', label: 'Responsive to Verbal Commands' },
+                      { key: 'saturatingRoomAir', label: 'Saturating Appropriately on Room Air' },
+                      { key: 'vitalSignsBaseline', label: 'Vital Signs Returned to Baseline' },
+                      { key: 'painDuringRecovery', label: 'Pain During Recovery', reverse: true }
+                    ].map((criterion) => {
+                      const value = ivSedationFormData[criterion.key];
+                      const isPositive = criterion.reverse ? value === 'no' : value === 'yes';
+                      const isNegative = criterion.reverse ? value === 'yes' : value === 'no';
+
+                      return (
+                        <div key={criterion.key} className="bg-white rounded-lg p-4 border border-red-200 shadow-sm">
+                          <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-2">{criterion.label}</div>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full ${
+                              isPositive ? 'bg-green-500' :
+                              isNegative ? 'bg-red-500' :
+                              'bg-gray-300'
+                            }`}></div>
+                            <span className={`text-sm font-semibold ${
+                              isPositive ? 'text-green-600' :
+                              isNegative ? 'text-red-600' :
+                              'text-gray-500'
+                            }`}>
+                              {value?.toUpperCase() || 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Discharge Information */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    Discharge Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white rounded-lg p-4 border border-red-200 shadow-sm">
+                      <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">Post-Op Instructions Given To</div>
+                      <div className="text-sm font-semibold text-gray-900">{ivSedationFormData.postOpInstructionsGivenTo || 'Not specified'}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-red-200 shadow-sm">
+                      <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">Follow-Up Instructions Given To</div>
+                      <div className="text-sm font-semibold text-gray-900">{ivSedationFormData.followUpInstructionsGivenTo || 'Not specified'}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-red-200 shadow-sm">
+                      <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">Discharged To</div>
+                      <div className="text-sm font-semibold text-gray-900">{ivSedationFormData.dischargedTo || 'Not specified'}</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-red-200 shadow-sm">
+                      <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">Pain Level at Discharge</div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {ivSedationFormData.painLevelDischarge ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{ivSedationFormData.painLevelDischarge}/10</span>
+                            <div className="flex gap-1">
+                              {[...Array(10)].map((_, i) => (
+                                <div
+                                  key={i}
+                                  className={`w-2 h-2 rounded-full ${
+                                    i < parseInt(ivSedationFormData.painLevelDischarge) ? 'bg-red-500' : 'bg-gray-200'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          'Not recorded'
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Other Remarks */}
+                {ivSedationFormData.otherRemarks && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                      Other Remarks
+                    </h4>
+                    <div className="bg-white rounded-lg p-4 border border-red-200 shadow-sm">
+                      <div className="text-sm text-gray-700 leading-relaxed">
+                        {ivSedationFormData.otherRemarks}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
 
           {/* Dialog Footer */}
-          <div className="flex-shrink-0 flex justify-between items-center px-6 py-4 border-t bg-gray-50">
+          <div className="flex-shrink-0 flex justify-end items-center px-6 py-4 border-t bg-gray-50">
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleEditFromSummary}
+                className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-50"
+              >
+                <Edit className="h-4 w-4" />
+                Edit
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleFinalIVSedationSubmit}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Submit Form
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* IV Sedation Preview Dialog */}
+      <Dialog open={showIVSedationPreview} onOpenChange={setShowIVSedationPreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              IV Sedation Flow Chart - {selectedIVSedationSheet?.patient_name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {selectedIVSedationSheet && (
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-3">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><strong>Patient:</strong> {selectedIVSedationSheet.patient_name}</div>
+                    <div><strong>Date:</strong> {new Date(selectedIVSedationSheet.sedation_date).toLocaleDateString()}</div>
+                    <div><strong>Upper Treatment:</strong> {selectedIVSedationSheet.upper_treatment}</div>
+                    <div><strong>Lower Treatment:</strong> {selectedIVSedationSheet.lower_treatment}</div>
+                    <div><strong>Height:</strong> {selectedIVSedationSheet.height_feet}'{selectedIVSedationSheet.height_inches}"</div>
+                    <div><strong>Weight:</strong> {selectedIVSedationSheet.weight} lbs</div>
+                  </div>
+                </div>
+
+                {/* Medical History */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Medical History</h3>
+                  <div className="space-y-3 text-sm">
+                    {selectedIVSedationSheet.allergies && selectedIVSedationSheet.allergies.length > 0 && (
+                      <div>
+                        <strong>Allergies:</strong> {selectedIVSedationSheet.allergies.join(', ')}
+                        {selectedIVSedationSheet.allergies_other && ` (${selectedIVSedationSheet.allergies_other})`}
+                      </div>
+                    )}
+                    {selectedIVSedationSheet.npo_status && (
+                      <div><strong>NPO Status:</strong> {selectedIVSedationSheet.npo_status}</div>
+                    )}
+                    {selectedIVSedationSheet.morning_medications && (
+                      <div><strong>Morning Medications:</strong> {selectedIVSedationSheet.morning_medications}</div>
+                    )}
+                    {selectedIVSedationSheet.anesthesia_history && selectedIVSedationSheet.anesthesia_history.length > 0 && (
+                      <div><strong>Anesthesia History:</strong> {selectedIVSedationSheet.anesthesia_history.join(', ')}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sedation Plan */}
+                <div className="bg-green-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-green-900 mb-3">Sedation Plan</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><strong>Sedation Type:</strong> {selectedIVSedationSheet.sedation_type}</div>
+                    <div><strong>Level of Sedation:</strong> {selectedIVSedationSheet.level_of_sedation}</div>
+                    <div><strong>Administration Route:</strong> {selectedIVSedationSheet.administration_route}</div>
+                    <div><strong>ASA Classification:</strong> {selectedIVSedationSheet.asa_classification}</div>
+                    {selectedIVSedationSheet.medications_planned && selectedIVSedationSheet.medications_planned.length > 0 && (
+                      <div className="md:col-span-2">
+                        <strong>Medications Planned:</strong> {selectedIVSedationSheet.medications_planned.join(', ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Time Summary */}
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-yellow-900 mb-3">Time Summary</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div><strong>Time in Room:</strong> {selectedIVSedationSheet.time_in_room}</div>
+                    <div><strong>Sedation Start:</strong> {selectedIVSedationSheet.sedation_start_time}</div>
+                    <div><strong>Sedation End:</strong> {selectedIVSedationSheet.sedation_end_time}</div>
+                    <div><strong>Out of Room:</strong> {selectedIVSedationSheet.out_of_room_time}</div>
+                  </div>
+                </div>
+
+                {/* Monitoring Entries */}
+                {selectedIVSedationSheet.flow_entries && Array.isArray(selectedIVSedationSheet.flow_entries) && selectedIVSedationSheet.flow_entries.length > 0 && (
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-purple-900 mb-3">Monitoring Log</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-purple-200">
+                            <th className="text-left p-2">Time</th>
+                            <th className="text-left p-2">BP</th>
+                            <th className="text-left p-2">HR</th>
+                            <th className="text-left p-2">RR</th>
+                            <th className="text-left p-2">SpO2</th>
+                            <th className="text-left p-2">Medications</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedIVSedationSheet.flow_entries.map((entry: any, index: number) => (
+                            <tr key={index} className="border-b border-purple-100">
+                              <td className="p-2">{entry.time}</td>
+                              <td className="p-2">{entry.bp}</td>
+                              <td className="p-2">{entry.heartRate}</td>
+                              <td className="p-2">{entry.rr}</td>
+                              <td className="p-2">{entry.spo2}%</td>
+                              <td className="p-2">
+                                {Array.isArray(entry.medications) ? entry.medications.map((medId: string) => {
+                                  const med = medicationOptions.find(m => m.id === medId);
+                                  return med ? med.name.split(' | ')[0] : medId;
+                                }).join(', ') : ''}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recovery Assessment */}
+                <div className="bg-red-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-red-900 mb-3">Recovery Assessment</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="flex justify-between">
+                      <span>Alert and Oriented:</span>
+                      <span className={`font-medium ${selectedIVSedationSheet.alert_oriented === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedIVSedationSheet.alert_oriented?.toUpperCase() || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Protective Reflexes:</span>
+                      <span className={`font-medium ${selectedIVSedationSheet.protective_reflexes === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedIVSedationSheet.protective_reflexes?.toUpperCase() || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Breathing Spontaneously:</span>
+                      <span className={`font-medium ${selectedIVSedationSheet.breathing_spontaneously === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedIVSedationSheet.breathing_spontaneously?.toUpperCase() || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Post-Op Nausea:</span>
+                      <span className={`font-medium ${selectedIVSedationSheet.post_op_nausea === 'no' ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedIVSedationSheet.post_op_nausea?.toUpperCase() || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Caregiver Present:</span>
+                      <span className={`font-medium ${selectedIVSedationSheet.caregiver_present === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedIVSedationSheet.caregiver_present?.toUpperCase() || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Baseline Mental Status:</span>
+                      <span className={`font-medium ${selectedIVSedationSheet.baseline_mental_status === 'yes' ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedIVSedationSheet.baseline_mental_status?.toUpperCase() || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-sm">
+                    <div><strong>Post-Op Instructions Given To:</strong> {selectedIVSedationSheet.post_op_instructions_given_to}</div>
+                    <div><strong>Follow-Up Instructions Given To:</strong> {selectedIVSedationSheet.follow_up_instructions_given_to}</div>
+                    <div><strong>Discharged To:</strong> {selectedIVSedationSheet.discharged_to}</div>
+                    <div><strong>Pain Level at Discharge:</strong> {selectedIVSedationSheet.pain_level_discharge}/10</div>
+                  </div>
+
+                  {selectedIVSedationSheet.other_remarks && (
+                    <div className="mt-4 text-sm">
+                      <strong>Other Remarks:</strong> {selectedIVSedationSheet.other_remarks}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Dialog Footer */}
+          <div className="flex-shrink-0 flex justify-end items-center px-6 py-4 border-t bg-gray-50">
             <Button
               type="button"
               variant="outline"
-              onClick={handleCloseSummary}
+              onClick={handleIVSedationPreviewClose}
               className="flex items-center gap-2"
             >
-              Cancel
-            </Button>
-
-            <Button
-              type="button"
-              onClick={handleFinalIVSedationSubmit}
-              disabled={!signatureData || !signatureName || !signatureTitle}
-              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-            >
-              <CheckCircle className="h-4 w-4" />
-              Submit Form
+              <X className="h-4 w-4" />
+              Close
             </Button>
           </div>
         </DialogContent>

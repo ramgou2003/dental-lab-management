@@ -1,6 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Clock, User, MapPin, MoreHorizontal } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface Appointment {
   id: string;
@@ -23,6 +25,47 @@ interface DayViewProps {
 }
 
 export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection }: DayViewProps) {
+  const navigate = useNavigate();
+
+  // Function to find patient ID by name and navigate to profile
+  const handlePatientNameClick = async (patientName: string) => {
+    console.log('Patient name clicked:', patientName);
+
+    try {
+      console.log('Searching for patient in database...');
+
+      // Search for patient by full name
+      const { data: patients, error } = await supabase
+        .from('patients')
+        .select('id, full_name')
+        .eq('full_name', patientName)
+        .limit(1);
+
+      console.log('Database query result:', { patients, error });
+
+      if (error) {
+        console.error('Error finding patient:', error);
+        alert(`Error finding patient: ${error.message}`);
+        return;
+      }
+
+      if (patients && patients.length > 0) {
+        console.log('Patient found, navigating to:', `/patients/${patients[0].id}`);
+        // Navigate to patient profile
+        navigate(`/patients/${patients[0].id}`);
+      } else {
+        console.warn('Patient not found:', patientName);
+        alert(`Patient "${patientName}" not found in database. This might be mock data.`);
+
+        // For development: try to navigate to a mock patient profile
+        console.log('Trying to navigate to mock patient profile...');
+        navigate('/patients/mock-patient');
+      }
+    } catch (error) {
+      console.error('Error searching for patient:', error);
+      alert(`Error: ${error}`);
+    }
+  };
   const hours = Array.from({ length: 13 }, (_, i) => i + 7); // 7 AM to 7 PM
 
   const appointmentTypes = [
@@ -95,6 +138,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [dragColumn, setDragColumn] = useState<string | null>(null);
   const [keepSelectionVisible, setKeepSelectionVisible] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Dynamic sizing state for column width tracking
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate column width for dynamic text switching
+  const getColumnWidth = () => {
+    return containerWidth / 6; // 6 appointment columns (excluding time column)
+  };
 
   const formatTime = (hour: number) => {
     const period = hour >= 12 ? 'PM' : 'AM';
@@ -416,6 +468,33 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     }
   }, [isDialogOpen, keepSelectionVisible, onClearSelection]);
 
+  // Measure container width for dynamic sizing
+  useEffect(() => {
+    const measureWidth = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.offsetWidth;
+        setContainerWidth(width);
+      }
+    };
+
+    // Initial measurement
+    measureWidth();
+
+    // Set up resize observer for dynamic updates
+    const resizeObserver = new ResizeObserver(measureWidth);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    // Also listen to window resize as fallback
+    window.addEventListener('resize', measureWidth);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', measureWidth);
+    };
+  }, []);
+
   // Check if this hour contains any part of the drag selection
   const isHourInDragSelection = (hour: number, column: string) => {
     if (!(isDragging || keepSelectionVisible) || !dragStart || !dragEnd || dragColumn !== column) return false;
@@ -471,6 +550,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   return (
     <div
+      ref={containerRef}
       className="flex flex-col h-full bg-white select-none"
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
@@ -659,14 +739,21 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           const firstLetter = typeColors.shortLabel?.charAt(0) || typeColors.label?.charAt(0) || 'A';
                           return (
                             <div className="flex items-center justify-between h-full w-full">
-                              <h4 className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 pr-2">
+                              <h4
+                                className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 pr-2 underline cursor-pointer hover:text-blue-600 transition-colors"
+                                onClick={(e) => {
+                                  console.log('15-minute appointment patient name clicked');
+                                  e.stopPropagation();
+                                  handlePatientNameClick(appointment.patient);
+                                }}
+                              >
                                 {appointment.patient}
                               </h4>
                               <div className="flex items-center gap-1 flex-shrink-0 ml-auto">
-                                <span className="text-xs text-gray-600 whitespace-nowrap text-[10px]">
+                                <span className="text-xs text-gray-600 whitespace-nowrap">
                                   {appointment.startTime} - {appointment.endTime}
                                 </span>
-                                <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full ${typeColors.badgeColor || 'bg-gray-500'}`}>
+                                <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full uppercase ${typeColors.badgeColor || 'bg-gray-500'}`}>
                                   {firstLetter}
                                 </span>
                               </div>
@@ -678,18 +765,64 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                             <div className="flex flex-col h-full justify-between">
                               {/* Top row - Name in top left */}
                               <div className="flex justify-start">
-                                <h4 className="font-semibold text-sm text-gray-800 truncate">
+                                <h4
+                                  className="font-semibold text-sm text-gray-800 truncate underline cursor-pointer hover:text-blue-600 transition-colors"
+                                  onClick={(e) => {
+                                    console.log('30+ minute appointment patient name clicked');
+                                    e.stopPropagation();
+                                    handlePatientNameClick(appointment.patient);
+                                  }}
+                                >
                                   {appointment.patient}
                                 </h4>
                               </div>
-                              {/* Bottom row - Badge left, Time right */}
-                              <div className="flex justify-between items-end">
-                                <span className={`inline-flex px-1 py-0.5 text-xs font-medium rounded-full ${typeColors.badgeColor || 'bg-gray-100 text-gray-800'}`}>
-                                  {typeColors.shortLabel || typeColors.label}
-                                </span>
-                                <div className="text-xs text-gray-600">
-                                  {appointment.startTime} - {appointment.endTime}
-                                </div>
+                              {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
+                              <div className="flex justify-between items-end gap-1 min-w-0 w-full">
+                                {(() => {
+                                  const columnWidth = getColumnWidth();
+                                  const label = typeColors.shortLabel || typeColors.label;
+
+                                  // Determine display text and badge size based on column width - reduced sizes
+                                  let displayText, badgeSize, badgePadding;
+
+                                  if (columnWidth >= 140) {
+                                    // Wide columns - show full text
+                                    displayText = label;
+                                    badgeSize = 'text-[11px]';
+                                    badgePadding = 'px-1.5 py-0.5';
+                                  } else if (columnWidth >= 120) {
+                                    // Medium columns - show full text but smaller
+                                    displayText = label;
+                                    badgeSize = 'text-[10px]';
+                                    badgePadding = 'px-1 py-0.5';
+                                  } else if (columnWidth >= 100) {
+                                    // Narrow columns - start abbreviating "Data Collection"
+                                    displayText = (label === 'Data Collection') ? 'Data' : label;
+                                    badgeSize = 'text-[9px]';
+                                    badgePadding = 'px-1 py-0.5';
+                                  } else if (columnWidth >= 80) {
+                                    // Very narrow - abbreviate and smaller size
+                                    displayText = (label === 'Data Collection') ? 'Data' : label;
+                                    badgeSize = 'text-[8px]';
+                                    badgePadding = 'px-0.5 py-0.5';
+                                  } else {
+                                    // Ultra narrow - minimal badge
+                                    displayText = (label === 'Data Collection') ? 'Data' : label;
+                                    badgeSize = 'text-[7px]';
+                                    badgePadding = 'px-0.5 py-0';
+                                  }
+
+                                  return (
+                                    <>
+                                      <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase ${typeColors.badgeColor || 'bg-gray-100 text-gray-800'} ${badgeSize} ${badgePadding}`}>
+                                        {label === 'Data Collection' ? 'Data' : displayText}
+                                      </span>
+                                      <div className="text-xs text-gray-600 text-right whitespace-nowrap flex-shrink-0 ml-auto">
+                                        {appointment.startTime} - {appointment.endTime}
+                                      </div>
+                                    </>
+                                  );
+                                })()}
                               </div>
                             </div>
                           );
