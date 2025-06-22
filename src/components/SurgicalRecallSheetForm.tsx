@@ -4,8 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, User, Calendar, Check, Plus, Camera } from "lucide-react";
-import { useState } from "react";
-import { SmartCameraCapture } from "./SmartCameraCapture";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 interface SurgicalRecallSheetFormProps {
   patientId: string;
@@ -50,8 +49,6 @@ export function SurgicalRecallSheetForm({
   const [currentStep, setCurrentStep] = useState(1);
   const [showImplantDialog, setShowImplantDialog] = useState(false);
   const [implantDialogType, setImplantDialogType] = useState<'upper' | 'lower'>('upper');
-  const [showImplantCamera, setShowImplantCamera] = useState(false);
-  const [showMuaCamera, setShowMuaCamera] = useState(false);
   const [implantData, setImplantData] = useState({
     position: '',
     mua_brand: '',
@@ -63,6 +60,22 @@ export function SurgicalRecallSheetForm({
     size: '',
     implant_picture: null as File | null
   });
+
+  // Camera capture states
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraType, setCameraType] = useState<'implant_picture' | 'mua_picture'>('implant_picture');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Cropping states
+  const [showCropper, setShowCropper] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [cropPoints, setCropPoints] = useState<{x: number, y: number}[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const cropCanvasRef = useRef<HTMLCanvasElement>(null);
+  const cropImageRef = useRef<HTMLImageElement>(null);
 
   // Calculate total steps and step names based on arch type
   const getTotalSteps = () => {
@@ -182,6 +195,265 @@ export function SurgicalRecallSheetForm({
       [field]: file
     }));
   };
+
+  // Camera functions
+  const startCamera = useCallback(async (type: 'implant_picture' | 'mua_picture') => {
+    try {
+      setCameraType(type);
+
+      // Check if mediaDevices is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported on this device');
+      }
+
+      // Try different camera constraints for better tablet compatibility
+      let stream;
+      try {
+        // First try with environment camera (rear camera)
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+      } catch (envError) {
+        console.warn('Environment camera failed, trying user camera:', envError);
+        // Fallback to front camera
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: 'user',
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          });
+        } catch (userError) {
+          console.warn('User camera failed, trying any camera:', userError);
+          // Final fallback - any available camera
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          });
+        }
+      }
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setShowCamera(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+
+      let errorMessage = 'Unable to access camera. ';
+      if (error.name === 'NotAllowedError') {
+        errorMessage += 'Please allow camera permissions in your browser settings.';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage += 'No camera found on this device.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage += 'Camera not supported on this device.';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage += 'Camera is being used by another application.';
+      } else {
+        errorMessage += 'Please check permissions and try again.';
+      }
+
+      alert(errorMessage);
+    }
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setShowCamera(false);
+  }, []);
+
+  const captureImage = useCallback(() => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+
+      if (context) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+
+        // Convert to data URL for cropping
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setCapturedImage(imageDataUrl);
+
+        // Initialize crop points (default rectangle covering most of the image)
+        const margin = 50;
+        setCropPoints([
+          { x: margin, y: margin }, // top-left
+          { x: canvas.width - margin, y: margin }, // top-right
+          { x: canvas.width - margin, y: canvas.height - margin }, // bottom-right
+          { x: margin, y: canvas.height - margin } // bottom-left
+        ]);
+
+        stopCamera();
+        setShowCropper(true);
+      }
+    }
+  }, [stopCamera]);
+
+  // Cropping functions
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!cropCanvasRef.current) return;
+
+    const canvas = cropCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    // Check if clicking near existing point (for dragging)
+    const pointRadius = 10;
+    for (let i = 0; i < cropPoints.length; i++) {
+      const point = cropPoints[i];
+      const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
+      if (distance <= pointRadius) {
+        setIsDragging(true);
+        setDragIndex(i);
+        return;
+      }
+    }
+  }, [cropPoints]);
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging || dragIndex === null || !cropCanvasRef.current) return;
+
+    const canvas = cropCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    const newPoints = [...cropPoints];
+    newPoints[dragIndex] = { x, y };
+    setCropPoints(newPoints);
+  }, [isDragging, dragIndex, cropPoints]);
+
+  const handleCanvasMouseUp = useCallback(() => {
+    setIsDragging(false);
+    setDragIndex(null);
+  }, []);
+
+  const applyCrop = useCallback(() => {
+    if (!capturedImage || !cropCanvasRef.current) return;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      // Calculate the bounding box of the crop area
+      const minX = Math.min(...cropPoints.map(p => p.x));
+      const maxX = Math.max(...cropPoints.map(p => p.x));
+      const minY = Math.min(...cropPoints.map(p => p.y));
+      const maxY = Math.max(...cropPoints.map(p => p.y));
+
+      const width = maxX - minX;
+      const height = maxY - minY;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      if (ctx) {
+        // Draw the cropped portion
+        ctx.drawImage(img, minX, minY, width, height, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], `${cameraType}_${Date.now()}.jpg`, {
+              type: 'image/jpeg'
+            });
+            handleFileChange(cameraType, file);
+            setShowCropper(false);
+            setCapturedImage(null);
+            setCropPoints([]);
+          }
+        }, 'image/jpeg', 0.8);
+      }
+    };
+
+    img.src = capturedImage;
+  }, [capturedImage, cropPoints, cameraType, handleFileChange]);
+
+  const drawCropOverlay = useCallback(() => {
+    if (!cropCanvasRef.current || !capturedImage) return;
+
+    const canvas = cropCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = cropImageRef.current;
+    if (!img) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw the image
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Draw crop overlay
+    if (cropPoints.length === 4) {
+      // Draw semi-transparent overlay
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Clear the crop area
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.moveTo(cropPoints[0].x, cropPoints[0].y);
+      for (let i = 1; i < cropPoints.length; i++) {
+        ctx.lineTo(cropPoints[i].x, cropPoints[i].y);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Reset composite operation
+      ctx.globalCompositeOperation = 'source-over';
+
+      // Draw crop border
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cropPoints[0].x, cropPoints[0].y);
+      for (let i = 1; i < cropPoints.length; i++) {
+        ctx.lineTo(cropPoints[i].x, cropPoints[i].y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      // Draw corner points
+      ctx.fillStyle = '#3b82f6';
+      cropPoints.forEach(point => {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+    }
+  }, [capturedImage, cropPoints]);
+
+  // Effect to redraw overlay when crop points change
+  useEffect(() => {
+    drawCropOverlay();
+  }, [drawCropOverlay]);
 
   const handleSaveImplant = () => {
     // Here you would save the implant data to the form
@@ -825,19 +1097,18 @@ export function SurgicalRecallSheetForm({
 
                 <div>
                   <Label htmlFor="implant_picture">Implant Sticker Picture</Label>
-                  <Button
+                  <button
                     type="button"
-                    onClick={() => setShowImplantCamera(true)}
-                    variant="outline"
-                    className="w-full h-12 border-2 border-dashed border-blue-300 hover:border-blue-500 text-blue-600 hover:text-blue-700 flex items-center justify-center gap-2"
+                    onClick={() => startCamera('implant_picture')}
+                    className="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg bg-transparent hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
                   >
-                    <Camera className="h-5 w-5" />
-                    {implantData.implant_picture ? 'Retake Picture' : 'Capture Sticker'}
-                  </Button>
+                    <Camera className="h-6 w-6" />
+                    <span className="text-sm">Capture Implant Sticker</span>
+                  </button>
                   {implantData.implant_picture && (
                     <div className="mt-2">
                       <p className="text-sm text-gray-600">
-                        Picture captured: {implantData.implant_picture.name}
+                        Captured: {implantData.implant_picture.name}
                       </p>
                       <p className="text-xs text-gray-500">
                         Size: {(implantData.implant_picture.size / 1024).toFixed(1)} KB
@@ -959,19 +1230,18 @@ export function SurgicalRecallSheetForm({
 
                 <div>
                   <Label htmlFor="mua_picture">MUA Sticker Picture</Label>
-                  <Button
+                  <button
                     type="button"
-                    onClick={() => setShowMuaCamera(true)}
-                    variant="outline"
-                    className="w-full h-12 border-2 border-dashed border-blue-300 hover:border-blue-500 text-blue-600 hover:text-blue-700 flex items-center justify-center gap-2"
+                    onClick={() => startCamera('mua_picture')}
+                    className="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg bg-transparent hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
                   >
-                    <Camera className="h-5 w-5" />
-                    {implantData.mua_picture ? 'Retake Picture' : 'Capture Sticker'}
-                  </Button>
+                    <Camera className="h-6 w-6" />
+                    <span className="text-sm">Capture MUA Sticker</span>
+                  </button>
                   {implantData.mua_picture && (
                     <div className="mt-2">
                       <p className="text-sm text-gray-600">
-                        Picture captured: {implantData.mua_picture.name}
+                        Captured: {implantData.mua_picture.name}
                       </p>
                       <p className="text-xs text-gray-500">
                         Size: {(implantData.mua_picture.size / 1024).toFixed(1)} KB
@@ -1002,27 +1272,110 @@ export function SurgicalRecallSheetForm({
         </DialogContent>
       </Dialog>
 
-      {/* Smart Camera Capture for Implant Sticker */}
-      <SmartCameraCapture
-        isOpen={showImplantCamera}
-        onClose={() => setShowImplantCamera(false)}
-        onCapture={(file) => {
-          handleFileChange('implant_picture', file);
-          setShowImplantCamera(false);
-        }}
-        title="Implant Sticker"
-      />
+      {/* Camera Capture Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                Capture {cameraType === 'implant_picture' ? 'Implant' : 'MUA'} Sticker
+              </h3>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={stopCamera}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </Button>
+            </div>
 
-      {/* Smart Camera Capture for MUA Sticker */}
-      <SmartCameraCapture
-        isOpen={showMuaCamera}
-        onClose={() => setShowMuaCamera(false)}
-        onCapture={(file) => {
-          handleFileChange('mua_picture', file);
-          setShowMuaCamera(false);
-        }}
-        title="MUA Sticker"
-      />
+            <div className="space-y-4">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className="w-full h-64 bg-black rounded-lg"
+              />
+
+              <Button
+                type="button"
+                onClick={captureImage}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+              >
+                <Camera className="h-4 w-4" />
+                Capture
+              </Button>
+            </div>
+
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+        </div>
+      )}
+
+      {/* Image Cropper Modal */}
+      {showCropper && capturedImage && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                Crop {cameraType === 'implant_picture' ? 'Implant' : 'MUA'} Sticker
+              </h3>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowCropper(false);
+                    setCapturedImage(null);
+                    setCropPoints([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={applyCrop}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Apply Crop
+                </Button>
+              </div>
+            </div>
+
+            <div className="relative">
+              <p className="text-sm text-gray-600 mb-2">
+                Drag the corner points to adjust the crop area
+              </p>
+              <div className="relative overflow-auto max-h-[60vh]">
+                <img
+                  ref={cropImageRef}
+                  src={capturedImage}
+                  alt="Captured"
+                  className="hidden"
+                  onLoad={() => {
+                    if (cropCanvasRef.current && cropImageRef.current) {
+                      const canvas = cropCanvasRef.current;
+                      const img = cropImageRef.current;
+                      canvas.width = img.naturalWidth;
+                      canvas.height = img.naturalHeight;
+                      drawCropOverlay();
+                    }
+                  }}
+                />
+                <canvas
+                  ref={cropCanvasRef}
+                  className="max-w-full h-auto border border-gray-300 cursor-crosshair"
+                  onMouseDown={handleCanvasClick}
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseUp={handleCanvasMouseUp}
+                  onMouseLeave={handleCanvasMouseUp}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
