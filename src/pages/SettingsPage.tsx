@@ -1,7 +1,8 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { Settings, User, Bell, Shield, Database, Palette, Clock } from "lucide-react";
+import { Settings, User, Bell, Shield, Database, Palette, Clock, Stethoscope } from "lucide-react";
+import { TeethSelectorDemo } from "@/components/TeethSelectorDemo";
 
 export function SettingsPage() {
   const [activeSection, setActiveSection] = useState("clinic");
@@ -13,6 +14,7 @@ export function SettingsPage() {
     { id: "data", label: "Data & Backup", icon: Database },
     { id: "appearance", label: "Appearance", icon: Palette },
     { id: "scheduling", label: "Scheduling", icon: Clock },
+    { id: "teeth-demo", label: "Teeth Selector Demo", icon: Stethoscope },
   ];
 
   const renderSettingContent = () => {
@@ -140,6 +142,9 @@ export function SettingsPage() {
             </div>
           </div>
         );
+
+      case "teeth-demo":
+        return <TeethSelectorDemo />;
 
       default:
         return (
