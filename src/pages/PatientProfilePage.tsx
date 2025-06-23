@@ -62,6 +62,8 @@ import { ViewClinicalReportCard } from "@/components/ViewClinicalReportCard";
 import { AppointmentScheduler } from "@/components/AppointmentScheduler";
 import { SurgicalRecallSheetForm } from "@/components/SurgicalRecallSheetForm";
 import { ViewSurgicalRecallSheet } from "@/components/ViewSurgicalRecallSheet";
+import { DeleteSurgicalRecallSheetDialog } from "@/components/DeleteSurgicalRecallSheetDialog";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSurgicalRecallSheets } from "@/hooks/useSurgicalRecallSheets";
@@ -204,6 +206,8 @@ export function PatientProfilePage() {
   const [showSurgicalRecallPreview, setShowSurgicalRecallPreview] = useState(false);
   const [selectedSurgicalRecallSheet, setSelectedSurgicalRecallSheet] = useState<any | null>(null);
   const [surgicalRecallActiveDropdown, setSurgicalRecallActiveDropdown] = useState<string | null>(null);
+  const [showSurgicalRecallDeleteDialog, setShowSurgicalRecallDeleteDialog] = useState(false);
+  const [surgicalRecallSheetToDelete, setSurgicalRecallSheetToDelete] = useState<any | null>(null);
 
   // Surgical recall sheets hook
   const {
@@ -2238,14 +2242,22 @@ export function PatientProfilePage() {
   };
 
   const handleSurgicalRecallFormCancel = () => {
+    console.log('🚫 Cancelling surgical recall form, resetting editing state');
     setShowSurgicalRecallForm(false);
     setEditingSurgicalRecallSheet(null);
   };
 
   const handleViewSurgicalRecallSheet = async (sheet: any) => {
     try {
-      const sheetWithImplants = await fetchSheetWithImplants(sheet.id);
-      setSelectedSurgicalRecallSheet(sheetWithImplants);
+      const result = await fetchSheetWithImplants(sheet.id);
+
+      // Restructure the data to match what the preview expects
+      const viewData = {
+        ...result.sheet,
+        surgical_recall_implants: result.implants
+      };
+
+      setSelectedSurgicalRecallSheet(viewData);
       setShowSurgicalRecallPreview(true);
     } catch (error) {
       console.error('Error fetching surgical recall sheet:', error);
@@ -2259,8 +2271,18 @@ export function PatientProfilePage() {
 
   const handleEditSurgicalRecallSheet = async (sheet: any) => {
     try {
-      const sheetWithImplants = await fetchSheetWithImplants(sheet.id);
-      setEditingSurgicalRecallSheet(sheetWithImplants);
+      console.log('🔍 Editing surgical recall sheet:', sheet);
+      const result = await fetchSheetWithImplants(sheet.id);
+      console.log('📋 Fetched sheet with implants:', result);
+
+      // Restructure the data to match what the form expects
+      const editingData = {
+        ...result.sheet,
+        surgical_recall_implants: result.implants
+      };
+
+      console.log('📝 Structured editing data:', editingData);
+      setEditingSurgicalRecallSheet(editingData);
       setShowSurgicalRecallForm(true);
       setSurgicalRecallActiveDropdown(null);
     } catch (error) {
@@ -2273,24 +2295,30 @@ export function PatientProfilePage() {
     }
   };
 
-  const handleDeleteSurgicalRecallSheet = async (sheet: any) => {
+  const handleDeleteSurgicalRecallSheet = (sheet: any) => {
     setSurgicalRecallActiveDropdown(null);
-
-    const result = await deleteSurgicalRecallSheet(sheet.id);
-
-    if (result.success) {
-      toast({
-        title: "Success",
-        description: "Surgical recall sheet deleted successfully.",
-      });
-    } else {
-      toast({
-        title: "Error",
-        description: result.error || "Failed to delete surgical recall sheet.",
-        variant: "destructive",
-      });
-    }
+    setSurgicalRecallSheetToDelete({
+      id: sheet.id,
+      patient_name: sheet.patient_name,
+      surgery_date: sheet.surgery_date,
+      arch_type: sheet.arch_type,
+      implantCount: 0 // We'll calculate this if needed
+    });
+    setShowSurgicalRecallDeleteDialog(true);
   };
+
+  const handleSurgicalRecallDeleteSuccess = async () => {
+    // Refresh the sheets list
+    await refetchSurgicalRecallSheets();
+    toast({
+      title: "Success",
+      description: "Surgical recall sheet and all images deleted successfully!",
+    });
+  };
+
+
+
+
 
   const handleDataCollectionFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -3922,6 +3950,7 @@ export function PatientProfilePage() {
                                         <Edit2 className="h-3.5 w-3.5" />
                                         Edit
                                       </button>
+
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -10428,6 +10457,7 @@ export function PatientProfilePage() {
         <DialogContent className="max-w-4xl h-[85vh] flex flex-col overflow-hidden p-0">
           {patient && (
             <SurgicalRecallSheetForm
+              key={editingSurgicalRecallSheet ? `edit-${editingSurgicalRecallSheet.id}` : 'new'}
               patientId={patient.id}
               patientName={patient.full_name}
               onSubmit={handleSurgicalRecallFormSubmit}
@@ -10446,6 +10476,17 @@ export function PatientProfilePage() {
           setSelectedSurgicalRecallSheet(null);
         }}
         sheetData={selectedSurgicalRecallSheet}
+      />
+
+      {/* Delete Surgical Recall Sheet Confirmation Dialog */}
+      <DeleteSurgicalRecallSheetDialog
+        isOpen={showSurgicalRecallDeleteDialog}
+        onClose={() => {
+          setShowSurgicalRecallDeleteDialog(false);
+          setSurgicalRecallSheetToDelete(null);
+        }}
+        onSuccess={handleSurgicalRecallDeleteSuccess}
+        sheet={surgicalRecallSheetToDelete}
       />
     </div>
   );

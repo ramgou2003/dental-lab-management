@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { deleteSurgicalRecallSheet as deleteSurgicalRecallSheetWithImages } from '@/lib/surgicalRecallService';
 
 export interface SurgicalRecallSheet {
   id: string;
@@ -16,14 +17,14 @@ export interface SurgicalRecallSheet {
 
 export interface SurgicalRecallImplant {
   id: string;
-  sheet_id: string;
-  arch: 'upper' | 'lower';
+  surgical_recall_sheet_id: string;
+  arch_type: 'upper' | 'lower';
   position: string;
   implant_brand: string;
-  implant_series: string;
+  implant_subtype: string;
   implant_size: string;
   mua_brand?: string;
-  mua_series?: string;
+  mua_subtype?: string;
   mua_size?: string;
   implant_picture_url?: string;
   mua_picture_url?: string;
@@ -80,7 +81,7 @@ export const useSurgicalRecallSheets = (patientId?: string) => {
       const { data: implants, error: implantsError } = await supabase
         .from('surgical_recall_implants')
         .select('*')
-        .eq('sheet_id', sheetId)
+        .eq('surgical_recall_sheet_id', sheetId)
         .order('created_at', { ascending: true });
 
       if (implantsError) throw implantsError;
@@ -97,31 +98,28 @@ export const useSurgicalRecallSheets = (patientId?: string) => {
 
   const deleteSheet = async (sheetId: string) => {
     try {
-      // First delete all implants
-      const { error: implantsError } = await supabase
-        .from('surgical_recall_implants')
-        .delete()
-        .eq('sheet_id', sheetId);
+      console.log('🗑️ Hook: Starting deletion of surgical recall sheet:', sheetId);
 
-      if (implantsError) throw implantsError;
+      // ✅ Use the proper deletion function that includes image cleanup
+      const result = await deleteSurgicalRecallSheetWithImages(sheetId);
 
-      // Then delete the sheet
-      const { error: sheetError } = await supabase
-        .from('surgical_recall_sheets')
-        .delete()
-        .eq('id', sheetId);
-
-      if (sheetError) throw sheetError;
-
-      // Refresh the list
-      await fetchSheets();
-      
-      return { success: true };
+      if (result.success) {
+        // Refresh the list after successful deletion
+        await fetchSheets();
+        console.log('✅ Hook: Successfully deleted sheet and refreshed list');
+        return { success: true };
+      } else {
+        console.error('❌ Hook: Deletion failed:', result.error);
+        return {
+          success: false,
+          error: result.error || 'Failed to delete sheet'
+        };
+      }
     } catch (err) {
-      console.error('Error deleting surgical recall sheet:', err);
-      return { 
-        success: false, 
-        error: err instanceof Error ? err.message : 'Failed to delete sheet' 
+      console.error('❌ Hook: Exception during deletion:', err);
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Failed to delete sheet'
       };
     }
   };

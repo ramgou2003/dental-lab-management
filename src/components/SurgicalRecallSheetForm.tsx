@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Activity, User, Calendar, Check, Plus, Camera, X, Eye, Crop, RotateCcw, Move, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
+import { Activity, User, Calendar, Check, Plus, Camera, X, Eye, Crop, RotateCcw, Move, ZoomIn, ZoomOut, RotateCw, Edit, Trash2 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { saveSurgicalRecallSheet, updateSurgicalRecallSheet, SavedImplant } from "@/lib/surgicalRecallService";
+import { saveSurgicalRecallSheet, updateSurgicalRecallSheet, SavedImplant, uploadImage, deleteImage, listStorageFiles, checkFileExists, testDeleteSpecificFiles, deleteSurgicalRecallSheet, testDeleteSurgicalRecallSheet } from "@/lib/surgicalRecallService";
 import { toast } from "sonner";
 
 interface SurgicalRecallSheetFormProps {
@@ -23,23 +23,30 @@ export function SurgicalRecallSheetForm({
   onCancel,
   editingSheet
 }: SurgicalRecallSheetFormProps) {
+  // Debug logging
+  console.log('🔍 SurgicalRecallSheetForm props:', {
+    patientId,
+    patientName,
+    editingSheet: editingSheet ? {
+      id: editingSheet.id,
+      surgery_date: editingSheet.surgery_date,
+      arch_type: editingSheet.arch_type,
+      implants: editingSheet.surgical_recall_implants?.length || 0
+    } : null
+  });
+
   const [formData, setFormData] = useState({
-    // Basic Information
     patient_name: patientName,
     surgery_date: editingSheet?.surgery_date || new Date().toISOString().split('T')[0],
     arch_type: editingSheet?.arch_type || '',
     upper_surgery_type: editingSheet?.upper_surgery_type || '',
     lower_surgery_type: editingSheet?.lower_surgery_type || '',
-
-    // Upper Implants
     upper_implant_count: editingSheet?.upper_implant_count || '',
     upper_implant_positions: editingSheet?.upper_implant_positions || '',
     upper_implant_brand: editingSheet?.upper_implant_brand || '',
     upper_implant_size: editingSheet?.upper_implant_size || '',
     upper_complications: editingSheet?.upper_complications || '',
     upper_notes: editingSheet?.upper_notes || '',
-
-    // Lower Implants
     lower_implant_count: editingSheet?.lower_implant_count || '',
     lower_implant_positions: editingSheet?.lower_implant_positions || '',
     lower_implant_brand: editingSheet?.lower_implant_brand || '',
@@ -51,6 +58,9 @@ export function SurgicalRecallSheetForm({
   const [currentStep, setCurrentStep] = useState(1);
   const [showImplantDialog, setShowImplantDialog] = useState(false);
   const [implantDialogType, setImplantDialogType] = useState<'upper' | 'lower'>('upper');
+  const [editingImplant, setEditingImplant] = useState<SavedImplant | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [implantToDelete, setImplantToDelete] = useState<SavedImplant | null>(null);
   const [implantData, setImplantData] = useState({
     position: '',
     mua_brand: '',
@@ -74,6 +84,13 @@ export function SurgicalRecallSheetForm({
     type: 'implant' | 'mua';
   } | null>(null);
 
+  // Sticker image preview state
+  const [stickerPreview, setStickerPreview] = useState<{
+    url: string;
+    title: string;
+    type: 'implant' | 'mua';
+  } | null>(null);
+
   // Store preview URLs to avoid recreating them on each render
   const [implantPreviewUrl, setImplantPreviewUrl] = useState<string | null>(null);
   const [muaPreviewUrl, setMuaPreviewUrl] = useState<string | null>(null);
@@ -89,41 +106,115 @@ export function SurgicalRecallSheetForm({
 
   // Loading state for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingImplant, setIsSavingImplant] = useState(false);
 
-  // Load existing implants when editing
+  // Make test function available globally for debugging
   useEffect(() => {
-    if (editingSheet?.surgical_recall_implants) {
-      const upperImplants: SavedImplant[] = [];
-      const lowerImplants: SavedImplant[] = [];
+    (window as any).testDeleteSpecificFiles = testDeleteSpecificFiles;
+    (window as any).testDeleteSurgicalRecallSheet = testDeleteSurgicalRecallSheet;
+    (window as any).listStorageFiles = listStorageFiles;
+    console.log('🧪 Debug functions available:');
+    console.log('  - window.testDeleteSpecificFiles() - Test deleting specific image URLs');
+    console.log('  - window.testDeleteSurgicalRecallSheet(sheetId) - Test deleting entire sheet');
+    console.log('  - window.listStorageFiles() - List all files in storage');
+  }, []);
 
-      editingSheet.surgical_recall_implants.forEach((implant: any) => {
-        const savedImplant: SavedImplant = {
-          id: implant.id,
-          position: implant.position,
-          brand: implant.implant_brand,
-          subtype: implant.implant_subtype,
-          size: implant.implant_size,
-          implant_picture_url: implant.implant_picture_url,
-          mua_brand: implant.mua_brand,
-          mua_subtype: implant.mua_subtype,
-          mua_size: implant.mua_size,
-          mua_picture_url: implant.mua_picture_url,
-          arch_type: implant.arch_type
-        };
+  // Load existing data when editing
+  useEffect(() => {
+    if (editingSheet) {
+      console.log('📝 Loading editing sheet data:', editingSheet);
+      console.log('📋 Available fields:', Object.keys(editingSheet));
+      console.log('📅 Surgery date:', editingSheet.surgery_date);
+      console.log('🦷 Arch type:', editingSheet.arch_type);
+      console.log('🔧 Upper surgery type:', editingSheet.upper_surgery_type);
+      console.log('🔧 Lower surgery type:', editingSheet.lower_surgery_type);
 
-        if (implant.arch_type === 'upper') {
-          upperImplants.push(savedImplant);
-        } else {
-          lowerImplants.push(savedImplant);
-        }
+      // Update form data with existing sheet data
+      const newFormData = {
+        patient_name: patientName,
+        surgery_date: editingSheet.surgery_date || new Date().toISOString().split('T')[0],
+        arch_type: editingSheet.arch_type || '',
+        upper_surgery_type: editingSheet.upper_surgery_type || '',
+        lower_surgery_type: editingSheet.lower_surgery_type || '',
+        upper_implant_count: editingSheet.upper_implant_count || '',
+        upper_implant_positions: editingSheet.upper_implant_positions || '',
+        upper_implant_brand: editingSheet.upper_implant_brand || '',
+        upper_implant_size: editingSheet.upper_implant_size || '',
+        upper_complications: editingSheet.upper_complications || '',
+        upper_notes: editingSheet.upper_notes || '',
+        lower_implant_count: editingSheet.lower_implant_count || '',
+        lower_implant_positions: editingSheet.lower_implant_positions || '',
+        lower_implant_brand: editingSheet.lower_implant_brand || '',
+        lower_implant_size: editingSheet.lower_implant_size || '',
+        lower_complications: editingSheet.lower_complications || '',
+        lower_notes: editingSheet.lower_notes || '',
+      };
+
+      console.log('📝 Setting form data:', newFormData);
+      setFormData(newFormData);
+
+      // Load existing implants
+      if (editingSheet.surgical_recall_implants) {
+        const upperImplants: SavedImplant[] = [];
+        const lowerImplants: SavedImplant[] = [];
+
+        editingSheet.surgical_recall_implants.forEach((implant: any) => {
+          const savedImplant: SavedImplant = {
+            id: implant.id,
+            position: implant.position,
+            implant_brand: implant.implant_brand,
+            implant_subtype: implant.implant_subtype,
+            implant_size: implant.implant_size,
+            implant_picture_url: implant.implant_picture_url,
+            mua_brand: implant.mua_brand,
+            mua_subtype: implant.mua_subtype,
+            mua_size: implant.mua_size,
+            mua_picture_url: implant.mua_picture_url,
+            arch_type: implant.arch_type
+          };
+
+          if (implant.arch_type === 'upper') {
+            upperImplants.push(savedImplant);
+          } else {
+            lowerImplants.push(savedImplant);
+          }
+        });
+
+        setSavedImplants({
+          upper: upperImplants,
+          lower: lowerImplants
+        });
+
+        console.log('📋 Loaded implants:', { upper: upperImplants.length, lower: lowerImplants.length });
+      }
+    } else {
+      // Reset form when not editing
+      setFormData({
+        patient_name: patientName,
+        surgery_date: new Date().toISOString().split('T')[0],
+        arch_type: '',
+        upper_surgery_type: '',
+        lower_surgery_type: '',
+        upper_implant_count: '',
+        upper_implant_positions: '',
+        upper_implant_brand: '',
+        upper_implant_size: '',
+        upper_complications: '',
+        upper_notes: '',
+        lower_implant_count: '',
+        lower_implant_positions: '',
+        lower_implant_brand: '',
+        lower_implant_size: '',
+        lower_complications: '',
+        lower_notes: '',
       });
 
       setSavedImplants({
-        upper: upperImplants,
-        lower: lowerImplants
+        upper: [],
+        lower: []
       });
     }
-  }, [editingSheet]);
+  }, [editingSheet, patientName]);
 
   // Advanced cropping state
   const [isCropping, setIsCropping] = useState(false);
@@ -229,6 +320,8 @@ export function SurgicalRecallSheetForm({
 
     setIsSubmitting(true);
     try {
+      console.log('🚀 Starting form submission with image uploads...');
+
       // Prepare sheet data
       const sheetData = {
         patient_id: patientId,
@@ -240,16 +333,70 @@ export function SurgicalRecallSheetForm({
         status: 'completed' as const
       };
 
-      // Prepare implants data
+      // ✅ Upload images for all implants that have File objects
       const allImplants: SavedImplant[] = [
         ...savedImplants.upper,
         ...savedImplants.lower
       ];
 
-      // Save to database
+      console.log('📸 Processing images for', allImplants.length, 'implants...');
+
+      // Process each implant and upload images if needed
+      const processedImplants: SavedImplant[] = [];
+
+      for (const implant of allImplants) {
+        console.log('🔄 Processing implant:', implant.id);
+
+        let implantPictureUrl = implant.implant_picture_url;
+        let muaPictureUrl = implant.mua_picture_url;
+
+        // Upload implant picture if it's a File object (new/changed image)
+        if (implant.implant_picture instanceof File) {
+          console.log('📤 Uploading implant image for:', implant.id);
+          try {
+            implantPictureUrl = await uploadImage(
+              implant.implant_picture,
+              `implants/${implant.id}`
+            );
+            console.log('✅ Implant image uploaded:', implantPictureUrl);
+          } catch (error) {
+            console.error('❌ Failed to upload implant image:', error);
+            throw new Error('Failed to upload implant image');
+          }
+        }
+
+        // Upload MUA picture if it's a File object (new/changed image)
+        if (implant.mua_picture instanceof File) {
+          console.log('📤 Uploading MUA image for:', implant.id);
+          try {
+            muaPictureUrl = await uploadImage(
+              implant.mua_picture,
+              `mua/${implant.id}`
+            );
+            console.log('✅ MUA image uploaded:', muaPictureUrl);
+          } catch (error) {
+            console.error('❌ Failed to upload MUA image:', error);
+            throw new Error('Failed to upload MUA image');
+          }
+        }
+
+        // Create processed implant with final URLs
+        processedImplants.push({
+          ...implant,
+          implant_picture_url: implantPictureUrl,
+          mua_picture_url: muaPictureUrl,
+          // Remove File objects before saving to database
+          implant_picture: undefined,
+          mua_picture: undefined
+        });
+      }
+
+      console.log('💾 Saving to database with', processedImplants.length, 'processed implants...');
+
+      // Save to database with processed implants
       const result = editingSheet
-        ? await updateSurgicalRecallSheet(editingSheet.id, sheetData, allImplants)
-        : await saveSurgicalRecallSheet(sheetData, allImplants);
+        ? await updateSurgicalRecallSheet(editingSheet.id, sheetData, processedImplants)
+        : await saveSurgicalRecallSheet(sheetData, processedImplants);
 
       if (result.success) {
         toast.success(
@@ -271,6 +418,7 @@ export function SurgicalRecallSheetForm({
 
   const handleAddImplant = (type: 'upper' | 'lower') => {
     setImplantDialogType(type);
+    setEditingImplant(null);
     setImplantData({
       position: '',
       mua_brand: '',
@@ -282,7 +430,130 @@ export function SurgicalRecallSheetForm({
       size: '',
       implant_picture: null
     });
+    setImplantPreviewUrl(null);
+    setMuaPreviewUrl(null);
     setShowImplantDialog(true);
+  };
+
+  const handleEditImplant = async (implant: SavedImplant) => {
+    setEditingImplant(implant);
+    setImplantDialogType(implant.arch_type);
+
+    // Load existing images as File objects if they exist
+    let implantFile: File | null = null;
+    let muaFile: File | null = null;
+
+    try {
+      // Convert existing image URLs to File objects for editing
+      if (implant.implant_picture_url) {
+        console.log('Loading existing implant image:', implant.implant_picture_url);
+        const response = await fetch(implant.implant_picture_url);
+        const blob = await response.blob();
+        implantFile = new File([blob], 'existing-implant-image.jpg', { type: blob.type });
+        console.log('Loaded implant image as File:', implantFile);
+      }
+
+      if (implant.mua_picture_url) {
+        console.log('Loading existing MUA image:', implant.mua_picture_url);
+        const response = await fetch(implant.mua_picture_url);
+        const blob = await response.blob();
+        muaFile = new File([blob], 'existing-mua-image.jpg', { type: blob.type });
+        console.log('Loaded MUA image as File:', muaFile);
+      }
+    } catch (error) {
+      console.error('Error loading existing images:', error);
+      // Continue without the images if loading fails
+    }
+
+    setImplantData({
+      position: implant.position,
+      mua_brand: implant.mua_brand || '',
+      mua_subtype: implant.mua_subtype || '',
+      mua_size: implant.mua_size || '',
+      mua_picture: muaFile,
+      brand: implant.implant_brand || '',
+      subtype: implant.implant_subtype || '',
+      size: implant.implant_size || '',
+      implant_picture: implantFile
+    });
+
+    // Set preview URLs from existing images
+    setImplantPreviewUrl(implant.implant_picture_url || null);
+    setMuaPreviewUrl(implant.mua_picture_url || null);
+
+    setShowImplantDialog(true);
+  };
+
+  const handleDeleteImplant = (implant: SavedImplant) => {
+    setImplantToDelete(implant);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteImplant = async () => {
+    if (!implantToDelete) return;
+
+    try {
+      console.log('🗑️ Deleting implant:', implantToDelete);
+
+      // List files before deletion
+      console.log('📋 Listing files before deletion:');
+      await listStorageFiles();
+
+      // Delete images from storage if they exist
+      const deletePromises = [];
+
+      if (implantToDelete.implant_picture_url) {
+        console.log('🗑️ Deleting implant image:', implantToDelete.implant_picture_url);
+        deletePromises.push(deleteImage(implantToDelete.implant_picture_url));
+      }
+
+      if (implantToDelete.mua_picture_url) {
+        console.log('🗑️ Deleting MUA image:', implantToDelete.mua_picture_url);
+        deletePromises.push(deleteImage(implantToDelete.mua_picture_url));
+      }
+
+      // Wait for all deletions to complete
+      const deleteResults = await Promise.all(deletePromises);
+      console.log('📊 Image deletion results:', deleteResults);
+
+      // List files after deletion
+      console.log('📋 Listing files after deletion:');
+      await listStorageFiles();
+
+      // Remove from saved implants
+      setSavedImplants(prev => ({
+        ...prev,
+        [implantToDelete.arch_type]: prev[implantToDelete.arch_type].filter(item => item.id !== implantToDelete.id)
+      }));
+
+      // Close dialog and reset state
+      setShowDeleteConfirm(false);
+      setImplantToDelete(null);
+
+      toast.success('Implant and images deleted successfully');
+    } catch (error) {
+      console.error('Error deleting implant:', error);
+      toast.error('Failed to delete implant. Please try again.');
+    }
+  };
+
+  const cancelDeleteImplant = () => {
+    setShowDeleteConfirm(false);
+    setImplantToDelete(null);
+  };
+
+  // Handle sticker image preview
+  const handleStickerPreview = (url: string, implant: SavedImplant, type: 'implant' | 'mua') => {
+    const title = `${type === 'implant' ? 'Implant' : 'MUA'} Sticker - Tooth ${implant.position}`;
+    setStickerPreview({
+      url,
+      title,
+      type
+    });
+  };
+
+  const closeStickerPreview = () => {
+    setStickerPreview(null);
   };
 
   const handleImplantDataChange = (field: string, value: string) => {
@@ -548,51 +819,89 @@ export function SurgicalRecallSheetForm({
     }, 'image/jpeg', 0.95);
   }, [cropArea, previewImage, rotation, handleFileChange]);
 
-  const handleSaveImplant = () => {
+  const handleSaveImplant = async () => {
     // Validate required fields
     if (!implantData.position) {
       alert('Please select an implant position');
       return;
     }
 
-    // Create implant object with all data including images
-    const newImplant = {
-      id: Date.now().toString(), // Simple ID generation
-      position: implantData.position,
-      brand: implantData.brand,
-      subtype: implantData.subtype,
-      size: implantData.size,
-      implant_picture: implantData.implant_picture,
-      implant_picture_url: implantPreviewUrl || (implantData.implant_picture ? URL.createObjectURL(implantData.implant_picture) : null),
-      mua_brand: implantData.mua_brand,
-      mua_subtype: implantData.mua_subtype,
-      mua_size: implantData.mua_size,
-      mua_picture: implantData.mua_picture,
-      mua_picture_url: muaPreviewUrl || (implantData.mua_picture ? URL.createObjectURL(implantData.mua_picture) : null),
-      arch_type: implantDialogType
-    };
+    try {
+      // Show loading state
+      setIsSavingImplant(true);
 
-    // Add to saved implants
-    setSavedImplants(prev => ({
-      ...prev,
-      [implantDialogType!]: [...prev[implantDialogType!], newImplant]
-    }));
+      const implantId = editingImplant ? editingImplant.id : Date.now().toString();
 
-    // Reset form and close dialog
-    setImplantData({
-      position: '',
-      mua_brand: '',
-      mua_subtype: '',
-      mua_size: '',
-      mua_picture: null,
-      brand: '',
-      subtype: '',
-      size: '',
-      implant_picture: null
-    });
-    setImplantPreviewUrl(null);
-    setMuaPreviewUrl(null);
-    setShowImplantDialog(false);
+      // ✅ DON'T upload images here - just store them locally for form submission
+      // Keep existing URLs if editing, or use preview URLs for new images
+      let implantPictureUrl = editingImplant?.implant_picture_url || implantPreviewUrl;
+      let muaPictureUrl = editingImplant?.mua_picture_url || muaPreviewUrl;
+
+      console.log('💾 Saving implant locally (images will be uploaded on form submission)');
+      console.log('📸 Implant image:', implantData.implant_picture ? 'File ready for upload' : 'No new image');
+      console.log('📸 MUA image:', implantData.mua_picture ? 'File ready for upload' : 'No new image');
+
+      // Create implant object with uploaded image URLs
+      const implantObject: SavedImplant = {
+        id: implantId,
+        position: implantData.position,
+        implant_brand: implantData.brand,
+        implant_subtype: implantData.subtype,
+        implant_size: implantData.size,
+        implant_picture: implantData.implant_picture,
+        implant_picture_url: implantPictureUrl || (implantPreviewUrl || (implantData.implant_picture ? URL.createObjectURL(implantData.implant_picture) : null)),
+        mua_brand: implantData.mua_brand,
+        mua_subtype: implantData.mua_subtype,
+        mua_size: implantData.mua_size,
+        mua_picture: implantData.mua_picture,
+        mua_picture_url: muaPictureUrl || (muaPreviewUrl || (implantData.mua_picture ? URL.createObjectURL(implantData.mua_picture) : null)),
+        arch_type: implantDialogType
+      };
+
+      if (editingImplant) {
+        // Update existing implant
+        setSavedImplants(prev => ({
+          ...prev,
+          [implantDialogType!]: prev[implantDialogType!].map(item =>
+            item.id === editingImplant.id ? implantObject : item
+          )
+        }));
+        toast.success('Implant updated successfully!');
+      } else {
+        // Add new implant
+        setSavedImplants(prev => ({
+          ...prev,
+          [implantDialogType!]: [...prev[implantDialogType!], implantObject]
+        }));
+        toast.success('Implant added successfully!');
+      }
+
+      // Reset form and close dialog
+      setImplantData({
+        position: '',
+        mua_brand: '',
+        mua_subtype: '',
+        mua_size: '',
+        mua_picture: null,
+        brand: '',
+        subtype: '',
+        size: '',
+        implant_picture: null
+      });
+      setImplantPreviewUrl(null);
+      setMuaPreviewUrl(null);
+      setShowImplantDialog(false);
+
+      // Show success message
+      console.log('✅ Implant saved locally (images will be uploaded on form submission)');
+      toast.success(editingImplant ? 'Implant updated successfully!' : 'Implant added successfully!');
+
+    } catch (error) {
+      console.error('Error saving implant:', error);
+      toast.error('Failed to save implant. Please try again.');
+    } finally {
+      setIsSavingImplant(false);
+    }
   };
 
   return (
@@ -602,7 +911,7 @@ export function SurgicalRecallSheetForm({
         <div className="flex items-center justify-between pr-12">
           <DialogTitle className="flex items-center gap-2 text-lg font-bold text-gray-900">
             <Activity className="h-5 w-5 text-blue-600" />
-            Surgical Recall Sheet - Step {currentStep} of {totalSteps}
+            {editingSheet ? 'Edit' : 'Add'} Surgical Recall Sheet - Step {currentStep} of {totalSteps}
           </DialogTitle>
         </div>
       </div>
@@ -677,33 +986,39 @@ export function SurgicalRecallSheetForm({
 
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {/* Patient Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
                     <User className="h-5 w-5 text-blue-600" />
                     Patient Information
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="patient_name">Patient Name</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="patient_name" className="text-sm font-medium text-gray-700">
+                        Patient Name
+                      </Label>
                       <Input
                         id="patient_name"
                         value={formData.patient_name}
                         disabled
-                        className="bg-gray-50"
+                        className="bg-gray-50 border-gray-200 text-gray-600"
                       />
+                      <p className="text-xs text-gray-500">Automatically filled from patient selection</p>
                     </div>
-                    <div>
-                      <Label htmlFor="surgery_date">Date <span className="text-red-500">*</span></Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="surgery_date" className="text-sm font-medium text-gray-700">
+                        Surgery Date <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         id="surgery_date"
                         type="date"
                         value={formData.surgery_date}
                         onChange={(e) => handleInputChange('surgery_date', e.target.value)}
                         required
-                        className="bg-white"
+                        className="bg-white border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                       />
+                      <p className="text-xs text-gray-500">Select the date when the surgery was performed</p>
                     </div>
                   </div>
                 </div>
@@ -711,60 +1026,73 @@ export function SurgicalRecallSheetForm({
                 {/* Arch Type */}
                 <div className="space-y-3">
                   <Label className="text-base font-medium">Arch Type <span className="text-red-500">*</span></Label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <button
                       type="button"
                       onClick={() => handleInputChange('arch_type', 'upper')}
-                      className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                      className={`px-4 py-3 rounded-lg border-2 text-center transition-all duration-200 ${
                         formData.arch_type === 'upper'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          ? 'bg-blue-50 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      Upper
+                      <div>
+                        <p className="font-medium">Upper</p>
+                        <p className="text-xs text-gray-500">Upper jaw only</p>
+                      </div>
                     </button>
+
                     <button
                       type="button"
                       onClick={() => handleInputChange('arch_type', 'lower')}
-                      className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                      className={`px-4 py-3 rounded-lg border-2 text-center transition-all duration-200 ${
                         formData.arch_type === 'lower'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          ? 'bg-blue-50 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      Lower
+                      <div>
+                        <p className="font-medium">Lower</p>
+                        <p className="text-xs text-gray-500">Lower jaw only</p>
+                      </div>
                     </button>
+
                     <button
                       type="button"
                       onClick={() => handleInputChange('arch_type', 'dual')}
-                      className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                      className={`px-4 py-3 rounded-lg border-2 text-center transition-all duration-200 ${
                         formData.arch_type === 'dual'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          ? 'bg-blue-50 border-blue-500 text-blue-700'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      Dual
+                      <div>
+                        <p className="font-medium">Dual</p>
+                        <p className="text-xs text-gray-500">Both upper & lower</p>
+                      </div>
                     </button>
                   </div>
                 </div>
 
-                {/* Dynamic Surgery Type based on Arch Type */}
+                {/* Surgery Type */}
                 {formData.arch_type && (
                   <div className="space-y-4">
                     {/* For dual arch - show upper and lower side by side */}
                     {formData.arch_type === 'dual' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Upper Surgery Type */}
                         <div className="space-y-3">
-                          <Label className="text-base font-medium">Upper Surgery Type <span className="text-red-500">*</span></Label>
-                          <div className="flex flex-wrap gap-2">
+                          <Label className="text-base font-medium">
+                            Upper Surgery Type <span className="text-red-500">*</span>
+                          </Label>
+                          <div className="grid grid-cols-1 gap-2">
                             <button
                               type="button"
                               onClick={() => handleInputChange('upper_surgery_type', 'surgery')}
-                              className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${
                                 formData.upper_surgery_type === 'surgery'
-                                  ? 'bg-blue-600 text-white border-blue-600'
-                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                  ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                               }`}
                             >
                               Surgery
@@ -772,10 +1100,10 @@ export function SurgicalRecallSheetForm({
                             <button
                               type="button"
                               onClick={() => handleInputChange('upper_surgery_type', 'surgical_revision')}
-                              className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${
                                 formData.upper_surgery_type === 'surgical_revision'
-                                  ? 'bg-blue-600 text-white border-blue-600'
-                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                  ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                               }`}
                             >
                               Surgical Revision
@@ -785,15 +1113,17 @@ export function SurgicalRecallSheetForm({
 
                         {/* Lower Surgery Type */}
                         <div className="space-y-3">
-                          <Label className="text-base font-medium">Lower Surgery Type <span className="text-red-500">*</span></Label>
-                          <div className="flex flex-wrap gap-2">
+                          <Label className="text-base font-medium">
+                            Lower Surgery Type <span className="text-red-500">*</span>
+                          </Label>
+                          <div className="grid grid-cols-1 gap-2">
                             <button
                               type="button"
                               onClick={() => handleInputChange('lower_surgery_type', 'surgery')}
-                              className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${
                                 formData.lower_surgery_type === 'surgery'
-                                  ? 'bg-blue-600 text-white border-blue-600'
-                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                  ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                               }`}
                             >
                               Surgery
@@ -801,10 +1131,10 @@ export function SurgicalRecallSheetForm({
                             <button
                               type="button"
                               onClick={() => handleInputChange('lower_surgery_type', 'surgical_revision')}
-                              className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${
                                 formData.lower_surgery_type === 'surgical_revision'
-                                  ? 'bg-blue-600 text-white border-blue-600'
-                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                  ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                               }`}
                             >
                               Surgical Revision
@@ -817,15 +1147,17 @@ export function SurgicalRecallSheetForm({
                     {/* For single arch - show only relevant surgery type */}
                     {formData.arch_type === 'upper' && (
                       <div className="space-y-3">
-                        <Label className="text-base font-medium">Upper Surgery Type <span className="text-red-500">*</span></Label>
-                        <div className="flex flex-wrap gap-2">
+                        <Label className="text-base font-medium">
+                          Upper Surgery Type <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <button
                             type="button"
                             onClick={() => handleInputChange('upper_surgery_type', 'surgery')}
-                            className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${
                               formData.upper_surgery_type === 'surgery'
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                           >
                             Surgery
@@ -833,10 +1165,10 @@ export function SurgicalRecallSheetForm({
                           <button
                             type="button"
                             onClick={() => handleInputChange('upper_surgery_type', 'surgical_revision')}
-                            className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${
                               formData.upper_surgery_type === 'surgical_revision'
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                           >
                             Surgical Revision
@@ -847,15 +1179,17 @@ export function SurgicalRecallSheetForm({
 
                     {formData.arch_type === 'lower' && (
                       <div className="space-y-3">
-                        <Label className="text-base font-medium">Lower Surgery Type <span className="text-red-500">*</span></Label>
-                        <div className="flex flex-wrap gap-2">
+                        <Label className="text-base font-medium">
+                          Lower Surgery Type <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <button
                             type="button"
                             onClick={() => handleInputChange('lower_surgery_type', 'surgery')}
-                            className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${
                               formData.lower_surgery_type === 'surgery'
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                           >
                             Surgery
@@ -863,10 +1197,10 @@ export function SurgicalRecallSheetForm({
                           <button
                             type="button"
                             onClick={() => handleInputChange('lower_surgery_type', 'surgical_revision')}
-                            className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${
                               formData.lower_surgery_type === 'surgical_revision'
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                           >
                             Surgical Revision
@@ -905,39 +1239,72 @@ export function SurgicalRecallSheetForm({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {savedImplants.upper.map((implant) => (
-                          <div key={implant.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h4 className="font-semibold text-gray-900">Position {implant.position}</h4>
-                                <p className="text-sm text-gray-600">
-                                  {implant.brand && implant.subtype ? `${implant.brand} - ${implant.subtype}` : implant.brand || 'No brand specified'}
-                                </p>
-                                {implant.size && (
-                                  <p className="text-sm text-gray-600">Size: {implant.size}</p>
-                                )}
+                          <div key={implant.id} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
+                            {/* Header with Position and Actions */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                  {implant.position}
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-blue-900 text-sm">Tooth {implant.position}</h4>
+                                  <p className="text-xs text-blue-700">
+                                    {implant.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
+                                  </p>
+                                </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSavedImplants(prev => ({
-                                    ...prev,
-                                    upper: prev.upper.filter(item => item.id !== implant.id)
-                                  }));
-                                }}
-                                className="text-red-500 hover:text-red-700 p-1"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditImplant(implant)}
+                                  className="text-blue-600 hover:text-blue-800 p-1.5 rounded-lg hover:bg-blue-200 transition-colors"
+                                  title="Edit implant"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteImplant(implant)}
+                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-100 transition-colors"
+                                  title="Delete implant"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Implant Details */}
+                            <div className="space-y-2 mb-3">
+                              {implant.implant_subtype && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-blue-800">Series: {implant.implant_subtype}</p>
+                                </div>
+                              )}
+                              {implant.implant_size && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-blue-800">Size: {implant.implant_size}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Images Grid */}
+                            <div className="grid grid-cols-2 gap-2 mb-3">
                               {/* Implant Image */}
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-1">Implant Sticker</p>
+                                <p className="text-xs font-bold text-blue-800 mb-1">Implant</p>
                                 {(implant.implant_picture || implant.implant_picture_url) ? (
-                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                  <div
+                                    className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
+                                    onClick={() => {
+                                      const url = implant.implant_picture
+                                        ? URL.createObjectURL(implant.implant_picture)
+                                        : implant.implant_picture_url;
+                                      if (url) handleStickerPreview(url, implant, 'implant');
+                                    }}
+                                    title="Click to view full size"
+                                  >
                                     <img
                                       src={
                                         implant.implant_picture
@@ -945,7 +1312,7 @@ export function SurgicalRecallSheetForm({
                                           : implant.implant_picture_url
                                       }
                                       alt="Implant sticker"
-                                      className="w-full h-20 object-contain"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
                                       onError={(e) => {
                                         console.log('Implant image failed to load');
                                         if (implant.implant_picture_url && implant.implant_picture) {
@@ -955,17 +1322,26 @@ export function SurgicalRecallSheetForm({
                                     />
                                   </div>
                                 ) : (
-                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
-                                    <span className="text-xs text-gray-400">No image</span>
+                                  <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-blue-400" />
                                   </div>
                                 )}
                               </div>
 
                               {/* MUA Image */}
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-1">MUA Sticker</p>
+                                <p className="text-xs font-bold text-blue-800 mb-1">MUA</p>
                                 {(implant.mua_picture || implant.mua_picture_url) ? (
-                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                  <div
+                                    className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
+                                    onClick={() => {
+                                      const url = implant.mua_picture
+                                        ? URL.createObjectURL(implant.mua_picture)
+                                        : implant.mua_picture_url;
+                                      if (url) handleStickerPreview(url, implant, 'mua');
+                                    }}
+                                    title="Click to view full size"
+                                  >
                                     <img
                                       src={
                                         implant.mua_picture
@@ -973,12 +1349,12 @@ export function SurgicalRecallSheetForm({
                                           : implant.mua_picture_url
                                       }
                                       alt="MUA sticker"
-                                      className="w-full h-20 object-contain"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
                                     />
                                   </div>
                                 ) : (
-                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
-                                    <span className="text-xs text-gray-400">No image</span>
+                                  <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-blue-400" />
                                   </div>
                                 )}
                               </div>
@@ -986,13 +1362,15 @@ export function SurgicalRecallSheetForm({
 
                             {/* MUA Details */}
                             {(implant.mua_brand || implant.mua_size) && (
-                              <div className="mt-3 pt-3 border-t border-gray-100">
-                                <p className="text-xs font-medium text-gray-700">MUA Details</p>
-                                <p className="text-sm text-gray-600">
-                                  {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand || 'No brand specified'}
-                                </p>
+                              <div className="bg-white/70 rounded-lg p-2 border border-blue-200">
+                                <p className="text-xs font-bold text-blue-800 mb-1">MUA Details</p>
+                                {implant.mua_brand && (
+                                  <p className="text-xs text-blue-700">
+                                    {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
+                                  </p>
+                                )}
                                 {implant.mua_size && (
-                                  <p className="text-sm text-gray-600">Size: {implant.mua_size}</p>
+                                  <p className="text-xs text-blue-700">Size: {implant.mua_size}</p>
                                 )}
                               </div>
                             )}
@@ -1031,39 +1409,72 @@ export function SurgicalRecallSheetForm({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {savedImplants.lower.map((implant) => (
-                          <div key={implant.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h4 className="font-semibold text-gray-900">Position {implant.position}</h4>
-                                <p className="text-sm text-gray-600">
-                                  {implant.brand && implant.subtype ? `${implant.brand} - ${implant.subtype}` : implant.brand || 'No brand specified'}
-                                </p>
-                                {implant.size && (
-                                  <p className="text-sm text-gray-600">Size: {implant.size}</p>
-                                )}
+                          <div key={implant.id} className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
+                            {/* Header with Position and Actions */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                  {implant.position}
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-green-900 text-sm">Tooth {implant.position}</h4>
+                                  <p className="text-xs text-green-700">
+                                    {implant.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
+                                  </p>
+                                </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSavedImplants(prev => ({
-                                    ...prev,
-                                    lower: prev.lower.filter(item => item.id !== implant.id)
-                                  }));
-                                }}
-                                className="text-red-500 hover:text-red-700 p-1"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditImplant(implant)}
+                                  className="text-green-600 hover:text-green-800 p-1.5 rounded-lg hover:bg-green-200 transition-colors"
+                                  title="Edit implant"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteImplant(implant)}
+                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-100 transition-colors"
+                                  title="Delete implant"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Implant Details */}
+                            <div className="space-y-2 mb-3">
+                              {implant.implant_subtype && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-green-800">Series: {implant.implant_subtype}</p>
+                                </div>
+                              )}
+                              {implant.implant_size && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-green-800">Size: {implant.implant_size}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Images Grid */}
+                            <div className="grid grid-cols-2 gap-2 mb-3">
                               {/* Implant Image */}
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-1">Implant Sticker</p>
+                                <p className="text-xs font-bold text-green-800 mb-1">Implant</p>
                                 {(implant.implant_picture || implant.implant_picture_url) ? (
-                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                  <div
+                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                    onClick={() => {
+                                      const url = implant.implant_picture
+                                        ? URL.createObjectURL(implant.implant_picture)
+                                        : implant.implant_picture_url;
+                                      if (url) handleStickerPreview(url, implant, 'implant');
+                                    }}
+                                    title="Click to view full size"
+                                  >
                                     <img
                                       src={
                                         implant.implant_picture
@@ -1071,7 +1482,7 @@ export function SurgicalRecallSheetForm({
                                           : implant.implant_picture_url
                                       }
                                       alt="Implant sticker"
-                                      className="w-full h-20 object-contain"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
                                       onError={(e) => {
                                         console.log('Implant image failed to load');
                                         if (implant.implant_picture_url && implant.implant_picture) {
@@ -1081,17 +1492,26 @@ export function SurgicalRecallSheetForm({
                                     />
                                   </div>
                                 ) : (
-                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
-                                    <span className="text-xs text-gray-400">No image</span>
+                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-green-400" />
                                   </div>
                                 )}
                               </div>
 
                               {/* MUA Image */}
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-1">MUA Sticker</p>
+                                <p className="text-xs font-bold text-green-800 mb-1">MUA</p>
                                 {(implant.mua_picture || implant.mua_picture_url) ? (
-                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                  <div
+                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                    onClick={() => {
+                                      const url = implant.mua_picture
+                                        ? URL.createObjectURL(implant.mua_picture)
+                                        : implant.mua_picture_url;
+                                      if (url) handleStickerPreview(url, implant, 'mua');
+                                    }}
+                                    title="Click to view full size"
+                                  >
                                     <img
                                       src={
                                         implant.mua_picture
@@ -1099,12 +1519,12 @@ export function SurgicalRecallSheetForm({
                                           : implant.mua_picture_url
                                       }
                                       alt="MUA sticker"
-                                      className="w-full h-20 object-contain"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
                                     />
                                   </div>
                                 ) : (
-                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
-                                    <span className="text-xs text-gray-400">No image</span>
+                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-green-400" />
                                   </div>
                                 )}
                               </div>
@@ -1112,13 +1532,15 @@ export function SurgicalRecallSheetForm({
 
                             {/* MUA Details */}
                             {(implant.mua_brand || implant.mua_size) && (
-                              <div className="mt-3 pt-3 border-t border-gray-100">
-                                <p className="text-xs font-medium text-gray-700">MUA Details</p>
-                                <p className="text-sm text-gray-600">
-                                  {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand || 'No brand specified'}
-                                </p>
+                              <div className="bg-white/70 rounded-lg p-2 border border-green-200">
+                                <p className="text-xs font-bold text-green-800 mb-1">MUA Details</p>
+                                {implant.mua_brand && (
+                                  <p className="text-xs text-green-700">
+                                    {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
+                                  </p>
+                                )}
                                 {implant.mua_size && (
-                                  <p className="text-sm text-gray-600">Size: {implant.mua_size}</p>
+                                  <p className="text-xs text-green-700">Size: {implant.mua_size}</p>
                                 )}
                               </div>
                             )}
@@ -1157,39 +1579,72 @@ export function SurgicalRecallSheetForm({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {savedImplants.lower.map((implant) => (
-                          <div key={implant.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <h4 className="font-semibold text-gray-900">Position {implant.position}</h4>
-                                <p className="text-sm text-gray-600">
-                                  {implant.brand && implant.subtype ? `${implant.brand} - ${implant.subtype}` : implant.brand || 'No brand specified'}
-                                </p>
-                                {implant.size && (
-                                  <p className="text-sm text-gray-600">Size: {implant.size}</p>
-                                )}
+                          <div key={implant.id} className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
+                            {/* Header with Position and Actions */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                  {implant.position}
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-green-900 text-sm">Tooth {implant.position}</h4>
+                                  <p className="text-xs text-green-700">
+                                    {implant.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
+                                  </p>
+                                </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSavedImplants(prev => ({
-                                    ...prev,
-                                    lower: prev.lower.filter(item => item.id !== implant.id)
-                                  }));
-                                }}
-                                className="text-red-500 hover:text-red-700 p-1"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditImplant(implant)}
+                                  className="text-green-600 hover:text-green-800 p-1.5 rounded-lg hover:bg-green-200 transition-colors"
+                                  title="Edit implant"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteImplant(implant)}
+                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-100 transition-colors"
+                                  title="Delete implant"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Implant Details */}
+                            <div className="space-y-2 mb-3">
+                              {implant.implant_subtype && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-green-800">Series: {implant.implant_subtype}</p>
+                                </div>
+                              )}
+                              {implant.implant_size && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-green-800">Size: {implant.implant_size}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Images Grid */}
+                            <div className="grid grid-cols-2 gap-2 mb-3">
                               {/* Implant Image */}
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-1">Implant Sticker</p>
+                                <p className="text-xs font-bold text-green-800 mb-1">Implant</p>
                                 {(implant.implant_picture || implant.implant_picture_url) ? (
-                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                  <div
+                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                    onClick={() => {
+                                      const url = implant.implant_picture
+                                        ? URL.createObjectURL(implant.implant_picture)
+                                        : implant.implant_picture_url;
+                                      if (url) handleStickerPreview(url, implant, 'implant');
+                                    }}
+                                    title="Click to view full size"
+                                  >
                                     <img
                                       src={
                                         implant.implant_picture
@@ -1197,7 +1652,7 @@ export function SurgicalRecallSheetForm({
                                           : implant.implant_picture_url
                                       }
                                       alt="Implant sticker"
-                                      className="w-full h-20 object-contain"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
                                       onError={(e) => {
                                         console.log('Implant image failed to load');
                                         if (implant.implant_picture_url && implant.implant_picture) {
@@ -1207,17 +1662,26 @@ export function SurgicalRecallSheetForm({
                                     />
                                   </div>
                                 ) : (
-                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
-                                    <span className="text-xs text-gray-400">No image</span>
+                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-green-400" />
                                   </div>
                                 )}
                               </div>
 
                               {/* MUA Image */}
                               <div>
-                                <p className="text-xs font-medium text-gray-700 mb-1">MUA Sticker</p>
+                                <p className="text-xs font-bold text-green-800 mb-1">MUA</p>
                                 {(implant.mua_picture || implant.mua_picture_url) ? (
-                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                  <div
+                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                    onClick={() => {
+                                      const url = implant.mua_picture
+                                        ? URL.createObjectURL(implant.mua_picture)
+                                        : implant.mua_picture_url;
+                                      if (url) handleStickerPreview(url, implant, 'mua');
+                                    }}
+                                    title="Click to view full size"
+                                  >
                                     <img
                                       src={
                                         implant.mua_picture
@@ -1225,12 +1689,12 @@ export function SurgicalRecallSheetForm({
                                           : implant.mua_picture_url
                                       }
                                       alt="MUA sticker"
-                                      className="w-full h-20 object-contain"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
                                     />
                                   </div>
                                 ) : (
-                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
-                                    <span className="text-xs text-gray-400">No image</span>
+                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-green-400" />
                                   </div>
                                 )}
                               </div>
@@ -1238,13 +1702,15 @@ export function SurgicalRecallSheetForm({
 
                             {/* MUA Details */}
                             {(implant.mua_brand || implant.mua_size) && (
-                              <div className="mt-3 pt-3 border-t border-gray-100">
-                                <p className="text-xs font-medium text-gray-700">MUA Details</p>
-                                <p className="text-sm text-gray-600">
-                                  {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand || 'No brand specified'}
-                                </p>
+                              <div className="bg-white/70 rounded-lg p-2 border border-green-200">
+                                <p className="text-xs font-bold text-green-800 mb-1">MUA Details</p>
+                                {implant.mua_brand && (
+                                  <p className="text-xs text-green-700">
+                                    {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
+                                  </p>
+                                )}
                                 {implant.mua_size && (
-                                  <p className="text-sm text-gray-600">Size: {implant.mua_size}</p>
+                                  <p className="text-xs text-green-700">Size: {implant.mua_size}</p>
                                 )}
                               </div>
                             )}
@@ -1277,7 +1743,10 @@ export function SurgicalRecallSheetForm({
               className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
             >
               {currentStep === totalSteps
-                ? (isSubmitting ? 'Saving...' : 'Submit')
+                ? (isSubmitting
+                    ? (editingSheet ? 'Updating...' : 'Saving...')
+                    : (editingSheet ? 'Update' : 'Submit')
+                  )
                 : 'Next'
               }
             </Button>
@@ -1290,8 +1759,12 @@ export function SurgicalRecallSheetForm({
         <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-blue-600" />
-              Add {implantDialogType === 'upper' ? 'Upper' : 'Lower'} Implant
+              {editingImplant ? (
+                <Edit className="h-5 w-5 text-blue-600" />
+              ) : (
+                <Plus className="h-5 w-5 text-blue-600" />
+              )}
+              {editingImplant ? 'Edit' : 'Add'} {implantDialogType === 'upper' ? 'Upper' : 'Lower'} Implant
             </DialogTitle>
           </DialogHeader>
 
@@ -1555,7 +2028,7 @@ export function SurgicalRecallSheetForm({
                     />
 
                     {/* Custom capture button with image preview */}
-                    {!implantData.implant_picture ? (
+                    {!implantData.implant_picture && !implantPreviewUrl ? (
                       <button
                         type="button"
                         onClick={() => implantPictureInputRef.current?.click()}
@@ -1569,7 +2042,7 @@ export function SurgicalRecallSheetForm({
                         {/* Image Preview */}
                         <div className="w-full bg-gray-50 flex items-center justify-center p-2">
                           <img
-                            src={implantPreviewUrl || URL.createObjectURL(implantData.implant_picture)}
+                            src={implantPreviewUrl || (implantData.implant_picture ? URL.createObjectURL(implantData.implant_picture) : '')}
                             alt="Implant sticker preview"
                             className="w-full h-auto max-h-32 object-contain rounded"
                           />
@@ -1580,22 +2053,29 @@ export function SurgicalRecallSheetForm({
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm text-green-700 font-medium">
-                                ✓ Captured Successfully
+                                ✓ {implantData.implant_picture ? 'Captured Successfully' : 'Existing Image'}
                               </p>
                               <p className="text-xs text-green-600">
-                                Size: {(implantData.implant_picture.size / 1024).toFixed(1)} KB
+                                {implantData.implant_picture
+                                  ? `Size: ${(implantData.implant_picture.size / 1024).toFixed(1)} KB`
+                                  : 'From storage'
+                                }
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const url = URL.createObjectURL(implantData.implant_picture!);
-                                  setPreviewImage({
-                                    url,
-                                    name: implantData.implant_picture!.name,
-                                    type: 'implant'
-                                  });
+                                  const url = implantData.implant_picture
+                                    ? URL.createObjectURL(implantData.implant_picture)
+                                    : implantPreviewUrl;
+                                  if (url) {
+                                    setPreviewImage({
+                                      url,
+                                      name: implantData.implant_picture?.name || 'existing-image',
+                                      type: 'implant'
+                                    });
+                                  }
                                 }}
                                 className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md transition-colors"
                               >
@@ -1748,7 +2228,7 @@ export function SurgicalRecallSheetForm({
                     />
 
                     {/* Custom capture button with image preview */}
-                    {!implantData.mua_picture ? (
+                    {!implantData.mua_picture && !muaPreviewUrl ? (
                       <button
                         type="button"
                         onClick={() => muaPictureInputRef.current?.click()}
@@ -1762,7 +2242,7 @@ export function SurgicalRecallSheetForm({
                         {/* Image Preview */}
                         <div className="w-full bg-gray-50 flex items-center justify-center p-2">
                           <img
-                            src={muaPreviewUrl || URL.createObjectURL(implantData.mua_picture)}
+                            src={muaPreviewUrl || (implantData.mua_picture ? URL.createObjectURL(implantData.mua_picture) : '')}
                             alt="MUA sticker preview"
                             className="w-full h-auto max-h-32 object-contain rounded"
                           />
@@ -1773,22 +2253,29 @@ export function SurgicalRecallSheetForm({
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm text-green-700 font-medium">
-                                ✓ Captured Successfully
+                                ✓ {implantData.mua_picture ? 'Captured Successfully' : 'Existing Image'}
                               </p>
                               <p className="text-xs text-green-600">
-                                Size: {(implantData.mua_picture.size / 1024).toFixed(1)} KB
+                                {implantData.mua_picture
+                                  ? `Size: ${(implantData.mua_picture.size / 1024).toFixed(1)} KB`
+                                  : 'From storage'
+                                }
                               </p>
                             </div>
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const url = URL.createObjectURL(implantData.mua_picture!);
-                                  setPreviewImage({
-                                    url,
-                                    name: implantData.mua_picture!.name,
-                                    type: 'mua'
-                                  });
+                                  const url = implantData.mua_picture
+                                    ? URL.createObjectURL(implantData.mua_picture)
+                                    : muaPreviewUrl;
+                                  if (url) {
+                                    setPreviewImage({
+                                      url,
+                                      name: implantData.mua_picture?.name || 'existing-image',
+                                      type: 'mua'
+                                    });
+                                  }
                                 }}
                                 className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md transition-colors"
                               >
@@ -1825,9 +2312,10 @@ export function SurgicalRecallSheetForm({
             <Button
               type="button"
               onClick={handleSaveImplant}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isSavingImplant}
+              className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
             >
-              Save Implant
+              {isSavingImplant ? 'Uploading Images...' : (editingImplant ? 'Update Implant' : 'Save Implant')}
             </Button>
           </div>
         </DialogContent>
@@ -1987,6 +2475,92 @@ export function SurgicalRecallSheetForm({
               <canvas ref={canvasRef} className="hidden" />
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Delete Implant
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-gray-700 mb-4">
+              Are you sure you want to delete this implant? This action will:
+            </p>
+            <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mb-4">
+              <li>Remove the implant from your form</li>
+              <li>Delete all associated images from storage</li>
+              <li>This action cannot be undone</li>
+            </ul>
+            {implantToDelete && (
+              <div className="bg-gray-50 rounded-lg p-3 border">
+                <p className="font-medium text-gray-900">
+                  Position {implantToDelete.position}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {implantToDelete.implant_brand && implantToDelete.implant_subtype
+                    ? `${implantToDelete.implant_brand} - ${implantToDelete.implant_subtype}`
+                    : implantToDelete.implant_brand || 'No brand specified'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={cancelDeleteImplant}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={confirmDeleteImplant}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Implant
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sticker Preview Dialog */}
+      <Dialog open={!!stickerPreview} onOpenChange={closeStickerPreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-blue-600" />
+              {stickerPreview?.title}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
+            {stickerPreview && (
+              <img
+                src={stickerPreview.url}
+                alt={stickerPreview.title}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                style={{ minHeight: '200px' }}
+              />
+            )}
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              onClick={closeStickerPreview}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
