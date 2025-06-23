@@ -4,17 +4,30 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Create a mock client if credentials are not configured
-const createMockClient = () => ({
-  from: () => ({
-    select: () => Promise.resolve({ data: [], error: null }),
-    insert: () => Promise.resolve({ data: null, error: null }),
-    update: () => Promise.resolve({ data: null, error: null }),
-    delete: () => Promise.resolve({ data: null, error: null }),
+const createMockClient = () => {
+  const mockQueryBuilder = {
+    select: function() { return this; },
+    insert: function() { return this; },
+    update: function() { return this; },
+    delete: function() { return this; },
     eq: function() { return this; },
     order: function() { return this; },
-    single: function() { return this; }
-  })
-});
+    single: function() { return Promise.resolve({ data: null, error: null }); },
+    then: function(resolve: any) {
+      return resolve({ data: null, error: null });
+    }
+  };
+
+  return {
+    from: () => mockQueryBuilder,
+    storage: {
+      from: () => ({
+        upload: () => Promise.resolve({ data: null, error: null }),
+        getPublicUrl: () => ({ data: { publicUrl: 'mock-url' } })
+      })
+    }
+  };
+};
 
 export const supabase = (!supabaseUrl || !supabaseAnonKey ||
   supabaseUrl === 'your_supabase_url_here' ||

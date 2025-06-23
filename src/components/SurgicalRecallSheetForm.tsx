@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Activity, User, Calendar, Check, Plus, Camera } from "lucide-react";
+import { Activity, User, Calendar, Check, Plus, Camera, X, Eye, Crop, RotateCcw, Move, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
+import { saveSurgicalRecallSheet, updateSurgicalRecallSheet, SavedImplant } from "@/lib/surgicalRecallService";
+import { toast } from "sonner";
 
 interface SurgicalRecallSheetFormProps {
   patientId: string;
@@ -61,21 +63,85 @@ export function SurgicalRecallSheetForm({
     implant_picture: null as File | null
   });
 
-  // Camera capture states
-  const [showCamera, setShowCamera] = useState(false);
-  const [cameraType, setCameraType] = useState<'implant_picture' | 'mua_picture'>('implant_picture');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  // File input refs for custom capture buttons
+  const implantPictureInputRef = useRef<HTMLInputElement>(null);
+  const muaPictureInputRef = useRef<HTMLInputElement>(null);
 
-  // Cropping states
-  const [showCropper, setShowCropper] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [cropPoints, setCropPoints] = useState<{x: number, y: number}[]>([]);
+  // Image preview state
+  const [previewImage, setPreviewImage] = useState<{
+    url: string;
+    name: string;
+    type: 'implant' | 'mua';
+  } | null>(null);
+
+  // Store preview URLs to avoid recreating them on each render
+  const [implantPreviewUrl, setImplantPreviewUrl] = useState<string | null>(null);
+  const [muaPreviewUrl, setMuaPreviewUrl] = useState<string | null>(null);
+
+  // Store saved implants
+  const [savedImplants, setSavedImplants] = useState<{
+    upper: Array<SavedImplant>;
+    lower: Array<SavedImplant>;
+  }>({
+    upper: [],
+    lower: []
+  });
+
+  // Loading state for form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load existing implants when editing
+  useEffect(() => {
+    if (editingSheet?.surgical_recall_implants) {
+      const upperImplants: SavedImplant[] = [];
+      const lowerImplants: SavedImplant[] = [];
+
+      editingSheet.surgical_recall_implants.forEach((implant: any) => {
+        const savedImplant: SavedImplant = {
+          id: implant.id,
+          position: implant.position,
+          brand: implant.implant_brand,
+          subtype: implant.implant_subtype,
+          size: implant.implant_size,
+          implant_picture_url: implant.implant_picture_url,
+          mua_brand: implant.mua_brand,
+          mua_subtype: implant.mua_subtype,
+          mua_size: implant.mua_size,
+          mua_picture_url: implant.mua_picture_url,
+          arch_type: implant.arch_type
+        };
+
+        if (implant.arch_type === 'upper') {
+          upperImplants.push(savedImplant);
+        } else {
+          lowerImplants.push(savedImplant);
+        }
+      });
+
+      setSavedImplants({
+        upper: upperImplants,
+        lower: lowerImplants
+      });
+    }
+  }, [editingSheet]);
+
+  // Advanced cropping state
+  const [isCropping, setIsCropping] = useState(false);
+  const [cropArea, setCropArea] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const cropCanvasRef = useRef<HTMLCanvasElement>(null);
-  const cropImageRef = useRef<HTMLImageElement>(null);
+  const [isResizing, setIsResizing] = useState<string | null>(null);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cropContainerRef = useRef<HTMLDivElement>(null);
 
   // Calculate total steps and step names based on arch type
   const getTotalSteps = () => {
@@ -158,12 +224,49 @@ export function SurgicalRecallSheetForm({
     }
   };
 
-  const handleSubmit = () => {
-    onSubmit({
-      ...formData,
-      patient_id: patientId,
-      status: 'completed'
-    });
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      // Prepare sheet data
+      const sheetData = {
+        patient_id: patientId,
+        patient_name: patientName,
+        surgery_date: formData.surgery_date,
+        arch_type: formData.arch_type as 'upper' | 'lower' | 'dual',
+        upper_surgery_type: formData.upper_surgery_type || undefined,
+        lower_surgery_type: formData.lower_surgery_type || undefined,
+        status: 'completed' as const
+      };
+
+      // Prepare implants data
+      const allImplants: SavedImplant[] = [
+        ...savedImplants.upper,
+        ...savedImplants.lower
+      ];
+
+      // Save to database
+      const result = editingSheet
+        ? await updateSurgicalRecallSheet(editingSheet.id, sheetData, allImplants)
+        : await saveSurgicalRecallSheet(sheetData, allImplants);
+
+      if (result.success) {
+        toast.success(
+          editingSheet
+            ? 'Surgical recall sheet updated successfully!'
+            : 'Surgical recall sheet saved successfully!'
+        );
+        onSubmit(result.data);
+      } else {
+        toast.error(`Failed to save: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast.error('An unexpected error occurred while saving');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddImplant = (type: 'upper' | 'lower') => {
@@ -194,270 +297,301 @@ export function SurgicalRecallSheetForm({
       ...prev,
       [field]: file
     }));
+
+    // Create preview URL and show preview dialog
+    if (file) {
+      const url = URL.createObjectURL(file);
+
+      // Store the preview URL for the specific field
+      if (field === 'implant_picture') {
+        // Clean up previous URL if exists
+        if (implantPreviewUrl) {
+          URL.revokeObjectURL(implantPreviewUrl);
+        }
+        setImplantPreviewUrl(url);
+      } else if (field === 'mua_picture') {
+        // Clean up previous URL if exists
+        if (muaPreviewUrl) {
+          URL.revokeObjectURL(muaPreviewUrl);
+        }
+        setMuaPreviewUrl(url);
+      }
+
+      setPreviewImage({
+        url,
+        name: file.name,
+        type: field === 'implant_picture' ? 'implant' : 'mua'
+      });
+    }
   };
 
-  // Camera functions
-  const startCamera = useCallback(async (type: 'implant_picture' | 'mua_picture') => {
-    try {
-      setCameraType(type);
-
-      // Check if mediaDevices is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera not supported on this device');
-      }
-
-      // Try different camera constraints for better tablet compatibility
-      let stream;
-      try {
-        // First try with environment camera (rear camera)
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        });
-      } catch (envError) {
-        console.warn('Environment camera failed, trying user camera:', envError);
-        // Fallback to front camera
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: 'user',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
-          });
-        } catch (userError) {
-          console.warn('User camera failed, trying any camera:', userError);
-          // Final fallback - any available camera
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
-          });
-        }
-      }
-
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setShowCamera(true);
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-
-      let errorMessage = 'Unable to access camera. ';
-      if (error.name === 'NotAllowedError') {
-        errorMessage += 'Please allow camera permissions in your browser settings.';
-      } else if (error.name === 'NotFoundError') {
-        errorMessage += 'No camera found on this device.';
-      } else if (error.name === 'NotSupportedError') {
-        errorMessage += 'Camera not supported on this device.';
-      } else if (error.name === 'NotReadableError') {
-        errorMessage += 'Camera is being used by another application.';
-      } else {
-        errorMessage += 'Please check permissions and try again.';
-      }
-
-      alert(errorMessage);
+  const closePreview = () => {
+    if (previewImage) {
+      URL.revokeObjectURL(previewImage.url);
+      setPreviewImage(null);
     }
-  }, []);
+    resetCropState();
+  };
 
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setShowCamera(false);
-  }, []);
-
-  const captureImage = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
-
-      if (context) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0);
-
-        // Convert to data URL for cropping
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        setCapturedImage(imageDataUrl);
-
-        // Initialize crop points (default rectangle covering most of the image)
-        const margin = 50;
-        setCropPoints([
-          { x: margin, y: margin }, // top-left
-          { x: canvas.width - margin, y: margin }, // top-right
-          { x: canvas.width - margin, y: canvas.height - margin }, // bottom-right
-          { x: margin, y: canvas.height - margin } // bottom-left
-        ]);
-
-        stopCamera();
-        setShowCropper(true);
+  // Cleanup URLs on component unmount
+  useEffect(() => {
+    return () => {
+      if (implantPreviewUrl) {
+        URL.revokeObjectURL(implantPreviewUrl);
       }
-    }
-  }, [stopCamera]);
-
-  // Cropping functions
-  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!cropCanvasRef.current) return;
-
-    const canvas = cropCanvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
-    // Check if clicking near existing point (for dragging)
-    const pointRadius = 10;
-    for (let i = 0; i < cropPoints.length; i++) {
-      const point = cropPoints[i];
-      const distance = Math.sqrt((x - point.x) ** 2 + (y - point.y) ** 2);
-      if (distance <= pointRadius) {
-        setIsDragging(true);
-        setDragIndex(i);
-        return;
+      if (muaPreviewUrl) {
+        URL.revokeObjectURL(muaPreviewUrl);
       }
-    }
-  }, [cropPoints]);
+    };
+  }, [implantPreviewUrl, muaPreviewUrl]);
 
-  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || dragIndex === null || !cropCanvasRef.current) return;
-
-    const canvas = cropCanvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
-    const newPoints = [...cropPoints];
-    newPoints[dragIndex] = { x, y };
-    setCropPoints(newPoints);
-  }, [isDragging, dragIndex, cropPoints]);
-
-  const handleCanvasMouseUp = useCallback(() => {
+  const resetCropState = () => {
+    setIsCropping(false);
+    setCropArea(null);
+    setIsDrawing(false);
     setIsDragging(false);
-    setDragIndex(null);
+    setIsResizing(null);
+    setZoom(1);
+    setRotation(0);
+  };
+
+  const startCropping = () => {
+    setIsCropping(true);
+    // Set initial crop area to center 80% of image
+    if (imageRef.current) {
+      const rect = imageRef.current.getBoundingClientRect();
+      const margin = 0.1;
+      setCropArea({
+        x: rect.width * margin,
+        y: rect.height * margin,
+        width: rect.width * (1 - 2 * margin),
+        height: rect.height * (1 - 2 * margin)
+      });
+    }
+  };
+
+  const cancelCropping = () => {
+    resetCropState();
+  };
+
+  // Touch and mouse event handlers
+  const getEventPosition = (e: React.TouchEvent | React.MouseEvent) => {
+    const rect = cropContainerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+
+    if ('touches' in e) {
+      const touch = e.touches[0] || e.changedTouches[0];
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
+      };
+    } else {
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+  };
+
+  const handlePointerDown = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (!isCropping) return;
+    e.preventDefault();
+
+    const pos = getEventPosition(e);
+
+    if (!cropArea) {
+      // Start drawing new crop area
+      setIsDrawing(true);
+      setCropArea({
+        x: pos.x,
+        y: pos.y,
+        width: 0,
+        height: 0
+      });
+    } else {
+      // Check if clicking on resize handles or inside crop area
+      const handleSize = 20;
+      const isOnRightEdge = Math.abs(pos.x - (cropArea.x + cropArea.width)) < handleSize;
+      const isOnBottomEdge = Math.abs(pos.y - (cropArea.y + cropArea.height)) < handleSize;
+      const isOnLeftEdge = Math.abs(pos.x - cropArea.x) < handleSize;
+      const isOnTopEdge = Math.abs(pos.y - cropArea.y) < handleSize;
+
+      if (isOnRightEdge && isOnBottomEdge) {
+        setIsResizing('se');
+      } else if (isOnRightEdge) {
+        setIsResizing('e');
+      } else if (isOnBottomEdge) {
+        setIsResizing('s');
+      } else if (pos.x >= cropArea.x && pos.x <= cropArea.x + cropArea.width &&
+                 pos.y >= cropArea.y && pos.y <= cropArea.y + cropArea.height) {
+        setIsDragging(true);
+        setDragStart({ x: pos.x - cropArea.x, y: pos.y - cropArea.y });
+      }
+    }
+  }, [isCropping, cropArea]);
+
+  const handlePointerMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (!isCropping) return;
+    e.preventDefault();
+
+    const pos = getEventPosition(e);
+
+    if (isDrawing && cropArea) {
+      setCropArea(prev => prev ? {
+        ...prev,
+        width: Math.max(0, pos.x - prev.x),
+        height: Math.max(0, pos.y - prev.y)
+      } : null);
+    } else if (isDragging && cropArea) {
+      const newX = pos.x - dragStart.x;
+      const newY = pos.y - dragStart.y;
+      setCropArea(prev => prev ? {
+        ...prev,
+        x: Math.max(0, newX),
+        y: Math.max(0, newY)
+      } : null);
+    } else if (isResizing && cropArea) {
+      setCropArea(prev => {
+        if (!prev) return null;
+        const newArea = { ...prev };
+
+        if (isResizing.includes('e')) {
+          newArea.width = Math.max(50, pos.x - prev.x);
+        }
+        if (isResizing.includes('s')) {
+          newArea.height = Math.max(50, pos.y - prev.y);
+        }
+
+        return newArea;
+      });
+    }
+  }, [isCropping, isDrawing, isDragging, isResizing, cropArea, dragStart]);
+
+  const handlePointerUp = useCallback(() => {
+    setIsDrawing(false);
+    setIsDragging(false);
+    setIsResizing(null);
   }, []);
 
   const applyCrop = useCallback(() => {
-    if (!capturedImage || !cropCanvasRef.current) return;
+    if (!cropArea || !imageRef.current || !canvasRef.current || !previewImage) return;
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-
-    img.onload = () => {
-      // Calculate the bounding box of the crop area
-      const minX = Math.min(...cropPoints.map(p => p.x));
-      const maxX = Math.max(...cropPoints.map(p => p.x));
-      const minY = Math.min(...cropPoints.map(p => p.y));
-      const maxY = Math.max(...cropPoints.map(p => p.y));
-
-      const width = maxX - minX;
-      const height = maxY - minY;
-
-      canvas.width = width;
-      canvas.height = height;
-
-      if (ctx) {
-        // Draw the cropped portion
-        ctx.drawImage(img, minX, minY, width, height, 0, 0, width, height);
-
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], `${cameraType}_${Date.now()}.jpg`, {
-              type: 'image/jpeg'
-            });
-            handleFileChange(cameraType, file);
-            setShowCropper(false);
-            setCapturedImage(null);
-            setCropPoints([]);
-          }
-        }, 'image/jpeg', 0.8);
-      }
-    };
-
-    img.src = capturedImage;
-  }, [capturedImage, cropPoints, cameraType, handleFileChange]);
-
-  const drawCropOverlay = useCallback(() => {
-    if (!cropCanvasRef.current || !capturedImage) return;
-
-    const canvas = cropCanvasRef.current;
+    const img = imageRef.current;
+    const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const img = cropImageRef.current;
-    if (!img) return;
+    // Calculate scale factors
+    const scaleX = img.naturalWidth / img.offsetWidth;
+    const scaleY = img.naturalHeight / img.offsetHeight;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Calculate crop coordinates relative to the actual image
+    const cropX = cropArea.x * scaleX;
+    const cropY = cropArea.y * scaleY;
+    const cropWidth = cropArea.width * scaleX;
+    const cropHeight = cropArea.height * scaleY;
 
-    // Draw the image
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // Set canvas size to crop dimensions
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
 
-    // Draw crop overlay
-    if (cropPoints.length === 4) {
-      // Draw semi-transparent overlay
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Clear the crop area
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.moveTo(cropPoints[0].x, cropPoints[0].y);
-      for (let i = 1; i < cropPoints.length; i++) {
-        ctx.lineTo(cropPoints[i].x, cropPoints[i].y);
-      }
-      ctx.closePath();
-      ctx.fill();
-
-      // Reset composite operation
-      ctx.globalCompositeOperation = 'source-over';
-
-      // Draw crop border
-      ctx.strokeStyle = '#3b82f6';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(cropPoints[0].x, cropPoints[0].y);
-      for (let i = 1; i < cropPoints.length; i++) {
-        ctx.lineTo(cropPoints[i].x, cropPoints[i].y);
-      }
-      ctx.closePath();
-      ctx.stroke();
-
-      // Draw corner points
-      ctx.fillStyle = '#3b82f6';
-      cropPoints.forEach(point => {
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
-        ctx.fill();
-
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      });
+    // Apply rotation if any
+    if (rotation !== 0) {
+      ctx.translate(cropWidth / 2, cropHeight / 2);
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.translate(-cropWidth / 2, -cropHeight / 2);
     }
-  }, [capturedImage, cropPoints]);
 
-  // Effect to redraw overlay when crop points change
-  useEffect(() => {
-    drawCropOverlay();
-  }, [drawCropOverlay]);
+    // Draw the cropped image
+    ctx.drawImage(
+      img,
+      cropX, cropY, cropWidth, cropHeight,
+      0, 0, cropWidth, cropHeight
+    );
+
+    // Convert to blob and update the file
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const croppedFile = new File([blob], previewImage.name, { type: 'image/jpeg' });
+
+        // Create new URL for the cropped image
+        const newUrl = URL.createObjectURL(blob);
+
+        // Update the implant data with the cropped file
+        setImplantData(prev => ({
+          ...prev,
+          [previewImage.type === 'implant' ? 'implant_picture' : 'mua_picture']: croppedFile
+        }));
+
+        // Update the appropriate preview URL
+        if (previewImage.type === 'implant') {
+          if (implantPreviewUrl) {
+            URL.revokeObjectURL(implantPreviewUrl);
+          }
+          setImplantPreviewUrl(newUrl);
+        } else {
+          if (muaPreviewUrl) {
+            URL.revokeObjectURL(muaPreviewUrl);
+          }
+          setMuaPreviewUrl(newUrl);
+        }
+
+        // Update preview dialog
+        URL.revokeObjectURL(previewImage.url);
+        setPreviewImage({
+          ...previewImage,
+          url: newUrl
+        });
+
+        resetCropState();
+      }
+    }, 'image/jpeg', 0.95);
+  }, [cropArea, previewImage, rotation, handleFileChange]);
 
   const handleSaveImplant = () => {
-    // Here you would save the implant data to the form
-    // For now, we'll just close the dialog
+    // Validate required fields
+    if (!implantData.position) {
+      alert('Please select an implant position');
+      return;
+    }
+
+    // Create implant object with all data including images
+    const newImplant = {
+      id: Date.now().toString(), // Simple ID generation
+      position: implantData.position,
+      brand: implantData.brand,
+      subtype: implantData.subtype,
+      size: implantData.size,
+      implant_picture: implantData.implant_picture,
+      implant_picture_url: implantPreviewUrl || (implantData.implant_picture ? URL.createObjectURL(implantData.implant_picture) : null),
+      mua_brand: implantData.mua_brand,
+      mua_subtype: implantData.mua_subtype,
+      mua_size: implantData.mua_size,
+      mua_picture: implantData.mua_picture,
+      mua_picture_url: muaPreviewUrl || (implantData.mua_picture ? URL.createObjectURL(implantData.mua_picture) : null),
+      arch_type: implantDialogType
+    };
+
+    // Add to saved implants
+    setSavedImplants(prev => ({
+      ...prev,
+      [implantDialogType!]: [...prev[implantDialogType!], newImplant]
+    }));
+
+    // Reset form and close dialog
+    setImplantData({
+      position: '',
+      mua_brand: '',
+      mua_subtype: '',
+      mua_size: '',
+      mua_picture: null,
+      brand: '',
+      subtype: '',
+      size: '',
+      implant_picture: null
+    });
+    setImplantPreviewUrl(null);
+    setMuaPreviewUrl(null);
     setShowImplantDialog(false);
   };
 
@@ -530,7 +664,13 @@ export function SurgicalRecallSheetForm({
 
       {/* Form Content - exactly like IV sedation structure */}
       <div className="flex-1 flex flex-col min-h-0">
-        <form className="flex-1 flex flex-col min-h-0">
+        <form
+          className="flex-1 flex flex-col min-h-0"
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
           {/* Step Content Container - Hidden Scrollbar */}
           <div className="flex-1 px-6 py-2 overflow-y-auto scrollbar-hidden">
 
@@ -757,10 +897,109 @@ export function SurgicalRecallSheetForm({
                       Add Implant
                     </Button>
                   </div>
-                  <div className="min-h-[300px] flex items-center justify-center">
-                    <div className="text-center text-gray-500">
-                      <p>Click "Add Implant" to add upper implant details...</p>
-                    </div>
+                  <div className="min-h-[300px]">
+                    {savedImplants.upper.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-gray-500">
+                          <p>Click "Add Implant" to add upper implant details...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {savedImplants.upper.map((implant) => (
+                          <div key={implant.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Position {implant.position}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {implant.brand && implant.subtype ? `${implant.brand} - ${implant.subtype}` : implant.brand || 'No brand specified'}
+                                </p>
+                                {implant.size && (
+                                  <p className="text-sm text-gray-600">Size: {implant.size}</p>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSavedImplants(prev => ({
+                                    ...prev,
+                                    upper: prev.upper.filter(item => item.id !== implant.id)
+                                  }));
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              {/* Implant Image */}
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-1">Implant Sticker</p>
+                                {(implant.implant_picture || implant.implant_picture_url) ? (
+                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                    <img
+                                      src={
+                                        implant.implant_picture
+                                          ? URL.createObjectURL(implant.implant_picture)
+                                          : implant.implant_picture_url
+                                      }
+                                      alt="Implant sticker"
+                                      className="w-full h-20 object-contain"
+                                      onError={(e) => {
+                                        console.log('Implant image failed to load');
+                                        if (implant.implant_picture_url && implant.implant_picture) {
+                                          e.currentTarget.src = implant.implant_picture_url;
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
+                                    <span className="text-xs text-gray-400">No image</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* MUA Image */}
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-1">MUA Sticker</p>
+                                {(implant.mua_picture || implant.mua_picture_url) ? (
+                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                    <img
+                                      src={
+                                        implant.mua_picture
+                                          ? URL.createObjectURL(implant.mua_picture)
+                                          : implant.mua_picture_url
+                                      }
+                                      alt="MUA sticker"
+                                      className="w-full h-20 object-contain"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
+                                    <span className="text-xs text-gray-400">No image</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* MUA Details */}
+                            {(implant.mua_brand || implant.mua_size) && (
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <p className="text-xs font-medium text-gray-700">MUA Details</p>
+                                <p className="text-sm text-gray-600">
+                                  {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand || 'No brand specified'}
+                                </p>
+                                {implant.mua_size && (
+                                  <p className="text-sm text-gray-600">Size: {implant.mua_size}</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -784,10 +1023,109 @@ export function SurgicalRecallSheetForm({
                       Add Implant
                     </Button>
                   </div>
-                  <div className="min-h-[300px] flex items-center justify-center">
-                    <div className="text-center text-gray-500">
-                      <p>Click "Add Implant" to add lower implant details...</p>
-                    </div>
+                  <div className="min-h-[300px]">
+                    {savedImplants.lower.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-gray-500">
+                          <p>Click "Add Implant" to add lower implant details...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {savedImplants.lower.map((implant) => (
+                          <div key={implant.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Position {implant.position}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {implant.brand && implant.subtype ? `${implant.brand} - ${implant.subtype}` : implant.brand || 'No brand specified'}
+                                </p>
+                                {implant.size && (
+                                  <p className="text-sm text-gray-600">Size: {implant.size}</p>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSavedImplants(prev => ({
+                                    ...prev,
+                                    lower: prev.lower.filter(item => item.id !== implant.id)
+                                  }));
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              {/* Implant Image */}
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-1">Implant Sticker</p>
+                                {(implant.implant_picture || implant.implant_picture_url) ? (
+                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                    <img
+                                      src={
+                                        implant.implant_picture
+                                          ? URL.createObjectURL(implant.implant_picture)
+                                          : implant.implant_picture_url
+                                      }
+                                      alt="Implant sticker"
+                                      className="w-full h-20 object-contain"
+                                      onError={(e) => {
+                                        console.log('Implant image failed to load');
+                                        if (implant.implant_picture_url && implant.implant_picture) {
+                                          e.currentTarget.src = implant.implant_picture_url;
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
+                                    <span className="text-xs text-gray-400">No image</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* MUA Image */}
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-1">MUA Sticker</p>
+                                {(implant.mua_picture || implant.mua_picture_url) ? (
+                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                    <img
+                                      src={
+                                        implant.mua_picture
+                                          ? URL.createObjectURL(implant.mua_picture)
+                                          : implant.mua_picture_url
+                                      }
+                                      alt="MUA sticker"
+                                      className="w-full h-20 object-contain"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
+                                    <span className="text-xs text-gray-400">No image</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* MUA Details */}
+                            {(implant.mua_brand || implant.mua_size) && (
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <p className="text-xs font-medium text-gray-700">MUA Details</p>
+                                <p className="text-sm text-gray-600">
+                                  {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand || 'No brand specified'}
+                                </p>
+                                {implant.mua_size && (
+                                  <p className="text-sm text-gray-600">Size: {implant.mua_size}</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -811,10 +1149,109 @@ export function SurgicalRecallSheetForm({
                       Add Implant
                     </Button>
                   </div>
-                  <div className="min-h-[300px] flex items-center justify-center">
-                    <div className="text-center text-gray-500">
-                      <p>Click "Add Implant" to add lower implant details...</p>
-                    </div>
+                  <div className="min-h-[300px]">
+                    {savedImplants.lower.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-gray-500">
+                          <p>Click "Add Implant" to add lower implant details...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {savedImplants.lower.map((implant) => (
+                          <div key={implant.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Position {implant.position}</h4>
+                                <p className="text-sm text-gray-600">
+                                  {implant.brand && implant.subtype ? `${implant.brand} - ${implant.subtype}` : implant.brand || 'No brand specified'}
+                                </p>
+                                {implant.size && (
+                                  <p className="text-sm text-gray-600">Size: {implant.size}</p>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSavedImplants(prev => ({
+                                    ...prev,
+                                    lower: prev.lower.filter(item => item.id !== implant.id)
+                                  }));
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              {/* Implant Image */}
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-1">Implant Sticker</p>
+                                {(implant.implant_picture || implant.implant_picture_url) ? (
+                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                    <img
+                                      src={
+                                        implant.implant_picture
+                                          ? URL.createObjectURL(implant.implant_picture)
+                                          : implant.implant_picture_url
+                                      }
+                                      alt="Implant sticker"
+                                      className="w-full h-20 object-contain"
+                                      onError={(e) => {
+                                        console.log('Implant image failed to load');
+                                        if (implant.implant_picture_url && implant.implant_picture) {
+                                          e.currentTarget.src = implant.implant_picture_url;
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
+                                    <span className="text-xs text-gray-400">No image</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* MUA Image */}
+                              <div>
+                                <p className="text-xs font-medium text-gray-700 mb-1">MUA Sticker</p>
+                                {(implant.mua_picture || implant.mua_picture_url) ? (
+                                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                                    <img
+                                      src={
+                                        implant.mua_picture
+                                          ? URL.createObjectURL(implant.mua_picture)
+                                          : implant.mua_picture_url
+                                      }
+                                      alt="MUA sticker"
+                                      className="w-full h-20 object-contain"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border border-dashed border-gray-300 rounded-lg h-20 flex items-center justify-center">
+                                    <span className="text-xs text-gray-400">No image</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* MUA Details */}
+                            {(implant.mua_brand || implant.mua_size) && (
+                              <div className="mt-3 pt-3 border-t border-gray-100">
+                                <p className="text-xs font-medium text-gray-700">MUA Details</p>
+                                <p className="text-sm text-gray-600">
+                                  {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand || 'No brand specified'}
+                                </p>
+                                {implant.mua_size && (
+                                  <p className="text-sm text-gray-600">Size: {implant.mua_size}</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -836,9 +1273,13 @@ export function SurgicalRecallSheetForm({
             <Button
               type="button"
               onClick={currentStep === totalSteps ? handleSubmit : handleNext}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
             >
-              {currentStep === totalSteps ? 'Submit' : 'Next'}
+              {currentStep === totalSteps
+                ? (isSubmitting ? 'Saving...' : 'Submit')
+                : 'Next'
+              }
             </Button>
           </div>
         </form>
@@ -1097,24 +1538,84 @@ export function SurgicalRecallSheetForm({
 
                 <div>
                   <Label htmlFor="implant_picture">Implant Sticker Picture</Label>
-                  <button
-                    type="button"
-                    onClick={() => startCamera('implant_picture')}
-                    className="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg bg-transparent hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-                  >
-                    <Camera className="h-6 w-6" />
-                    <span className="text-sm">Capture Implant Sticker</span>
-                  </button>
-                  {implantData.implant_picture && (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600">
-                        Captured: {implantData.implant_picture.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Size: {(implantData.implant_picture.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                  )}
+                  <div className="space-y-3">
+                    {/* Hidden file input */}
+                    <input
+                      ref={implantPictureInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const file = e.target.files?.[0] || null;
+                        handleFileChange('implant_picture', file);
+                      }}
+                      className="hidden"
+                    />
+
+                    {/* Custom capture button with image preview */}
+                    {!implantData.implant_picture ? (
+                      <button
+                        type="button"
+                        onClick={() => implantPictureInputRef.current?.click()}
+                        className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-transparent border-2 border-dashed border-blue-400 hover:border-blue-600 hover:bg-blue-50/20 transition-colors rounded-lg text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        <Camera className="h-5 w-5" />
+                        Capture Implant Sticker
+                      </button>
+                    ) : (
+                      <div className="w-full border-2 border-green-400 rounded-lg overflow-hidden bg-white">
+                        {/* Image Preview */}
+                        <div className="w-full bg-gray-50 flex items-center justify-center p-2">
+                          <img
+                            src={implantPreviewUrl || URL.createObjectURL(implantData.implant_picture)}
+                            alt="Implant sticker preview"
+                            className="w-full h-auto max-h-32 object-contain rounded"
+                          />
+                        </div>
+
+                        {/* Controls */}
+                        <div className="p-3 bg-green-50 border-t border-green-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-green-700 font-medium">
+                                ✓ Captured Successfully
+                              </p>
+                              <p className="text-xs text-green-600">
+                                Size: {(implantData.implant_picture.size / 1024).toFixed(1)} KB
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const url = URL.createObjectURL(implantData.implant_picture!);
+                                  setPreviewImage({
+                                    url,
+                                    name: implantData.implant_picture!.name,
+                                    type: 'implant'
+                                  });
+                                }}
+                                className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md transition-colors"
+                              >
+                                <Eye className="h-3 w-3" />
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => implantPictureInputRef.current?.click()}
+                                className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
+                              >
+                                <Camera className="h-3 w-3" />
+                                Retake
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1230,24 +1731,84 @@ export function SurgicalRecallSheetForm({
 
                 <div>
                   <Label htmlFor="mua_picture">MUA Sticker Picture</Label>
-                  <button
-                    type="button"
-                    onClick={() => startCamera('mua_picture')}
-                    className="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg bg-transparent hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-                  >
-                    <Camera className="h-6 w-6" />
-                    <span className="text-sm">Capture MUA Sticker</span>
-                  </button>
-                  {implantData.mua_picture && (
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-600">
-                        Captured: {implantData.mua_picture.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Size: {(implantData.mua_picture.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                  )}
+                  <div className="space-y-3">
+                    {/* Hidden file input */}
+                    <input
+                      ref={muaPictureInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const file = e.target.files?.[0] || null;
+                        handleFileChange('mua_picture', file);
+                      }}
+                      className="hidden"
+                    />
+
+                    {/* Custom capture button with image preview */}
+                    {!implantData.mua_picture ? (
+                      <button
+                        type="button"
+                        onClick={() => muaPictureInputRef.current?.click()}
+                        className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-transparent border-2 border-dashed border-blue-400 hover:border-blue-600 hover:bg-blue-50/20 transition-colors rounded-lg text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        <Camera className="h-5 w-5" />
+                        Capture MUA Sticker
+                      </button>
+                    ) : (
+                      <div className="w-full border-2 border-green-400 rounded-lg overflow-hidden bg-white">
+                        {/* Image Preview */}
+                        <div className="w-full bg-gray-50 flex items-center justify-center p-2">
+                          <img
+                            src={muaPreviewUrl || URL.createObjectURL(implantData.mua_picture)}
+                            alt="MUA sticker preview"
+                            className="w-full h-auto max-h-32 object-contain rounded"
+                          />
+                        </div>
+
+                        {/* Controls */}
+                        <div className="p-3 bg-green-50 border-t border-green-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-green-700 font-medium">
+                                ✓ Captured Successfully
+                              </p>
+                              <p className="text-xs text-green-600">
+                                Size: {(implantData.mua_picture.size / 1024).toFixed(1)} KB
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const url = URL.createObjectURL(implantData.mua_picture!);
+                                  setPreviewImage({
+                                    url,
+                                    name: implantData.mua_picture!.name,
+                                    type: 'mua'
+                                  });
+                                }}
+                                className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md transition-colors"
+                              >
+                                <Eye className="h-3 w-3" />
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => muaPictureInputRef.current?.click()}
+                                className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
+                              >
+                                <Camera className="h-3 w-3" />
+                                Retake
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1272,110 +1833,162 @@ export function SurgicalRecallSheetForm({
         </DialogContent>
       </Dialog>
 
-      {/* Camera Capture Modal */}
-      {showCamera && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">
-                Capture {cameraType === 'implant_picture' ? 'Implant' : 'MUA'} Sticker
-              </h3>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={stopCamera}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                Cancel
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full h-64 bg-black rounded-lg"
-              />
-
-              <Button
-                type="button"
-                onClick={captureImage}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
-              >
-                <Camera className="h-4 w-4" />
-                Capture
-              </Button>
-            </div>
-
-            <canvas ref={canvasRef} className="hidden" />
+      {/* Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={closePreview}>
+        <DialogContent className="max-w-fit max-h-[95vh] overflow-hidden flex flex-col p-0">
+          {/* Simple Header */}
+          <div className="p-4 border-b bg-white">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {previewImage?.type === 'implant' ? 'Implant Sticker' : 'MUA Sticker'} Preview
+            </h2>
           </div>
-        </div>
-      )}
 
-      {/* Image Cropper Modal */}
-      {showCropper && capturedImage && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">
-                Crop {cameraType === 'implant_picture' ? 'Implant' : 'MUA'} Sticker
-              </h3>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowCropper(false);
-                    setCapturedImage(null);
-                    setCropPoints([]);
+          {previewImage && (
+            <>
+              {/* Image Display Area */}
+              <div className="flex-1 flex items-center justify-center bg-gray-50 p-4">
+                <div
+                  ref={cropContainerRef}
+                  className="relative touch-none select-none"
+                  onTouchStart={handlePointerDown}
+                  onTouchMove={handlePointerMove}
+                  onTouchEnd={handlePointerUp}
+                  onMouseDown={handlePointerDown}
+                  onMouseMove={handlePointerMove}
+                  onMouseUp={handlePointerUp}
+                  style={{
+                    cursor: isCropping ? 'crosshair' : 'default',
+                    transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                    transition: 'transform 0.2s ease'
                   }}
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={applyCrop}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Apply Crop
-                </Button>
-              </div>
-            </div>
+                  <img
+                    ref={imageRef}
+                    src={previewImage.url}
+                    alt={`${previewImage.type} sticker preview`}
+                    className="max-w-[64vw] max-h-[56vh] object-contain rounded-lg shadow-lg"
+                    draggable={false}
+                  />
 
-            <div className="relative">
-              <p className="text-sm text-gray-600 mb-2">
-                Drag the corner points to adjust the crop area
-              </p>
-              <div className="relative overflow-auto max-h-[60vh]">
-                <img
-                  ref={cropImageRef}
-                  src={capturedImage}
-                  alt="Captured"
-                  className="hidden"
-                  onLoad={() => {
-                    if (cropCanvasRef.current && cropImageRef.current) {
-                      const canvas = cropCanvasRef.current;
-                      const img = cropImageRef.current;
-                      canvas.width = img.naturalWidth;
-                      canvas.height = img.naturalHeight;
-                      drawCropOverlay();
-                    }
-                  }}
-                />
-                <canvas
-                  ref={cropCanvasRef}
-                  className="max-w-full h-auto border border-gray-300 cursor-crosshair"
-                  onMouseDown={handleCanvasClick}
-                  onMouseMove={handleCanvasMouseMove}
-                  onMouseUp={handleCanvasMouseUp}
-                  onMouseLeave={handleCanvasMouseUp}
-                />
+                  {/* Crop Overlay */}
+                  {isCropping && cropArea && (
+                    <div
+                      className="absolute border-2 border-blue-500 bg-blue-500/10"
+                      style={{
+                        left: cropArea.x,
+                        top: cropArea.y,
+                        width: cropArea.width,
+                        height: cropArea.height,
+                        boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)'
+                      }}
+                    >
+                      {/* Grid Lines */}
+                      <div className="absolute inset-0 grid grid-cols-3 grid-rows-3">
+                        {Array.from({ length: 9 }).map((_, i) => (
+                          <div key={i} className="border border-blue-300/50" />
+                        ))}
+                      </div>
+
+                      {/* Resize Handles */}
+                      <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg cursor-se-resize" />
+                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-4 bg-blue-500 rounded border-2 border-white shadow-lg cursor-s-resize" />
+                      <div className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-4 h-6 bg-blue-500 rounded border-2 border-white shadow-lg cursor-e-resize" />
+
+                      {/* Move Handle */}
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-blue-500 rounded-full border-2 border-white shadow-lg cursor-move flex items-center justify-center">
+                        <Move className="h-4 w-4 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+
+              {/* Simple Footer with Controls */}
+              <div className="flex-shrink-0 flex items-center justify-between p-4 border-t bg-white">
+                <div className="flex items-center gap-3">
+                  {!isCropping ? (
+                    <button
+                      type="button"
+                      onClick={startCropping}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+                    >
+                      <Crop className="h-4 w-4" />
+                      Crop
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={applyCrop}
+                        disabled={!cropArea}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                      >
+                        <Check className="h-4 w-4" />
+                        Apply
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelCropping}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Zoom Controls */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <ZoomOut className="h-4 w-4 text-gray-600" />
+                    </button>
+                    <span className="text-sm font-medium text-gray-700 min-w-[50px] text-center">
+                      {Math.round(zoom * 100)}%
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setZoom(Math.min(3, zoom + 0.1))}
+                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <ZoomIn className="h-4 w-4 text-gray-600" />
+                    </button>
+                  </div>
+
+                  {/* Rotation Controls */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRotation((rotation - 90) % 360)}
+                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <RotateCcw className="h-4 w-4 text-gray-600" />
+                    </button>
+                    <span className="text-sm font-medium text-gray-700 min-w-[35px] text-center">
+                      {rotation}°
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setRotation((rotation + 90) % 360)}
+                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      <RotateCw className="h-4 w-4 text-gray-600" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hidden canvas for cropping */}
+              <canvas ref={canvasRef} className="hidden" />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

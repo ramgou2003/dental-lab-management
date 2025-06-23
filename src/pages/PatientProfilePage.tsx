@@ -61,8 +61,10 @@ import { ClinicalReportCardForm } from "@/components/ClinicalReportCardForm";
 import { ViewClinicalReportCard } from "@/components/ViewClinicalReportCard";
 import { AppointmentScheduler } from "@/components/AppointmentScheduler";
 import { SurgicalRecallSheetForm } from "@/components/SurgicalRecallSheetForm";
+import { ViewSurgicalRecallSheet } from "@/components/ViewSurgicalRecallSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSurgicalRecallSheets } from "@/hooks/useSurgicalRecallSheets";
 
 export function PatientProfilePage() {
   const { patientId } = useParams<{ patientId: string }>();
@@ -198,8 +200,19 @@ export function PatientProfilePage() {
 
   // State for Surgical Recall Sheets
   const [showSurgicalRecallForm, setShowSurgicalRecallForm] = useState(false);
-  const [surgicalRecallSheets, setSurgicalRecallSheets] = useState<any[]>([]);
   const [editingSurgicalRecallSheet, setEditingSurgicalRecallSheet] = useState<any | null>(null);
+  const [showSurgicalRecallPreview, setShowSurgicalRecallPreview] = useState(false);
+  const [selectedSurgicalRecallSheet, setSelectedSurgicalRecallSheet] = useState<any | null>(null);
+  const [surgicalRecallActiveDropdown, setSurgicalRecallActiveDropdown] = useState<string | null>(null);
+
+  // Surgical recall sheets hook
+  const {
+    sheets: surgicalRecallSheets,
+    loading: surgicalRecallLoading,
+    refetch: refetchSurgicalRecallSheets,
+    fetchSheetWithImplants,
+    deleteSheet: deleteSurgicalRecallSheet
+  } = useSurgicalRecallSheets(patient?.id);
 
   // Auto-save state
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -2218,13 +2231,65 @@ export function PatientProfilePage() {
   // Surgical Recall Sheet Handlers
   const handleSurgicalRecallFormSubmit = async (formData: any) => {
     console.log('Surgical recall sheet form submitted:', formData);
-    // For now, just close the form
     setShowSurgicalRecallForm(false);
+    setEditingSurgicalRecallSheet(null);
+    // Refresh the sheets list
+    await refetchSurgicalRecallSheets();
   };
 
   const handleSurgicalRecallFormCancel = () => {
     setShowSurgicalRecallForm(false);
     setEditingSurgicalRecallSheet(null);
+  };
+
+  const handleViewSurgicalRecallSheet = async (sheet: any) => {
+    try {
+      const sheetWithImplants = await fetchSheetWithImplants(sheet.id);
+      setSelectedSurgicalRecallSheet(sheetWithImplants);
+      setShowSurgicalRecallPreview(true);
+    } catch (error) {
+      console.error('Error fetching surgical recall sheet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load surgical recall sheet details.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditSurgicalRecallSheet = async (sheet: any) => {
+    try {
+      const sheetWithImplants = await fetchSheetWithImplants(sheet.id);
+      setEditingSurgicalRecallSheet(sheetWithImplants);
+      setShowSurgicalRecallForm(true);
+      setSurgicalRecallActiveDropdown(null);
+    } catch (error) {
+      console.error('Error fetching surgical recall sheet for editing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load surgical recall sheet for editing.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteSurgicalRecallSheet = async (sheet: any) => {
+    setSurgicalRecallActiveDropdown(null);
+
+    const result = await deleteSurgicalRecallSheet(sheet.id);
+
+    if (result.success) {
+      toast({
+        title: "Success",
+        description: "Surgical recall sheet deleted successfully.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to delete surgical recall sheet.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDataCollectionFormSubmit = (e: React.FormEvent) => {
@@ -3753,7 +3818,7 @@ export function PatientProfilePage() {
                       <div className="p-1.5 bg-blue-100 rounded-lg">
                         <FileText className="h-4 w-4 text-blue-600" />
                       </div>
-                      <h3 className="text-base font-semibold text-gray-900">Surgical Recall Sheet (0)</h3>
+                      <h3 className="text-base font-semibold text-gray-900">Surgical Recall Sheet ({surgicalRecallSheets.length})</h3>
                     </div>
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
@@ -3767,12 +3832,119 @@ export function PatientProfilePage() {
                           <span className="text-sm font-medium">Add Surgical Recall Sheet</span>
                         </button>
 
-                        {/* Empty State */}
-                        <div className="text-center py-8">
-                          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm font-medium text-gray-500 mb-1">No surgical recall sheets</p>
-                          <p className="text-xs text-gray-400">Use the button above to create your first surgical recall sheet</p>
-                        </div>
+                        {/* Surgical Recall Sheets */}
+                        {surgicalRecallSheets.length > 0 ? (
+                          surgicalRecallSheets.map((sheet) => (
+                            <div
+                              key={sheet.id}
+                              className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                              onClick={() => handleViewSurgicalRecallSheet(sheet)}
+                            >
+                              {/* Header with date and status */}
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    sheet.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                  }`}></div>
+                                  <span className="text-sm font-semibold text-gray-900">
+                                    {new Date(sheet.surgery_date).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+
+                                {/* Status Badge */}
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  sheet.status === 'completed'
+                                    ? 'bg-green-100 text-green-800 border border-green-200'
+                                    : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                }`}>
+                                  {sheet.status === 'completed' ? 'Completed' : 'Draft'}
+                                </span>
+                              </div>
+
+                              {/* Content preview */}
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-gray-500">Arch Type:</span>
+                                  <span className="text-xs text-gray-700 capitalize">{sheet.arch_type}</span>
+                                </div>
+                                {sheet.upper_surgery_type && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-500">Upper:</span>
+                                    <span className="text-xs text-blue-600 font-medium">{sheet.upper_surgery_type}</span>
+                                  </div>
+                                )}
+                                {sheet.lower_surgery_type && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-500">Lower:</span>
+                                    <span className="text-xs text-blue-600 font-medium">{sheet.lower_surgery_type}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Footer with timestamp */}
+                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                                <span className="text-xs text-gray-400">
+                                  {new Date(sheet.created_at).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+
+                                {/* Three dots menu */}
+                                <div className="relative">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSurgicalRecallActiveDropdown(surgicalRecallActiveDropdown === sheet.id ? null : sheet.id);
+                                    }}
+                                    className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                  >
+                                    <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                  </button>
+
+                                  {/* Dropdown menu */}
+                                  {surgicalRecallActiveDropdown === sheet.id && (
+                                    <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSurgicalRecallActiveDropdown(null);
+                                          handleEditSurgicalRecallSheet(sheet);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
+                                      >
+                                        <Edit2 className="h-3.5 w-3.5" />
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteSurgicalRecallSheet(sheet);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-sm font-medium text-gray-500 mb-1">No surgical recall sheets</p>
+                            <p className="text-xs text-gray-400">Use the button above to create your first surgical recall sheet</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -10265,6 +10437,16 @@ export function PatientProfilePage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* View Surgical Recall Sheet Dialog */}
+      <ViewSurgicalRecallSheet
+        isOpen={showSurgicalRecallPreview}
+        onClose={() => {
+          setShowSurgicalRecallPreview(false);
+          setSelectedSurgicalRecallSheet(null);
+        }}
+        sheetData={selectedSurgicalRecallSheet}
+      />
     </div>
   );
 }
