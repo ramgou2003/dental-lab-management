@@ -134,6 +134,12 @@ export function AppointmentDetailsDialog({
     });
   };
 
+  const formatTime = (timeString: string) => {
+    // Remove seconds from time string (HH:MM:SS -> HH:MM)
+    const [hours, minutes] = timeString.split(':');
+    return `${hours}:${minutes}`;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -177,7 +183,7 @@ export function AppointmentDetailsDialog({
             <div>
               <p className="text-sm text-gray-600">Date & Time</p>
               <p className="font-semibold text-gray-900">{formatDate(appointment.date)}</p>
-              <p className="text-sm text-gray-700">{appointment.startTime} - {appointment.endTime}</p>
+              <p className="text-sm text-gray-700">{formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}</p>
             </div>
           </div>
 

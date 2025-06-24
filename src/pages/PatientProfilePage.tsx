@@ -2973,7 +2973,7 @@ export function PatientProfilePage() {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Clock className="h-4 w-4" />
-                                    <span>{appointment.startTime} - {appointment.endTime}</span>
+                                    <span>{appointment.startTime.split(':').slice(0, 2).join(':')} - {appointment.endTime.split(':').slice(0, 2).join(':')}</span>
                                   </div>
                                 </div>
                                 {appointment.notes && (

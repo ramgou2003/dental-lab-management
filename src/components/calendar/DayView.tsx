@@ -180,6 +180,12 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     return `${displayHour}:00 ${period}`;
   };
 
+  const formatAppointmentTime = (timeString: string) => {
+    // Remove seconds from time string (HH:MM:SS -> HH:MM)
+    const [hours, minutes] = timeString.split(':');
+    return `${hours}:${minutes}`;
+  };
+
   const getTypeColors = (typeKey: string) => {
     return appointmentTypes.find(type => type.key === typeKey) || {
       key: typeKey,
@@ -824,7 +830,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                               </div>
                               <div className="flex items-center gap-1 flex-shrink-0 ml-auto">
                                 <span className="text-xs text-gray-600 whitespace-nowrap">
-                                  {appointment.startTime} - {appointment.endTime}
+                                  {formatAppointmentTime(appointment.startTime)} - {formatAppointmentTime(appointment.endTime)}
                                 </span>
                                 <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full uppercase ${typeColors.badgeColor || 'bg-gray-500'}`}>
                                   {firstLetter}
@@ -892,7 +898,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                         {label === 'Data Collection' ? 'Data' : displayText}
                                       </span>
                                       <div className="text-xs text-gray-600 text-right whitespace-nowrap flex-shrink-0 ml-auto">
-                                        {appointment.startTime} - {appointment.endTime}
+                                        {formatAppointmentTime(appointment.startTime)} - {formatAppointmentTime(appointment.endTime)}
                                       </div>
                                     </>
                                   );
