@@ -1,4 +1,4 @@
-# GitHub Repository Update - Complete Dental Lab Management System
+# GitHub Repository Update - Complete NYDI System
 
 ## ✅ **Successfully Updated GitHub Repository**
 

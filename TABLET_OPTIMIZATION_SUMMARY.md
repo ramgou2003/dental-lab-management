@@ -1,7 +1,7 @@
-# Dental Lab Management - Tablet Optimization Summary
+# NYDI - Tablet Optimization Summary
 
 ## 🎯 Overview
-The dental lab management application has been comprehensively optimized for tablet use (768px-1024px screens) with smaller elements, improved touch targets, and better responsive design.
+The NYDI application has been comprehensively optimized for tablet use (768px-1024px screens) with smaller elements, improved touch targets, and better responsive design.
 
 ## ✅ Completed Optimizations
 

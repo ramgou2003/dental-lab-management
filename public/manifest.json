@@ -1,6 +1,6 @@
 {
-  "name": "Dental Lab Management System",
-  "short_name": "Dental Lab",
+  "name": "NYDI",
+  "short_name": "NYDI",
   "description": "Complete dental lab management solution for clinics - Optimized for tablets and mobile devices",
   "start_url": "/",
   "display": "standalone",

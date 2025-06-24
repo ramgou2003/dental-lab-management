@@ -104,13 +104,30 @@ const OrientationGuard: React.FC<OrientationGuardProps> = ({ children }) => {
 
           {/* App Info */}
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div className="flex items-center justify-center space-x-2 mb-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">D</span>
+            <div className="flex items-center justify-center space-x-3 mb-2">
+              <img
+                src="/logo-icon.png"
+                alt="NYDI Logo"
+                className="w-10 h-10 object-contain"
+                onError={(e) => {
+                  // Fallback to SVG if PNG doesn't exist
+                  e.currentTarget.src = "/logo-icon.svg";
+                  e.currentTarget.onerror = () => {
+                    // Final fallback to placeholder icon
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback && fallback.classList.contains('fallback-icon')) {
+                      fallback.style.display = 'flex';
+                    }
+                  };
+                }}
+              />
+              <div className="w-10 h-10 bg-blue-600 rounded-lg items-center justify-center fallback-icon" style={{ display: 'none' }}>
+                <span className="text-white font-bold text-sm">N</span>
               </div>
-              <span className="font-semibold text-gray-900">Dental Lab Management</span>
+              <span className="font-semibold text-gray-900 text-lg">NYDI</span>
             </div>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 text-center">
               Professional dental laboratory workflow management system
             </p>
           </div>

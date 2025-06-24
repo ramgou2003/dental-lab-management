@@ -1,4 +1,4 @@
-# Dental Lab Management System
+# NYDI
 
 A comprehensive dental lab management system with patient management, lab scripts, manufacturing queue, and report cards. Built with React, TypeScript, Tailwind CSS, and Supabase.
 
