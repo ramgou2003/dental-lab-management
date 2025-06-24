@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { PageHeader } from "@/components/PageHeader";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useLabScripts } from "@/hooks/useLabScripts";
@@ -21,7 +20,9 @@ import {
   LineChart,
   Line,
   Area,
-  AreaChart
+  AreaChart,
+  RadialBarChart,
+  RadialBar
 } from "recharts";
 import {
   Users,
@@ -35,7 +36,15 @@ import {
   Activity,
   Target,
   Zap,
-  Award
+  Award,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  Sparkles,
+  BarChart3,
+  PieChart as PieChartIcon,
+  Timer,
+  Stethoscope
 } from "lucide-react";
 
 export function DashboardPage() {
@@ -165,74 +174,115 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
-      <PageHeader
-        title="Dashboard"
-        description="Real-time insights into your dental lab operations"
-      />
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Main Dashboard Content */}
+      <div className="h-full p-8">
+        <div className="h-full grid grid-cols-12 gap-8">
 
-      {/* Main Dashboard Content - Perfect Viewport Fit */}
-      <div className="flex-1 overflow-hidden p-6">
-        <div className="h-full grid grid-cols-12 gap-6">
+          {/* Left Column - Main Analytics */}
+          <div className="col-span-8 flex flex-col gap-8">
 
-          {/* Left Column - Key Metrics & Charts */}
-          <div className="col-span-8 flex flex-col gap-6">
-
-            {/* Key Metrics Row */}
-            <div className="grid grid-cols-4 gap-4 h-32">
+            {/* Hero Metrics Row */}
+            <div className="grid grid-cols-4 gap-6">
               {keyMetrics.map((metric, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between hover:shadow-md transition-shadow">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600 mb-1">{metric.title}</p>
-                    <p className="text-2xl font-bold text-gray-900 mb-1">{metric.value}</p>
-                    <div className="flex items-center">
-                      <span className={`text-xs font-medium ${metric.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                        {metric.change}
-                      </span>
-                      <span className="text-xs text-gray-500 ml-1">vs last month</span>
+                <div key={index} className="group relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl hover:scale-105 transition-all duration-300">
+                  {/* Gradient Background */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${
+                    index === 0 ? 'from-blue-500/10 to-cyan-500/10' :
+                    index === 1 ? 'from-emerald-500/10 to-teal-500/10' :
+                    index === 2 ? 'from-purple-500/10 to-pink-500/10' :
+                    'from-orange-500/10 to-red-500/10'
+                  } rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`p-3 rounded-xl ${
+                        index === 0 ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                        index === 1 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
+                        index === 2 ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
+                        'bg-gradient-to-r from-orange-500 to-red-500'
+                      } shadow-lg`}>
+                        <metric.icon className="h-6 w-6 text-white" />
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        {metric.trend === 'up' ? (
+                          <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+                        ) : metric.trend === 'down' ? (
+                          <ArrowDownRight className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <Minus className="h-4 w-4 text-gray-400" />
+                        )}
+                        <span className={`text-sm font-semibold ${
+                          metric.trend === 'up' ? 'text-emerald-600' :
+                          metric.trend === 'down' ? 'text-red-600' : 'text-gray-500'
+                        }`}>
+                          {metric.change}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className={`${metric.color} p-3 rounded-lg`}>
-                    <metric.icon className="h-6 w-6 text-white" />
+
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-600 mb-1">{metric.title}</h3>
+                      <p className="text-3xl font-bold text-gray-900">{metric.value}</p>
+                      <p className="text-xs text-gray-500 mt-1">vs last month</p>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Charts Row */}
-            <div className="flex-1 grid grid-cols-2 gap-6">
+            {/* Modern Charts Section */}
+            <div className="flex-1 grid grid-cols-2 gap-8">
 
               {/* Manufacturing Pipeline Chart */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Manufacturing Pipeline</h3>
-                  <Activity className="h-5 w-5 text-gray-400" />
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
+                      <BarChart3 className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Manufacturing Pipeline</h3>
+                      <p className="text-sm text-gray-500">Production workflow status</p>
+                    </div>
+                  </div>
+                  <Sparkles className="h-5 w-5 text-purple-400" />
                 </div>
-                <div className="h-64">
+                <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={manufacturingPipelineData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <BarChart data={manufacturingPipelineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                          <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.6}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
                       <XAxis
                         dataKey="name"
-                        tick={{ fontSize: 12 }}
-                        stroke="#6b7280"
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        axisLine={false}
+                        tickLine={false}
                       />
                       <YAxis
-                        tick={{ fontSize: 12 }}
-                        stroke="#6b7280"
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        axisLine={false}
+                        tickLine={false}
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1f2937',
+                          backgroundColor: 'rgba(15, 23, 42, 0.9)',
                           border: 'none',
-                          borderRadius: '8px',
-                          color: '#fff'
+                          borderRadius: '12px',
+                          color: '#fff',
+                          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
                         }}
+                        cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
                       />
                       <Bar
                         dataKey="value"
-                        fill="#3b82f6"
-                        radius={[4, 4, 0, 0]}
+                        fill="url(#barGradient)"
+                        radius={[8, 8, 0, 0]}
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -240,46 +290,67 @@ export function DashboardPage() {
               </div>
 
               {/* Weekly Trends Chart */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Weekly Appointment Trends</h3>
-                  <TrendingUp className="h-5 w-5 text-gray-400" />
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg">
+                      <TrendingUp className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Weekly Trends</h3>
+                      <p className="text-sm text-gray-500">7-day appointment patterns</p>
+                    </div>
+                  </div>
+                  <Timer className="h-5 w-5 text-emerald-400" />
                 </div>
-                <div className="h-64">
+                <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={weeklyTrends}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <AreaChart data={weeklyTrends} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="appointmentsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.4}/>
+                          <stop offset="100%" stopColor="#10b981" stopOpacity={0.1}/>
+                        </linearGradient>
+                        <linearGradient id="completedGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4}/>
+                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.5} />
                       <XAxis
                         dataKey="day"
-                        tick={{ fontSize: 12 }}
-                        stroke="#6b7280"
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        axisLine={false}
+                        tickLine={false}
                       />
                       <YAxis
-                        tick={{ fontSize: 12 }}
-                        stroke="#6b7280"
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        axisLine={false}
+                        tickLine={false}
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1f2937',
+                          backgroundColor: 'rgba(15, 23, 42, 0.9)',
                           border: 'none',
-                          borderRadius: '8px',
-                          color: '#fff'
+                          borderRadius: '12px',
+                          color: '#fff',
+                          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
                         }}
                       />
                       <Area
                         type="monotone"
                         dataKey="appointments"
                         stroke="#10b981"
-                        fill="#10b981"
-                        fillOpacity={0.3}
+                        strokeWidth={3}
+                        fill="url(#appointmentsGradient)"
                         name="Total Appointments"
                       />
                       <Area
                         type="monotone"
                         dataKey="completed"
                         stroke="#6366f1"
-                        fill="#6366f1"
-                        fillOpacity={0.3}
+                        strokeWidth={3}
+                        fill="url(#completedGradient)"
                         name="Completed"
                       />
                     </AreaChart>
@@ -289,150 +360,210 @@ export function DashboardPage() {
             </div>
           </div>
 
-          {/* Right Column - Status Overview & Activity */}
-          <div className="col-span-4 flex flex-col gap-6">
+          {/* Right Column - Status & Insights */}
+          <div className="col-span-4 flex flex-col gap-8">
 
             {/* Appointment Status Distribution */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-80">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Appointment Status</h3>
-                <Target className="h-5 w-5 text-gray-400" />
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-600 rounded-lg">
+                    <PieChartIcon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Appointment Status</h3>
+                    <p className="text-sm text-gray-500">Current distribution</p>
+                  </div>
+                </div>
+                <Target className="h-5 w-5 text-pink-400" />
               </div>
-              <div className="h-48">
+              <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
+                    <defs>
+                      {appointmentStatusData.map((entry, index) => (
+                        <linearGradient key={index} id={`gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor={entry.color} stopOpacity={0.8}/>
+                          <stop offset="100%" stopColor={entry.color} stopOpacity={0.6}/>
+                        </linearGradient>
+                      ))}
+                    </defs>
                     <Pie
                       data={appointmentStatusData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={40}
-                      outerRadius={80}
-                      paddingAngle={5}
+                      innerRadius={50}
+                      outerRadius={90}
+                      paddingAngle={3}
                       dataKey="value"
                     >
                       {appointmentStatusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell key={`cell-${index}`} fill={`url(#gradient-${index})`} />
                       ))}
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1f2937',
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
                         border: 'none',
-                        borderRadius: '8px',
-                        color: '#fff'
+                        borderRadius: '12px',
+                        color: '#fff',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
                       }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-4">
+              <div className="grid grid-cols-2 gap-3 mt-6">
                 {appointmentStatusData.map((item, index) => (
-                  <div key={index} className="flex items-center">
-                    <div
-                      className="w-3 h-3 rounded-full mr-2"
-                      style={{ backgroundColor: item.color }}
-                    ></div>
-                    <span className="text-sm text-gray-600">{item.name}: {item.value}</span>
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl">
+                    <div className="flex items-center space-x-2">
+                      <div
+                        className="w-3 h-3 rounded-full shadow-sm"
+                        style={{ backgroundColor: item.color }}
+                      ></div>
+                      <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-bold text-gray-900">{item.value}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Treatment Types Distribution */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-80">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Treatment Types</h3>
-                <Award className="h-5 w-5 text-gray-400" />
-              </div>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={treatmentTypes}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {treatmentTypes.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1f2937',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: '#fff'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="grid grid-cols-1 gap-1 mt-4">
-                {treatmentTypes.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: item.color }}
-                      ></div>
-                      <span className="text-sm text-gray-600">{item.name}</span>
-                    </div>
-                    <span className="text-sm font-medium text-gray-900">{item.value}</span>
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg">
+                    <Stethoscope className="h-5 w-5 text-white" />
                   </div>
-                ))}
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Treatment Types</h3>
+                    <p className="text-sm text-gray-500">Procedure breakdown</p>
+                  </div>
+                </div>
+                <Award className="h-5 w-5 text-indigo-400" />
+              </div>
+
+              {/* Radial Progress Bars */}
+              <div className="space-y-4">
+                {treatmentTypes.map((item, index) => {
+                  const total = treatmentTypes.reduce((sum, t) => sum + t.value, 0);
+                  const percentage = total > 0 ? (item.value / total) * 100 : 0;
+
+                  return (
+                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl hover:bg-gray-100/50 transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className="w-4 h-4 rounded-full shadow-sm"
+                          style={{ backgroundColor: item.color }}
+                        ></div>
+                        <div>
+                          <span className="text-sm font-semibold text-gray-800">{item.name}</span>
+                          <p className="text-xs text-gray-500">{percentage.toFixed(1)}% of total</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-gray-900">{item.value}</span>
+                        <div className="w-16 h-2 bg-gray-200 rounded-full mt-1">
+                          <div
+                            className="h-2 rounded-full transition-all duration-500"
+                            style={{
+                              width: `${percentage}%`,
+                              backgroundColor: item.color
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Quick Stats */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-1">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Quick Stats</h3>
-                <Zap className="h-5 w-5 text-gray-400" />
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 flex-1 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-lg">
+                    <Zap className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Live Metrics</h3>
+                    <p className="text-sm text-gray-500">Real-time insights</p>
+                  </div>
+                </div>
+                <Activity className="h-5 w-5 text-yellow-400" />
               </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-blue-600 mr-3" />
-                    <span className="text-sm font-medium text-gray-700">Pending Lab Scripts</span>
+
+              <div className="space-y-5">
+                <div className="group relative p-5 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-100 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-500 rounded-lg shadow-sm">
+                        <Clock className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-gray-800">Pending Lab Scripts</span>
+                        <p className="text-xs text-gray-500">Awaiting processing</p>
+                      </div>
+                    </div>
+                    <span className="text-2xl font-bold text-blue-600">{pendingLabScripts}</span>
                   </div>
-                  <span className="text-lg font-bold text-blue-600">{pendingLabScripts}</span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
-                    <span className="text-sm font-medium text-gray-700">Completed Today</span>
+                <div className="group relative p-5 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-emerald-500 rounded-lg shadow-sm">
+                        <CheckCircle className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-gray-800">Completed Today</span>
+                        <p className="text-xs text-gray-500">Finished appointments</p>
+                      </div>
+                    </div>
+                    <span className="text-2xl font-bold text-emerald-600">
+                      {appointments.filter(a =>
+                        a.date === new Date().toISOString().split('T')[0] &&
+                        a.status === 'completed'
+                      ).length}
+                    </span>
                   </div>
-                  <span className="text-lg font-bold text-green-600">
-                    {appointments.filter(a =>
-                      a.date === new Date().toISOString().split('T')[0] &&
-                      a.status === 'completed'
-                    ).length}
-                  </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                  <div className="flex items-center">
-                    <AlertTriangle className="h-5 w-5 text-orange-600 mr-3" />
-                    <span className="text-sm font-medium text-gray-700">Overdue Items</span>
+                <div className="group relative p-5 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-100 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-orange-500 rounded-lg shadow-sm">
+                        <AlertTriangle className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-gray-800">Overdue Items</span>
+                        <p className="text-xs text-gray-500">Require attention</p>
+                      </div>
+                    </div>
+                    <span className="text-2xl font-bold text-orange-600">
+                      {labScripts.filter(script => {
+                        if (!script.due_date) return false;
+                        return new Date(script.due_date) < new Date() && script.status !== 'completed';
+                      }).length}
+                    </span>
                   </div>
-                  <span className="text-lg font-bold text-orange-600">
-                    {labScripts.filter(script => {
-                      if (!script.due_date) return false;
-                      return new Date(script.due_date) < new Date() && script.status !== 'completed';
-                    }).length}
-                  </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Factory className="h-5 w-5 text-purple-600 mr-3" />
-                    <span className="text-sm font-medium text-gray-700">In Manufacturing</span>
+                <div className="group relative p-5 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-purple-500 rounded-lg shadow-sm">
+                        <Factory className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-gray-800">In Manufacturing</span>
+                        <p className="text-xs text-gray-500">Active production</p>
+                      </div>
+                    </div>
+                    <span className="text-2xl font-bold text-purple-600">{activeManufacturing}</span>
                   </div>
-                  <span className="text-lg font-bold text-purple-600">{activeManufacturing}</span>
                 </div>
               </div>
             </div>
