@@ -294,34 +294,37 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     setIsEnhancing(true);
     try {
       const API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
-      console.log('Environment check:', {
+      console.log('🔍 Detailed Environment check:', {
         hasApiKey: !!API_KEY,
         keyLength: API_KEY?.length,
-        keyStart: API_KEY?.substring(0, 10) + '...'
+        keyStart: API_KEY?.substring(0, 15) + '...',
+        keyEnd: '...' + API_KEY?.substring(API_KEY.length - 10),
+        allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')),
+        currentOrigin: window.location.origin,
+        isProduction: import.meta.env.PROD
       });
 
       // Check if API key is configured
       if (!API_KEY || API_KEY === 'your_openrouter_api_key_here') {
-        toast.error("AI enhancement unavailable. Please configure OpenRouter API key in .env file.");
+        console.error('❌ API key not configured properly');
+        toast.error("AI enhancement unavailable. Please configure OpenRouter API key.");
         return;
       }
 
-      // OpenRouter API call
-      console.log('Using OpenRouter API Key:', API_KEY ? 'Key present' : 'No key');
+      // Validate API key format
+      if (!API_KEY.startsWith('sk-or-v1-')) {
+        console.error('❌ Invalid API key format. Expected format: sk-or-v1-...');
+        toast.error("Invalid OpenRouter API key format.");
+        return;
+      }
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Dental Lab Enhancement'
-        },
-        body: JSON.stringify({
-          model: 'anthropic/claude-3-haiku', // Fast and cost-effective model
-          messages: [{
-            role: 'user',
-            content: `Please rewrite the following dental lab script instructions. This is clinical staff giving design instructions to the designer for patient appliance modifications or new designs:
+      console.log('✅ API key validation passed, making request...');
+
+      const requestBody = {
+        model: 'anthropic/claude-3-haiku', // Fast and cost-effective model
+        messages: [{
+          role: 'user',
+          content: `Please rewrite the following dental lab script instructions. This is clinical staff giving design instructions to the designer for patient appliance modifications or new designs:
 
 "${formData.instructions}"
 
@@ -361,30 +364,81 @@ Please respond with only the professionally enhanced text, no additional comment
           }],
           max_tokens: 500,
           temperature: 0.3
-        })
+        };
+
+      console.log('📤 Request details:', {
+        url: 'https://openrouter.ai/api/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY.substring(0, 15)}...`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Dental Lab Enhancement'
+        },
+        bodySize: JSON.stringify(requestBody).length,
+        model: requestBody.model
       });
 
-      console.log('Response status:', response.status);
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Dental Lab Enhancement'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error:', errorText);
+        console.error('❌ API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+
+        // Provide more specific error messages
+        if (response.status === 401) {
+          toast.error("Invalid OpenRouter API key. Please check your API key.");
+        } else if (response.status === 403) {
+          toast.error("OpenRouter API access forbidden. Check your account status.");
+        } else if (response.status === 429) {
+          toast.error("Rate limit exceeded. Please try again later.");
+        } else if (response.status >= 500) {
+          toast.error("OpenRouter service temporarily unavailable. Please try again.");
+        } else {
+          toast.error(`API Error: ${response.status} - ${errorText}`);
+        }
         throw new Error(`API Error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('API Response:', data);
+      console.log('✅ API Response:', data);
       const enhancedText = data.choices?.[0]?.message?.content;
 
       if (enhancedText) {
         handleInputChange("instructions", enhancedText.trim());
         toast.success("Instructions enhanced with AI!");
       } else {
+        console.error('❌ No enhanced text in response:', data);
         throw new Error('No enhanced text received from API');
       }
     } catch (error) {
-      console.error('Error enhancing instructions:', error);
-      toast.error("AI enhancement failed. Please check your OpenRouter API key and try again.");
+      console.error('💥 Error enhancing instructions:', {
+        error: error,
+        message: error.message,
+        stack: error.stack
+      });
+
+      // Only show generic error if we haven't already shown a specific one
+      if (!error.message.includes('API Error:')) {
+        toast.error("AI enhancement failed. Please try again.");
+      }
     } finally {
       setIsEnhancing(false);
     }
