@@ -24,53 +24,87 @@ export function useAppointments() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Load appointments from Supabase
+  // Function to fetch appointments from Supabase
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      // Transform Supabase data to match our Appointment interface
+      const transformedAppointments: Appointment[] = (data || []).map(appointment => ({
+        id: appointment.id,
+        title: appointment.title,
+        patient: appointment.patient_name,
+        startTime: appointment.start_time,
+        endTime: appointment.end_time,
+        type: appointment.appointment_type,
+        status: appointment.status as Appointment['status'],
+        date: appointment.date,
+        notes: appointment.notes || undefined,
+        createdAt: appointment.created_at,
+        updatedAt: appointment.updated_at
+      }));
+
+      console.log(`📅 Fetched ${transformedAppointments.length} appointments from database`);
+      setAppointments(transformedAppointments);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load appointments');
+      console.error('❌ Error loading appointments:', err);
+      toast({
+        title: "Error",
+        description: "Failed to load appointments",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load appointments and set up real-time subscription
   useEffect(() => {
-    const loadAppointments = async () => {
-      try {
-        setLoading(true);
+    fetchAppointments();
 
-        const { data, error } = await supabase
-          .from('appointments')
-          .select('*')
-          .order('date', { ascending: true })
-          .order('start_time', { ascending: true });
+    // Subscribe to real-time changes only if supabase.channel is available
+    let subscription: any = null;
 
-        if (error) {
-          throw error;
-        }
-
-        // Transform Supabase data to match our Appointment interface
-        const transformedAppointments: Appointment[] = (data || []).map(appointment => ({
-          id: appointment.id,
-          title: appointment.title,
-          patient: appointment.patient_name,
-          startTime: appointment.start_time,
-          endTime: appointment.end_time,
-          type: appointment.appointment_type,
-          status: appointment.status as Appointment['status'],
-          date: appointment.date,
-          notes: appointment.notes || undefined,
-          createdAt: appointment.created_at,
-          updatedAt: appointment.updated_at
-        }));
-
-        setAppointments(transformedAppointments);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load appointments');
-        console.error('Error loading appointments:', err);
-        toast({
-          title: "Error",
-          description: "Failed to load appointments",
-          variant: "destructive",
+    if (typeof supabase.channel === 'function') {
+      subscription = supabase
+        .channel('appointments_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'appointments'
+          },
+          (payload) => {
+            console.log('🔄 Real-time appointment change received:', payload.eventType, payload);
+            // Refetch data when changes occur to ensure all devices stay in sync
+            fetchAppointments();
+          }
+        )
+        .subscribe((status) => {
+          console.log('📡 Appointments real-time subscription status:', status);
         });
-      } finally {
-        setLoading(false);
+    } else {
+      console.warn('⚠️ Supabase real-time not available - appointments will not update in real-time');
+    }
+
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
       }
     };
-
-    loadAppointments();
   }, [toast]);
 
   const addAppointment = async (appointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -94,30 +128,13 @@ export function useAppointments() {
         throw error;
       }
 
-      // Transform the returned data to match our interface
-      const newAppointment: Appointment = {
-        id: data.id,
-        title: data.title,
-        patient: data.patient_name,
-        startTime: data.start_time,
-        endTime: data.end_time,
-        type: data.appointment_type,
-        status: data.status as Appointment['status'],
-        date: data.date,
-        notes: data.notes || undefined,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at
-      };
-
-      // Update local state
-      setAppointments(prev => [...prev, newAppointment]);
-
       toast({
         title: "Success",
         description: "Appointment created successfully",
       });
 
-      return newAppointment;
+      // Real-time subscription will handle state updates automatically
+      return data;
     } catch (err) {
       console.error('Error adding appointment:', err);
       toast({
@@ -153,28 +170,12 @@ export function useAppointments() {
         throw error;
       }
 
-      // Transform the returned data
-      const updatedAppointment: Appointment = {
-        id: data.id,
-        title: data.title,
-        patient: data.patient_name,
-        startTime: data.start_time,
-        endTime: data.end_time,
-        type: data.appointment_type,
-        status: data.status as Appointment['status'],
-        date: data.date,
-        notes: data.notes || undefined,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at
-      };
-
-      // Update local state
-      setAppointments(prev => prev.map(apt => apt.id === id ? updatedAppointment : apt));
-
       toast({
         title: "Success",
         description: "Appointment updated successfully",
       });
+
+      // Real-time subscription will handle state updates automatically
     } catch (err) {
       console.error('Error updating appointment:', err);
       toast({
@@ -197,13 +198,12 @@ export function useAppointments() {
         throw error;
       }
 
-      // Update local state
-      setAppointments(prev => prev.filter(apt => apt.id !== id));
-
       toast({
         title: "Success",
         description: "Appointment deleted successfully",
       });
+
+      // Real-time subscription will handle state updates automatically
     } catch (err) {
       console.error('Error deleting appointment:', err);
       toast({
