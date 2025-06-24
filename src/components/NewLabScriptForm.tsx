@@ -349,12 +349,12 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
       let lastError = null;
 
-      // Try multiple OpenRouter models, starting with free Gemini 2.0
+      // Try multiple OpenRouter models, starting with known working models
       const models = [
-        'google/gemini-2.0-flash-exp:free',  // FREE Gemini 2.0 - Latest and best!
+        'openai/gpt-3.5-turbo',  // Paid but very reliable - test this first
         'meta-llama/llama-3.1-8b-instruct:free',  // FREE Llama
+        'google/gemini-2.0-flash-exp:free',  // FREE Gemini 2.0 - Latest and best!
         'google/gemini-flash-1.5:free',  // FREE Gemini 1.5 (alternative)
-        'openai/gpt-3.5-turbo',  // Paid but reliable
         'anthropic/claude-3-haiku',  // Paid fallback
         'microsoft/wizardlm-2-8x22b'  // Additional fallback
       ];
@@ -428,8 +428,9 @@ Please respond with only the professionally enhanced text, no additional comment
             headers: {
               'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
               'Content-Type': 'application/json',
-              'HTTP-Referer': window.location.origin,
-              'X-Title': 'Dental Lab Management System'
+              'HTTP-Referer': window.location.origin || 'https://dental-lab-management.vercel.app',
+              'X-Title': 'Dental Lab Management System',
+              'Origin': window.location.origin || 'https://dental-lab-management.vercel.app'
             },
             body: JSON.stringify(requestBody)
           });
@@ -442,7 +443,14 @@ Please respond with only the professionally enhanced text, no additional comment
             console.error(`❌ Model ${model} failed:`, {
               status: response.status,
               statusText: response.statusText,
-              errorText: errorText
+              errorText: errorText,
+              headers: Object.fromEntries(response.headers.entries()),
+              requestHeaders: {
+                'Authorization': `Bearer ${OPENROUTER_API_KEY.substring(0, 15)}...`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'Dental Lab Management System'
+              }
             });
 
             lastError = new Error(`${model}: ${response.status} - ${errorText}`);
