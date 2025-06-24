@@ -6,9 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { PatientAutocomplete } from "@/components/PatientAutocomplete";
-import { User, FlaskConical } from "lucide-react";
+import { User, FlaskConical, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useLabScriptComments } from "@/hooks/useLabScriptComments";
+import { enhanceLabInstructions } from "@/services/geminiAI";
 
 interface NewLabScriptFormProps {
   open: boolean;
@@ -87,6 +88,7 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       { id: 63, value: 'custom', label: 'Custom' }
     ]
   };
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [formData, setFormData] = useState({
     patientId: "",
     patientName: "",
@@ -282,6 +284,42 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     const day = String(date.getDate()).padStart(2, '0');
     const year = date.getFullYear();
     return `${month}-${day}-${year}`;
+  };
+
+  // AI Enhancement function using Google Gemini
+  const enhanceInstructions = async () => {
+    const currentInstructions = formData.instructions.trim();
+
+    if (!currentInstructions) {
+      toast.error("Please enter some instructions first before enhancing.");
+      return;
+    }
+
+    if (currentInstructions.length < 10) {
+      toast.error("Please enter more detailed instructions before enhancing.");
+      return;
+    }
+
+    setIsEnhancing(true);
+
+    try {
+      console.log('🤖 Enhancing instructions with Google Gemini...');
+      const enhancedText = await enhanceLabInstructions(currentInstructions);
+
+      handleInputChange("instructions", enhancedText);
+      toast.success("Instructions enhanced with AI! (Google Gemini 1.5 Flash - FREE!)");
+
+    } catch (error) {
+      console.error('💥 Error enhancing instructions:', error);
+
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("AI enhancement failed. Please try again.");
+      }
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
 
@@ -753,7 +791,29 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
           {/* Instructions & Notes */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="instructions">Special Instructions *</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="instructions">Special Instructions *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={enhanceInstructions}
+                  disabled={isEnhancing || !formData.instructions.trim()}
+                  className="flex items-center gap-2 text-xs"
+                >
+                  {isEnhancing ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Enhancing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3" />
+                      Enhance with AI
+                    </>
+                  )}
+                </Button>
+              </div>
               <Textarea
                 id="instructions"
                 value={formData.instructions}
