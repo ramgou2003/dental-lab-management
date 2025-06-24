@@ -782,31 +782,52 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     setOpen: (open: boolean) => void;
     hasError?: boolean;
   }) => {
+    const [searchValue, setSearchValue] = useState("");
+
+    // Filter options based on search
+    const filteredOptions = toothLibraryOptions.filter(option =>
+      option.toLowerCase().includes(searchValue.toLowerCase())
+    );
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={(newOpen) => {
+        setOpen(newOpen);
+        if (!newOpen) {
+          setSearchValue(""); // Reset search when closing
+        }
+      }}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
             aria-expanded={open}
+            type="button"
             className={`w-full justify-between ${hasError ? "border-red-500 focus:border-red-500" : ""}`}
+            onClick={(e) => {
+              e.preventDefault();
+              setOpen(!open);
+            }}
           >
             {value || placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Type to search tooth library..." />
-            <CommandList>
+        <PopoverContent className="w-[400px] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Type to search tooth library..."
+              value={searchValue}
+              onValueChange={setSearchValue}
+            />
+            <CommandList className="max-h-[200px] overflow-y-auto">
               <CommandEmpty>No tooth library found.</CommandEmpty>
               <CommandGroup>
-                {toothLibraryOptions.map((option) => (
+                {filteredOptions.map((option) => (
                   <CommandItem
                     key={option}
                     value={option}
-                    onSelect={(currentValue) => {
-                      onValueChange(currentValue === value ? "" : currentValue);
+                    onSelect={() => {
+                      // Use the original option value instead of the transformed currentValue
+                      onValueChange(value === option ? "" : option);
                       setOpen(false);
                     }}
                   >
