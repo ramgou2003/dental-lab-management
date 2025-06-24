@@ -6,8 +6,9 @@ import { ParticleButton } from "@/components/ui/particle-button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download } from "lucide-react";
+import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
 import { useMillingForms } from "@/hooks/useMillingForms";
@@ -26,6 +27,10 @@ export function ManufacturingPage() {
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [selectedViewItem, setSelectedViewItem] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showShippingDialog, setShowShippingDialog] = useState(false);
+  const [selectedShippingItem, setSelectedShippingItem] = useState<any>(null);
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [trackingLink, setTrackingLink] = useState("");
   const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails } = useManufacturingItems();
   const { createMillingForm } = useMillingForms();
 
@@ -95,12 +100,54 @@ export function ManufacturingPage() {
     }
   };
 
-  const handleStatusChange = async (itemId: string, newStatus: 'pending-printing' | 'pending-milling' | 'in-production' | 'milling' | 'in-transit' | 'quality-check' | 'completed') => {
+  const handleStatusChange = async (itemId: string, newStatus: 'pending-printing' | 'pending-milling' | 'printing' | 'milling' | 'in-transit' | 'inspection' | 'completed') => {
     try {
       await updateManufacturingItemStatus(itemId, newStatus);
       toast.success(`Status updated to ${newStatus.replace('-', ' ')}`);
     } catch (error) {
       toast.error('Failed to update status');
+    }
+  };
+
+  const handleShippedByLab = (item: any) => {
+    setSelectedShippingItem(item);
+    setTrackingNumber("");
+    setTrackingLink("");
+    setShowShippingDialog(true);
+  };
+
+  const handleSubmitShipping = async () => {
+    if (!trackingNumber.trim()) {
+      toast.error('Please enter a tracking number');
+      return;
+    }
+
+    try {
+      // Update the item with tracking information and change status to in-transit
+      await updateManufacturingItemWithMillingDetails(
+        selectedShippingItem.id,
+        'in-transit',
+        {
+          tracking_number: trackingNumber,
+          tracking_link: trackingLink || null
+        }
+      );
+      toast.success('Item marked as shipped with tracking information');
+      setShowShippingDialog(false);
+      setSelectedShippingItem(null);
+      setTrackingNumber("");
+      setTrackingLink("");
+    } catch (error) {
+      toast.error('Failed to update shipping status');
+    }
+  };
+
+  const handleCompleteInspection = async (item: any) => {
+    try {
+      await updateManufacturingItemStatus(item.id, 'completed');
+      toast.success('Manufacturing completed - item moved to appliance delivery');
+    } catch (error) {
+      toast.error('Failed to complete manufacturing');
     }
   };
 
@@ -113,7 +160,7 @@ export function ManufacturingPage() {
       ).length;
     }
     if (status === "printing") {
-      return manufacturingItems.filter(item => item.status === 'in-production').length;
+      return manufacturingItems.filter(item => item.status === 'printing').length;
     }
     if (status === "milling") {
       return manufacturingItems.filter(item => item.status === 'milling').length;
@@ -122,16 +169,16 @@ export function ManufacturingPage() {
       return manufacturingItems.filter(item => item.status === 'in-transit').length;
     }
     if (status === "inspection") {
-      return manufacturingItems.filter(item => item.status === 'quality-check').length;
+      return manufacturingItems.filter(item => item.status === 'inspection').length;
     }
     if (status === "incomplete") {
       return manufacturingItems.filter(item =>
         item.status === 'pending-printing' ||
         item.status === 'pending-milling' ||
-        item.status === 'in-production' ||
+        item.status === 'printing' ||
         item.status === 'milling' ||
         item.status === 'in-transit' ||
-        item.status === 'quality-check'
+        item.status === 'inspection'
       ).length;
     }
     if (status === "completed") {
@@ -211,20 +258,20 @@ export function ManufacturingPage() {
     if (activeFilter === "new-script") {
       statusMatch = item.status === 'pending-printing' || item.status === 'pending-milling';
     } else if (activeFilter === "printing") {
-      statusMatch = item.status === 'in-production';
+      statusMatch = item.status === 'printing';
     } else if (activeFilter === "milling") {
       statusMatch = item.status === 'milling';
     } else if (activeFilter === "in-transit") {
       statusMatch = item.status === 'in-transit';
     } else if (activeFilter === "inspection") {
-      statusMatch = item.status === 'quality-check';
+      statusMatch = item.status === 'inspection';
     } else if (activeFilter === "incomplete") {
       statusMatch = item.status === 'pending-printing' ||
                    item.status === 'pending-milling' ||
-                   item.status === 'in-production' ||
+                   item.status === 'printing' ||
                    item.status === 'milling' ||
                    item.status === 'in-transit' ||
-                   item.status === 'quality-check';
+                   item.status === 'inspection';
     } else if (activeFilter === "completed") {
       statusMatch = item.status === 'completed';
     }
@@ -318,7 +365,7 @@ export function ManufacturingPage() {
                           return (
                             <ParticleButton
                               className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                              onClick={() => handleStatusChange(item.id, 'in-production')}
+                              onClick={() => handleStatusChange(item.id, 'printing')}
                               onSuccess={() => {}}
                               successDuration={1000}
                             >
@@ -338,17 +385,17 @@ export function ManufacturingPage() {
                               Start Milling
                             </ParticleButton>
                           );
-                        case 'in-production':
+                        case 'printing':
                           return (
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleStatusChange(item.id, 'milling')}
-                                className="border-2 border-cyan-600 text-cyan-600 hover:border-cyan-700 hover:text-cyan-700 hover:bg-cyan-50 px-4 py-2 text-sm font-semibold"
+                                onClick={() => handleStatusChange(item.id, 'inspection')}
+                                className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
                               >
-                                <Settings className="h-4 w-4 mr-2" />
-                                Start Milling
+                                <AlertCircle className="h-4 w-4 mr-2" />
+                                Start Inspection
                               </Button>
                             </div>
                           );
@@ -367,11 +414,11 @@ export function ManufacturingPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleStatusChange(item.id, 'in-transit')}
+                                onClick={() => handleShippedByLab(item)}
                                 className="border-2 border-yellow-600 text-yellow-600 hover:border-yellow-700 hover:text-yellow-700 hover:bg-yellow-50 px-4 py-2 text-sm font-semibold"
                               >
                                 <Truck className="h-4 w-4 mr-2" />
-                                Ship
+                                Shipped by Lab
                               </Button>
                             </div>
                           );
@@ -381,30 +428,21 @@ export function ManufacturingPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleStatusChange(item.id, 'quality-check')}
-                                className="border-2 border-purple-600 text-purple-600 hover:border-purple-700 hover:text-purple-700 hover:bg-purple-50 px-4 py-2 text-sm font-semibold"
+                                onClick={() => handleStatusChange(item.id, 'inspection')}
+                                className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
                               >
                                 <AlertCircle className="h-4 w-4 mr-2" />
-                                Inspection
+                                Start Inspection
                               </Button>
                             </div>
                           );
-                        case 'quality-check':
+                        case 'inspection':
                           return (
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleStatusChange(item.id, 'in-production')}
-                                className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
-                              >
-                                <RotateCcw className="h-4 w-4 mr-2" />
-                                Back to Printing
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleStatusChange(item.id, 'completed')}
+                                onClick={() => handleCompleteInspection(item)}
                                 className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 px-4 py-2 text-sm font-semibold"
                               >
                                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -566,47 +604,113 @@ export function ManufacturingPage() {
 
           <div className="p-6">
             <div className="space-y-4">
-              {/* Case Details at the Top */}
+              {/* Appliance Summary */}
               {selectedMillingItem && (
-                <div className="bg-gray-50 rounded-lg p-4 border">
-                  <h4 className="font-medium text-gray-900 mb-3">Case Details</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Patient:</span>
-                      <span className="ml-2 font-medium">{selectedMillingItem.patient_name}</span>
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-semibold text-blue-900">Appliance Summary</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Patient Information */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">Patient Information</span>
+                      </div>
+                      <div className="pl-6 space-y-2 text-sm">
+                        <div>
+                          <span className="text-gray-600">Name:</span>
+                          <span className="ml-2 font-medium text-gray-900">{selectedMillingItem.patient_name}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Arch Type:</span>
+                          <span className="ml-2 font-medium text-gray-900 capitalize">{selectedMillingItem.arch_type}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-gray-600">Shade:</span>
-                      <span className="ml-2 font-medium">{selectedMillingItem.shade}</span>
+
+                    {/* Appliance Details */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">Appliance Details</span>
+                      </div>
+                      <div className="pl-6 space-y-2 text-sm">
+                        {selectedMillingItem.upper_appliance_type && (
+                          <div>
+                            <span className="text-gray-600">Upper Appliance:</span>
+                            <span className="ml-2 font-medium text-gray-900">
+                              {selectedMillingItem.upper_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                            </span>
+                          </div>
+                        )}
+                        {selectedMillingItem.lower_appliance_type && (
+                          <div>
+                            <span className="text-gray-600">Lower Appliance:</span>
+                            <span className="ml-2 font-medium text-gray-900">
+                              {selectedMillingItem.lower_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                            </span>
+                          </div>
+                        )}
+                        {selectedMillingItem.upper_appliance_number && (
+                          <div>
+                            <span className="text-gray-600">Upper Number:</span>
+                            <span className="ml-2 font-mono font-medium text-gray-900">{selectedMillingItem.upper_appliance_number}</span>
+                          </div>
+                        )}
+                        {selectedMillingItem.lower_appliance_number && (
+                          <div>
+                            <span className="text-gray-600">Lower Number:</span>
+                            <span className="ml-2 font-mono font-medium text-gray-900">{selectedMillingItem.lower_appliance_number}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    {selectedMillingItem.screw && (
-                      <div>
-                        <span className="text-gray-600">Screw Type:</span>
-                        <span className="ml-2 font-medium">{selectedMillingItem.screw}</span>
+
+                    {/* Material Specifications */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <FlaskConical className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">Material Specifications</span>
                       </div>
-                    )}
-                    {selectedMillingItem.material && (
-                      <div>
-                        <span className="text-gray-600">Material:</span>
-                        <span className="ml-2 font-medium">{selectedMillingItem.material}</span>
+                      <div className="pl-6 space-y-2 text-sm">
+                        <div>
+                          <span className="text-gray-600">Shade:</span>
+                          <span className="ml-2 font-medium text-gray-900">{selectedMillingItem.shade}</span>
+                        </div>
+                        {selectedMillingItem.material && (
+                          <div>
+                            <span className="text-gray-600">Material:</span>
+                            <span className="ml-2 font-medium text-gray-900">{selectedMillingItem.material}</span>
+                          </div>
+                        )}
+                        {selectedMillingItem.screw && (
+                          <div>
+                            <span className="text-gray-600">Screw Type:</span>
+                            <span className="ml-2 font-medium text-gray-900">{selectedMillingItem.screw}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {selectedMillingItem.upper_appliance_type && (
-                      <div>
-                        <span className="text-gray-600">Upper:</span>
-                        <span className="ml-2 font-medium">
-                          {selectedMillingItem.upper_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                        </span>
+                    </div>
+
+                    {/* Manufacturing Method */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Factory className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">Manufacturing</span>
                       </div>
-                    )}
-                    {selectedMillingItem.lower_appliance_type && (
-                      <div>
-                        <span className="text-gray-600">Lower:</span>
-                        <span className="ml-2 font-medium">
-                          {selectedMillingItem.lower_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                        </span>
+                      <div className="pl-6 space-y-2 text-sm">
+                        <div>
+                          <span className="text-gray-600">Method:</span>
+                          <span className="ml-2 font-medium text-gray-900 capitalize">{selectedMillingItem.manufacturing_method}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Status:</span>
+                          <span className="ml-2 font-medium text-gray-900 capitalize">{selectedMillingItem.status.replace('-', ' ')}</span>
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -621,10 +725,10 @@ export function ManufacturingPage() {
                     <SelectValue placeholder="Select milling location" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="in-house">In-House</SelectItem>
-                    <SelectItem value="micro-dental-lab">Micro-Dental Lab</SelectItem>
+                    <SelectItem value="in-house">Inhouse</SelectItem>
+                    <SelectItem value="micro-dental-lab">Micro Dental Lab</SelectItem>
+                    <SelectItem value="evolution-dental-lab">Evolution Dental Lab</SelectItem>
                     <SelectItem value="haus-milling">Haus Milling</SelectItem>
-                    <SelectItem value="evolution">Evolution</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -776,7 +880,7 @@ export function ManufacturingPage() {
                         await createMillingForm({
                           manufacturing_item_id: selectedMillingItem.id,
                           patient_name: selectedMillingItem.patient_name,
-                          milling_location: millingLocation as 'in-house' | 'micro-dental-lab' | 'haus-milling' | 'evolution',
+                          milling_location: millingLocation as 'in-house' | 'micro-dental-lab' | 'haus-milling' | 'evolution-dental-lab',
                           gingiva_color: gingivaColor as 'light' | 'medium' | 'dark' | 'custom' | undefined,
                           stained_and_glazed: stainedAndGlazed as 'yes' | 'no' | undefined,
                           cementation: cementation as 'yes' | 'no' | undefined,
@@ -978,6 +1082,64 @@ export function ManufacturingPage() {
                 </div>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shipping Dialog */}
+      <Dialog open={showShippingDialog} onOpenChange={setShowShippingDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5 text-yellow-600" />
+              Shipping Information
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="patient-name">Patient</Label>
+              <div className="text-sm text-gray-600 mt-1">
+                {selectedShippingItem?.patient_name}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="tracking-number">Tracking Number *</Label>
+              <Input
+                id="tracking-number"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value)}
+                placeholder="Enter tracking number"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="tracking-link">Tracking Link (Optional)</Label>
+              <Input
+                id="tracking-link"
+                value={trackingLink}
+                onChange={(e) => setTrackingLink(e.target.value)}
+                placeholder="Enter tracking URL"
+                className="mt-1"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowShippingDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitShipping}
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                <Truck className="h-4 w-4 mr-2" />
+                Submit Shipping
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

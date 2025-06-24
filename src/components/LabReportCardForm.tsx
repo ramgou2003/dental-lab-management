@@ -10,7 +10,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { FileText, Save, User, FlaskConical, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ReportCard } from "@/hooks/useReportCards";
-import { useLabReportCards } from "@/hooks/useLabReportCards";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LabReportCardFormProps {
   reportCard: ReportCard;
@@ -18,9 +19,92 @@ interface LabReportCardFormProps {
   onCancel: () => void;
 }
 
+// Simple form component like all other forms in the app
 export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportCardFormProps) {
-  const { addLabReportCard, getLabReportCardByLabScriptId } = useLabReportCards();
+  const { toast } = useToast();
   const [existingLabReport, setExistingLabReport] = useState<any>(null);
+
+  // Direct functions without real-time subscription to prevent form re-renders
+  const getLabReportCardByLabScriptId = async (labScriptId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('lab_report_cards')
+        .select('*')
+        .eq('lab_script_id', labScriptId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+        console.error('Error fetching lab report card:', error);
+        throw error;
+      }
+
+      return data || null;
+    } catch (error) {
+      console.error('Error:', error);
+      return null;
+    }
+  };
+
+  const addLabReportCard = async (formData: any, labScriptId: string) => {
+    try {
+      // Prepare the data object
+      const labReportData: any = {
+        lab_script_id: labScriptId,
+        patient_name: formData.patient_name,
+        arch_type: formData.arch_type,
+        upper_appliance_type: formData.upper_appliance_type || null,
+        lower_appliance_type: formData.lower_appliance_type || null,
+        screw: formData.screw,
+        material: formData.material || null,
+        shade: formData.shade,
+        manufacturing_method: formData.manufacturing_method || null,
+        implant_on_upper: formData.implant_on_upper || null,
+        implant_on_lower: formData.implant_on_lower || null,
+        custom_implant_upper: formData.custom_implant_upper || null,
+        custom_implant_lower: formData.custom_implant_lower || null,
+        tooth_library_upper: formData.tooth_library_upper || null,
+        tooth_library_lower: formData.tooth_library_lower || null,
+        custom_tooth_library_upper: formData.custom_tooth_library_upper || null,
+        custom_tooth_library_lower: formData.custom_tooth_library_lower || null,
+        upper_appliance_number: formData.upper_appliance_number || null,
+        lower_appliance_number: formData.lower_appliance_number || null,
+        notes_and_remarks: formData.notes_and_remarks || null,
+        submitted_at: new Date().toISOString(),
+        status: 'completed' // Change from pending to completed when user submits
+      };
+
+      // If we have an existing lab report, include its ID for proper update
+      if (existingLabReport?.id) {
+        labReportData.id = existingLabReport.id;
+      }
+
+      const { data, error } = await supabase
+        .from('lab_report_cards')
+        .upsert([labReportData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding lab report card:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create lab report card",
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Lab report card created successfully",
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Error:', error);
+      throw error;
+    }
+  };
 
 
   const [formData, setFormData] = useState({
@@ -79,9 +163,11 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
             upper_appliance_type: existing.upper_appliance_type || '',
             lower_appliance_type: existing.lower_appliance_type || '',
             screw: existing.screw,
-            material: existing.material || '',
+            // Use existing material, but fallback to lab script material if empty
+            material: existing.material || reportCard.lab_script?.material || '',
             shade: existing.shade,
             manufacturing_method: existing.manufacturing_method || determineManufacturingMethod(existing.upper_appliance_type || '', existing.lower_appliance_type || ''),
+            // These fields should be empty if not filled by user (cleared auto-generated data)
             implant_on_upper: existing.implant_on_upper || '',
             implant_on_lower: existing.implant_on_lower || '',
             custom_implant_upper: existing.custom_implant_upper || '',
@@ -92,15 +178,15 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
             custom_tooth_library_lower: existing.custom_tooth_library_lower || '',
             upper_appliance_number: existing.upper_appliance_number || '',
             lower_appliance_number: existing.lower_appliance_number || '',
-            notes_and_remarks: existing.notes_and_remarks
+            notes_and_remarks: existing.notes_and_remarks || ''
           });
         }
       }
     };
     loadExistingReport();
-  }, [reportCard.lab_script_id, getLabReportCardByLabScriptId]);
+  }, [reportCard.lab_script_id]);
 
-  // Auto-set manufacturing method for new reports (when no existing report is found)
+  // Auto-set manufacturing method for new reports
   useEffect(() => {
     if (!existingLabReport && formData.manufacturing_method === '') {
       const autoManufacturingMethod = determineManufacturingMethod(
@@ -220,16 +306,12 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
         custom_tooth_library_lower: formData.custom_tooth_library_lower
       };
 
-      if (existingLabReport) {
-        // Update existing lab report card
-        onSubmit(finalFormData);
-      } else {
-        // Create new lab report card and let the parent handle the workflow
-        await addLabReportCard(finalFormData, reportCard.lab_script_id);
-        onSubmit(finalFormData);
-      }
+      // Always update/create the lab report card in the database
+      await addLabReportCard(finalFormData, reportCard.lab_script_id);
+
+      // Then notify the parent component
+      onSubmit(finalFormData);
     } catch (error) {
-      console.error('Error submitting lab report card:', error);
       // Error is already handled by the addLabReportCard function with toast
     }
   };
@@ -788,13 +870,27 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     const filteredOptions = toothLibraryOptions.filter(option =>
       option.toLowerCase().includes(searchValue.toLowerCase())
     );
+
+    const handleOpenChange = (newOpen: boolean) => {
+      setOpen(newOpen);
+      if (!newOpen) {
+        setSearchValue(""); // Reset search when closing
+      }
+    };
+
+    const handleButtonClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setOpen(!open);
+    };
+
+    const handleOptionClick = (option: string) => {
+      onValueChange(value === option ? "" : option);
+      setOpen(false);
+    };
+
     return (
-      <Popover open={open} onOpenChange={(newOpen) => {
-        setOpen(newOpen);
-        if (!newOpen) {
-          setSearchValue(""); // Reset search when closing
-        }
-      }}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -802,61 +898,84 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
             aria-expanded={open}
             type="button"
             className={`w-full justify-between ${hasError ? "border-red-500 focus:border-red-500" : ""}`}
-            onClick={(e) => {
-              e.preventDefault();
-              setOpen(!open);
-            }}
+            onClick={handleButtonClick}
           >
             {value || placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0" align="start">
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder="Type to search tooth library..."
-              value={searchValue}
-              onValueChange={setSearchValue}
-            />
-            <CommandList className="max-h-[200px] overflow-y-auto">
-              <CommandEmpty>No tooth library found.</CommandEmpty>
-              <CommandGroup>
-                {filteredOptions.map((option) => (
-                  <CommandItem
-                    key={option}
-                    value={option}
-                    onSelect={() => {
-                      // Use the original option value instead of the transformed currentValue
-                      onValueChange(value === option ? "" : option);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={`mr-2 h-4 w-4 ${
-                        value === option ? "opacity-100" : "opacity-0"
+          <div className="flex flex-col">
+            {/* Search Input */}
+            <div className="p-3 border-b">
+              <Input
+                placeholder="Type to search tooth library..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            {/* Scrollable Options List */}
+            <div
+              className="max-h-[200px] overflow-y-auto overflow-x-hidden"
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#cbd5e1 #f1f5f9'
+              }}
+            >
+              {filteredOptions.length === 0 ? (
+                <div className="py-6 text-center text-sm text-gray-500">
+                  No tooth library found.
+                </div>
+              ) : (
+                <div className="p-1">
+                  {filteredOptions.map((option) => (
+                    <div
+                      key={option}
+                      className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground ${
+                        value === option ? "bg-accent text-accent-foreground" : ""
                       }`}
-                    />
-                    {option}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
+                      onClick={() => handleOptionClick(option)}
+                    >
+                      <Check
+                        className={`mr-2 h-4 w-4 ${
+                          value === option ? "opacity-100" : "opacity-0"
+                        }`}
+                      />
+                      {option}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </PopoverContent>
       </Popover>
     );
   };
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
-          <FileText className="h-6 w-6 text-indigo-600" />
-          Lab Report Card
-        </DialogTitle>
-      </DialogHeader>
+    <div className="flex flex-col h-full max-h-[80vh]">
+      {/* Frozen Header */}
+      <div className="flex-shrink-0 border-b bg-white">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+            <FileText className="h-6 w-6 text-indigo-600" />
+            Lab Report Card
+          </DialogTitle>
+        </DialogHeader>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-1 py-6 space-y-6"
+             style={{
+               WebkitOverflowScrolling: 'touch',
+               overscrollBehavior: 'contain'
+             }}>
         {/* Patient Information */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -1253,35 +1372,38 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
           </div>
         </div>
 
-        {/* Notes & Remarks */}
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="notes_and_remarks">
-              Notes and Remarks by Designer <span className="text-red-500">*</span>
-            </Label>
-            <Textarea
-              id="notes_and_remarks"
-              value={formData.notes_and_remarks}
-              onChange={(e) => handleInputChange('notes_and_remarks', e.target.value)}
-              placeholder="Enter any additional notes or remarks..."
-              className={fieldErrors.notes_and_remarks ? "border-red-500 focus:border-red-500" : ""}
-              rows={4}
-              required
-            />
+          {/* Notes & Remarks */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="notes_and_remarks">
+                Notes and Remarks by Designer <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="notes_and_remarks"
+                value={formData.notes_and_remarks}
+                onChange={(e) => handleInputChange('notes_and_remarks', e.target.value)}
+                placeholder="Enter any additional notes or remarks..."
+                className={fieldErrors.notes_and_remarks ? "border-red-500 focus:border-red-500" : ""}
+                rows={4}
+                required
+              />
+            </div>
           </div>
         </div>
 
-        {/* Submit Buttons */}
-        <div className="flex justify-end space-x-3 pt-6">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-            <Save className="h-4 w-4 mr-2" />
-            Submit Lab Report
-          </Button>
+        {/* Frozen Footer */}
+        <div className="flex-shrink-0 border-t bg-white pt-4">
+          <div className="flex justify-end space-x-3">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+              <Save className="h-4 w-4 mr-2" />
+              Submit Lab Report
+            </Button>
+          </div>
         </div>
       </form>
-    </>
+    </div>
   );
 }

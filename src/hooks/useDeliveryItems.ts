@@ -14,7 +14,7 @@ export interface DeliveryItem {
   arch_type: string;
   upper_appliance_number: string | null;
   lower_appliance_number: string | null;
-  delivery_status: 'ready-for-delivery' | 'patient-scheduled' | 'inserted' | 'returned';
+  delivery_status: 'ready-to-insert' | 'ready-for-delivery' | 'patient-scheduled' | 'inserted' | 'returned';
   delivery_address: string | null;
   delivery_notes: string | null;
   scheduled_delivery_date: string | null;
@@ -60,6 +60,66 @@ export function useDeliveryItems() {
       setLoading(false);
     }
   };
+
+  // Load delivery items and set up real-time subscription
+  useEffect(() => {
+    fetchDeliveryItems();
+
+    // Subscribe to real-time changes only if supabase.channel is available
+    let subscription: any = null;
+
+    if (typeof supabase.channel === 'function') {
+      subscription = supabase
+        .channel('delivery_items_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'delivery_items'
+          },
+          (payload) => {
+            console.log('🔄 Real-time delivery item change received:', payload.eventType, payload);
+
+            // Handle different types of changes efficiently
+            if (payload.eventType === 'INSERT' && payload.new) {
+              // Add new delivery item to existing list
+              setDeliveryItems(prev => {
+                // Check if item already exists to avoid duplicates
+                if (prev.some(item => item.id === payload.new.id)) {
+                  return prev;
+                }
+                // Insert at the beginning (most recent first)
+                return [payload.new as DeliveryItem, ...prev];
+              });
+
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Update specific delivery item in the list
+              setDeliveryItems(prev =>
+                prev.map(item =>
+                  item.id === payload.new.id ? payload.new as DeliveryItem : item
+                )
+              );
+
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Remove deleted delivery item from the list
+              setDeliveryItems(prev => prev.filter(item => item.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('📡 Delivery items real-time subscription status:', status);
+        });
+    } else {
+      console.warn('⚠️ Supabase real-time not available - delivery items will not update in real-time');
+    }
+
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
+  }, []);
 
   const updateDeliveryStatus = async (
     deliveryItemId: string,
@@ -189,10 +249,6 @@ export function useDeliveryItems() {
       });
     }
   };
-
-  useEffect(() => {
-    fetchDeliveryItems();
-  }, []);
 
   return {
     deliveryItems,

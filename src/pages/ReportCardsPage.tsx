@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ParticleButton } from "@/components/ui/particle-button";
@@ -21,21 +21,30 @@ export function ReportCardsPage() {
   const [showClinicalReportForm, setShowClinicalReportForm] = useState(false);
   const [showViewClinicalReport, setShowViewClinicalReport] = useState(false);
   const [selectedReportCard, setSelectedReportCard] = useState<ReportCard | null>(null);
+  const [stableSelectedReportCard, setStableSelectedReportCard] = useState<ReportCard | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [insertionStatus, setInsertionStatus] = useState<{canSubmit: boolean; reason: string; message: string} | null>(null);
   const { reportCards, loading, updateLabReportStatus, updateClinicalReportStatus } = useReportCards();
+
+
 
   const handleNewReport = () => {
     setShowNewReportForm(true);
   };
 
   const handleFillLabReport = (reportCard: ReportCard) => {
-    setSelectedReportCard(reportCard);
+    // Create a stable copy to prevent re-renders from real-time updates
+    const stableCopy = { ...reportCard };
+    setSelectedReportCard(stableCopy);
+    setStableSelectedReportCard(stableCopy);
     setShowLabReportForm(true);
   };
 
   const handleFillClinicalReport = async (reportCard: ReportCard) => {
-    setSelectedReportCard(reportCard);
+    // Create a stable copy to prevent re-renders from real-time updates
+    const stableCopy = { ...reportCard };
+    setSelectedReportCard(stableCopy);
+    setStableSelectedReportCard(stableCopy);
 
     // Check insertion status before opening the form
     const statusCheck = await checkInsertionStatus(reportCard.id);
@@ -45,19 +54,23 @@ export function ReportCardsPage() {
   };
 
   const handleViewLabReport = (reportCard: ReportCard) => {
-    setSelectedReportCard(reportCard);
+    // Create a stable copy to prevent re-renders from real-time updates
+    const stableCopy = { ...reportCard };
+    setSelectedReportCard(stableCopy);
+    setStableSelectedReportCard(stableCopy);
     setShowViewLabReport(true);
   };
 
   const handleLabReportSubmit = async (formData: any) => {
-    if (!selectedReportCard) return;
+    if (!stableSelectedReportCard) return;
 
     try {
       // The lab report card is already created by the form, now update the report card status
-      await updateLabReportStatus(selectedReportCard.id, 'completed', formData);
+      await updateLabReportStatus(stableSelectedReportCard.id, 'completed', formData);
       toast.success('Lab report card completed successfully!');
       setShowLabReportForm(false);
       setSelectedReportCard(null);
+      setStableSelectedReportCard(null);
     } catch (error) {
       console.error('Error completing lab report card:', error);
       toast.error('Failed to complete lab report card');
@@ -67,11 +80,13 @@ export function ReportCardsPage() {
   const handleLabReportCancel = () => {
     setShowLabReportForm(false);
     setSelectedReportCard(null);
+    setStableSelectedReportCard(null);
   };
 
   const handleViewLabReportClose = () => {
     setShowViewLabReport(false);
     setSelectedReportCard(null);
+    setStableSelectedReportCard(null);
   };
 
   const checkInsertionStatus = async (reportCardId: string) => {
@@ -140,10 +155,10 @@ export function ReportCardsPage() {
   };
 
   const handleClinicalReportSubmit = async (formData: any) => {
-    if (!selectedReportCard) return;
+    if (!stableSelectedReportCard) return;
 
     // Check insertion status before allowing submission
-    const statusCheck = await checkInsertionStatus(selectedReportCard.id);
+    const statusCheck = await checkInsertionStatus(stableSelectedReportCard.id);
 
     if (!statusCheck.canSubmit) {
       toast.error(statusCheck.message);
@@ -151,10 +166,11 @@ export function ReportCardsPage() {
     }
 
     try {
-      await updateClinicalReportStatus(selectedReportCard.id, 'completed', formData);
+      await updateClinicalReportStatus(stableSelectedReportCard.id, 'completed', formData);
       toast.success('Clinical report card completed successfully!');
       setShowClinicalReportForm(false);
       setSelectedReportCard(null);
+      setStableSelectedReportCard(null);
       setInsertionStatus(null);
     } catch (error) {
       console.error('Error submitting clinical report:', error);
@@ -165,17 +181,22 @@ export function ReportCardsPage() {
   const handleClinicalReportCancel = () => {
     setShowClinicalReportForm(false);
     setSelectedReportCard(null);
+    setStableSelectedReportCard(null);
     setInsertionStatus(null);
   };
 
   const handleViewClinicalReport = (reportCard: ReportCard) => {
-    setSelectedReportCard(reportCard);
+    // Create a stable copy to prevent re-renders from real-time updates
+    const stableCopy = { ...reportCard };
+    setSelectedReportCard(stableCopy);
+    setStableSelectedReportCard(stableCopy);
     setShowViewClinicalReport(true);
   };
 
   const handleViewClinicalReportClose = () => {
     setShowViewClinicalReport(false);
     setSelectedReportCard(null);
+    setStableSelectedReportCard(null);
   };
 
   const handleClinicalReportComplete = async (reportCardId: string) => {
@@ -492,11 +513,12 @@ export function ReportCardsPage() {
       </Dialog>
 
       {/* Lab Report Card Form Dialog */}
-      <Dialog open={showLabReportForm && !!selectedReportCard} onOpenChange={setShowLabReportForm}>
+      <Dialog open={showLabReportForm && !!stableSelectedReportCard} onOpenChange={setShowLabReportForm}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedReportCard && (
+          {stableSelectedReportCard && (
             <LabReportCardForm
-              reportCard={selectedReportCard}
+              key={`lab-form-${stableSelectedReportCard.id}`} // Force component isolation
+              reportCard={stableSelectedReportCard}
               onSubmit={handleLabReportSubmit}
               onCancel={handleLabReportCancel}
             />
@@ -505,11 +527,11 @@ export function ReportCardsPage() {
       </Dialog>
 
       {/* View Lab Report Card Dialog */}
-      <Dialog open={showViewLabReport && !!selectedReportCard} onOpenChange={setShowViewLabReport}>
+      <Dialog open={showViewLabReport && !!stableSelectedReportCard} onOpenChange={setShowViewLabReport}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedReportCard && (
+          {stableSelectedReportCard && (
             <ViewLabReportCard
-              reportCard={selectedReportCard}
+              reportCard={stableSelectedReportCard}
               onClose={handleViewLabReportClose}
             />
           )}
@@ -517,11 +539,11 @@ export function ReportCardsPage() {
       </Dialog>
 
       {/* Clinical Report Card Form Dialog */}
-      <Dialog open={showClinicalReportForm && !!selectedReportCard} onOpenChange={setShowClinicalReportForm}>
+      <Dialog open={showClinicalReportForm && !!stableSelectedReportCard} onOpenChange={setShowClinicalReportForm}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedReportCard && (
+          {stableSelectedReportCard && (
             <ClinicalReportCardForm
-              reportCard={selectedReportCard}
+              reportCard={stableSelectedReportCard}
               onSubmit={handleClinicalReportSubmit}
               onCancel={handleClinicalReportCancel}
               insertionStatus={insertionStatus}
@@ -531,11 +553,11 @@ export function ReportCardsPage() {
       </Dialog>
 
       {/* View Clinical Report Card Dialog */}
-      <Dialog open={showViewClinicalReport && !!selectedReportCard} onOpenChange={setShowViewClinicalReport}>
+      <Dialog open={showViewClinicalReport && !!stableSelectedReportCard} onOpenChange={setShowViewClinicalReport}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedReportCard && (
+          {stableSelectedReportCard && (
             <ViewClinicalReportCard
-              reportCardId={selectedReportCard.id}
+              reportCardId={stableSelectedReportCard.id}
               onClose={handleViewClinicalReportClose}
             />
           )}

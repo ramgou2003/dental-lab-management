@@ -113,14 +113,8 @@ BEGIN
         WHEN NEW.arch_type IN ('lower', 'dual') THEN 'Posterior Teeth'
         ELSE NULL
       END,
-      CASE
-        WHEN NEW.arch_type IN ('upper', 'dual') THEN 'U-' || LPAD(EXTRACT(epoch FROM NOW())::text, 6, '0')
-        ELSE NULL
-      END,
-      CASE
-        WHEN NEW.arch_type IN ('lower', 'dual') THEN 'L-' || LPAD(EXTRACT(epoch FROM NOW())::text, 6, '0')
-        ELSE NULL
-      END,
+      NULL, -- upper_appliance_number - should be filled by user
+      NULL, -- lower_appliance_number - should be filled by user
       'Lab report card automatically created upon completion. Please review and update all specifications as needed.',
       'completed'
     )

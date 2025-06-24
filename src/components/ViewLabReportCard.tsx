@@ -146,14 +146,9 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2 tablet:gap-1.5 text-xl tablet:text-lg font-bold text-gray-900">
-            <Eye className="h-6 w-6 tablet:h-5 tablet:w-5 text-indigo-600" />
-            Lab Report Card Preview
-          </div>
-          <Button variant="outline" size="sm" onClick={onClose} className="tablet:px-2 tablet:py-1">
-            <X className="h-4 w-4 tablet:h-3 tablet:w-3" />
-          </Button>
+        <DialogTitle className="flex items-center gap-2 tablet:gap-1.5 text-xl tablet:text-lg font-bold text-gray-900">
+          <Eye className="h-6 w-6 tablet:h-5 tablet:w-5 text-indigo-600" />
+          Lab Report Card Preview
         </DialogTitle>
       </DialogHeader>
 
@@ -495,19 +490,10 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-6 tablet:pt-4 border-t">
-          <div className="text-sm tablet:text-xs text-gray-500">
+        {/* Lab Report Card Info */}
+        <div className="pt-6 tablet:pt-4 border-t">
+          <div className="text-sm tablet:text-xs text-gray-500 text-center">
             Lab Report Card #{labReportData.id.slice(0, 8)}... • {labReportData.patient_name}
-          </div>
-          <div className="flex gap-3 tablet:gap-2">
-            <Button variant="outline" onClick={onClose} className="tablet:px-3 tablet:py-1.5 tablet:text-sm">
-              Close Preview
-            </Button>
-            <Button onClick={onClose} className="bg-indigo-600 hover:bg-indigo-700 tablet:px-3 tablet:py-1.5 tablet:text-sm">
-              <Eye className="h-4 w-4 tablet:h-3 tablet:w-3 mr-2 tablet:mr-1" />
-              Done Viewing
-            </Button>
           </div>
         </div>
       </div>

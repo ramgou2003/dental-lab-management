@@ -259,6 +259,32 @@ export function useReportCards() {
             }
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'lab_report_cards'
+          },
+          (payload) => {
+            console.log('🔄 Real-time lab report card change received:', payload.eventType);
+            // When lab report cards change, refresh the main report cards to get updated status
+            fetchReportCards();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'clinical_report_cards'
+          },
+          (payload) => {
+            console.log('🔄 Real-time clinical report card change received:', payload.eventType);
+            // When clinical report cards change, refresh the main report cards to get updated status
+            fetchReportCards();
+          }
+        )
         .subscribe((status) => {
           console.log('📡 Report cards real-time subscription status:', status);
         });

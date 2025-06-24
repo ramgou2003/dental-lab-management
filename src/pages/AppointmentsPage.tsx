@@ -13,6 +13,7 @@ export function AppointmentsPage() {
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
   const [initialFormDate, setInitialFormDate] = useState<Date | undefined>(undefined);
   const [initialFormTime, setInitialFormTime] = useState<string | undefined>(undefined);
   const [initialFormEndTime, setInitialFormEndTime] = useState<string | undefined>(undefined);
@@ -73,11 +74,14 @@ export function AppointmentsPage() {
   };
 
   const handleClearSelection = () => {
-    // This will be called when the selection needs to be cleared
-    // Currently no additional state to clear in the parent
+    // Trigger selection clearing by incrementing the trigger
+    console.log('Clearing selection from parent');
+    setClearSelectionTrigger(prev => prev + 1);
   };
 
   const handleAppointmentClick = (appointment: Appointment) => {
+    // Clear any existing selection when clicking on an appointment
+    handleClearSelection();
     setSelectedAppointment(appointment);
     setShowAppointmentDetails(true);
   };
@@ -164,6 +168,7 @@ export function AppointmentsPage() {
             onTimeSlotClick={handleTimeSlotClick}
             isDialogOpen={showAppointmentForm || showAppointmentDetails}
             onClearSelection={handleClearSelection}
+            clearSelectionTrigger={clearSelectionTrigger}
           />
         </div>
       </div>
@@ -172,6 +177,8 @@ export function AppointmentsPage() {
       <AppointmentForm
         isOpen={showAppointmentForm}
         onClose={() => {
+          // Clear selection when dialog is closed/canceled
+          handleClearSelection();
           setShowAppointmentForm(false);
           setEditingAppointment(null);
         }}

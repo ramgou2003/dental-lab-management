@@ -22,9 +22,10 @@ interface DayViewProps {
   onTimeSlotClick: (startTime: string, endTime: string, appointmentType?: string) => void;
   isDialogOpen?: boolean;
   onClearSelection?: () => void;
+  clearSelectionTrigger?: number;
 }
 
-export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection }: DayViewProps) {
+export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger }: DayViewProps) {
   const navigate = useNavigate();
 
   // Function to get status dot color
@@ -154,6 +155,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [dragStart, setDragStart] = useState<{ hour: number; minute: number; column: string } | null>(null);
   const [dragEnd, setDragEnd] = useState<{ hour: number; minute: number; column: string } | null>(null);
   const [dragColumn, setDragColumn] = useState<string | null>(null);
+  const [shouldClearSelection, setShouldClearSelection] = useState(false);
 
   // Use ref to persist selection across re-renders
   const persistentSelectionRef = useRef<{
@@ -185,6 +187,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     const [hours, minutes] = timeString.split(':');
     return `${hours}:${minutes}`;
   };
+
+  // Function to clear selection
+  const clearSelection = useCallback(() => {
+    console.log('Clearing selection in DayView');
+    setDragStart(null);
+    setDragEnd(null);
+    setDragColumn(null);
+    persistentSelectionRef.current = { start: null, end: null, column: null, isVisible: false };
+  }, []);
 
   const getTypeColors = (typeKey: string) => {
     return appointmentTypes.find(type => type.key === typeKey) || {
@@ -317,11 +328,11 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const handleMouseUp = useCallback(() => {
     if (isDragging && dragStart && dragEnd && dragColumn) {
       const startTotalMinutes = dragStart.hour * 60 + dragStart.minute;
-      const endTotalMinutes = dragEnd.hour * 60 + dragEnd.minute + 15; // +15 for end of slot
+      const endTotalMinutes = dragEnd.hour * 60 + dragEnd.minute;
 
       // Check if this is a single click (same slot) or a drag selection
       const isSingleClick = dragStart.hour === dragEnd.hour && dragStart.minute === dragEnd.minute;
-      const isDraggedSelection = Math.abs(endTotalMinutes - startTotalMinutes) > 15 ||
+      const isDraggedSelection = Math.abs(endTotalMinutes - startTotalMinutes) > 0 ||
                                 dragStart.hour !== dragEnd.hour ||
                                 dragStart.minute !== dragEnd.minute;
 
@@ -336,11 +347,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
           endHour = Math.floor((startTotalMinutes + 15) / 60);
           endMinute = (startTotalMinutes + 15) % 60;
         } else {
-          // For drag selection, use the selected range
-          startHour = Math.floor(Math.min(startTotalMinutes, endTotalMinutes) / 60);
-          startMinute = Math.min(startTotalMinutes, endTotalMinutes) % 60;
-          endHour = Math.floor(Math.max(startTotalMinutes, endTotalMinutes) / 60);
-          endMinute = Math.max(startTotalMinutes, endTotalMinutes) % 60;
+          // For drag selection, determine the actual start and end times
+          // The selection should include the full time slots from start to end
+          const actualStartMinutes = Math.min(startTotalMinutes, endTotalMinutes);
+          const actualEndMinutes = Math.max(startTotalMinutes, endTotalMinutes) + 15; // Add 15 to include the end slot
+
+          startHour = Math.floor(actualStartMinutes / 60);
+          startMinute = actualStartMinutes % 60;
+          endHour = Math.floor(actualEndMinutes / 60);
+          endMinute = actualEndMinutes % 60;
         }
 
         const startTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
@@ -493,19 +508,18 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     };
   }, [isDragging]);
 
-  // Clear selection when dialog closes
+  // Handle external clear selection requests
+  useEffect(() => {
+    if (clearSelectionTrigger && clearSelectionTrigger > 0) {
+      console.log('Clearing selection due to trigger:', clearSelectionTrigger);
+      clearSelection();
+    }
+  }, [clearSelectionTrigger, clearSelection]);
+
+  // Never automatically clear selection - let it persist until explicitly cleared
   useEffect(() => {
     console.log('Dialog state useEffect:', { isDialogOpen, persistentVisible: persistentSelectionRef.current.isVisible });
-    if (!isDialogOpen && persistentSelectionRef.current.isVisible) {
-      console.log('Clearing selection because dialog closed');
-      setDragStart(null);
-      setDragEnd(null);
-      setDragColumn(null);
-      persistentSelectionRef.current = { start: null, end: null, column: null, isVisible: false };
-      if (onClearSelection) {
-        onClearSelection();
-      }
-    }
+    // Don't clear selection automatically - it will be handled by explicit clearing
   }, [isDialogOpen, onClearSelection]);
 
   // Measure container width for dynamic sizing
@@ -564,8 +578,12 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
     if (!(isDragging || (isDialogOpen && persistentSelection.isVisible)) || !activeStart || !activeEnd || activeColumn !== column) return null;
 
-    const startTotalMinutes = Math.min(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute);
-    const endTotalMinutes = Math.max(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute + 15);
+    // Calculate the actual start and end times properly, accounting for drag direction
+    const startMinutes = activeStart.hour * 60 + activeStart.minute;
+    const endMinutes = activeEnd.hour * 60 + activeEnd.minute;
+
+    const startTotalMinutes = Math.min(startMinutes, endMinutes);
+    const endTotalMinutes = Math.max(startMinutes, endMinutes) + 15; // Add 15 to include the end slot
 
     const hourStart = hour * 60;
     const hourEnd = hour * 60 + 60;
@@ -685,8 +703,30 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                   if (type.key !== activeColumn) return null;
 
                   const typeColors = getTypeColors(type.key);
-                  const startTotalMinutes = Math.min(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute);
-                  const endTotalMinutes = Math.max(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute + 15);
+
+                  // Calculate the actual start and end times properly, accounting for drag direction
+                  const startMinutes = activeStart.hour * 60 + activeStart.minute;
+                  const endMinutes = activeEnd.hour * 60 + activeEnd.minute;
+
+                  const startTotalMinutes = Math.min(startMinutes, endMinutes);
+                  const endTotalMinutes = Math.max(startMinutes, endMinutes) + 15; // Add 15 to include the end slot
+
+                  // Check if there's an appointment in this exact location - if so, don't show selection
+                  const hasAppointmentInSelection = appointments.some(appointment => {
+                    if (appointment.type !== type.key) return false;
+
+                    const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                    const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+
+                    const appointmentStart = startHour * 60 + startMinute;
+                    const appointmentEnd = endHour * 60 + endMinute;
+
+                    // Check if appointment overlaps with selection
+                    return !(endTotalMinutes <= appointmentStart || startTotalMinutes >= appointmentEnd);
+                  });
+
+                  // Don't show selection rectangle if there's an appointment in the same location
+                  if (hasAppointmentInSelection) return null;
 
                   // Calculate position within the grid
                   const totalHours = hours.length;

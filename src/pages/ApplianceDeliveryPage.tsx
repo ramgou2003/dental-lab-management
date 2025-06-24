@@ -88,13 +88,13 @@ export function ApplianceDeliveryPage() {
   const getInsertionCount = (status: string) => {
     if (status === "all-deliveries") return deliveryItems.length;
     if (status === "ready-to-insert") {
-      return deliveryItems.filter(item => item.delivery_status === 'ready-for-delivery').length;
+      return deliveryItems.filter(item => item.delivery_status === 'ready-to-insert').length;
     }
     if (status === "scheduled") {
       return deliveryItems.filter(item => item.delivery_status === 'patient-scheduled').length;
     }
     if (status === "unscheduled") {
-      return deliveryItems.filter(item => item.delivery_status === 'ready-for-delivery' && !item.scheduled_delivery_date).length;
+      return deliveryItems.filter(item => item.delivery_status === 'ready-to-insert' && !item.scheduled_delivery_date).length;
     }
     if (status === "inserted") {
       return deliveryItems.filter(item => item.delivery_status === 'inserted').length;
@@ -164,16 +164,16 @@ export function ApplianceDeliveryPage() {
     // Filter based on active filter for insertion appointments
     let statusMatch = true;
     if (activeFilter === "ready-to-insert") {
-      statusMatch = item.delivery_status === 'ready-for-delivery';
+      statusMatch = item.delivery_status === 'ready-to-insert';
     } else if (activeFilter === "scheduled") {
       statusMatch = item.delivery_status === 'patient-scheduled';
     } else if (activeFilter === "unscheduled") {
-      statusMatch = item.delivery_status === 'ready-for-delivery' && !item.scheduled_delivery_date;
+      statusMatch = item.delivery_status === 'ready-to-insert' && !item.scheduled_delivery_date;
     } else if (activeFilter === "inserted") {
       statusMatch = item.delivery_status === 'inserted';
     } else if (activeFilter === "pending") {
-      statusMatch = item.delivery_status === 'ready-for-delivery' ||
-                   (item.delivery_status === 'in-transit' && !item.scheduled_delivery_date);
+      statusMatch = item.delivery_status === 'ready-to-insert' ||
+                   (item.delivery_status === 'patient-scheduled' && !item.scheduled_delivery_date);
     }
     // "all-deliveries" shows everything
 
@@ -261,7 +261,7 @@ export function ApplianceDeliveryPage() {
                     // Get status-specific button configuration for insertion appointments
                     const getStatusButton = () => {
                       switch (item.delivery_status) {
-                        case 'ready-for-delivery':
+                        case 'ready-to-insert':
                           return {
                             text: 'Schedule Appointment',
                             icon: CalendarIcon,

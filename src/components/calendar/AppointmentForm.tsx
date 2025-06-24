@@ -33,11 +33,13 @@ export function AppointmentForm({
   appointmentType,
   editingAppointment
 }: AppointmentFormProps) {
-  const [selectedPatient, setSelectedPatient] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState(''); // Patient name for display
+  const [selectedPatientId, setSelectedPatientId] = useState(''); // Patient ID for database
   const [selectedAppointmentType, setSelectedAppointmentType] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('09:30');
+  const [notes, setNotes] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
 
@@ -112,13 +114,26 @@ export function AppointmentForm({
 
       if (editingAppointment) {
         setSelectedPatient(editingAppointment.patient || '');
+        setSelectedPatientId(editingAppointment.patientId || '');
+
+        // If we don't have a patient ID but have a patient name, try to find the ID
+        if (!editingAppointment.patientId && editingAppointment.patient && patients.length > 0) {
+          const patient = patients.find(p => p.full_name === editingAppointment.patient);
+          if (patient) {
+            setSelectedPatientId(patient.id);
+          }
+        }
+
         setSelectedAppointmentType(editingAppointment.type || '');
         setSelectedDate(editingAppointment.date ? new Date(editingAppointment.date) : new Date());
         setStartTime(editingAppointment.startTime || '09:00');
         setEndTime(editingAppointment.endTime || '09:30');
+        setNotes(editingAppointment.notes || '');
       } else {
         // Reset form for new appointment
         setSelectedPatient('');
+        setSelectedPatientId('');
+        setNotes('');
 
         // Only set appointment type if it's valid
         if (appointmentType && appointmentType.trim() !== '') {
@@ -148,7 +163,7 @@ export function AppointmentForm({
         }
       }
     }
-  }, [isOpen]);
+  }, [isOpen, patients]);
 
   // Watch for prop changes and update form accordingly
   useEffect(() => {
@@ -176,20 +191,21 @@ export function AppointmentForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedPatient || !selectedAppointmentType) {
+    if (!selectedPatientId || !selectedAppointmentType) {
       return;
     }
 
     const appointmentData = {
       id: editingAppointment?.id || `apt_${Date.now()}`,
       title: selectedAppointmentType, // Use appointment type as title
-      patient: selectedPatient,
+      patient: selectedPatient, // Patient name for display
+      patientId: selectedPatientId, // Patient ID for database
       date: selectedDate.toISOString().split('T')[0],
       startTime: startTime,
       endTime: endTime,
       type: selectedAppointmentType,
       status: 'pending',
-      notes: ''
+      notes: notes.trim() || undefined
     };
 
     onSave(appointmentData);
@@ -198,10 +214,12 @@ export function AppointmentForm({
 
   const handleCancel = () => {
     setSelectedPatient('');
+    setSelectedPatientId('');
     setSelectedAppointmentType('');
     setSelectedDate(new Date());
     setStartTime('09:00');
     setEndTime('09:30');
+    setNotes('');
     onClose();
   };
 
@@ -223,13 +241,22 @@ export function AppointmentForm({
             <label className="text-sm font-medium text-gray-700">
               Patient *
             </label>
-            <Select value={selectedPatient || undefined} onValueChange={setSelectedPatient} disabled={loadingPatients}>
+            <Select
+              value={selectedPatientId || undefined}
+              onValueChange={(patientId) => {
+                setSelectedPatientId(patientId);
+                // Find the patient name for display
+                const patient = patients.find(p => p.id === patientId);
+                setSelectedPatient(patient?.full_name || '');
+              }}
+              disabled={loadingPatients}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={loadingPatients ? "Loading patients..." : "Select a patient"} />
               </SelectTrigger>
               <SelectContent>
                 {patients.map((patient) => (
-                  <SelectItem key={patient.id} value={patient.full_name}>
+                  <SelectItem key={patient.id} value={patient.id}>
                     {patient.full_name}
                   </SelectItem>
                 ))}
@@ -313,6 +340,20 @@ export function AppointmentForm({
             </div>
           </div>
 
+          {/* Notes */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              Notes
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any additional notes for this appointment..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+              rows={3}
+            />
+          </div>
+
           {/* Actions */}
           <div className="flex justify-end space-x-3 pt-4">
             <Button
@@ -325,7 +366,7 @@ export function AppointmentForm({
             <Button
               type="submit"
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
-              disabled={!selectedPatient || !selectedAppointmentType}
+              disabled={!selectedPatientId || !selectedAppointmentType}
             >
               {editingAppointment ? 'Update Appointment' : 'Create Appointment'}
             </Button>

@@ -6,6 +6,7 @@ export interface Appointment {
   id: string;
   title: string;
   patient: string;
+  patientId?: string; // Add patient ID field
   startTime: string;
   endTime: string;
   type: string;
@@ -44,6 +45,7 @@ export function useAppointments() {
         id: appointment.id,
         title: appointment.title,
         patient: appointment.patient_name,
+        patientId: appointment.patient_id || undefined,
         startTime: appointment.start_time,
         endTime: appointment.end_time,
         type: appointment.appointment_type,
@@ -97,6 +99,7 @@ export function useAppointments() {
                 id: payload.new.id,
                 title: payload.new.title,
                 patient: payload.new.patient_name,
+                patientId: payload.new.patient_id || undefined,
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
@@ -129,6 +132,7 @@ export function useAppointments() {
                 id: payload.new.id,
                 title: payload.new.title,
                 patient: payload.new.patient_name,
+                patientId: payload.new.patient_id || undefined,
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
@@ -174,11 +178,43 @@ export function useAppointments() {
   }, [toast]);
 
   const addAppointment = async (appointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>) => {
+    // Generate a temporary ID for optimistic update
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+
+    // Create optimistic appointment object
+    const optimisticAppointment: Appointment = {
+      id: tempId,
+      title: appointmentData.title,
+      patient: appointmentData.patient,
+      patientId: appointmentData.patientId,
+      startTime: appointmentData.startTime,
+      endTime: appointmentData.endTime,
+      type: appointmentData.type,
+      status: appointmentData.status,
+      date: appointmentData.date,
+      notes: appointmentData.notes || undefined,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    // Immediately add to local state for instant UI update
+    setAppointments(prev => {
+      const newList = [...prev, optimisticAppointment];
+      return newList.sort((a, b) => {
+        if (a.date === b.date) {
+          return a.startTime.localeCompare(b.startTime);
+        }
+        return a.date.localeCompare(b.date);
+      });
+    });
+
     try {
       const { data, error } = await supabase
         .from('appointments')
         .insert([{
           patient_name: appointmentData.patient,
+          patient_id: appointmentData.patientId || null,
           title: appointmentData.title,
           start_time: appointmentData.startTime,
           end_time: appointmentData.endTime,
@@ -199,6 +235,7 @@ export function useAppointments() {
         id: data.id,
         title: data.title,
         patient: data.patient_name,
+        patientId: data.patient_id || undefined,
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
@@ -209,15 +246,11 @@ export function useAppointments() {
         updatedAt: data.updated_at
       };
 
-      // Immediately update local state for the user who created it
+      // Replace the optimistic appointment with the real one
       setAppointments(prev => {
-        // Check if appointment already exists to avoid duplicates
-        if (prev.some(apt => apt.id === newAppointment.id)) {
-          return prev;
-        }
-        // Insert in correct position based on date and time
-        const newList = [...prev, newAppointment];
-        return newList.sort((a, b) => {
+        return prev.map(apt =>
+          apt.id === tempId ? newAppointment : apt
+        ).sort((a, b) => {
           if (a.date === b.date) {
             return a.startTime.localeCompare(b.startTime);
           }
@@ -233,6 +266,10 @@ export function useAppointments() {
       return newAppointment;
     } catch (err) {
       console.error('Error adding appointment:', err);
+
+      // Remove the optimistic appointment on error
+      setAppointments(prev => prev.filter(apt => apt.id !== tempId));
+
       toast({
         title: "Error",
         description: "Failed to create appointment",
@@ -247,6 +284,7 @@ export function useAppointments() {
       // Prepare the update data for Supabase
       const updateData: any = {};
       if (updates.patient) updateData.patient_name = updates.patient;
+      if (updates.patientId !== undefined) updateData.patient_id = updates.patientId || null;
       if (updates.title) updateData.title = updates.title;
       if (updates.startTime) updateData.start_time = updates.startTime;
       if (updates.endTime) updateData.end_time = updates.endTime;
@@ -271,6 +309,7 @@ export function useAppointments() {
         id: data.id,
         title: data.title,
         patient: data.patient_name,
+        patientId: data.patient_id || undefined,
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
