@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Appointment {
   id: string;
@@ -7,185 +9,210 @@ export interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'not-confirmed' | 'completed' | 'cancelled';
   date: string; // YYYY-MM-DD format
   notes?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-// Mock data for demonstration
-const mockAppointments: Appointment[] = [
-  {
-    id: 'apt_1',
-    title: 'Dental Cleaning',
-    patient: 'Emily Johnson',
-    startTime: '09:00',
-    endTime: '09:30',
-    type: 'cleaning',
-    status: 'confirmed',
-    date: '2025-01-20',
-    notes: 'Regular cleaning appointment. Patient has no allergies.',
-    createdAt: '2025-01-15T10:00:00Z',
-    updatedAt: '2025-01-15T10:00:00Z'
-  },
-  {
-    id: 'apt_2',
-    title: 'Root Canal Consultation',
-    patient: 'Michael Chen',
-    startTime: '10:30',
-    endTime: '11:30',
-    type: 'consultation',
-    status: 'scheduled',
-    date: '2025-01-20',
-    notes: 'Patient experiencing pain in upper left molar. X-rays needed.',
-    createdAt: '2025-01-15T11:00:00Z',
-    updatedAt: '2025-01-15T11:00:00Z'
-  },
-  {
-    id: 'apt_3',
-    title: 'Crown Fitting',
-    patient: 'Sarah Williams',
-    startTime: '14:00',
-    endTime: '15:00',
-    type: 'crown',
-    status: 'confirmed',
-    date: '2025-01-20',
-    notes: 'Final crown fitting for tooth #14. Crown ready for placement.',
-    createdAt: '2025-01-15T12:00:00Z',
-    updatedAt: '2025-01-15T12:00:00Z'
-  },
-  {
-    id: 'apt_4',
-    title: 'Orthodontic Check-up',
-    patient: 'David Brown',
-    startTime: '15:30',
-    endTime: '16:00',
-    type: 'orthodontics',
-    status: 'scheduled',
-    date: '2025-01-21',
-    notes: 'Monthly braces adjustment. Patient reports no issues.',
-    createdAt: '2025-01-15T13:00:00Z',
-    updatedAt: '2025-01-15T13:00:00Z'
-  },
-  {
-    id: 'apt_5',
-    title: 'Emergency Visit',
-    patient: 'Lisa Anderson',
-    startTime: '11:00',
-    endTime: '11:30',
-    type: 'emergency',
-    status: 'completed',
-    date: '2025-01-19',
-    notes: 'Emergency visit for broken tooth. Temporary filling applied.',
-    createdAt: '2025-01-19T09:00:00Z',
-    updatedAt: '2025-01-19T11:30:00Z'
-  },
-  {
-    id: 'apt_6',
-    title: 'Implant Consultation',
-    patient: 'Robert Taylor',
-    startTime: '09:30',
-    endTime: '10:30',
-    type: 'consultation',
-    status: 'scheduled',
-    date: '2025-01-22',
-    notes: 'Consultation for dental implant. Patient missing tooth #19.',
-    createdAt: '2025-01-16T14:00:00Z',
-    updatedAt: '2025-01-16T14:00:00Z'
-  },
-  {
-    id: 'apt_7',
-    title: 'Filling Replacement',
-    patient: 'Jennifer Davis',
-    startTime: '13:00',
-    endTime: '13:30',
-    type: 'filling',
-    status: 'confirmed',
-    date: '2025-01-22',
-    notes: 'Replace old amalgam filling with composite. Tooth #12.',
-    createdAt: '2025-01-16T15:00:00Z',
-    updatedAt: '2025-01-16T15:00:00Z'
-  },
-  {
-    id: 'apt_8',
-    title: 'Follow-up Exam',
-    patient: 'Mark Wilson',
-    startTime: '16:00',
-    endTime: '16:30',
-    type: 'follow-up',
-    status: 'scheduled',
-    date: '2025-01-23',
-    notes: 'Post-surgery follow-up. Check healing progress.',
-    createdAt: '2025-01-17T10:00:00Z',
-    updatedAt: '2025-01-17T10:00:00Z'
-  }
-];
+
 
 export function useAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  // Simulate loading appointments from an API
+  // Load appointments from Supabase
   useEffect(() => {
     const loadAppointments = async () => {
       try {
         setLoading(true);
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Load from localStorage or start with empty array
-        const stored = localStorage.getItem('appointments');
-        if (stored) {
-          setAppointments(JSON.parse(stored));
-        } else {
-          setAppointments([]);
-          localStorage.setItem('appointments', JSON.stringify([]));
+
+        const { data, error } = await supabase
+          .from('appointments')
+          .select('*')
+          .order('date', { ascending: true })
+          .order('start_time', { ascending: true });
+
+        if (error) {
+          throw error;
         }
-        
+
+        // Transform Supabase data to match our Appointment interface
+        const transformedAppointments: Appointment[] = (data || []).map(appointment => ({
+          id: appointment.id,
+          title: appointment.title,
+          patient: appointment.patient_name,
+          startTime: appointment.start_time,
+          endTime: appointment.end_time,
+          type: appointment.appointment_type,
+          status: appointment.status as Appointment['status'],
+          date: appointment.date,
+          notes: appointment.notes || undefined,
+          createdAt: appointment.created_at,
+          updatedAt: appointment.updated_at
+        }));
+
+        setAppointments(transformedAppointments);
         setError(null);
       } catch (err) {
         setError('Failed to load appointments');
         console.error('Error loading appointments:', err);
+        toast({
+          title: "Error",
+          description: "Failed to load appointments",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     loadAppointments();
-  }, []);
+  }, [toast]);
 
-  const saveAppointments = (newAppointments: Appointment[]) => {
-    setAppointments(newAppointments);
-    localStorage.setItem('appointments', JSON.stringify(newAppointments));
+  const addAppointment = async (appointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert([{
+          patient_name: appointmentData.patient,
+          title: appointmentData.title,
+          start_time: appointmentData.startTime,
+          end_time: appointmentData.endTime,
+          appointment_type: appointmentData.type,
+          status: appointmentData.status,
+          date: appointmentData.date,
+          notes: appointmentData.notes || null
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // Transform the returned data to match our interface
+      const newAppointment: Appointment = {
+        id: data.id,
+        title: data.title,
+        patient: data.patient_name,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        type: data.appointment_type,
+        status: data.status as Appointment['status'],
+        date: data.date,
+        notes: data.notes || undefined,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+
+      // Update local state
+      setAppointments(prev => [...prev, newAppointment]);
+
+      toast({
+        title: "Success",
+        description: "Appointment created successfully",
+      });
+
+      return newAppointment;
+    } catch (err) {
+      console.error('Error adding appointment:', err);
+      toast({
+        title: "Error",
+        description: "Failed to create appointment",
+        variant: "destructive",
+      });
+      throw err;
+    }
   };
 
-  const addAppointment = (appointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newAppointment: Appointment = {
-      ...appointmentData,
-      id: `apt_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+  const updateAppointment = async (id: string, updates: Partial<Appointment>) => {
+    try {
+      // Prepare the update data for Supabase
+      const updateData: any = {};
+      if (updates.patient) updateData.patient_name = updates.patient;
+      if (updates.title) updateData.title = updates.title;
+      if (updates.startTime) updateData.start_time = updates.startTime;
+      if (updates.endTime) updateData.end_time = updates.endTime;
+      if (updates.type) updateData.appointment_type = updates.type;
+      if (updates.status) updateData.status = updates.status;
+      if (updates.date) updateData.date = updates.date;
+      if (updates.notes !== undefined) updateData.notes = updates.notes || null;
 
-    const updatedAppointments = [...appointments, newAppointment];
-    saveAppointments(updatedAppointments);
-    return newAppointment;
+      const { data, error } = await supabase
+        .from('appointments')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // Transform the returned data
+      const updatedAppointment: Appointment = {
+        id: data.id,
+        title: data.title,
+        patient: data.patient_name,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        type: data.appointment_type,
+        status: data.status as Appointment['status'],
+        date: data.date,
+        notes: data.notes || undefined,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+
+      // Update local state
+      setAppointments(prev => prev.map(apt => apt.id === id ? updatedAppointment : apt));
+
+      toast({
+        title: "Success",
+        description: "Appointment updated successfully",
+      });
+    } catch (err) {
+      console.error('Error updating appointment:', err);
+      toast({
+        title: "Error",
+        description: "Failed to update appointment",
+        variant: "destructive",
+      });
+      throw err;
+    }
   };
 
-  const updateAppointment = (id: string, updates: Partial<Appointment>) => {
-    const updatedAppointments = appointments.map(apt =>
-      apt.id === id
-        ? { ...apt, ...updates, updatedAt: new Date().toISOString() }
-        : apt
-    );
-    saveAppointments(updatedAppointments);
-  };
+  const deleteAppointment = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', id);
 
-  const deleteAppointment = (id: string) => {
-    const updatedAppointments = appointments.filter(apt => apt.id !== id);
-    saveAppointments(updatedAppointments);
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setAppointments(prev => prev.filter(apt => apt.id !== id));
+
+      toast({
+        title: "Success",
+        description: "Appointment deleted successfully",
+      });
+    } catch (err) {
+      console.error('Error deleting appointment:', err);
+      toast({
+        title: "Error",
+        description: "Failed to delete appointment",
+        variant: "destructive",
+      });
+      throw err;
+    }
   };
 
   const getAppointmentsByDate = (date: string) => {

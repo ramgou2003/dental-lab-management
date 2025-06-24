@@ -20,6 +20,7 @@ import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { TreatmentDialog, TreatmentData } from "@/components/TreatmentDialog";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
+import { usePatientAppointments } from "@/hooks/usePatientAppointments";
 import { LabScript } from "@/hooks/useLabScripts";
 import { ManufacturingItem } from "@/hooks/useManufacturingItems";
 import { useReportCards } from "@/hooks/useReportCards";
@@ -77,7 +78,7 @@ export function PatientProfilePage() {
   const getInitialTab = () => {
     const urlParams = new URLSearchParams(location.search);
     const tabFromUrl = urlParams.get('tab');
-    const validTabs = ['basic', 'lab', 'reports', 'manufacturing', 'delivery', 'clinical'];
+    const validTabs = ['basic', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery', 'clinical'];
     return validTabs.includes(tabFromUrl || '') ? tabFromUrl : 'basic';
   };
 
@@ -94,7 +95,7 @@ export function PatientProfilePage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const tabFromUrl = urlParams.get('tab');
-    const validTabs = ['basic', 'lab', 'reports', 'manufacturing', 'delivery', 'clinical'];
+    const validTabs = ['basic', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery', 'clinical'];
     const newTab = validTabs.includes(tabFromUrl || '') ? tabFromUrl : 'basic';
     if (newTab !== activeTab) {
       setActiveTab(newTab);
@@ -137,6 +138,7 @@ export function PatientProfilePage() {
   // Fetch patient-specific lab scripts and manufacturing items
   const { labScripts, loading: labScriptsLoading, updateLabScript } = usePatientLabScripts(patientId);
   const { manufacturingItems, loading: manufacturingLoading, updateManufacturingItemStatus } = usePatientManufacturingItems(patientId);
+  const { appointments: patientAppointments, loading: appointmentsLoading } = usePatientAppointments(patient?.full_name);
   const { reportCards, loading: reportCardsLoading, updateLabReportStatus, updateClinicalReportStatus } = useReportCards();
   const { deliveryItems, loading: deliveryItemsLoading, updateDeliveryStatus } = useDeliveryItems();
   const { toast } = useToast();
@@ -2678,10 +2680,14 @@ export function PatientProfilePage() {
         {/* Fixed Tabs Navigation and Content */}
         <div className="flex-1 flex flex-col min-h-0">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col h-full">
-            <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200 p-0.5 rounded-xl shadow-sm flex-shrink-0">
+            <TabsList className="grid w-full grid-cols-7 bg-white border border-gray-200 p-0.5 rounded-xl shadow-sm flex-shrink-0">
               <TabsTrigger value="basic" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
                 <User className="h-3.5 w-3.5" />
                 Basic Details
+              </TabsTrigger>
+              <TabsTrigger value="appointments" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
+                <Calendar className="h-3.5 w-3.5" />
+                Appointments ({patientAppointments.length})
               </TabsTrigger>
               <TabsTrigger value="lab" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
                 <FlaskConical className="h-3.5 w-3.5" />
@@ -2908,6 +2914,87 @@ export function PatientProfilePage() {
                   </div>
                 </div>
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="appointments" className="flex-1 mt-2 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full mb-4 table-container-rounded">
+                {appointmentsLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Appointments...</h3>
+                      <p className="text-gray-500">Please wait while we fetch appointment data.</p>
+                    </div>
+                  </div>
+                ) : patientAppointments.length > 0 ? (
+                  <>
+                    {/* Header */}
+                    <div className="p-6 border-b border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h2 className="text-xl font-semibold text-gray-900">Patient Appointments</h2>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {patientAppointments.length} appointment{patientAppointments.length !== 1 ? 's' : ''} found
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Appointments List */}
+                    <div className="flex-1 overflow-auto p-6">
+                      <div className="space-y-4">
+                        {patientAppointments.map((appointment) => (
+                          <div key={appointment.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-sm transition-shadow">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className={`w-3 h-3 rounded-full ${
+                                    appointment.status === 'confirmed' ? 'bg-green-500' :
+                                    appointment.status === 'not-confirmed' ? 'bg-orange-500' :
+                                    appointment.status === 'cancelled' ? 'bg-red-500' :
+                                    appointment.status === 'pending' ? 'bg-yellow-500' :
+                                    'bg-gray-400'
+                                  }`}></div>
+                                  <h3 className="font-semibold text-gray-900">{appointment.type}</h3>
+                                  <Badge variant={
+                                    appointment.status === 'confirmed' ? 'default' :
+                                    appointment.status === 'not-confirmed' ? 'secondary' :
+                                    appointment.status === 'cancelled' ? 'destructive' :
+                                    'outline'
+                                  }>
+                                    {appointment.status}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>{new Date(appointment.date).toLocaleDateString()}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4" />
+                                    <span>{appointment.startTime} - {appointment.endTime}</span>
+                                  </div>
+                                </div>
+                                {appointment.notes && (
+                                  <p className="text-sm text-gray-600 mt-2">{appointment.notes}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Appointments Found</h3>
+                      <p className="text-gray-500 mb-4">This patient doesn't have any appointments scheduled yet.</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
 

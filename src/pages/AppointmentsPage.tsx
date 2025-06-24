@@ -53,12 +53,22 @@ export function AppointmentsPage() {
   };
 
   const handleTimeSlotClick = (startTime: string, endTime: string, appointmentType?: string) => {
+    console.log('handleTimeSlotClick called with:', { startTime, endTime, appointmentType });
+
     // Day view: startTime and endTime from drag selection
-    setInitialFormDate(currentDate);
-    setInitialFormTime(startTime);
-    setInitialFormEndTime(endTime);
-    setSelectedAppointmentType(appointmentType);
     setEditingAppointment(null);
+    setInitialFormDate(currentDate);
+    setInitialFormTime(startTime || '09:00');
+    setInitialFormEndTime(endTime || '09:30');
+    setSelectedAppointmentType(appointmentType || '');
+
+    // Open dialog immediately - no delay
+    console.log('Opening appointment form with state:', {
+      date: currentDate,
+      startTime: startTime || '09:00',
+      endTime: endTime || '09:30',
+      type: appointmentType || ''
+    });
     setShowAppointmentForm(true);
   };
 
@@ -78,38 +88,43 @@ export function AppointmentsPage() {
     setShowAppointmentForm(true);
   };
 
-  const handleDeleteAppointment = (appointmentId: string) => {
-    deleteAppointment(appointmentId);
-    setShowAppointmentDetails(false);
-    toast.success("Appointment deleted successfully");
+  const handleDeleteAppointment = async (appointmentId: string) => {
+    try {
+      await deleteAppointment(appointmentId);
+      setShowAppointmentDetails(false);
+    } catch (error) {
+      // Error handling is done in the hook with toast notifications
+      console.error('Failed to delete appointment:', error);
+    }
   };
 
-  const handleSaveAppointment = (appointmentData: any) => {
+  const handleStatusChange = async (appointmentId: string, newStatus: Appointment['status']) => {
+    try {
+      await updateAppointment(appointmentId, { status: newStatus });
+    } catch (error) {
+      // Error handling is done in the hook with toast notifications
+      console.error('Failed to update appointment status:', error);
+    }
+  };
+
+  const handleSaveAppointment = async (appointmentData: any) => {
     try {
       if (editingAppointment) {
-        updateAppointment(editingAppointment.id, appointmentData);
-        toast.success("Appointment updated successfully!");
+        await updateAppointment(editingAppointment.id, appointmentData);
       } else {
-        addAppointment(appointmentData);
-        toast.success("Appointment created successfully!");
+        await addAppointment(appointmentData);
       }
       setShowAppointmentForm(false);
       setEditingAppointment(null);
     } catch (error) {
-      toast.error("Failed to save appointment. Please try again.");
+      // Error handling is done in the hook with toast notifications
+      console.error('Failed to save appointment:', error);
     }
   };
 
 
 
-  const handleStatusChange = (appointmentId: string, status: Appointment['status']) => {
-    try {
-      updateAppointment(appointmentId, { status });
-      toast.success(`Appointment marked as ${status}!`);
-    } catch (error) {
-      toast.error("Failed to update appointment status. Please try again.");
-    }
-  };
+
 
   const filteredAppointments = getFilteredAppointments();
 
@@ -178,6 +193,7 @@ export function AppointmentsPage() {
         appointment={selectedAppointment}
         onEdit={handleEditAppointment}
         onDelete={handleDeleteAppointment}
+        onStatusChange={handleStatusChange}
       />
 
 

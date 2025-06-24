@@ -99,23 +99,79 @@ export function AppointmentForm({
     }
   }, [isOpen]);
 
+  // Initialize form when dialog opens
   useEffect(() => {
-    if (editingAppointment) {
-      setSelectedPatient(editingAppointment.patient || '');
-      setSelectedAppointmentType(editingAppointment.type || '');
-      setSelectedDate(editingAppointment.date ? new Date(editingAppointment.date) : new Date());
-      setStartTime(editingAppointment.startTime || '09:00');
-      setEndTime(editingAppointment.endTime || '09:30');
-    } else {
-      setSelectedPatient('');
-      setSelectedAppointmentType(appointmentType || '');
-      setSelectedDate(initialDate || new Date());
-      setStartTime(initialTime || '09:00');
-      setEndTime(initialEndTime || '09:30');
+    if (isOpen) {
+      console.log('Form initializing with:', {
+        editingAppointment,
+        appointmentType,
+        initialDate,
+        initialTime,
+        initialEndTime
+      });
+
+      if (editingAppointment) {
+        setSelectedPatient(editingAppointment.patient || '');
+        setSelectedAppointmentType(editingAppointment.type || '');
+        setSelectedDate(editingAppointment.date ? new Date(editingAppointment.date) : new Date());
+        setStartTime(editingAppointment.startTime || '09:00');
+        setEndTime(editingAppointment.endTime || '09:30');
+      } else {
+        // Reset form for new appointment
+        setSelectedPatient('');
+
+        // Only set appointment type if it's valid
+        if (appointmentType && appointmentType.trim() !== '') {
+          setSelectedAppointmentType(appointmentType);
+        } else {
+          setSelectedAppointmentType('');
+        }
+
+        // Set date
+        if (initialDate) {
+          setSelectedDate(initialDate);
+        } else {
+          setSelectedDate(new Date());
+        }
+
+        // Set times with validation
+        if (initialTime && initialTime.trim() !== '') {
+          setStartTime(initialTime);
+        } else {
+          setStartTime('09:00');
+        }
+
+        if (initialEndTime && initialEndTime.trim() !== '') {
+          setEndTime(initialEndTime);
+        } else {
+          setEndTime('09:30');
+        }
+      }
     }
-  }, [editingAppointment, initialDate, initialTime, initialEndTime, appointmentType, isOpen]);
+  }, [isOpen]);
 
+  // Watch for prop changes and update form accordingly
+  useEffect(() => {
+    if (isOpen && !editingAppointment) {
+      console.log('Props changed, updating form:', { appointmentType, initialTime, initialEndTime });
 
+      if (appointmentType && appointmentType.trim() !== '' && appointmentType !== selectedAppointmentType) {
+        setSelectedAppointmentType(appointmentType);
+      }
+
+      if (initialTime && initialTime.trim() !== '' && initialTime !== startTime) {
+        setStartTime(initialTime);
+      }
+
+      if (initialEndTime && initialEndTime.trim() !== '' && initialEndTime !== endTime) {
+        setEndTime(initialEndTime);
+      }
+
+      if (initialDate && initialDate !== selectedDate) {
+        setSelectedDate(initialDate);
+      }
+    }
+  }, [appointmentType, initialTime, initialEndTime, initialDate, isOpen, editingAppointment, selectedAppointmentType, startTime, endTime, selectedDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,7 +188,7 @@ export function AppointmentForm({
       startTime: startTime,
       endTime: endTime,
       type: selectedAppointmentType,
-      status: 'scheduled',
+      status: 'pending',
       notes: ''
     };
 
@@ -167,7 +223,7 @@ export function AppointmentForm({
             <label className="text-sm font-medium text-gray-700">
               Patient *
             </label>
-            <Select value={selectedPatient} onValueChange={setSelectedPatient} disabled={loadingPatients}>
+            <Select value={selectedPatient || undefined} onValueChange={setSelectedPatient} disabled={loadingPatients}>
               <SelectTrigger>
                 <SelectValue placeholder={loadingPatients ? "Loading patients..." : "Select a patient"} />
               </SelectTrigger>
@@ -191,7 +247,7 @@ export function AppointmentForm({
             <label className="text-sm font-medium text-gray-700">
               Appointment Type *
             </label>
-            <Select value={selectedAppointmentType} onValueChange={setSelectedAppointmentType}>
+            <Select value={selectedAppointmentType || undefined} onValueChange={setSelectedAppointmentType}>
               <SelectTrigger>
                 <SelectValue placeholder="Select appointment type" />
               </SelectTrigger>
@@ -224,9 +280,9 @@ export function AppointmentForm({
               <label className="text-sm font-medium text-gray-700">
                 Start Time *
               </label>
-              <Select value={startTime} onValueChange={setStartTime}>
+              <Select value={startTime || undefined} onValueChange={setStartTime}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select start time" />
                 </SelectTrigger>
                 <SelectContent>
                   {timeSlots.map((slot) => (
@@ -242,9 +298,9 @@ export function AppointmentForm({
               <label className="text-sm font-medium text-gray-700">
                 End Time *
               </label>
-              <Select value={endTime} onValueChange={setEndTime}>
+              <Select value={endTime || undefined} onValueChange={setEndTime}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select end time" />
                 </SelectTrigger>
                 <SelectContent>
                   {timeSlots.map((slot) => (

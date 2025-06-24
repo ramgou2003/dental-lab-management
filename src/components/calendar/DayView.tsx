@@ -11,7 +11,7 @@ interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'not-confirmed' | 'completed' | 'cancelled';
   notes?: string;
 }
 
@@ -26,6 +26,24 @@ interface DayViewProps {
 
 export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection }: DayViewProps) {
   const navigate = useNavigate();
+
+  // Function to get status dot color
+  const getStatusDotColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-500';
+      case 'confirmed':
+        return 'bg-green-500';
+      case 'not-confirmed':
+        return 'bg-orange-500';
+      case 'completed':
+        return 'bg-blue-500';
+      case 'cancelled':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
 
   // Function to find patient ID by name and navigate to profile
   const handlePatientNameClick = async (patientName: string) => {
@@ -136,7 +154,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [dragStart, setDragStart] = useState<{ hour: number; minute: number; column: string } | null>(null);
   const [dragEnd, setDragEnd] = useState<{ hour: number; minute: number; column: string } | null>(null);
   const [dragColumn, setDragColumn] = useState<string | null>(null);
-  const [keepSelectionVisible, setKeepSelectionVisible] = useState(false);
+
+  // Use ref to persist selection across re-renders
+  const persistentSelectionRef = useRef<{
+    start: { hour: number; minute: number; column: string } | null;
+    end: { hour: number; minute: number; column: string } | null;
+    column: string | null;
+    isVisible: boolean;
+  }>({ start: null, end: null, column: null, isVisible: false });
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Dynamic sizing state for column width tracking
@@ -314,10 +340,16 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         const startTime = `${startHour.toString().padStart(2, '0')}:${startMinute.toString().padStart(2, '0')}`;
         const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
 
-        onTimeSlotClick(startTime, endTime, dragColumn);
+        // Save selection to persistent ref (survives re-renders)
+        persistentSelectionRef.current = {
+          start: dragStart,
+          end: dragEnd,
+          column: dragColumn,
+          isVisible: true
+        };
 
-        // Keep selection visible while dialog is open
-        setKeepSelectionVisible(true);
+        // Call onTimeSlotClick immediately - this will open the dialog
+        onTimeSlotClick(startTime, endTime, dragColumn);
       }
     }
 
@@ -457,16 +489,18 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Clear selection when dialog closes
   useEffect(() => {
-    if (!isDialogOpen && keepSelectionVisible) {
-      setKeepSelectionVisible(false);
+    console.log('Dialog state useEffect:', { isDialogOpen, persistentVisible: persistentSelectionRef.current.isVisible });
+    if (!isDialogOpen && persistentSelectionRef.current.isVisible) {
+      console.log('Clearing selection because dialog closed');
       setDragStart(null);
       setDragEnd(null);
       setDragColumn(null);
+      persistentSelectionRef.current = { start: null, end: null, column: null, isVisible: false };
       if (onClearSelection) {
         onClearSelection();
       }
     }
-  }, [isDialogOpen, keepSelectionVisible, onClearSelection]);
+  }, [isDialogOpen, onClearSelection]);
 
   // Measure container width for dynamic sizing
   useEffect(() => {
@@ -497,10 +531,16 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Check if this hour contains any part of the drag selection
   const isHourInDragSelection = (hour: number, column: string) => {
-    if (!(isDragging || keepSelectionVisible) || !dragStart || !dragEnd || dragColumn !== column) return false;
+    // Use persistent selection from ref when dialog is open, otherwise use current drag state
+    const persistentSelection = persistentSelectionRef.current;
+    const activeStart = (isDialogOpen && persistentSelection.start) ? persistentSelection.start : dragStart;
+    const activeEnd = (isDialogOpen && persistentSelection.end) ? persistentSelection.end : dragEnd;
+    const activeColumn = (isDialogOpen && persistentSelection.column) ? persistentSelection.column : dragColumn;
 
-    const startTotalMinutes = Math.min(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute);
-    const endTotalMinutes = Math.max(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute + 15);
+    if (!(isDragging || (isDialogOpen && persistentSelection.isVisible)) || !activeStart || !activeEnd || activeColumn !== column) return false;
+
+    const startTotalMinutes = Math.min(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute);
+    const endTotalMinutes = Math.max(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute + 15);
 
     const hourStart = hour * 60;
     const hourEnd = hour * 60 + 60;
@@ -510,10 +550,16 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Get the drag selection rectangle dimensions for this hour
   const getDragSelectionForHour = (hour: number, column: string) => {
-    if (!(isDragging || keepSelectionVisible) || !dragStart || !dragEnd || dragColumn !== column) return null;
+    // Use persistent selection from ref when dialog is open, otherwise use current drag state
+    const persistentSelection = persistentSelectionRef.current;
+    const activeStart = (isDialogOpen && persistentSelection.start) ? persistentSelection.start : dragStart;
+    const activeEnd = (isDialogOpen && persistentSelection.end) ? persistentSelection.end : dragEnd;
+    const activeColumn = (isDialogOpen && persistentSelection.column) ? persistentSelection.column : dragColumn;
 
-    const startTotalMinutes = Math.min(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute);
-    const endTotalMinutes = Math.max(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute + 15);
+    if (!(isDragging || (isDialogOpen && persistentSelection.isVisible)) || !activeStart || !activeEnd || activeColumn !== column) return null;
+
+    const startTotalMinutes = Math.min(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute);
+    const endTotalMinutes = Math.max(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute + 15);
 
     const hourStart = hour * 60;
     const hourEnd = hour * 60 + 60;
@@ -604,60 +650,84 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
         <div className="relative">
           {/* Continuous drag selection overlay - positioned absolutely over the entire grid */}
-          {(isDragging || keepSelectionVisible) && dragStart && dragEnd && dragColumn && (
-            <div className="absolute inset-0 pointer-events-none z-10">
-              {appointmentTypes.map((type, typeIndex) => {
-                if (type.key !== dragColumn) return null;
+          {(() => {
+            // Use persistent selection from ref when dialog is open, otherwise use current drag state
+            const persistentSelection = persistentSelectionRef.current;
+            const activeStart = (isDialogOpen && persistentSelection.start) ? persistentSelection.start : dragStart;
+            const activeEnd = (isDialogOpen && persistentSelection.end) ? persistentSelection.end : dragEnd;
+            const activeColumn = (isDialogOpen && persistentSelection.column) ? persistentSelection.column : dragColumn;
 
-                const typeColors = getTypeColors(type.key);
-                const startTotalMinutes = Math.min(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute);
-                const endTotalMinutes = Math.max(dragStart.hour * 60 + dragStart.minute, dragEnd.hour * 60 + dragEnd.minute + 15);
+            const shouldShowSelection = (isDragging || (isDialogOpen && persistentSelection.isVisible)) && activeStart && activeEnd && activeColumn;
+            console.log('Selection overlay render:', {
+              isDragging,
+              isDialogOpen,
+              dragStart,
+              dragEnd,
+              dragColumn,
+              persistentSelection,
+              activeStart,
+              activeEnd,
+              activeColumn,
+              shouldShowSelection
+            });
 
-                // Calculate position within the grid
-                const totalHours = hours.length;
-                const firstHour = hours[0];
-                const hourHeight = 120; // h-[120px]
+            if (!shouldShowSelection) return null;
 
-                const startHour = Math.floor(startTotalMinutes / 60);
-                const endHour = Math.floor((endTotalMinutes - 1) / 60);
+            return (
+              <div className="absolute inset-0 pointer-events-none z-10">
+                {appointmentTypes.map((type, typeIndex) => {
+                  if (type.key !== activeColumn) return null;
 
-                // Calculate exact position based on total minutes from first hour
-                const startMinutesFromFirst = startTotalMinutes - (firstHour * 60);
-                const endMinutesFromFirst = endTotalMinutes - (firstHour * 60);
+                  const typeColors = getTypeColors(type.key);
+                  const startTotalMinutes = Math.min(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute);
+                  const endTotalMinutes = Math.max(activeStart.hour * 60 + activeStart.minute, activeEnd.hour * 60 + activeEnd.minute + 15);
 
-                const topPosition = (startMinutesFromFirst / 60) * hourHeight;
-                const bottomPosition = (endMinutesFromFirst / 60) * hourHeight;
-                const height = bottomPosition - topPosition;
+                  // Calculate position within the grid
+                  const totalHours = hours.length;
+                  const firstHour = hours[0];
+                  const hourHeight = 120; // h-[120px]
 
-                // Calculate column position to match the grid exactly
-                // Grid uses: '60px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
-                const columnWidth = `calc((100% - 60px) / ${appointmentTypes.length})`;
-                const leftPosition = `calc(60px + ${typeIndex} * ${columnWidth})`;
+                  const startHour = Math.floor(startTotalMinutes / 60);
+                  const endHour = Math.floor((endTotalMinutes - 1) / 60);
 
-                return (
-                  <div
-                    key={type.key}
-                    className={`absolute ${typeColors.dragColor} rounded-lg border-2 shadow-lg`}
-                    style={{
-                      left: `calc(${leftPosition} + 8px)`, // Add left padding
-                      width: `calc(${columnWidth} - 16px)`, // Subtract left and right padding
-                      top: `${topPosition}px`,
-                      height: `${height}px`,
-                    }}
-                  >
-                    <div className="h-full flex items-end justify-end p-2">
-                      <div className="text-xs font-medium text-gray-700">
-                        {Math.floor(startTotalMinutes / 60)}:
-                        {String(startTotalMinutes % 60).padStart(2, '0')} -
-                        {Math.floor(endTotalMinutes / 60)}:
-                        {String(endTotalMinutes % 60).padStart(2, '0')}
+                  // Calculate exact position based on total minutes from first hour
+                  const startMinutesFromFirst = startTotalMinutes - (firstHour * 60);
+                  const endMinutesFromFirst = endTotalMinutes - (firstHour * 60);
+
+                  const topPosition = (startMinutesFromFirst / 60) * hourHeight;
+                  const bottomPosition = (endMinutesFromFirst / 60) * hourHeight;
+                  const height = bottomPosition - topPosition;
+
+                  // Calculate column position to match the grid exactly
+                  // Grid uses: '60px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
+                  const columnWidth = `calc((100% - 60px) / ${appointmentTypes.length})`;
+                  const leftPosition = `calc(60px + ${typeIndex} * ${columnWidth})`;
+
+                  return (
+                    <div
+                      key={type.key}
+                      className={`absolute ${typeColors.dragColor} rounded-lg border-2 shadow-lg`}
+                      style={{
+                        left: `calc(${leftPosition} + 8px)`, // Add left padding
+                        width: `calc(${columnWidth} - 16px)`, // Subtract left and right padding
+                        top: `${topPosition}px`,
+                        height: `${height}px`,
+                      }}
+                    >
+                      <div className="h-full flex items-end justify-end p-2">
+                        <div className="text-xs font-medium text-gray-700">
+                          {Math.floor(startTotalMinutes / 60)}:
+                          {String(startTotalMinutes % 60).padStart(2, '0')} -
+                          {Math.floor(endTotalMinutes / 60)}:
+                          {String(endTotalMinutes % 60).padStart(2, '0')}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Continuous appointment rectangles - positioned absolutely over the entire grid */}
           <div className="absolute inset-0 pointer-events-none z-20">
@@ -739,16 +809,19 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           const firstLetter = typeColors.shortLabel?.charAt(0) || typeColors.label?.charAt(0) || 'A';
                           return (
                             <div className="flex items-center justify-between h-full w-full">
-                              <h4
-                                className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 pr-2 underline cursor-pointer hover:text-blue-600 transition-colors"
-                                onClick={(e) => {
-                                  console.log('15-minute appointment patient name clicked');
-                                  e.stopPropagation();
-                                  handlePatientNameClick(appointment.patient);
-                                }}
-                              >
-                                {appointment.patient}
-                              </h4>
+                              <div className="flex items-center gap-1 flex-1 min-w-0 pr-2">
+                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
+                                <h4
+                                  className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
+                                  onClick={(e) => {
+                                    console.log('15-minute appointment patient name clicked');
+                                    e.stopPropagation();
+                                    handlePatientNameClick(appointment.patient);
+                                  }}
+                                >
+                                  {appointment.patient}
+                                </h4>
+                              </div>
                               <div className="flex items-center gap-1 flex-shrink-0 ml-auto">
                                 <span className="text-xs text-gray-600 whitespace-nowrap">
                                   {appointment.startTime} - {appointment.endTime}
@@ -764,7 +837,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           return (
                             <div className="flex flex-col h-full justify-between">
                               {/* Top row - Name in top left */}
-                              <div className="flex justify-start">
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
                                 <h4
                                   className="font-semibold text-sm text-gray-800 truncate underline cursor-pointer hover:text-blue-600 transition-colors"
                                   onClick={(e) => {

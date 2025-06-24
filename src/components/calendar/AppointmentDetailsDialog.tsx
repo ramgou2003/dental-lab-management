@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Calendar, Clock, User, Edit, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Clock, User, Edit, Trash2, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck } from "lucide-react";
 
 interface Appointment {
   id: string;
@@ -10,7 +11,7 @@ interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'not-confirmed' | 'completed' | 'cancelled';
   date: string;
   notes?: string;
 }
@@ -21,6 +22,7 @@ interface AppointmentDetailsDialogProps {
   appointment: Appointment | null;
   onEdit: (appointment: Appointment) => void;
   onDelete: (appointmentId: string) => void;
+  onStatusChange: (appointmentId: string, newStatus: Appointment['status']) => void;
 }
 
 export function AppointmentDetailsDialog({
@@ -28,7 +30,8 @@ export function AppointmentDetailsDialog({
   onClose,
   appointment,
   onEdit,
-  onDelete
+  onDelete,
+  onStatusChange
 }: AppointmentDetailsDialogProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -45,18 +48,60 @@ export function AppointmentDetailsDialog({
     setShowDeleteConfirm(false);
   };
 
+  const handleStatusChange = (newStatus: Appointment['status']) => {
+    if (appointment) {
+      onStatusChange(appointment.id, newStatus);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'confirmed':
         return 'bg-green-100 text-green-800 border-green-200';
+      case 'not-confirmed':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'completed':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock3 className="h-4 w-4" />;
+      case 'confirmed':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'not-confirmed':
+        return <AlertCircle className="h-4 w-4" />;
+      case 'completed':
+        return <UserCheck className="h-4 w-4" />;
+      case 'cancelled':
+        return <XCircle className="h-4 w-4" />;
+      default:
+        return <Clock3 className="h-4 w-4" />;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'not-confirmed':
+        return 'Not Confirmed';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
@@ -137,15 +182,99 @@ export function AppointmentDetailsDialog({
           </div>
 
           {/* Status */}
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <div className="h-5 w-5 rounded-full bg-gray-400" />
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className={`p-2 rounded-lg ${getStatusColor(appointment.status).replace('text-', 'text-').replace('bg-', 'bg-').replace('border-', 'bg-')}`}>
+                {getStatusIcon(appointment.status)}
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Current Status</p>
+                <Badge className={`${getStatusColor(appointment.status)} flex items-center gap-1`}>
+                  {getStatusIcon(appointment.status)}
+                  {getStatusLabel(appointment.status)}
+                </Badge>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Status</p>
-              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(appointment.status)}`}>
-                {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-              </span>
+
+            {/* Status Management Buttons */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-gray-700">Update Status:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusChange('pending')}
+                  disabled={appointment.status === 'pending'}
+                  className={`flex items-center gap-2 text-xs ${
+                    appointment.status === 'pending'
+                      ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                      : 'hover:bg-yellow-50 hover:border-yellow-200'
+                  }`}
+                >
+                  <Clock3 className="h-3 w-3" />
+                  Pending
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusChange('confirmed')}
+                  disabled={appointment.status === 'confirmed'}
+                  className={`flex items-center gap-2 text-xs ${
+                    appointment.status === 'confirmed'
+                      ? 'bg-green-50 border-green-200 text-green-700'
+                      : 'hover:bg-green-50 hover:border-green-200'
+                  }`}
+                >
+                  <CheckCircle className="h-3 w-3" />
+                  Confirmed
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusChange('not-confirmed')}
+                  disabled={appointment.status === 'not-confirmed'}
+                  className={`flex items-center gap-2 text-xs ${
+                    appointment.status === 'not-confirmed'
+                      ? 'bg-orange-50 border-orange-200 text-orange-700'
+                      : 'hover:bg-orange-50 hover:border-orange-200'
+                  }`}
+                >
+                  <AlertCircle className="h-3 w-3" />
+                  Not Confirmed
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusChange('completed')}
+                  disabled={appointment.status === 'completed'}
+                  className={`flex items-center gap-2 text-xs ${
+                    appointment.status === 'completed'
+                      ? 'bg-blue-50 border-blue-200 text-blue-700'
+                      : 'hover:bg-blue-50 hover:border-blue-200'
+                  }`}
+                >
+                  <UserCheck className="h-3 w-3" />
+                  Completed
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusChange('cancelled')}
+                  disabled={appointment.status === 'cancelled'}
+                  className={`flex items-center gap-2 text-xs col-span-2 ${
+                    appointment.status === 'cancelled'
+                      ? 'bg-red-50 border-red-200 text-red-700'
+                      : 'hover:bg-red-50 hover:border-red-200'
+                  }`}
+                >
+                  <XCircle className="h-3 w-3" />
+                  Cancelled
+                </Button>
+              </div>
             </div>
           </div>
 

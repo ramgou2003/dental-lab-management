@@ -9,6 +9,59 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          id: string
+          patient_name: string
+          patient_id: string | null
+          title: string
+          start_time: string
+          end_time: string
+          appointment_type: string
+          status: string
+          date: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_name: string
+          patient_id?: string | null
+          title: string
+          start_time: string
+          end_time: string
+          appointment_type: string
+          status?: string
+          date: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_name?: string
+          patient_id?: string | null
+          title?: string
+          start_time?: string
+          end_time?: string
+          appointment_type?: string
+          status?: string
+          date?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       data_collection_sheets: {
         Row: {
           id: string
