@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { PatientAutocomplete } from "@/components/PatientAutocomplete";
-import { User, FlaskConical, Sparkles, Loader2 } from "lucide-react";
+import { User, FlaskConical } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useLabScriptComments } from "@/hooks/useLabScriptComments";
 
@@ -17,7 +17,7 @@ interface NewLabScriptFormProps {
 }
 
 export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormProps) {
-  const [isEnhancing, setIsEnhancing] = useState(false);
+
   const { addComment } = useLabScriptComments();
 
   // Hardcoded dropdown options
@@ -284,179 +284,7 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     return `${month}-${day}-${year}`;
   };
 
-  // AI Enhancement function
-  const enhanceInstructions = async () => {
-    if (!formData.instructions.trim()) {
-      toast.error("Please enter some instructions first");
-      return;
-    }
 
-    setIsEnhancing(true);
-    try {
-      const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
-
-      console.log('🔍 Detailed Environment check:', {
-        hasOpenRouterKey: !!OPENROUTER_API_KEY,
-        openRouterKeyLength: OPENROUTER_API_KEY?.length,
-        openRouterKeyStart: OPENROUTER_API_KEY?.substring(0, 15) + '...',
-        allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')),
-        currentOrigin: window.location.origin,
-        isProduction: import.meta.env.PROD
-      });
-
-      // Check if OpenRouter API key is configured
-      if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY === 'your_openrouter_api_key_here') {
-        console.error('❌ OpenRouter API key not configured properly');
-        toast.error("AI enhancement unavailable. Please configure OpenRouter API key in .env file.");
-        return;
-      }
-
-      // Validate OpenRouter API key format
-      if (!OPENROUTER_API_KEY.startsWith('sk-or-v1-')) {
-        console.error('❌ Invalid OpenRouter API key format. Expected format: sk-or-v1-...');
-        toast.error("Invalid OpenRouter API key format.");
-        return;
-      }
-
-      console.log('✅ API key validation passed, making request...');
-
-      // Test API key with a simple request first
-      try {
-        console.log('🧪 Testing API key with simple request...');
-        const testResponse = await fetch('https://openrouter.ai/api/v1/models', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-          }
-        });
-
-        if (testResponse.ok) {
-          console.log('✅ API key test successful');
-        } else {
-          console.error('❌ API key test failed:', {
-            status: testResponse.status,
-            statusText: testResponse.statusText
-          });
-          toast.error(`OpenRouter API key test failed: ${testResponse.status}`);
-          return;
-        }
-      } catch (testError) {
-        console.error('💥 API key test error:', testError);
-        toast.error("OpenRouter API key test failed. Please check your API key.");
-        return;
-      }
-
-      let lastError = null;
-
-      // Use only Google Gemini 2.0 Flash (FREE) from OpenRouter
-      // Let's try the standard model name without :free suffix first
-      const model = 'google/gemini-2.0-flash-exp';
-
-      try {
-        console.log(`🔄 Using model: ${model} (FREE Gemini 2.0)`);
-
-        const requestBody = {
-          model: model,
-            messages: [{
-              role: 'user',
-              content: `Please enhance these dental lab instructions to be more professional: "${formData.instructions}"`
-            }],
-            max_tokens: 200,
-            temperature: 0.1
-          };
-
-          console.log('📤 Request details:', {
-            url: 'https://openrouter.ai/api/v1/chat/completions',
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${OPENROUTER_API_KEY.substring(0, 15)}...`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': window.location.origin,
-              'X-Title': 'Dental Lab Management System'
-            },
-            bodySize: JSON.stringify(requestBody).length,
-            model: requestBody.model,
-            isFreeModel: model.includes(':free')
-          });
-
-          // Try with minimal headers first for free models
-          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': window.location.origin || 'https://your-app.vercel.app',
-              'X-Title': 'Dental Lab Management System'
-            },
-            body: JSON.stringify(requestBody)
-          });
-
-          console.log('📡 Response status:', response.status);
-          console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ Model ${model} failed:`, {
-              status: response.status,
-              statusText: response.statusText,
-              errorText: errorText,
-              headers: Object.fromEntries(response.headers.entries()),
-              requestHeaders: {
-                'Authorization': `Bearer ${OPENROUTER_API_KEY.substring(0, 15)}...`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': window.location.origin,
-                'X-Title': 'Dental Lab Management System'
-              }
-            });
-
-            // Provide specific error messages for Gemini 2.0
-            if (response.status === 401) {
-              toast.error("OpenRouter API key authentication failed. Please check your API key.");
-            } else if (response.status === 403) {
-              toast.error("Access forbidden to Gemini 2.0 Flash. Check your OpenRouter account permissions.");
-            } else if (response.status === 429) {
-              toast.error("Rate limit exceeded for Gemini 2.0 Flash. Please try again later.");
-            } else if (response.status >= 500) {
-              toast.error("Gemini 2.0 Flash service temporarily unavailable. Please try again.");
-            } else {
-              toast.error(`Gemini 2.0 Flash Error: ${response.status} - ${errorText}`);
-            }
-
-            throw new Error(`Gemini 2.0 Flash: ${response.status} - ${errorText}`);
-          }
-
-          const data = await response.json();
-          console.log(`✅ Gemini 2.0 Flash succeeded:`, data);
-          const enhancedText = data.choices?.[0]?.message?.content;
-
-          if (enhancedText) {
-            handleInputChange("instructions", enhancedText.trim());
-            toast.success("Instructions enhanced with AI! (Google Gemini 2.0 Flash - FREE!)");
-            return; // Success! Exit the function
-          } else {
-            console.error(`❌ No enhanced text from Gemini 2.0 Flash:`, data);
-            throw new Error('No enhanced text received from Gemini 2.0 Flash');
-          }
-        } catch (error) {
-          console.error(`💥 Error with Gemini 2.0 Flash:`, error);
-          throw error;
-        }
-    } catch (error) {
-      console.error('💥 Error enhancing instructions:', {
-        error: error,
-        message: error.message,
-        stack: error.stack
-      });
-
-      // Only show generic error if we haven't already shown a specific one
-      if (!error.message.includes('API Error:')) {
-        toast.error("AI enhancement failed. Please try again.");
-      }
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
 
   const handleCancel = () => {
     // Reset form
@@ -925,29 +753,7 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
           {/* Instructions & Notes */}
           <div className="space-y-4">
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label htmlFor="instructions">Special Instructions *</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={enhanceInstructions}
-                  disabled={isEnhancing || !formData.instructions.trim()}
-                  className="flex items-center gap-2 text-xs"
-                >
-                  {isEnhancing ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Enhancing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3 w-3" />
-                      Enhance with AI
-                    </>
-                  )}
-                </Button>
-              </div>
+              <Label htmlFor="instructions">Special Instructions *</Label>
               <Textarea
                 id="instructions"
                 value={formData.instructions}
