@@ -83,8 +83,42 @@ export function usePatientManufacturingItems(patientId: string | undefined) {
     }
   };
 
+  // Load patient manufacturing items and set up real-time subscription
   useEffect(() => {
     fetchPatientManufacturingItems();
+
+    // Subscribe to real-time changes only if supabase.channel is available and patientId exists
+    let subscription: any = null;
+
+    if (patientId && typeof supabase.channel === 'function') {
+      subscription = supabase
+        .channel(`patient_manufacturing_items_${patientId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'manufacturing_items'
+          },
+          (payload) => {
+            console.log('🔄 Real-time patient manufacturing item change received:', payload.eventType, payload);
+
+            // We need to check if this change affects this patient
+            // Since we filter by patient_name, we need to refetch to be safe
+            // or implement more complex filtering logic
+            fetchPatientManufacturingItems();
+          }
+        )
+        .subscribe((status) => {
+          console.log('📡 Patient manufacturing items real-time subscription status:', status);
+        });
+    }
+
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
   }, [patientId]);
 
   return {

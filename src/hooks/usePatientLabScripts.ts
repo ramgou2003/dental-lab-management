@@ -125,8 +125,63 @@ export function usePatientLabScripts(patientId: string | undefined) {
     }
   };
 
+  // Load patient lab scripts and set up real-time subscription
   useEffect(() => {
     fetchPatientLabScripts();
+
+    // Subscribe to real-time changes only if supabase.channel is available and patientId exists
+    let subscription: any = null;
+
+    if (patientId && typeof supabase.channel === 'function') {
+      subscription = supabase
+        .channel(`patient_lab_scripts_${patientId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'lab_scripts',
+            filter: `patient_id=eq.${patientId}`
+          },
+          (payload) => {
+            console.log('🔄 Real-time patient lab script change received:', payload.eventType, payload);
+
+            // Handle different types of changes efficiently
+            if (payload.eventType === 'INSERT' && payload.new) {
+              // Add new lab script to existing list
+              setLabScripts(prev => {
+                // Check if script already exists to avoid duplicates
+                if (prev.some(script => script.id === payload.new.id)) {
+                  return prev;
+                }
+                // Insert at the beginning (most recent first)
+                return [payload.new as LabScript, ...prev];
+              });
+
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Update specific lab script in the list
+              setLabScripts(prev =>
+                prev.map(script =>
+                  script.id === payload.new.id ? payload.new as LabScript : script
+                )
+              );
+
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Remove deleted lab script from the list
+              setLabScripts(prev => prev.filter(script => script.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('📡 Patient lab scripts real-time subscription status:', status);
+        });
+    }
+
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
   }, [patientId]);
 
   return {

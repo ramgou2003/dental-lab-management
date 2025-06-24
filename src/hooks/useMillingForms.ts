@@ -183,11 +183,39 @@ export function useMillingForms() {
             table: 'milling_forms'
           },
           (payload) => {
-            console.log('Milling forms change received:', payload);
-            fetchMillingForms(); // Refetch data when changes occur
+            console.log('🔄 Real-time milling form change received:', payload.eventType, payload);
+
+            // Handle different types of changes efficiently
+            if (payload.eventType === 'INSERT' && payload.new) {
+              // Add new milling form to existing list
+              setMillingForms(prev => {
+                // Check if form already exists to avoid duplicates
+                if (prev.some(form => form.id === payload.new.id)) {
+                  return prev;
+                }
+                // Insert at the beginning (most recent first)
+                return [payload.new as MillingForm, ...prev];
+              });
+
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Update specific milling form in the list
+              setMillingForms(prev =>
+                prev.map(form =>
+                  form.id === payload.new.id ? payload.new as MillingForm : form
+                )
+              );
+
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Remove deleted milling form from the list
+              setMillingForms(prev => prev.filter(form => form.id !== payload.old.id));
+            }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('📡 Milling forms real-time subscription status:', status);
+        });
+    } else {
+      console.warn('⚠️ Supabase real-time not available - milling forms will not update in real-time');
     }
 
     return () => {

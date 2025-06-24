@@ -168,8 +168,21 @@ export function useLabScripts() {
 
       if (error) throw error;
 
-      // Refresh the list
-      await fetchLabScripts();
+      // Immediately update local state for the user who created it
+      const newLabScript: LabScript = {
+        ...data,
+        comments: []
+      };
+
+      setLabScripts(prev => {
+        // Check if script already exists to avoid duplicates
+        if (prev.some(script => script.id === newLabScript.id)) {
+          return prev;
+        }
+        // Insert at the beginning (most recent first)
+        return [newLabScript, ...prev];
+      });
+
       return data;
     } catch (err) {
       console.error('Error adding lab script:', err);
@@ -188,8 +201,15 @@ export function useLabScripts() {
 
       if (error) throw error;
 
-      // Refresh the list
-      await fetchLabScripts();
+      // Immediately update local state for the user who updated it
+      setLabScripts(prev =>
+        prev.map(script =>
+          script.id === id
+            ? { ...script, ...updates }
+            : script
+        )
+      );
+
       return data;
     } catch (err) {
       console.error('Error updating lab script:', err);
@@ -206,16 +226,74 @@ export function useLabScripts() {
 
       if (error) throw error;
 
-      // Refresh the list
-      await fetchLabScripts();
+      // Immediately update local state for the user who deleted it
+      setLabScripts(prev => prev.filter(script => script.id !== id));
     } catch (err) {
       console.error('Error deleting lab script:', err);
       throw err;
     }
   };
 
+  // Load lab scripts and set up real-time subscription
   useEffect(() => {
     fetchLabScripts();
+
+    // Subscribe to real-time changes only if supabase.channel is available
+    let subscription: any = null;
+
+    if (typeof supabase.channel === 'function') {
+      subscription = supabase
+        .channel('lab_scripts_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'lab_scripts'
+          },
+          (payload) => {
+            console.log('🔄 Real-time lab script change received:', payload.eventType, payload);
+
+            // Handle different types of changes efficiently
+            if (payload.eventType === 'INSERT' && payload.new) {
+              // Add new lab script to existing list
+              setLabScripts(prev => {
+                // Check if script already exists to avoid duplicates
+                if (prev.some(script => script.id === payload.new.id)) {
+                  return prev;
+                }
+                // Insert at the beginning (most recent first)
+                return [{ ...payload.new, comments: [] } as LabScript, ...prev];
+              });
+
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Update specific lab script in the list
+              setLabScripts(prev =>
+                prev.map(script =>
+                  script.id === payload.new.id
+                    ? { ...payload.new, comments: script.comments || [] } as LabScript
+                    : script
+                )
+              );
+
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Remove deleted lab script from the list
+              setLabScripts(prev => prev.filter(script => script.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('📡 Lab scripts real-time subscription status:', status);
+        });
+    } else {
+      console.warn('⚠️ Supabase real-time not available - lab scripts will not update in real-time');
+    }
+
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   return {

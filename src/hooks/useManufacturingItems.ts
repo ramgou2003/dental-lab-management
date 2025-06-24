@@ -219,11 +219,39 @@ export function useManufacturingItems() {
             table: 'manufacturing_items'
           },
           (payload) => {
-            console.log('Manufacturing items change received:', payload);
-            fetchManufacturingItems(); // Refetch data when changes occur
+            console.log('🔄 Real-time manufacturing item change received:', payload.eventType, payload);
+
+            // Handle different types of changes efficiently
+            if (payload.eventType === 'INSERT' && payload.new) {
+              // Add new manufacturing item to existing list
+              setManufacturingItems(prev => {
+                // Check if item already exists to avoid duplicates
+                if (prev.some(item => item.id === payload.new.id)) {
+                  return prev;
+                }
+                // Insert at the beginning (most recent first)
+                return [payload.new as ManufacturingItem, ...prev];
+              });
+
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Update specific manufacturing item in the list
+              setManufacturingItems(prev =>
+                prev.map(item =>
+                  item.id === payload.new.id ? payload.new as ManufacturingItem : item
+                )
+              );
+
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Remove deleted manufacturing item from the list
+              setManufacturingItems(prev => prev.filter(item => item.id !== payload.old.id));
+            }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('📡 Manufacturing items real-time subscription status:', status);
+        });
+    } else {
+      console.warn('⚠️ Supabase real-time not available - manufacturing items will not update in real-time');
     }
 
     return () => {

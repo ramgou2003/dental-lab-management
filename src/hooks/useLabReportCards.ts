@@ -228,8 +228,67 @@ export function useLabReportCards() {
     }
   };
 
+  // Load lab report cards and set up real-time subscription
   useEffect(() => {
     fetchLabReportCards();
+
+    // Subscribe to real-time changes only if supabase.channel is available
+    let subscription: any = null;
+
+    if (typeof supabase.channel === 'function') {
+      subscription = supabase
+        .channel('lab_report_cards_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'lab_report_cards'
+          },
+          (payload) => {
+            console.log('🔄 Real-time lab report card change received:', payload.eventType, payload);
+
+            // Handle different types of changes efficiently
+            if (payload.eventType === 'INSERT' && payload.new) {
+              // Add new lab report card to existing list
+              setLabReportCards(prev => {
+                // Check if report card already exists to avoid duplicates
+                if (prev.some(card => card.id === payload.new.id)) {
+                  return prev;
+                }
+                // Insert in correct position based on submitted_at (most recent first)
+                const newList = [payload.new as LabReportCard, ...prev];
+                return newList.sort((a, b) =>
+                  new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+                );
+              });
+
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Update specific lab report card in the list
+              setLabReportCards(prev =>
+                prev.map(card =>
+                  card.id === payload.new.id ? payload.new as LabReportCard : card
+                )
+              );
+
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Remove deleted lab report card from the list
+              setLabReportCards(prev => prev.filter(card => card.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('📡 Lab report cards real-time subscription status:', status);
+        });
+    } else {
+      console.warn('⚠️ Supabase real-time not available - lab report cards will not update in real-time');
+    }
+
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   return {

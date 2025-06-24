@@ -243,8 +243,67 @@ export function useClinicalReportCards() {
     }
   }, []);
 
+  // Load clinical report cards and set up real-time subscription
   useEffect(() => {
     fetchClinicalReportCards();
+
+    // Subscribe to real-time changes only if supabase.channel is available
+    let subscription: any = null;
+
+    if (typeof supabase.channel === 'function') {
+      subscription = supabase
+        .channel('clinical_report_cards_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'clinical_report_cards'
+          },
+          (payload) => {
+            console.log('🔄 Real-time clinical report card change received:', payload.eventType, payload);
+
+            // Handle different types of changes efficiently
+            if (payload.eventType === 'INSERT' && payload.new) {
+              // Add new clinical report card to existing list
+              setClinicalReportCards(prev => {
+                // Check if report card already exists to avoid duplicates
+                if (prev.some(card => card.id === payload.new.id)) {
+                  return prev;
+                }
+                // Insert in correct position based on submitted_at (most recent first)
+                const newList = [payload.new as ClinicalReportCard, ...prev];
+                return newList.sort((a, b) =>
+                  new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+                );
+              });
+
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Update specific clinical report card in the list
+              setClinicalReportCards(prev =>
+                prev.map(card =>
+                  card.id === payload.new.id ? payload.new as ClinicalReportCard : card
+                )
+              );
+
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Remove deleted clinical report card from the list
+              setClinicalReportCards(prev => prev.filter(card => card.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('📡 Clinical report cards real-time subscription status:', status);
+        });
+    } else {
+      console.warn('⚠️ Supabase real-time not available - clinical report cards will not update in real-time');
+    }
+
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   return {

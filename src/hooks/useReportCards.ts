@@ -86,8 +86,21 @@ export function useReportCards() {
 
       if (error) throw error;
 
-      // Refresh the list
-      await fetchReportCards();
+      // Immediately update local state for the user who updated it
+      setReportCards(prev =>
+        prev.map(card =>
+          card.id === reportCardId
+            ? {
+                ...card,
+                lab_report_status: status,
+                lab_report_data: reportData,
+                lab_report_completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            : card
+        )
+      );
+
       return data;
     } catch (err) {
       console.error('Error updating lab report status:', err);
@@ -178,8 +191,21 @@ export function useReportCards() {
 
       if (error) throw error;
 
-      // Refresh the list
-      await fetchReportCards();
+      // Immediately update local state for the user who updated it
+      setReportCards(prev =>
+        prev.map(card =>
+          card.id === reportCardId
+            ? {
+                ...card,
+                clinical_report_status: status,
+                clinical_report_data: reportData,
+                clinical_report_completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            : card
+        )
+      );
+
       return data;
     } catch (err) {
       console.error('Error updating clinical report status:', err);
@@ -187,8 +213,64 @@ export function useReportCards() {
     }
   };
 
+  // Load report cards and set up real-time subscription
   useEffect(() => {
     fetchReportCards();
+
+    // Subscribe to real-time changes only if supabase.channel is available
+    let subscription: any = null;
+
+    if (typeof supabase.channel === 'function') {
+      subscription = supabase
+        .channel('report_cards_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'report_cards'
+          },
+          (payload) => {
+            console.log('🔄 Real-time report card change received:', payload.eventType, payload);
+
+            // Handle different types of changes efficiently
+            if (payload.eventType === 'INSERT' && payload.new) {
+              // Add new report card to existing list
+              setReportCards(prev => {
+                // Check if report card already exists to avoid duplicates
+                if (prev.some(card => card.id === payload.new.id)) {
+                  return prev;
+                }
+                // Insert at the beginning (most recent first)
+                return [payload.new as ReportCard, ...prev];
+              });
+
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Update specific report card in the list
+              setReportCards(prev =>
+                prev.map(card =>
+                  card.id === payload.new.id ? payload.new as ReportCard : card
+                )
+              );
+
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Remove deleted report card from the list
+              setReportCards(prev => prev.filter(card => card.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log('📡 Report cards real-time subscription status:', status);
+        });
+    } else {
+      console.warn('⚠️ Supabase real-time not available - report cards will not update in real-time');
+    }
+
+    return () => {
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   return {
