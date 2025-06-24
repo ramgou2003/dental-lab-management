@@ -5,11 +5,13 @@ The appointment system now supports real-time updates across all devices using S
 
 ## How It Works
 
-### 1. Real-Time Subscription
-The `useAppointments` hook now includes a real-time subscription that:
+### 1. Optimized Real-Time Subscription
+The `useAppointments` hook now includes an optimized real-time subscription that:
 - Listens for all changes (`INSERT`, `UPDATE`, `DELETE`) on the `appointments` table
-- Automatically refetches appointment data when changes occur
+- **Efficiently updates only the specific appointment that changed** (no full page refresh)
 - Maintains consistent state across all connected devices
+- Provides immediate feedback for the user making changes
+- Automatically sorts appointments by date and time
 
 ### 2. Database Configuration
 The appointments table has been configured for real-time:
@@ -24,7 +26,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE appointments;
 ### 3. Implementation Details
 - **Subscription Channel**: `appointments_changes`
 - **Events Monitored**: `*` (all events: INSERT, UPDATE, DELETE)
-- **Auto-Refetch**: When any change is detected, the hook automatically refetches all appointments
+- **Optimized Updates**:
+  - `INSERT`: Adds new appointment to existing list in correct sorted position
+  - `UPDATE`: Updates only the specific appointment that changed
+  - `DELETE`: Removes only the deleted appointment from the list
+- **Immediate Feedback**: User who makes changes sees them instantly
+- **Automatic Sorting**: Appointments are automatically sorted by date and time
+- **Duplicate Prevention**: Checks prevent duplicate appointments in the list
 - **Error Handling**: Graceful fallback if real-time is unavailable
 
 ## Testing Real-Time Functionality
@@ -57,11 +65,13 @@ The implementation includes helpful console logging:
 - **Warnings**: Alerts if real-time is not available
 
 ## Benefits
-1. **Immediate Updates**: No need to refresh pages or manually sync
-2. **Multi-User Support**: Perfect for dental offices with multiple staff members
-3. **Consistent State**: All devices always show the same appointment data
-4. **Better UX**: Seamless experience across all devices
-5. **Conflict Prevention**: Reduces scheduling conflicts from outdated information
+1. **Immediate Updates**: No page refresh - only the specific appointment updates
+2. **Smooth Performance**: No full page reloads, just targeted updates
+3. **Multi-User Support**: Perfect for dental offices with multiple staff members
+4. **Consistent State**: All devices always show the same appointment data
+5. **Better UX**: Seamless experience with instant feedback
+6. **Conflict Prevention**: Reduces scheduling conflicts from outdated information
+7. **Optimized Bandwidth**: Only changed data is transmitted, not entire lists
 
 ## Fallback Behavior
 If real-time subscriptions are not available:

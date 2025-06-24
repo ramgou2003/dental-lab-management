@@ -89,8 +89,74 @@ export function useAppointments() {
           },
           (payload) => {
             console.log('🔄 Real-time appointment change received:', payload.eventType, payload);
-            // Refetch data when changes occur to ensure all devices stay in sync
-            fetchAppointments();
+
+            // Handle different types of changes efficiently
+            if (payload.eventType === 'INSERT' && payload.new) {
+              // Transform new appointment data to match our interface
+              const newAppointment: Appointment = {
+                id: payload.new.id,
+                title: payload.new.title,
+                patient: payload.new.patient_name,
+                startTime: payload.new.start_time,
+                endTime: payload.new.end_time,
+                type: payload.new.appointment_type,
+                status: payload.new.status as Appointment['status'],
+                date: payload.new.date,
+                notes: payload.new.notes || undefined,
+                createdAt: payload.new.created_at,
+                updatedAt: payload.new.updated_at
+              };
+
+              // Add new appointment to existing list
+              setAppointments(prev => {
+                // Check if appointment already exists to avoid duplicates
+                if (prev.some(apt => apt.id === newAppointment.id)) {
+                  return prev;
+                }
+                // Insert in correct position based on date and time
+                const newList = [...prev, newAppointment];
+                return newList.sort((a, b) => {
+                  if (a.date === b.date) {
+                    return a.startTime.localeCompare(b.startTime);
+                  }
+                  return a.date.localeCompare(b.date);
+                });
+              });
+
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Transform updated appointment data
+              const updatedAppointment: Appointment = {
+                id: payload.new.id,
+                title: payload.new.title,
+                patient: payload.new.patient_name,
+                startTime: payload.new.start_time,
+                endTime: payload.new.end_time,
+                type: payload.new.appointment_type,
+                status: payload.new.status as Appointment['status'],
+                date: payload.new.date,
+                notes: payload.new.notes || undefined,
+                createdAt: payload.new.created_at,
+                updatedAt: payload.new.updated_at
+              };
+
+              // Update specific appointment in the list
+              setAppointments(prev => {
+                const newList = prev.map(apt =>
+                  apt.id === updatedAppointment.id ? updatedAppointment : apt
+                );
+                // Re-sort in case date/time changed
+                return newList.sort((a, b) => {
+                  if (a.date === b.date) {
+                    return a.startTime.localeCompare(b.startTime);
+                  }
+                  return a.date.localeCompare(b.date);
+                });
+              });
+
+            } else if (payload.eventType === 'DELETE' && payload.old) {
+              // Remove deleted appointment from the list
+              setAppointments(prev => prev.filter(apt => apt.id !== payload.old.id));
+            }
           }
         )
         .subscribe((status) => {
@@ -128,13 +194,43 @@ export function useAppointments() {
         throw error;
       }
 
+      // Transform the returned data to match our interface
+      const newAppointment: Appointment = {
+        id: data.id,
+        title: data.title,
+        patient: data.patient_name,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        type: data.appointment_type,
+        status: data.status as Appointment['status'],
+        date: data.date,
+        notes: data.notes || undefined,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+
+      // Immediately update local state for the user who created it
+      setAppointments(prev => {
+        // Check if appointment already exists to avoid duplicates
+        if (prev.some(apt => apt.id === newAppointment.id)) {
+          return prev;
+        }
+        // Insert in correct position based on date and time
+        const newList = [...prev, newAppointment];
+        return newList.sort((a, b) => {
+          if (a.date === b.date) {
+            return a.startTime.localeCompare(b.startTime);
+          }
+          return a.date.localeCompare(b.date);
+        });
+      });
+
       toast({
         title: "Success",
         description: "Appointment created successfully",
       });
 
-      // Real-time subscription will handle state updates automatically
-      return data;
+      return newAppointment;
     } catch (err) {
       console.error('Error adding appointment:', err);
       toast({
@@ -170,12 +266,39 @@ export function useAppointments() {
         throw error;
       }
 
+      // Transform the returned data to match our interface
+      const updatedAppointment: Appointment = {
+        id: data.id,
+        title: data.title,
+        patient: data.patient_name,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        type: data.appointment_type,
+        status: data.status as Appointment['status'],
+        date: data.date,
+        notes: data.notes || undefined,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+
+      // Immediately update local state for the user who updated it
+      setAppointments(prev => {
+        const newList = prev.map(apt =>
+          apt.id === updatedAppointment.id ? updatedAppointment : apt
+        );
+        // Re-sort in case date/time changed
+        return newList.sort((a, b) => {
+          if (a.date === b.date) {
+            return a.startTime.localeCompare(b.startTime);
+          }
+          return a.date.localeCompare(b.date);
+        });
+      });
+
       toast({
         title: "Success",
         description: "Appointment updated successfully",
       });
-
-      // Real-time subscription will handle state updates automatically
     } catch (err) {
       console.error('Error updating appointment:', err);
       toast({
@@ -198,12 +321,13 @@ export function useAppointments() {
         throw error;
       }
 
+      // Immediately update local state for the user who deleted it
+      setAppointments(prev => prev.filter(apt => apt.id !== id));
+
       toast({
         title: "Success",
         description: "Appointment deleted successfully",
       });
-
-      // Real-time subscription will handle state updates automatically
     } catch (err) {
       console.error('Error deleting appointment:', err);
       toast({
