@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,22 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     ]
   };
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
+  const [selectionPosition, setSelectionPosition] = useState({ start: 0, end: 0 });
+  const [showSelectionShortcut, setShowSelectionShortcut] = useState(false);
+  const [shortcutPosition, setShortcutPosition] = useState({ x: 0, y: 0 });
+
+  // Hide selection shortcut when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowSelectionShortcut(false);
+    };
+
+    if (showSelectionShortcut) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showSelectionShortcut]);
   const [formData, setFormData] = useState({
     patientId: "",
     patientName: "",
@@ -286,7 +302,74 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     return `${month}-${day}-${year}`;
   };
 
-  // AI Enhancement function using Google Gemini
+  // Handle text selection in instructions field
+  const handleTextSelection = (event: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const textarea = event.currentTarget;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.substring(start, end);
+
+    if (selected.trim().length > 0) {
+      setSelectedText(selected);
+      setSelectionPosition({ start, end });
+
+      // Calculate position for the shortcut button
+      const rect = textarea.getBoundingClientRect();
+      const textareaStyle = window.getComputedStyle(textarea);
+      const lineHeight = parseInt(textareaStyle.lineHeight);
+
+      // Approximate position based on selection
+      setShortcutPosition({
+        x: rect.left + 10,
+        y: rect.top + 30
+      });
+
+      setShowSelectionShortcut(true);
+    } else {
+      setShowSelectionShortcut(false);
+      setSelectedText("");
+    }
+  };
+
+  // AI Enhancement function for selected text
+  const enhanceSelectedText = async () => {
+    if (!selectedText.trim()) {
+      toast.error("No text selected for enhancement.");
+      return;
+    }
+
+    setIsEnhancing(true);
+    setShowSelectionShortcut(false);
+
+    try {
+      console.log('🤖 Enhancing selected text with Google Gemini...');
+      const enhancedText = await enhanceLabInstructions(selectedText);
+
+      // Replace the selected text with enhanced version
+      const currentInstructions = formData.instructions;
+      const newInstructions =
+        currentInstructions.substring(0, selectionPosition.start) +
+        enhancedText +
+        currentInstructions.substring(selectionPosition.end);
+
+      handleInputChange("instructions", newInstructions);
+      toast.success("Selected text professionally rewritten!");
+
+    } catch (error) {
+      console.error('💥 Error enhancing selected text:', error);
+
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("AI enhancement failed. Please try again.");
+      }
+    } finally {
+      setIsEnhancing(false);
+      setSelectedText("");
+    }
+  };
+
+  // AI Enhancement function for entire text
   const enhanceInstructions = async () => {
     const currentInstructions = formData.instructions.trim();
 
@@ -814,13 +897,50 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
                   )}
                 </Button>
               </div>
-              <Textarea
-                id="instructions"
-                value={formData.instructions}
-                onChange={(e) => handleInputChange("instructions", e.target.value)}
-                placeholder="Enter any special instructions for the lab..."
-                rows={3}
-              />
+              <div className="relative">
+                <Textarea
+                  id="instructions"
+                  value={formData.instructions}
+                  onChange={(e) => handleInputChange("instructions", e.target.value)}
+                  onSelect={handleTextSelection}
+                  onMouseUp={handleTextSelection}
+                  placeholder="Enter any special instructions for the lab..."
+                  rows={3}
+                />
+
+                {/* Floating AI Shortcut for Selected Text */}
+                {showSelectionShortcut && (
+                  <div
+                    className="absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2"
+                    style={{
+                      left: `${shortcutPosition.x}px`,
+                      top: `${shortcutPosition.y}px`,
+                      transform: 'translate(-50%, -100%)'
+                    }}
+                  >
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={enhanceSelectedText}
+                      disabled={isEnhancing}
+                      className="flex items-center gap-2 text-xs whitespace-nowrap"
+                    >
+                      {isEnhancing ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Rewriting...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3" />
+                          Rewrite Selected
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <Label htmlFor="notes">Additional Notes</Label>
