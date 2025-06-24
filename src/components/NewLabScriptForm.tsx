@@ -320,11 +320,25 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
       console.log('✅ API key validation passed, making request...');
 
-      const requestBody = {
-        model: 'anthropic/claude-3-haiku', // Fast and cost-effective model
-        messages: [{
-          role: 'user',
-          content: `Please rewrite the following dental lab script instructions. This is clinical staff giving design instructions to the designer for patient appliance modifications or new designs:
+      // Try multiple models in order of preference
+      const models = [
+        'openai/gpt-3.5-turbo',
+        'anthropic/claude-3-haiku',
+        'meta-llama/llama-3.1-8b-instruct:free',
+        'microsoft/wizardlm-2-8x22b'
+      ];
+
+      let lastError = null;
+
+      for (const model of models) {
+        try {
+          console.log(`🔄 Trying model: ${model}`);
+
+          const requestBody = {
+            model: model,
+            messages: [{
+              role: 'user',
+              content: `Please rewrite the following dental lab script instructions. This is clinical staff giving design instructions to the designer for patient appliance modifications or new designs:
 
 "${formData.instructions}"
 
@@ -361,73 +375,72 @@ Both designs require expedited completion.
 Thank you."
 
 Please respond with only the professionally enhanced text, no additional commentary.`
-          }],
-          max_tokens: 500,
-          temperature: 0.3
-        };
+            }],
+            max_tokens: 500,
+            temperature: 0.3
+          };
 
-      console.log('📤 Request details:', {
-        url: 'https://openrouter.ai/api/v1/chat/completions',
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_KEY.substring(0, 15)}...`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Dental Lab Enhancement'
-        },
-        bodySize: JSON.stringify(requestBody).length,
-        model: requestBody.model
-      });
+          console.log('📤 Request details:', {
+            url: 'https://openrouter.ai/api/v1/chat/completions',
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${API_KEY.substring(0, 15)}...`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': window.location.origin,
+              'X-Title': 'Dental Lab Management System'
+            },
+            bodySize: JSON.stringify(requestBody).length,
+            model: requestBody.model
+          });
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Dental Lab Enhancement'
-        },
-        body: JSON.stringify(requestBody)
-      });
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${API_KEY}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': window.location.origin,
+              'X-Title': 'Dental Lab Management System'
+            },
+            body: JSON.stringify(requestBody)
+          });
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+          console.log('📡 Response status:', response.status);
+          console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error Response:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorText: errorText,
-          headers: Object.fromEntries(response.headers.entries())
-        });
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Model ${model} failed:`, {
+              status: response.status,
+              statusText: response.statusText,
+              errorText: errorText
+            });
 
-        // Provide more specific error messages
-        if (response.status === 401) {
-          toast.error("Invalid OpenRouter API key. Please check your API key.");
-        } else if (response.status === 403) {
-          toast.error("OpenRouter API access forbidden. Check your account status.");
-        } else if (response.status === 429) {
-          toast.error("Rate limit exceeded. Please try again later.");
-        } else if (response.status >= 500) {
-          toast.error("OpenRouter service temporarily unavailable. Please try again.");
-        } else {
-          toast.error(`API Error: ${response.status} - ${errorText}`);
+            lastError = new Error(`${model}: ${response.status} - ${errorText}`);
+            continue; // Try next model
+          }
+
+          const data = await response.json();
+          console.log(`✅ Model ${model} succeeded:`, data);
+          const enhancedText = data.choices?.[0]?.message?.content;
+
+          if (enhancedText) {
+            handleInputChange("instructions", enhancedText.trim());
+            toast.success(`Instructions enhanced with AI! (${model})`);
+            return; // Success! Exit the function
+          } else {
+            console.error(`❌ No enhanced text from ${model}:`, data);
+            lastError = new Error(`No enhanced text received from ${model}`);
+            continue; // Try next model
+          }
+        } catch (modelError) {
+          console.error(`💥 Error with model ${model}:`, modelError);
+          lastError = modelError;
+          continue; // Try next model
         }
-        throw new Error(`API Error: ${response.status} - ${errorText}`);
       }
 
-      const data = await response.json();
-      console.log('✅ API Response:', data);
-      const enhancedText = data.choices?.[0]?.message?.content;
-
-      if (enhancedText) {
-        handleInputChange("instructions", enhancedText.trim());
-        toast.success("Instructions enhanced with AI!");
-      } else {
-        console.error('❌ No enhanced text in response:', data);
-        throw new Error('No enhanced text received from API');
-      }
+      // If we get here, all models failed
+      throw lastError || new Error('All AI models failed');
     } catch (error) {
       console.error('💥 Error enhancing instructions:', {
         error: error,
