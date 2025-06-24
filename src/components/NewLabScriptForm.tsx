@@ -350,7 +350,8 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       let lastError = null;
 
       // Use only Google Gemini 2.0 Flash (FREE) from OpenRouter
-      const model = 'google/gemini-2.0-flash-exp:free';
+      // Let's try the standard model name without :free suffix first
+      const model = 'google/gemini-2.0-flash-exp';
 
       try {
         console.log(`🔄 Using model: ${model} (FREE Gemini 2.0)`);
@@ -359,46 +360,10 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
           model: model,
             messages: [{
               role: 'user',
-              content: `Please rewrite the following dental lab script instructions. This is clinical staff giving design instructions to the designer for patient appliance modifications or new designs:
-
-"${formData.instructions}"
-
-ENHANCEMENT RULES:
-- Keep ALL abbreviations and short forms EXACTLY as written (PTI, SDA, USDA, etc.)
-- Do NOT expand or elaborate any abbreviations
-- Keep ALL numbers, measurements, specifications unchanged
-- Keep ALL materials, shades, tooth numbers exactly as provided
-- Rephrase the entire text comprehensively
-- Use proper dental terminology and professional tone throughout
-- Make the tone consistently professional and polished
-- Correct grammar and improve sentence structure
-- Format content with proper layout and structure
-- Convert any lists into bullet points (•)
-- Write as clinical staff instructing designer on patient design requirements
-- End with only "Thank you." - nothing else
-- Preserve the original meaning and all technical terms
-
-Examples:
-Input: "need PTI for upper, shade A1, make fast, also check bite, use good material"
-Output: "Please design the following for the patient:
-• PTI for upper, shade A1, with expedited completion
-• Verify occlusal contacts during design
-• Utilize high-quality materials
-
-Thank you."
-
-Input: "patient needs crown tooth 8, bridge 14-16, both rush, modify existing design"
-Output: "Please modify the existing design and create:
-• Crown for tooth #8
-• Bridge for teeth #14-16
-Both designs require expedited completion.
-
-Thank you."
-
-Please respond with only the professionally enhanced text, no additional commentary.`
+              content: `Please enhance these dental lab instructions to be more professional: "${formData.instructions}"`
             }],
-            max_tokens: 500,
-            temperature: 0.3
+            max_tokens: 200,
+            temperature: 0.1
           };
 
           console.log('📤 Request details:', {
@@ -415,14 +380,14 @@ Please respond with only the professionally enhanced text, no additional comment
             isFreeModel: model.includes(':free')
           });
 
+          // Try with minimal headers first for free models
           const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
               'Content-Type': 'application/json',
-              'HTTP-Referer': window.location.origin || 'https://dental-lab-management.vercel.app',
-              'X-Title': 'Dental Lab Management System',
-              'Origin': window.location.origin || 'https://dental-lab-management.vercel.app'
+              'HTTP-Referer': window.location.origin || 'https://your-app.vercel.app',
+              'X-Title': 'Dental Lab Management System'
             },
             body: JSON.stringify(requestBody)
           });
