@@ -42,13 +42,19 @@ REWRITING REQUIREMENTS:
 - Structure content with bullet points for clarity when appropriate
 - Maintain professional, instructional tone throughout
 - Preserve all original technical requirements and specifications
-- End with "Thank you for your attention to these specifications."
+
+IMPORTANT - PRESERVE PERSONAL GREETINGS:
+- If the text starts with "Hi [Name]" or similar greeting, keep it EXACTLY as written
+- If the text ends with "Thank you, [Name]" or similar personal closing, keep it EXACTLY as written
+- Only rewrite the middle content (the actual dental instructions)
+- Do NOT add any generic closings if there's already a personal one
 
 Focus on:
 - Professional grammar and sentence structure
 - Clear, concise design instructions
 - Proper dental terminology usage
 - Maintaining all technical details exactly as specified
+- Preserving personal greetings and closings
 
 Respond with only the professionally rewritten instructions, no additional commentary.`;
 
