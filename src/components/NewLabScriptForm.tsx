@@ -320,12 +320,40 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
       console.log('✅ API key validation passed, making request...');
 
+      // Test API key with a simple request first
+      try {
+        console.log('🧪 Testing API key with simple request...');
+        const testResponse = await fetch('https://openrouter.ai/api/v1/models', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (testResponse.ok) {
+          console.log('✅ API key test successful');
+        } else {
+          console.error('❌ API key test failed:', {
+            status: testResponse.status,
+            statusText: testResponse.statusText
+          });
+          toast.error(`OpenRouter API key test failed: ${testResponse.status}`);
+          return;
+        }
+      } catch (testError) {
+        console.error('💥 API key test error:', testError);
+        toast.error("OpenRouter API key test failed. Please check your API key.");
+        return;
+      }
+
       let lastError = null;
 
       // Try multiple OpenRouter models, starting with free Gemini 2.0
       const models = [
         'google/gemini-2.0-flash-exp:free',  // FREE Gemini 2.0 - Latest and best!
         'meta-llama/llama-3.1-8b-instruct:free',  // FREE Llama
+        'google/gemini-flash-1.5:free',  // FREE Gemini 1.5 (alternative)
         'openai/gpt-3.5-turbo',  // Paid but reliable
         'anthropic/claude-3-haiku',  // Paid fallback
         'microsoft/wizardlm-2-8x22b'  // Additional fallback
