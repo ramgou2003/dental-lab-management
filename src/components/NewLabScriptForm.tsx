@@ -307,7 +307,7 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       const enhancedText = await enhanceLabInstructions(currentInstructions);
 
       handleInputChange("instructions", enhancedText);
-      toast.success("Instructions enhanced with AI! (Google Gemini 1.5 Flash - FREE!)");
+      toast.success("Design instructions professionally rewritten with proper dental terminology!");
 
     } catch (error) {
       console.error('💥 Error enhancing instructions:', error);
@@ -804,12 +804,12 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
                   {isEnhancing ? (
                     <>
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      Enhancing...
+                      Rewriting...
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-3 w-3" />
-                      Enhance with AI
+                      Professional Rewrite
                     </>
                   )}
                 </Button>

@@ -23,26 +23,29 @@ export const enhanceLabInstructions = async (instructions: string): Promise<stri
     // Use Gemini 1.5 Flash (free model with generous limits)
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
-    const prompt = `Please enhance these dental lab instructions to be more professional and clear while keeping all technical details exactly the same:
+    const prompt = `You are a professional dental laboratory communication specialist. Rewrite these dental design instructions to be professionally formatted with correct grammar and proper dental terminology:
 
 "${instructions}"
 
-ENHANCEMENT RULES:
-- Keep ALL abbreviations and short forms EXACTLY as written (PTI, SDA, USDA, etc.)
-- Do NOT expand or elaborate any abbreviations
-- Keep ALL numbers, measurements, specifications unchanged
-- Keep ALL materials, shades, tooth numbers exactly as provided
-- Rephrase the entire text comprehensively
-- Use proper dental terminology and professional tone throughout
-- Make the tone consistently professional and polished
-- Correct grammar and improve sentence structure
-- Format content with proper layout and structure
-- Convert any lists into bullet points (•)
-- Write as clinical staff instructing designer on patient design requirements
-- End with only "Thank you." - nothing else
-- Preserve the original meaning and all technical terms
+REWRITING REQUIREMENTS:
+- Correct all grammar, spelling, and punctuation errors
+- Use professional dental terminology and proper dental notations
+- Maintain ALL technical specifications exactly as provided (tooth numbers, materials, shades, measurements)
+- Keep ALL abbreviations unchanged (PTI, SDA, USDA, RPD, etc.)
+- Format as clear design instructions from clinical staff to lab technician
+- Use proper dental notation standards (tooth #8, teeth #14-16, etc.)
+- Structure content with bullet points for clarity when appropriate
+- Maintain professional, instructional tone throughout
+- Preserve all original technical requirements and specifications
+- End with "Thank you for your attention to these specifications."
 
-Please respond with only the professionally enhanced text, no additional commentary.`;
+Focus on:
+- Professional grammar and sentence structure
+- Clear, concise design instructions
+- Proper dental terminology usage
+- Maintaining all technical details exactly as specified
+
+Respond with only the professionally rewritten instructions, no additional commentary.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
