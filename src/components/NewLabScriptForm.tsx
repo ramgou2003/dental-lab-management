@@ -293,24 +293,28 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
     setIsEnhancing(true);
     try {
-      // Try Gemini first, then fallback to OpenRouter
-      const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
       const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 
       console.log('🔍 Detailed Environment check:', {
-        hasGeminiKey: !!GEMINI_API_KEY,
         hasOpenRouterKey: !!OPENROUTER_API_KEY,
-        geminiKeyLength: GEMINI_API_KEY?.length,
-        geminiKeyStart: GEMINI_API_KEY?.substring(0, 10) + '...',
+        openRouterKeyLength: OPENROUTER_API_KEY?.length,
+        openRouterKeyStart: OPENROUTER_API_KEY?.substring(0, 15) + '...',
         allEnvVars: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')),
         currentOrigin: window.location.origin,
         isProduction: import.meta.env.PROD
       });
 
-      // Check if at least one API key is configured
-      if (!GEMINI_API_KEY && !OPENROUTER_API_KEY) {
-        console.error('❌ No API keys configured');
-        toast.error("AI enhancement unavailable. Please configure Gemini or OpenRouter API key.");
+      // Check if OpenRouter API key is configured
+      if (!OPENROUTER_API_KEY || OPENROUTER_API_KEY === 'your_openrouter_api_key_here') {
+        console.error('❌ OpenRouter API key not configured properly');
+        toast.error("AI enhancement unavailable. Please configure OpenRouter API key in .env file.");
+        return;
+      }
+
+      // Validate OpenRouter API key format
+      if (!OPENROUTER_API_KEY.startsWith('sk-or-v1-')) {
+        console.error('❌ Invalid OpenRouter API key format. Expected format: sk-or-v1-...');
+        toast.error("Invalid OpenRouter API key format.");
         return;
       }
 
@@ -318,115 +322,21 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
       let lastError = null;
 
-      // Try Gemini first (free and reliable)
-      if (GEMINI_API_KEY) {
+      // Try multiple OpenRouter models, starting with free Gemini 2.0
+      const models = [
+        'google/gemini-2.0-flash-exp:free',  // FREE Gemini 2.0 - Latest and best!
+        'meta-llama/llama-3.1-8b-instruct:free',  // FREE Llama
+        'openai/gpt-3.5-turbo',  // Paid but reliable
+        'anthropic/claude-3-haiku',  // Paid fallback
+        'microsoft/wizardlm-2-8x22b'  // Additional fallback
+      ];
+
+      for (const model of models) {
         try {
-          console.log('🔄 Trying Google Gemini (free)...');
+          console.log(`🔄 Trying model: ${model}`);
 
-          const geminiPrompt = `Please rewrite the following dental lab script instructions. This is clinical staff giving design instructions to the designer for patient appliance modifications or new designs:
-
-"${formData.instructions}"
-
-ENHANCEMENT RULES:
-- Keep ALL abbreviations and short forms EXACTLY as written (PTI, SDA, USDA, etc.)
-- Do NOT expand or elaborate any abbreviations
-- Keep ALL numbers, measurements, specifications unchanged
-- Keep ALL materials, shades, tooth numbers exactly as provided
-- Rephrase the entire text comprehensively
-- Use proper dental terminology and professional tone throughout
-- Make the tone consistently professional and polished
-- Correct grammar and improve sentence structure
-- Format content with proper layout and structure
-- Convert any lists into bullet points (•)
-- Write as clinical staff instructing designer on patient design requirements
-- End with only "Thank you." - nothing else
-- Preserve the original meaning and all technical terms
-
-Examples:
-Input: "need PTI for upper, shade A1, make fast, also check bite, use good material"
-Output: "Please design the following for the patient:
-• PTI for upper, shade A1, with expedited completion
-• Verify occlusal contacts during design
-• Utilize high-quality materials
-
-Thank you."
-
-Please respond with only the professionally enhanced text, no additional commentary.`;
-
-          const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: geminiPrompt
-                }]
-              }],
-              generationConfig: {
-                temperature: 0.3,
-                maxOutputTokens: 500,
-              }
-            })
-          });
-
-          console.log('📡 Gemini Response status:', geminiResponse.status);
-
-          if (geminiResponse.ok) {
-            const geminiData = await geminiResponse.json();
-            console.log('✅ Gemini succeeded:', geminiData);
-
-            const enhancedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            if (enhancedText) {
-              handleInputChange("instructions", enhancedText.trim());
-              toast.success("Instructions enhanced with AI! (Google Gemini - Free)");
-              return; // Success! Exit the function
-            } else {
-              console.error('❌ No enhanced text from Gemini:', geminiData);
-              lastError = new Error('No enhanced text received from Gemini');
-            }
-          } else {
-            const errorText = await geminiResponse.text();
-            console.error('❌ Gemini failed:', {
-              status: geminiResponse.status,
-              statusText: geminiResponse.statusText,
-              errorText: errorText
-            });
-            lastError = new Error(`Gemini: ${geminiResponse.status} - ${errorText}`);
-          }
-        } catch (geminiError) {
-          console.error('💥 Error with Gemini:', geminiError);
-          lastError = geminiError;
-        }
-      }
-
-      // Fallback to OpenRouter if Gemini fails
-      if (OPENROUTER_API_KEY) {
-        console.log('🔄 Falling back to OpenRouter...');
-
-        // Validate OpenRouter API key format
-        if (!OPENROUTER_API_KEY.startsWith('sk-or-v1-')) {
-          console.error('❌ Invalid OpenRouter API key format. Expected format: sk-or-v1-...');
-          toast.error("Invalid OpenRouter API key format.");
-          return;
-        }
-
-        // Try multiple OpenRouter models
-        const models = [
-          'openai/gpt-3.5-turbo',
-          'anthropic/claude-3-haiku',
-          'meta-llama/llama-3.1-8b-instruct:free',
-          'microsoft/wizardlm-2-8x22b'
-        ];
-
-        for (const model of models) {
-          try {
-            console.log(`🔄 Trying OpenRouter model: ${model}`);
-
-            const requestBody = {
-              model: model,
+          const requestBody = {
+            model: model,
             messages: [{
               role: 'user',
               content: `Please rewrite the following dental lab script instructions. This is clinical staff giving design instructions to the designer for patient appliance modifications or new designs:
@@ -471,29 +381,30 @@ Please respond with only the professionally enhanced text, no additional comment
             temperature: 0.3
           };
 
-            console.log('📤 OpenRouter Request details:', {
-              url: 'https://openrouter.ai/api/v1/chat/completions',
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${OPENROUTER_API_KEY.substring(0, 15)}...`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': window.location.origin,
-                'X-Title': 'Dental Lab Management System'
-              },
-              bodySize: JSON.stringify(requestBody).length,
-              model: requestBody.model
-            });
+          console.log('📤 Request details:', {
+            url: 'https://openrouter.ai/api/v1/chat/completions',
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENROUTER_API_KEY.substring(0, 15)}...`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': window.location.origin,
+              'X-Title': 'Dental Lab Management System'
+            },
+            bodySize: JSON.stringify(requestBody).length,
+            model: requestBody.model,
+            isFreeModel: model.includes(':free')
+          });
 
-            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': window.location.origin,
-                'X-Title': 'Dental Lab Management System'
-              },
-              body: JSON.stringify(requestBody)
-            });
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': window.location.origin,
+              'X-Title': 'Dental Lab Management System'
+            },
+            body: JSON.stringify(requestBody)
+          });
 
           console.log('📡 Response status:', response.status);
           console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
@@ -514,25 +425,25 @@ Please respond with only the professionally enhanced text, no additional comment
           console.log(`✅ Model ${model} succeeded:`, data);
           const enhancedText = data.choices?.[0]?.message?.content;
 
-            if (enhancedText) {
-              handleInputChange("instructions", enhancedText.trim());
-              toast.success(`Instructions enhanced with AI! (OpenRouter: ${model})`);
-              return; // Success! Exit the function
-            } else {
-              console.error(`❌ No enhanced text from ${model}:`, data);
-              lastError = new Error(`No enhanced text received from ${model}`);
-              continue; // Try next model
-            }
-          } catch (modelError) {
-            console.error(`💥 Error with OpenRouter model ${model}:`, modelError);
-            lastError = modelError;
+          if (enhancedText) {
+            handleInputChange("instructions", enhancedText.trim());
+            const modelDisplayName = model.includes(':free') ? `${model} (FREE!)` : model;
+            toast.success(`Instructions enhanced with AI! (${modelDisplayName})`);
+            return; // Success! Exit the function
+          } else {
+            console.error(`❌ No enhanced text from ${model}:`, data);
+            lastError = new Error(`No enhanced text received from ${model}`);
             continue; // Try next model
           }
+        } catch (modelError) {
+          console.error(`💥 Error with model ${model}:`, modelError);
+          lastError = modelError;
+          continue; // Try next model
         }
       }
 
-      // If we get here, all services failed
-      throw lastError || new Error('All AI services failed (Gemini and OpenRouter)');
+      // If we get here, all models failed
+      throw lastError || new Error('All AI models failed');
     } catch (error) {
       console.error('💥 Error enhancing instructions:', {
         error: error,
