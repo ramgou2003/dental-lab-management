@@ -5,6 +5,11 @@ const getGeminiAI = () => {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   
   if (!apiKey || apiKey === 'your_gemini_api_key_here') {
+    console.error('❌ Gemini API key not configured:', {
+      hasKey: !!apiKey,
+      keyStart: apiKey?.substring(0, 10) + '...',
+      environment: import.meta.env.MODE
+    });
     throw new Error('Gemini API key not configured. Please add VITE_GEMINI_API_KEY to your environment variables.');
   }
   
