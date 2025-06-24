@@ -641,9 +641,7 @@ export function SurgicalRecallSheetForm({
     }
   };
 
-  const cancelCropping = () => {
-    resetCropState();
-  };
+
 
   // Touch and mouse event handlers
   const getEventPosition = (e: React.TouchEvent | React.MouseEvent) => {
@@ -2394,39 +2392,6 @@ export function SurgicalRecallSheetForm({
               {/* Simple Footer with Controls */}
               <div className="flex-shrink-0 flex items-center justify-between p-4 border-t bg-white">
                 <div className="flex items-center gap-3">
-                  {!isCropping ? (
-                    <button
-                      type="button"
-                      onClick={startCropping}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
-                    >
-                      <Crop className="h-4 w-4" />
-                      Crop
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={applyCrop}
-                        disabled={!cropArea}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
-                      >
-                        <Check className="h-4 w-4" />
-                        Apply
-                      </button>
-                      <button
-                        type="button"
-                        onClick={cancelCropping}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-lg transition-colors"
-                      >
-                        <RotateCcw className="h-4 w-4" />
-                        Cancel
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3">
                   {/* Zoom Controls */}
                   <div className="flex items-center gap-2">
                     <button
@@ -2468,6 +2433,42 @@ export function SurgicalRecallSheetForm({
                       <RotateCw className="h-4 w-4 text-gray-600" />
                     </button>
                   </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {!isCropping ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={startCropping}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+                      >
+                        <Crop className="h-4 w-4" />
+                        Crop
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Close the preview dialog
+                          closePreview();
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+                      >
+                        <Check className="h-4 w-4" />
+                        Submit
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={applyCrop}
+                      disabled={!cropArea}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                    >
+                      <Check className="h-4 w-4" />
+                      Apply
+                    </button>
+                  )}
                 </div>
               </div>
 

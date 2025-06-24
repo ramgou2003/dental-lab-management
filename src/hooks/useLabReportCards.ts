@@ -12,6 +12,7 @@ export interface LabReportCard {
   screw: string;
   material: string | null;
   shade: string;
+  manufacturing_method: 'milling' | 'printing' | null;
   implant_on_upper: string | null;
   implant_on_lower: string | null;
   custom_implant_upper: string | null;
@@ -37,6 +38,7 @@ export interface LabReportCardFormData {
   screw: string;
   material: string;
   shade: string;
+  manufacturing_method: string;
   implant_on_upper: string;
   implant_on_lower: string;
   custom_implant_upper: string;
@@ -99,6 +101,7 @@ export function useLabReportCards() {
           screw: formData.screw,
           material: formData.material || null,
           shade: formData.shade,
+          manufacturing_method: formData.manufacturing_method || null,
           implant_on_upper: formData.implant_on_upper || null,
           implant_on_lower: formData.implant_on_lower || null,
           custom_implant_upper: formData.custom_implant_upper || null,

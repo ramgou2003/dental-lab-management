@@ -21,6 +21,7 @@ interface CompleteLabReportData {
   lower_appliance_type: string | null;
   screw: string;
   shade: string;
+  manufacturing_method: string | null;
   implant_on_upper: string | null;
   implant_on_lower: string | null;
   tooth_library_upper: string | null;
@@ -282,7 +283,7 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
             <Stethoscope className="h-5 w-5 text-indigo-600" />
             Lab Specifications (Completed Report)
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label>Screw Type Used</Label>
               <div className="p-3 bg-indigo-50 rounded-md border border-indigo-200">
@@ -300,6 +301,24 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
                 <span className="font-medium text-yellow-900">{labReportData.shade}</span>
               </div>
             </div>
+            {labReportData.manufacturing_method && (
+              <div>
+                <Label>Manufacturing Method</Label>
+                <div className={`p-3 rounded-md border ${
+                  labReportData.manufacturing_method === 'milling'
+                    ? 'bg-cyan-50 border-cyan-200'
+                    : 'bg-blue-50 border-blue-200'
+                }`}>
+                  <span className={`font-medium ${
+                    labReportData.manufacturing_method === 'milling'
+                      ? 'text-cyan-900'
+                      : 'text-blue-900'
+                  }`}>
+                    {labReportData.manufacturing_method.charAt(0).toUpperCase() + labReportData.manufacturing_method.slice(1)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

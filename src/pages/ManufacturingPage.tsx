@@ -3,22 +3,99 @@ import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ParticleButton } from "@/components/ui/particle-button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
+import { useMillingForms } from "@/hooks/useMillingForms";
+import { generateManufacturingScriptPDF } from "@/utils/pdfGenerator";
 
 export function ManufacturingPage() {
   const [activeFilter, setActiveFilter] = useState("new-script");
   const [showNewManufacturingForm, setShowNewManufacturingForm] = useState(false);
+  const [showMillingDialog, setShowMillingDialog] = useState(false);
+  const [selectedMillingItem, setSelectedMillingItem] = useState<any>(null);
+  const [millingLocation, setMillingLocation] = useState("");
+  const [gingivaColor, setGingivaColor] = useState("");
+  const [stainedAndGlazed, setStainedAndGlazed] = useState("");
+  const [cementation, setCementation] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [selectedViewItem, setSelectedViewItem] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const { manufacturingItems, loading, updateManufacturingItemStatus } = useManufacturingItems();
+  const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails } = useManufacturingItems();
+  const { createMillingForm } = useMillingForms();
 
   const handleNewManufacturing = () => {
     setShowNewManufacturingForm(true);
   };
 
-  const handleStatusChange = async (itemId: string, newStatus: 'pending-printing' | 'in-production' | 'quality-check' | 'completed') => {
+  const handleStartMilling = (item: any) => {
+    setSelectedMillingItem(item);
+    setMillingLocation(""); // Reset selection
+    setGingivaColor("");
+    setStainedAndGlazed("");
+    setCementation("");
+    setAdditionalNotes("");
+    setShowMillingDialog(true);
+  };
+
+  // Check if the case is tie bar and superstructure
+  const isTieBarSuperstructure = (item: any) => {
+    return item?.upper_appliance_type === 'ti-bar-superstructure' ||
+           item?.lower_appliance_type === 'ti-bar-superstructure';
+  };
+
+  const handleViewManufacturingScript = (item: any) => {
+    setSelectedViewItem(item);
+    setShowViewDialog(true);
+  };
+
+  const handleDownloadPDF = async (item: any) => {
+    try {
+      console.log('PDF generation data:', {
+        patient_name: item.patient_name,
+        material: item.material,
+        shade: item.shade,
+        screw: item.screw,
+        arch_type: item.arch_type,
+        upper_appliance_type: item.upper_appliance_type,
+        lower_appliance_type: item.lower_appliance_type,
+        milling_location: item.milling_location,
+        status: item.status
+      });
+
+      await generateManufacturingScriptPDF({
+        patient_name: item.patient_name,
+        shade: item.shade,
+        screw: item.screw,
+        material: item.material,
+        arch_type: item.arch_type,
+        upper_appliance_type: item.upper_appliance_type,
+        lower_appliance_type: item.lower_appliance_type,
+        upper_appliance_number: item.upper_appliance_number,
+        lower_appliance_number: item.lower_appliance_number,
+        milling_location: item.milling_location,
+        gingiva_color: item.gingiva_color,
+        stained_and_glazed: item.stained_and_glazed,
+        cementation: item.cementation,
+        additional_notes: item.additional_notes,
+        status: item.status,
+        manufacturing_method: item.manufacturing_method,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      });
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to generate PDF');
+      console.error('PDF generation error:', error);
+    }
+  };
+
+  const handleStatusChange = async (itemId: string, newStatus: 'pending-printing' | 'pending-milling' | 'in-production' | 'milling' | 'in-transit' | 'quality-check' | 'completed') => {
     try {
       await updateManufacturingItemStatus(itemId, newStatus);
       toast.success(`Status updated to ${newStatus.replace('-', ' ')}`);
@@ -31,10 +108,18 @@ export function ManufacturingPage() {
   const getManufacturingCount = (status: string) => {
     if (status === "all-cam-scripts") return manufacturingItems.length;
     if (status === "new-script") {
-      return manufacturingItems.filter(item => item.status === 'pending-printing').length;
+      return manufacturingItems.filter(item =>
+        item.status === 'pending-printing' || item.status === 'pending-milling'
+      ).length;
     }
     if (status === "printing") {
       return manufacturingItems.filter(item => item.status === 'in-production').length;
+    }
+    if (status === "milling") {
+      return manufacturingItems.filter(item => item.status === 'milling').length;
+    }
+    if (status === "in-transit") {
+      return manufacturingItems.filter(item => item.status === 'in-transit').length;
     }
     if (status === "inspection") {
       return manufacturingItems.filter(item => item.status === 'quality-check').length;
@@ -42,7 +127,10 @@ export function ManufacturingPage() {
     if (status === "incomplete") {
       return manufacturingItems.filter(item =>
         item.status === 'pending-printing' ||
+        item.status === 'pending-milling' ||
         item.status === 'in-production' ||
+        item.status === 'milling' ||
+        item.status === 'in-transit' ||
         item.status === 'quality-check'
       ).length;
     }
@@ -52,7 +140,7 @@ export function ManufacturingPage() {
     return manufacturingItems.length;
   };
 
-  // Stats configuration - 6 filters matching your requirements
+  // Stats configuration - 8 filters with new milling and in-transit phases
   const stats = [
     {
       title: "New Script",
@@ -67,6 +155,20 @@ export function ManufacturingPage() {
       filter: "printing",
       icon: Factory,
       color: "bg-blue-500"
+    },
+    {
+      title: "Milling",
+      value: getManufacturingCount("milling"),
+      filter: "milling",
+      icon: Settings,
+      color: "bg-cyan-500"
+    },
+    {
+      title: "In Transit",
+      value: getManufacturingCount("in-transit"),
+      filter: "in-transit",
+      icon: Truck,
+      color: "bg-yellow-500"
     },
     {
       title: "Inspection",
@@ -107,14 +209,21 @@ export function ManufacturingPage() {
     // Filter based on active filter
     let statusMatch = true;
     if (activeFilter === "new-script") {
-      statusMatch = item.status === 'pending-printing';
+      statusMatch = item.status === 'pending-printing' || item.status === 'pending-milling';
     } else if (activeFilter === "printing") {
       statusMatch = item.status === 'in-production';
+    } else if (activeFilter === "milling") {
+      statusMatch = item.status === 'milling';
+    } else if (activeFilter === "in-transit") {
+      statusMatch = item.status === 'in-transit';
     } else if (activeFilter === "inspection") {
       statusMatch = item.status === 'quality-check';
     } else if (activeFilter === "incomplete") {
       statusMatch = item.status === 'pending-printing' ||
+                   item.status === 'pending-milling' ||
                    item.status === 'in-production' ||
+                   item.status === 'milling' ||
+                   item.status === 'in-transit' ||
                    item.status === 'quality-check';
     } else if (activeFilter === "completed") {
       statusMatch = item.status === 'completed';
@@ -141,8 +250,8 @@ export function ManufacturingPage() {
         />
       </div>
       <div className="flex-1 px-6 pt-6 pb-2">
-        {/* Stats Cards - 6 filters */}
-        <div className="grid grid-cols-6 gap-2 sm:gap-3 lg:gap-4 mb-6">
+        {/* Stats Cards - 8 filters */}
+        <div className="grid grid-cols-8 gap-1 sm:gap-2 lg:gap-3 mb-6">
           {stats.map((stat, index) => (
             <button
               key={index}
@@ -202,7 +311,7 @@ export function ManufacturingPage() {
                     const upperAppliance = formatApplianceType(item.upper_appliance_type);
                     const lowerAppliance = formatApplianceType(item.lower_appliance_type);
 
-                    // Render action buttons based on status
+                    // Render action buttons based on status and manufacturing method
                     const renderActionButtons = () => {
                       switch (item.status) {
                         case 'pending-printing':
@@ -217,7 +326,56 @@ export function ManufacturingPage() {
                               Start Printing
                             </ParticleButton>
                           );
+                        case 'pending-milling':
+                          return (
+                            <ParticleButton
+                              className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                              onClick={() => handleStartMilling(item)}
+                              onSuccess={() => {}}
+                              successDuration={1000}
+                            >
+                              <Play className="h-4 w-4 mr-2" />
+                              Start Milling
+                            </ParticleButton>
+                          );
                         case 'in-production':
+                          return (
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStatusChange(item.id, 'milling')}
+                                className="border-2 border-cyan-600 text-cyan-600 hover:border-cyan-700 hover:text-cyan-700 hover:bg-cyan-50 px-4 py-2 text-sm font-semibold"
+                              >
+                                <Settings className="h-4 w-4 mr-2" />
+                                Start Milling
+                              </Button>
+                            </div>
+                          );
+                        case 'milling':
+                          return (
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewManufacturingScript(item)}
+                                className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Script
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStatusChange(item.id, 'in-transit')}
+                                className="border-2 border-yellow-600 text-yellow-600 hover:border-yellow-700 hover:text-yellow-700 hover:bg-yellow-50 px-4 py-2 text-sm font-semibold"
+                              >
+                                <Truck className="h-4 w-4 mr-2" />
+                                Ship
+                              </Button>
+                            </div>
+                          );
+                        case 'in-transit':
                           return (
                             <div className="flex gap-2">
                               <Button
@@ -311,11 +469,16 @@ export function ManufacturingPage() {
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                                   item.status === 'completed' ? 'bg-green-100 text-green-700' :
                                   item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
+                                  item.status === 'milling' ? 'bg-cyan-100 text-cyan-700' :
+                                  item.status === 'in-transit' ? 'bg-yellow-100 text-yellow-700' :
                                   item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
                                   'bg-amber-100 text-amber-700'
                                 }`}>
                                   {item.status === 'pending-printing' ? 'New Script' :
+                                   item.status === 'pending-milling' ? 'New Script' :
                                    item.status === 'in-production' ? 'Printing' :
+                                   item.status === 'milling' ? 'Milling' :
+                                   item.status === 'in-transit' ? 'In Transit' :
                                    item.status === 'quality-check' ? 'Inspection' :
                                    item.status === 'completed' ? 'Completed' :
                                    item.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -343,6 +506,8 @@ export function ManufacturingPage() {
               <p className="text-gray-500 mb-4">
                 {activeFilter === "new-script" ? "No new manufacturing scripts found." :
                  activeFilter === "printing" ? "No items currently printing." :
+                 activeFilter === "milling" ? "No items currently in milling." :
+                 activeFilter === "in-transit" ? "No items currently in transit." :
                  activeFilter === "inspection" ? "No items currently in inspection." :
                  activeFilter === "incomplete" ? "No incomplete manufacturing items found." :
                  activeFilter === "completed" ? "No completed manufacturing items found." :
@@ -378,6 +543,441 @@ export function ManufacturingPage() {
               <Factory className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">Manufacturing form will be implemented here</p>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Start Milling Dialog */}
+      <Dialog open={showMillingDialog} onOpenChange={setShowMillingDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Settings className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Start Milling Process</h2>
+                <p className="text-gray-600">
+                  {selectedMillingItem?.patient_name && `Patient: ${selectedMillingItem.patient_name}`}
+                </p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="p-6">
+            <div className="space-y-4">
+              {/* Case Details at the Top */}
+              {selectedMillingItem && (
+                <div className="bg-gray-50 rounded-lg p-4 border">
+                  <h4 className="font-medium text-gray-900 mb-3">Case Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Patient:</span>
+                      <span className="ml-2 font-medium">{selectedMillingItem.patient_name}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Shade:</span>
+                      <span className="ml-2 font-medium">{selectedMillingItem.shade}</span>
+                    </div>
+                    {selectedMillingItem.screw && (
+                      <div>
+                        <span className="text-gray-600">Screw Type:</span>
+                        <span className="ml-2 font-medium">{selectedMillingItem.screw}</span>
+                      </div>
+                    )}
+                    {selectedMillingItem.material && (
+                      <div>
+                        <span className="text-gray-600">Material:</span>
+                        <span className="ml-2 font-medium">{selectedMillingItem.material}</span>
+                      </div>
+                    )}
+                    {selectedMillingItem.upper_appliance_type && (
+                      <div>
+                        <span className="text-gray-600">Upper:</span>
+                        <span className="ml-2 font-medium">
+                          {selectedMillingItem.upper_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        </span>
+                      </div>
+                    )}
+                    {selectedMillingItem.lower_appliance_type && (
+                      <div>
+                        <span className="text-gray-600">Lower:</span>
+                        <span className="ml-2 font-medium">
+                          {selectedMillingItem.lower_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Milling Location Selection */}
+              <div>
+                <Label htmlFor="milling-location" className="text-sm font-medium text-gray-700">
+                  Milling Location <span className="text-red-500">*</span>
+                </Label>
+                <Select value={millingLocation} onValueChange={setMillingLocation}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select milling location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in-house">In-House</SelectItem>
+                    <SelectItem value="micro-dental-lab">Micro-Dental Lab</SelectItem>
+                    <SelectItem value="haus-milling">Haus Milling</SelectItem>
+                    <SelectItem value="evolution">Evolution</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Gingiva Color - Always visible for milling cases */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">
+                  Gingiva Color
+                </Label>
+                <Select value={gingivaColor} onValueChange={setGingivaColor}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select gingiva color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Stained and Glazed - Always visible for milling cases */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">
+                  Stained and Glazed
+                </Label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setStainedAndGlazed(stainedAndGlazed === "yes" ? "" : "yes")}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${
+                      stainedAndGlazed === "yes"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                    }`}
+                  >
+                    <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                      stainedAndGlazed === "yes" ? "border-white" : "border-gray-400"
+                    }`}>
+                      {stainedAndGlazed === "yes" && (
+                        <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                      )}
+                    </div>
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStainedAndGlazed(stainedAndGlazed === "no" ? "" : "no")}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${
+                      stainedAndGlazed === "no"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                    }`}
+                  >
+                    <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                      stainedAndGlazed === "no" ? "border-white" : "border-gray-400"
+                    }`}>
+                      {stainedAndGlazed === "no" && (
+                        <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                      )}
+                    </div>
+                    No
+                  </button>
+                </div>
+              </div>
+
+              {/* Cementation - Only for Tie Bar and Superstructure */}
+              {selectedMillingItem && isTieBarSuperstructure(selectedMillingItem) && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">
+                    Cementation to be done
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setCementation(cementation === "yes" ? "" : "yes")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${
+                        cementation === "yes"
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                      }`}
+                    >
+                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        cementation === "yes" ? "border-white" : "border-gray-400"
+                      }`}>
+                        {cementation === "yes" && (
+                          <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                        )}
+                      </div>
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCementation(cementation === "no" ? "" : "no")}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${
+                        cementation === "no"
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                      }`}
+                    >
+                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        cementation === "no" ? "border-white" : "border-gray-400"
+                      }`}>
+                        {cementation === "no" && (
+                          <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                        )}
+                      </div>
+                      No
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Notes */}
+              <div>
+                <Label htmlFor="additional-notes" className="text-sm font-medium text-gray-700">
+                  Additional Notes
+                </Label>
+                <Textarea
+                  id="additional-notes"
+                  value={additionalNotes}
+                  onChange={(e) => setAdditionalNotes(e.target.value)}
+                  placeholder="Enter any additional notes or special instructions..."
+                  className="mt-1 min-h-[80px]"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end pt-4">
+                <Button
+                  onClick={async () => {
+                    if (millingLocation && selectedMillingItem) {
+                      try {
+                        // Update manufacturing item with milling details
+                        await updateManufacturingItemWithMillingDetails(
+                          selectedMillingItem.id,
+                          'milling',
+                          {
+                            milling_location: millingLocation,
+                            gingiva_color: gingivaColor,
+                            stained_and_glazed: stainedAndGlazed,
+                            cementation: cementation,
+                            additional_notes: additionalNotes
+                          }
+                        );
+
+                        // Create milling form record
+                        await createMillingForm({
+                          manufacturing_item_id: selectedMillingItem.id,
+                          patient_name: selectedMillingItem.patient_name,
+                          milling_location: millingLocation as 'in-house' | 'micro-dental-lab' | 'haus-milling' | 'evolution',
+                          gingiva_color: gingivaColor as 'light' | 'medium' | 'dark' | 'custom' | undefined,
+                          stained_and_glazed: stainedAndGlazed as 'yes' | 'no' | undefined,
+                          cementation: cementation as 'yes' | 'no' | undefined,
+                          additional_notes: additionalNotes || undefined,
+                          upper_appliance_type: selectedMillingItem.upper_appliance_type,
+                          lower_appliance_type: selectedMillingItem.lower_appliance_type,
+                          upper_appliance_number: selectedMillingItem.upper_appliance_number,
+                          lower_appliance_number: selectedMillingItem.lower_appliance_number,
+                          shade: selectedMillingItem.shade,
+                          screw: selectedMillingItem.screw,
+                          material: selectedMillingItem.material,
+                          arch_type: selectedMillingItem.arch_type
+                        });
+
+                        setShowMillingDialog(false);
+                      } catch (error) {
+                        // Error is handled by the hooks
+                      }
+                    }
+                  }}
+                  disabled={!millingLocation}
+                  className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Start Milling
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Manufacturing Script Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Eye className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Manufacturing Script</h2>
+                  <p className="text-gray-600">
+                    {selectedViewItem?.patient_name && `Patient: ${selectedViewItem.patient_name}`}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => selectedViewItem && handleDownloadPDF(selectedViewItem)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                size="sm"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="p-6">
+            {selectedViewItem && (
+              <div className="space-y-6">
+                {/* Case Information */}
+                <div className="bg-gray-50 rounded-lg p-4 border">
+                  <h4 className="font-medium text-gray-900 mb-3">Case Information</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Patient:</span>
+                      <span className="ml-2 font-medium">{selectedViewItem.patient_name}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Shade:</span>
+                      <span className="ml-2 font-medium">{selectedViewItem.shade}</span>
+                    </div>
+                    {selectedViewItem.screw && (
+                      <div>
+                        <span className="text-gray-600">Screw Type:</span>
+                        <span className="ml-2 font-medium">{selectedViewItem.screw}</span>
+                      </div>
+                    )}
+                    {selectedViewItem.material && (
+                      <div>
+                        <span className="text-gray-600">Material:</span>
+                        <span className="ml-2 font-medium">{selectedViewItem.material}</span>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-gray-600">Arch Type:</span>
+                      <span className="ml-2 font-medium">{selectedViewItem.arch_type}</span>
+                    </div>
+                    {selectedViewItem.upper_appliance_type && (
+                      <div>
+                        <span className="text-gray-600">Upper Appliance:</span>
+                        <span className="ml-2 font-medium">
+                          {selectedViewItem.upper_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          {selectedViewItem.upper_appliance_number && (
+                            <span className="ml-1 text-purple-600">({selectedViewItem.upper_appliance_number})</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {selectedViewItem.lower_appliance_type && (
+                      <div>
+                        <span className="text-gray-600">Lower Appliance:</span>
+                        <span className="ml-2 font-medium">
+                          {selectedViewItem.lower_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          {selectedViewItem.lower_appliance_number && (
+                            <span className="ml-1 text-purple-600">({selectedViewItem.lower_appliance_number})</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Milling Details */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h4 className="font-medium text-blue-900 mb-3">Milling Instructions</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-700">Milling Location:</span>
+                      <span className="ml-2 font-medium text-blue-900">
+                        {selectedViewItem.milling_location ?
+                          selectedViewItem.milling_location.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) :
+                          'Not specified'
+                        }
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-blue-700">Gingiva Color:</span>
+                      <span className="ml-2 font-medium text-blue-900">
+                        {selectedViewItem.gingiva_color ?
+                          selectedViewItem.gingiva_color.replace(/\b\w/g, (l: string) => l.toUpperCase()) :
+                          'Not specified'
+                        }
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-blue-700">Stained and Glazed:</span>
+                      <span className="ml-2 font-medium text-blue-900">
+                        {selectedViewItem.stained_and_glazed ?
+                          selectedViewItem.stained_and_glazed.replace(/\b\w/g, (l: string) => l.toUpperCase()) :
+                          'Not specified'
+                        }
+                      </span>
+                    </div>
+                    {selectedViewItem.cementation && (
+                      <div>
+                        <span className="text-blue-700">Cementation:</span>
+                        <span className="ml-2 font-medium text-blue-900">
+                          {selectedViewItem.cementation.replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedViewItem.additional_notes && (
+                    <div className="mt-4">
+                      <span className="text-blue-700 text-sm">Additional Notes:</span>
+                      <div className="mt-1 p-3 bg-white rounded border border-blue-200">
+                        <p className="text-blue-900 text-sm">{selectedViewItem.additional_notes}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Status Information */}
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <h4 className="font-medium text-green-900 mb-3">Status Information</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-green-700">Current Status:</span>
+                      <span className="ml-2 font-medium text-green-900">
+                        {selectedViewItem.status === 'milling' ? 'In Milling' :
+                         selectedViewItem.status === 'in-transit' ? 'In Transit' :
+                         selectedViewItem.status === 'quality-check' ? 'Quality Check' :
+                         selectedViewItem.status === 'completed' ? 'Completed' :
+                         selectedViewItem.status.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-green-700">Manufacturing Method:</span>
+                      <span className="ml-2 font-medium text-green-900">
+                        {selectedViewItem.manufacturing_method?.replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Not specified'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-green-700">Created:</span>
+                      <span className="ml-2 font-medium text-green-900">
+                        {new Date(selectedViewItem.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-green-700">Last Updated:</span>
+                      <span className="ml-2 font-medium text-green-900">
+                        {new Date(selectedViewItem.updated_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

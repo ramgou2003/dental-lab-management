@@ -10,10 +10,18 @@ export interface ManufacturingItem {
   upper_appliance_type: string | null;
   lower_appliance_type: string | null;
   shade: string;
+  screw: string | null;
+  material: string | null;
   arch_type: string;
   upper_appliance_number: string | null;
   lower_appliance_number: string | null;
-  status: 'pending-printing' | 'in-production' | 'quality-check' | 'completed';
+  manufacturing_method: 'milling' | 'printing' | null;
+  milling_location: string | null;
+  gingiva_color: string | null;
+  stained_and_glazed: string | null;
+  cementation: string | null;
+  additional_notes: string | null;
+  status: 'pending-printing' | 'pending-milling' | 'in-production' | 'milling' | 'in-transit' | 'quality-check' | 'completed';
   created_at: string;
   updated_at: string;
 }
@@ -93,6 +101,56 @@ export function useManufacturingItems() {
     }
   };
 
+  const updateManufacturingItemWithMillingDetails = async (
+    itemId: string,
+    newStatus: ManufacturingItem['status'],
+    millingDetails: {
+      milling_location: string;
+      gingiva_color: string;
+      stained_and_glazed: string;
+      cementation: string;
+      additional_notes: string;
+    }
+  ) => {
+    try {
+      const { error } = await supabase
+        .from('manufacturing_items')
+        .update({
+          status: newStatus,
+          ...millingDetails,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error updating manufacturing item with milling details:', error);
+        throw error;
+      }
+
+      // Update local state
+      setManufacturingItems(prev =>
+        prev.map(item =>
+          item.id === itemId
+            ? { ...item, status: newStatus, ...millingDetails, updated_at: new Date().toISOString() }
+            : item
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: "Milling process started successfully",
+      });
+    } catch (error) {
+      console.error('Error updating manufacturing item with milling details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start milling process",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const deleteManufacturingItem = async (itemId: string) => {
     try {
       const { error } = await supabase
@@ -147,25 +205,31 @@ export function useManufacturingItems() {
   useEffect(() => {
     fetchManufacturingItems();
 
-    // Subscribe to real-time changes
-    const subscription = supabase
-      .channel('manufacturing_items_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'manufacturing_items'
-        },
-        (payload) => {
-          console.log('Manufacturing items change received:', payload);
-          fetchManufacturingItems(); // Refetch data when changes occur
-        }
-      )
-      .subscribe();
+    // Subscribe to real-time changes only if supabase.channel is available
+    let subscription: any = null;
+
+    if (typeof supabase.channel === 'function') {
+      subscription = supabase
+        .channel('manufacturing_items_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'manufacturing_items'
+          },
+          (payload) => {
+            console.log('Manufacturing items change received:', payload);
+            fetchManufacturingItems(); // Refetch data when changes occur
+          }
+        )
+        .subscribe();
+    }
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
@@ -175,6 +239,7 @@ export function useManufacturingItems() {
     error,
     fetchManufacturingItems,
     updateManufacturingItemStatus,
+    updateManufacturingItemWithMillingDetails,
     deleteManufacturingItem,
     getManufacturingItemByLabReportId
   };

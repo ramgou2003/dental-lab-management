@@ -59,7 +59,7 @@ export function usePatientManufacturingItems(patientId: string | undefined) {
     }
   };
 
-  const updateManufacturingItemStatus = async (id: string, newStatus: 'pending-printing' | 'in-production' | 'quality-check' | 'completed') => {
+  const updateManufacturingItemStatus = async (id: string, newStatus: 'pending-printing' | 'in-production' | 'milling' | 'in-transit' | 'quality-check' | 'completed') => {
     try {
       const { error } = await supabase
         .from('manufacturing_items')

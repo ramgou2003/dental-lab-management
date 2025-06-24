@@ -35,6 +35,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     customScrewType: reportCard.lab_script?.custom_screw_type || '',
     material: reportCard.lab_script?.material || '',
     shade: reportCard.lab_script?.shade || '',
+    manufacturing_method: '', // Will be auto-populated based on appliance types
 
     // New fields
     implant_on_upper: '',
@@ -52,6 +53,19 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
 
 
 
+  // Function to determine manufacturing method based on appliance types
+  const determineManufacturingMethod = (upperType: string, lowerType: string) => {
+    const millingTypes = ['direct-load-zirconia', 'direct-load-pmma', 'ti-bar-superstructure'];
+
+    // Check if any appliance type requires milling
+    if (millingTypes.includes(upperType) || millingTypes.includes(lowerType)) {
+      return 'milling';
+    }
+
+    // Default to printing for all other appliances
+    return 'printing';
+  };
+
   // Load existing lab report card if it exists
   useEffect(() => {
     const loadExistingReport = async () => {
@@ -67,6 +81,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
             screw: existing.screw,
             material: existing.material || '',
             shade: existing.shade,
+            manufacturing_method: existing.manufacturing_method || determineManufacturingMethod(existing.upper_appliance_type || '', existing.lower_appliance_type || ''),
             implant_on_upper: existing.implant_on_upper || '',
             implant_on_lower: existing.implant_on_lower || '',
             custom_implant_upper: existing.custom_implant_upper || '',
@@ -84,6 +99,20 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     };
     loadExistingReport();
   }, [reportCard.lab_script_id, getLabReportCardByLabScriptId]);
+
+  // Auto-set manufacturing method for new reports (when no existing report is found)
+  useEffect(() => {
+    if (!existingLabReport && formData.manufacturing_method === '') {
+      const autoManufacturingMethod = determineManufacturingMethod(
+        reportCard.lab_script?.upper_appliance_type || '',
+        reportCard.lab_script?.lower_appliance_type || ''
+      );
+      setFormData(prev => ({
+        ...prev,
+        manufacturing_method: autoManufacturingMethod
+      }));
+    }
+  }, [existingLabReport, formData.manufacturing_method, reportCard.lab_script?.upper_appliance_type, reportCard.lab_script?.lower_appliance_type]);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const [openUpperToothLibrary, setOpenUpperToothLibrary] = useState(false);
@@ -123,6 +152,10 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     if (!formData.shade) {
       errors.push("Shade is required");
       newFieldErrors.shade = true;
+    }
+    if (!formData.manufacturing_method) {
+      errors.push("Manufacturing Method is required");
+      newFieldErrors.manufacturing_method = true;
     }
 
     // Implant Libraries (conditional based on arch type)
@@ -222,6 +255,11 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     "N/A", "A1", "A2", "A3", "A3.5", "A4", "B1", "B2", "B3", "B4",
     "C1", "C2", "C3", "C4", "D2", "D3", "D4", "BL1", "BL2", "BL3", "BL4",
     "BLEACH", "NW", "Clear", "Custom"
+  ];
+
+  const manufacturingMethodOptions = [
+    "milling",
+    "printing"
   ];
 
   const toothLibraryOptions = [
@@ -978,6 +1016,47 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Manufacturing Method - Full Width */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label>
+                Manufacturing Method <span className="text-red-500">*</span>
+              </Label>
+              <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                Auto-selected based on appliance type
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {manufacturingMethodOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => handleInputChange("manufacturing_method", formData.manufacturing_method === option ? "" : option)}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${
+                    formData.manufacturing_method === option
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                      : fieldErrors.manufacturing_method
+                      ? "bg-white text-gray-700 border-red-500 hover:bg-red-50"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                  }`}
+                >
+                  <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                    formData.manufacturing_method === option
+                      ? "border-white"
+                      : fieldErrors.manufacturing_method
+                      ? "border-red-500"
+                      : "border-gray-400"
+                  }`}>
+                    {formData.manufacturing_method === option && (
+                      <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                    )}
+                  </div>
+                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
         </div>

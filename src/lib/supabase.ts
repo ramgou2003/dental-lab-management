@@ -25,7 +25,11 @@ const createMockClient = () => {
         upload: () => Promise.resolve({ data: null, error: null }),
         getPublicUrl: () => ({ data: { publicUrl: 'mock-url' } })
       })
-    }
+    },
+    channel: () => ({
+      on: function() { return this; },
+      subscribe: () => ({ unsubscribe: () => {} })
+    })
   };
 };
 
