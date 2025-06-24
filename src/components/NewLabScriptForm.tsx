@@ -349,22 +349,14 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
       let lastError = null;
 
-      // Try multiple OpenRouter models, starting with known working models
-      const models = [
-        'openai/gpt-3.5-turbo',  // Paid but very reliable - test this first
-        'meta-llama/llama-3.1-8b-instruct:free',  // FREE Llama
-        'google/gemini-2.0-flash-exp:free',  // FREE Gemini 2.0 - Latest and best!
-        'google/gemini-flash-1.5:free',  // FREE Gemini 1.5 (alternative)
-        'anthropic/claude-3-haiku',  // Paid fallback
-        'microsoft/wizardlm-2-8x22b'  // Additional fallback
-      ];
+      // Use only Google Gemini 2.0 Flash (FREE) from OpenRouter
+      const model = 'google/gemini-2.0-flash-exp:free';
 
-      for (const model of models) {
-        try {
-          console.log(`🔄 Trying model: ${model}`);
+      try {
+        console.log(`🔄 Using model: ${model} (FREE Gemini 2.0)`);
 
-          const requestBody = {
-            model: model,
+        const requestBody = {
+          model: model,
             messages: [{
               role: 'user',
               content: `Please rewrite the following dental lab script instructions. This is clinical staff giving design instructions to the designer for patient appliance modifications or new designs:
@@ -453,33 +445,38 @@ Please respond with only the professionally enhanced text, no additional comment
               }
             });
 
-            lastError = new Error(`${model}: ${response.status} - ${errorText}`);
-            continue; // Try next model
+            // Provide specific error messages for Gemini 2.0
+            if (response.status === 401) {
+              toast.error("OpenRouter API key authentication failed. Please check your API key.");
+            } else if (response.status === 403) {
+              toast.error("Access forbidden to Gemini 2.0 Flash. Check your OpenRouter account permissions.");
+            } else if (response.status === 429) {
+              toast.error("Rate limit exceeded for Gemini 2.0 Flash. Please try again later.");
+            } else if (response.status >= 500) {
+              toast.error("Gemini 2.0 Flash service temporarily unavailable. Please try again.");
+            } else {
+              toast.error(`Gemini 2.0 Flash Error: ${response.status} - ${errorText}`);
+            }
+
+            throw new Error(`Gemini 2.0 Flash: ${response.status} - ${errorText}`);
           }
 
           const data = await response.json();
-          console.log(`✅ Model ${model} succeeded:`, data);
+          console.log(`✅ Gemini 2.0 Flash succeeded:`, data);
           const enhancedText = data.choices?.[0]?.message?.content;
 
           if (enhancedText) {
             handleInputChange("instructions", enhancedText.trim());
-            const modelDisplayName = model.includes(':free') ? `${model} (FREE!)` : model;
-            toast.success(`Instructions enhanced with AI! (${modelDisplayName})`);
+            toast.success("Instructions enhanced with AI! (Google Gemini 2.0 Flash - FREE!)");
             return; // Success! Exit the function
           } else {
-            console.error(`❌ No enhanced text from ${model}:`, data);
-            lastError = new Error(`No enhanced text received from ${model}`);
-            continue; // Try next model
+            console.error(`❌ No enhanced text from Gemini 2.0 Flash:`, data);
+            throw new Error('No enhanced text received from Gemini 2.0 Flash');
           }
-        } catch (modelError) {
-          console.error(`💥 Error with model ${model}:`, modelError);
-          lastError = modelError;
-          continue; // Try next model
+        } catch (error) {
+          console.error(`💥 Error with Gemini 2.0 Flash:`, error);
+          throw error;
         }
-      }
-
-      // If we get here, all models failed
-      throw lastError || new Error('All AI models failed');
     } catch (error) {
       console.error('💥 Error enhancing instructions:', {
         error: error,
