@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhoneInput } from "./PhoneInput";
@@ -36,24 +36,19 @@ interface Patient {
 interface EditPatientFormProps {
   patient: Patient;
   onSubmit: (patientData: any) => void;
-  onCancel: () => void;
 }
 
-export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientFormProps) {
+export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     dateOfBirth: '',
     phone: '',
-    status: '',
     street: '',
     city: '',
     state: '',
     zipCode: '',
-    gender: 'male',
-    treatmentType: '',
-    upperArch: false,
-    lowerArch: false
+    gender: 'male'
   });
 
   const [errors, setErrors] = useState({
@@ -73,15 +68,11 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
         lastName: patient.last_name || '',
         dateOfBirth: patient.date_of_birth || '',
         phone: patient.phone || '',
-        status: patient.status || '',
         street: patient.street || '',
         city: patient.city || '',
         state: patient.state || '',
         zipCode: patient.zip_code || '',
-        gender: patient.gender || 'male',
-        treatmentType: patient.treatment_type || '',
-        upperArch: patient.upper_arch || false,
-        lowerArch: patient.lower_arch || false
+        gender: patient.gender || 'male'
       });
     }
   }, [patient]);
@@ -112,34 +103,35 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
     setIsSubmitting(true);
 
     try {
+      const updateData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        date_of_birth: formData.dateOfBirth,
+        phone: formData.phone || null,
+        street: formData.street || null,
+        city: formData.city || null,
+        state: formData.state || null,
+        zip_code: formData.zipCode || null,
+        gender: formData.gender,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('Updating patient with data:', updateData);
+      console.log('Patient ID:', patient.id);
+
       const { data, error } = await supabase
         .from('patients')
-        .update({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          full_name: `${formData.firstName} ${formData.lastName}`,
-          date_of_birth: formData.dateOfBirth,
-          phone: formData.phone || null,
-          status: formData.status || null,
-          street: formData.street || null,
-          city: formData.city || null,
-          state: formData.state || null,
-          zip_code: formData.zipCode || null,
-          gender: formData.gender,
-          treatment_type: formData.treatmentType || null,
-          upper_arch: formData.upperArch,
-          lower_arch: formData.lowerArch,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', patient.id)
         .select()
         .single();
 
       if (error) {
         console.error('Error updating patient:', error);
+        console.error('Error details:', error.message, error.details, error.hint);
         toast({
           title: "Error",
-          description: "Failed to update patient",
+          description: `Failed to update patient: ${error.message}`,
           variant: "destructive",
         });
         return;
@@ -153,9 +145,10 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
       onSubmit(data);
     } catch (error) {
       console.error('Error:', error);
+      console.error('Caught error details:', error);
       toast({
         title: "Error",
-        description: "Failed to update patient",
+        description: `Failed to update patient: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -179,14 +172,10 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Edit Patient Profile</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+    <div className="w-full max-w-2xl mx-auto">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
               <Label htmlFor="firstName" className={errors.firstName ? "text-red-500" : ""}>
                 First Name <span className="text-red-500">*</span>
               </Label>
@@ -211,6 +200,32 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
           </div>
 
           <div>
+            <Label className="text-base font-medium">Gender</Label>
+            <div className="flex gap-4 mt-2">
+              <div
+                className={`flex items-center justify-center px-4 py-2 rounded-md border-2 cursor-pointer transition-colors ${
+                  formData.gender === 'male'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                }`}
+                onClick={() => handleInputChange('gender', 'male')}
+              >
+                <span className="font-medium">Male</span>
+              </div>
+              <div
+                className={`flex items-center justify-center px-4 py-2 rounded-md border-2 cursor-pointer transition-colors ${
+                  formData.gender === 'female'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                }`}
+                onClick={() => handleInputChange('gender', 'female')}
+              >
+                <span className="font-medium">Female</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
             <Label htmlFor="dateOfBirth" className={errors.dateOfBirth ? "text-red-500" : ""}>
               Date of Birth <span className="text-red-500">*</span>
             </Label>
@@ -228,136 +243,20 @@ export function EditPatientForm({ patient, onSubmit, onCancel }: EditPatientForm
             onChange={(value) => handleInputChange('phone', value)}
           />
 
-          <div>
-            <Label>Gender</Label>
-            <RadioGroup 
-              value={formData.gender} 
-              onValueChange={(value) => handleInputChange('gender', value)}
-              className="flex space-x-6 mt-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="male" id="male" />
-                <Label htmlFor="male">Male</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="female" id="female" />
-                <Label htmlFor="female">Female</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="other" id="other" />
-                <Label htmlFor="other">Other</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
           <AddressAutocomplete
             street={formData.street}
             city={formData.city}
             state={formData.state}
             zipCode={formData.zipCode}
-            onAddressChange={(address) => {
-              handleInputChange('street', address.street);
-              handleInputChange('city', address.city);
-              handleInputChange('state', address.state);
-              handleInputChange('zipCode', address.zipCode);
-            }}
+            onAddressChange={handleInputChange}
           />
 
-
-
-          <div>
-            <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No Status Set</SelectItem>
-                <SelectItem value="New patient">New Patient</SelectItem>
-                <SelectItem value="Treatment not started">Treatment Not Started</SelectItem>
-                <SelectItem value="Treatment in progress">Treatment In Progress</SelectItem>
-                <SelectItem value="Treatment completed">Treatment Completed</SelectItem>
-                <SelectItem value="Patient deceased">Patient Deceased</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Treatment Information Section */}
-          <div className="space-y-4 pt-4 border-t border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Treatment Information</h3>
-
-            <div>
-              <Label htmlFor="treatmentType">Treatment Type</Label>
-              <Select value={formData.treatmentType} onValueChange={(value) => handleInputChange('treatmentType', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select treatment type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No Treatment Type</SelectItem>
-                  <SelectItem value="Orthodontics">Orthodontics</SelectItem>
-                  <SelectItem value="Dental Cleaning">Dental Cleaning</SelectItem>
-                  <SelectItem value="Root Canal">Root Canal</SelectItem>
-                  <SelectItem value="Dental Implant">Dental Implant</SelectItem>
-                  <SelectItem value="Teeth Whitening">Teeth Whitening</SelectItem>
-                  <SelectItem value="Periodontal Treatment">Periodontal Treatment</SelectItem>
-                  <SelectItem value="Crown Replacement">Crown Replacement</SelectItem>
-                  <SelectItem value="Wisdom Tooth Extraction">Wisdom Tooth Extraction</SelectItem>
-                  <SelectItem value="Dental Bridge">Dental Bridge</SelectItem>
-                  <SelectItem value="Cavity Filling">Cavity Filling</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-base font-medium">Arch Selection</Label>
-              <div className="flex space-x-4 mt-2">
-                <div
-                  className={`flex items-center justify-center px-4 py-2 rounded-md border-2 cursor-pointer transition-colors ${
-                    formData.upperArch
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                  }`}
-                  onClick={() => handleInputChange('upperArch', !formData.upperArch)}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.upperArch}
-                    onChange={(e) => handleInputChange('upperArch', e.target.checked)}
-                    className="sr-only"
-                  />
-                  <span className="font-medium">Upper</span>
-                </div>
-
-                <div
-                  className={`flex items-center justify-center px-4 py-2 rounded-md border-2 cursor-pointer transition-colors ${
-                    formData.lowerArch
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                  }`}
-                  onClick={() => handleInputChange('lowerArch', !formData.lowerArch)}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.lowerArch}
-                    onChange={(e) => handleInputChange('lowerArch', e.target.checked)}
-                    className="sr-only"
-                  />
-                  <span className="font-medium">Lower</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-4 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
+          <div className="flex justify-end pt-4">
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmitting}>
               {isSubmitting ? "Updating..." : "Update Patient"}
             </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+      </form>
+    </div>
   );
 }

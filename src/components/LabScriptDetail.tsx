@@ -18,10 +18,11 @@ interface LabScriptDetailProps {
   onClose: () => void;
   labScript: LabScript | null;
   onUpdate: (id: string, updates: Partial<LabScript>) => Promise<void>;
+  initialEditMode?: boolean;
 }
 
-export function LabScriptDetail({ open, onClose, labScript, onUpdate }: LabScriptDetailProps) {
-  const [isEditing, setIsEditing] = useState(false);
+export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEditMode = false }: LabScriptDetailProps) {
+  const [isEditing, setIsEditing] = useState(initialEditMode);
   const [editData, setEditData] = useState<Partial<LabScript>>({});
   const [newComment, setNewComment] = useState("");
   const { comments, addComment, loading: commentsLoading } = useLabScriptComments(labScript?.id);
@@ -107,8 +108,9 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate }: LabScrip
   useEffect(() => {
     if (labScript) {
       setEditData(labScript);
+      setIsEditing(initialEditMode);
     }
-  }, [labScript]);
+  }, [labScript, initialEditMode]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -180,27 +182,20 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate }: LabScrip
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FlaskConical className="h-6 w-6 text-indigo-600" />
-              Lab Script Details
+              {isEditing ? "Edit Lab Script" : "Lab Script Details"}
             </div>
-            <div className="flex items-center gap-2 mr-8">
-              {!isEditing ? (
-                <Button variant="outline" size="sm" onClick={handleEdit}>
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit
+            {isEditing && (
+              <div className="flex items-center gap-2 mr-8">
+                <Button variant="outline" size="sm" onClick={handleSave}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
                 </Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleSave}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleCancel}>
-                    <X className="h-4 w-4 mr-2" />
-                    Cancel
-                  </Button>
-                </div>
-              )}
-            </div>
+                <Button variant="outline" size="sm" onClick={handleCancel}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            )}
           </DialogTitle>
         </DialogHeader>
 

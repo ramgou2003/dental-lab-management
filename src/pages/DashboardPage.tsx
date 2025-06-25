@@ -295,13 +295,7 @@ export function DashboardPage() {
             {/* Gradient Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-xl lg:rounded-2xl opacity-100"></div>
 
-            {/* Live Data - Top Right Corner */}
-            <div className="absolute top-2 sm:top-3 lg:top-4 right-2 sm:right-3 lg:right-4 flex items-center space-x-1 sm:space-x-2">
-              <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-500/10 rounded-full border border-blue-300/60 backdrop-blur-sm">
-                <span className="text-xs font-medium text-blue-700">Live Data</span>
-              </div>
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse border border-blue-200/30 shadow-sm"></div>
-            </div>
+
 
             <div className="relative flex flex-col justify-center h-full min-h-[3rem] sm:min-h-[4rem] lg:min-h-[5.5rem] pt-1 sm:pt-1.5 lg:pt-2">
               <div className="text-center">

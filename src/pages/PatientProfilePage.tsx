@@ -4104,12 +4104,16 @@ export function PatientProfilePage() {
       {/* Edit Patient Dialog */}
       <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {patient && (
+          <DialogHeader>
+            <DialogTitle className="text-blue-600">Edit Patient Profile</DialogTitle>
+          </DialogHeader>
+          {patient ? (
             <EditPatientForm
               patient={patient}
               onSubmit={handleEditSubmit}
-              onCancel={handleEditCancel}
             />
+          ) : (
+            <div>Loading patient data...</div>
           )}
         </DialogContent>
       </Dialog>

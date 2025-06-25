@@ -2,22 +2,31 @@ import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { NewLabScriptForm } from "@/components/NewLabScriptForm";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
+import { EditLabScriptForm } from "@/components/EditLabScriptForm";
 import { useLabScripts } from "@/hooks/useLabScripts";
 import { LabScript } from "@/hooks/useLabScripts";
-import { FlaskConical, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search } from "lucide-react";
+import { FlaskConical, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, MoreHorizontal, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function LabPage() {
   const [activeTab, setActiveTab] = useState("orders");
   const [activeFilter, setActiveFilter] = useState("pending");
   const [showNewScriptForm, setShowNewScriptForm] = useState(false);
   const [showLabScriptDetail, setShowLabScriptDetail] = useState(false);
+  const [showEditLabScriptForm, setShowEditLabScriptForm] = useState(false);
   const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [designStates, setDesignStates] = useState<Record<string, 'not-started' | 'in-progress' | 'hold' | 'completed'>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [editingStatus, setEditingStatus] = useState<Record<string, boolean>>({});
-  const { labScripts, loading, addLabScript, updateLabScript } = useLabScripts();
+  const { labScripts, loading, addLabScript, updateLabScript, deleteLabScript } = useLabScripts();
 
   const handleNewOrder = () => {
     setShowNewScriptForm(true);
@@ -60,12 +69,67 @@ export function LabPage() {
 
   const handleViewLabScript = (labScript: LabScript) => {
     setSelectedLabScript(labScript);
+    setIsEditMode(false);
     setShowLabScriptDetail(true);
+  };
+
+  const handleEditLabScript = (labScript: LabScript) => {
+    setSelectedLabScript(labScript);
+    setShowEditLabScriptForm(true);
+  };
+
+  const handleDeleteLabScript = async (labScript: LabScript) => {
+    if (window.confirm(`Are you sure you want to delete the lab script for ${labScript.patient_name}?`)) {
+      try {
+        await deleteLabScript(labScript.id);
+        toast.success("Lab script deleted successfully!");
+      } catch (error) {
+        console.error('Error deleting lab script:', error);
+        toast.error("Failed to delete lab script");
+      }
+    }
   };
 
   const handleLabScriptDetailClose = () => {
     setShowLabScriptDetail(false);
     setSelectedLabScript(null);
+    setIsEditMode(false);
+  };
+
+  const handleEditFormClose = () => {
+    setShowEditLabScriptForm(false);
+    setSelectedLabScript(null);
+  };
+
+  const handleEditFormSubmit = async (id: string, formData: any) => {
+    try {
+      // Convert form data to lab script format
+      const updateData = {
+        patient_id: formData.patientId,
+        patient_name: formData.patientName,
+        arch_type: formData.archType,
+        upper_appliance_type: formData.upperApplianceType,
+        lower_appliance_type: formData.lowerApplianceType,
+        screw_type: formData.screwType,
+        custom_screw_type: formData.customScrewType,
+        material: formData.material,
+        shade: formData.shade,
+        vdo_details: formData.vdoDetails,
+        is_nightguard_needed: formData.isNightguardNeeded,
+        requested_date: formData.requestedDate,
+        due_date: formData.dueDate,
+        instructions: formData.instructions,
+        notes: formData.notes
+      };
+
+      await updateLabScript(id, updateData);
+      setShowEditLabScriptForm(false);
+      setSelectedLabScript(null);
+      return updateData;
+    } catch (error) {
+      console.error('Error updating lab script:', error);
+      throw error;
+    }
   };
 
   const handleLabScriptUpdate = async (id: string, updates: Partial<LabScript>) => {
@@ -569,6 +633,34 @@ export function LabPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 flex-shrink-0"
+                                  title="More Actions"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => originalScript && handleEditLabScript(originalScript)}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => originalScript && handleDeleteLabScript(originalScript)}
+                                  className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                       </div>
@@ -607,6 +699,15 @@ export function LabPage() {
         onClose={handleLabScriptDetailClose}
         labScript={selectedLabScript}
         onUpdate={handleLabScriptUpdate}
+        initialEditMode={isEditMode}
+      />
+
+      {/* Edit Lab Script Form */}
+      <EditLabScriptForm
+        open={showEditLabScriptForm}
+        onClose={handleEditFormClose}
+        onSubmit={handleEditFormSubmit}
+        labScript={selectedLabScript}
       />
     </div>
   );

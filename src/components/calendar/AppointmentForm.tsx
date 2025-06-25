@@ -43,6 +43,36 @@ export function AppointmentForm({
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
 
+  // Helper function to format date for input (YYYY-MM-DD) using EST timezone
+  const formatDateForInput = (date: Date) => {
+    // Convert to EST timezone
+    const estDate = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const year = estDate.getFullYear();
+    const month = String(estDate.getMonth() + 1).padStart(2, '0');
+    const day = String(estDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to create date from input string in EST timezone
+  const createDateFromInput = (dateString: string) => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    // Create date in EST timezone
+    const estDate = new Date();
+    estDate.setFullYear(year, month - 1, day); // month is 0-indexed
+    estDate.setHours(12, 0, 0, 0); // Set to noon EST to avoid timezone edge cases
+    return estDate;
+  };
+
+  // Helper function to format date for database in EST
+  const formatDateForDatabase = (date: Date) => {
+    // Convert to EST timezone
+    const estDate = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const year = estDate.getFullYear();
+    const month = String(estDate.getMonth() + 1).padStart(2, '0');
+    const day = String(estDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Fetch real patients from Supabase
   const fetchPatients = async () => {
     setLoadingPatients(true);
@@ -125,9 +155,23 @@ export function AppointmentForm({
         }
 
         setSelectedAppointmentType(editingAppointment.type || '');
-        setSelectedDate(editingAppointment.date ? new Date(editingAppointment.date) : new Date());
-        setStartTime(editingAppointment.startTime || '09:00');
-        setEndTime(editingAppointment.endTime || '09:30');
+
+        // Handle date properly in EST timezone
+        if (editingAppointment.date) {
+          setSelectedDate(createDateFromInput(editingAppointment.date));
+        } else {
+          setSelectedDate(new Date());
+        }
+
+        // Format time to HH:MM (remove seconds if present)
+        const formatTimeForSelect = (timeString: string) => {
+          if (!timeString) return '09:00';
+          const [hours, minutes] = timeString.split(':');
+          return `${hours}:${minutes}`;
+        };
+
+        setStartTime(formatTimeForSelect(editingAppointment.startTime) || '09:00');
+        setEndTime(formatTimeForSelect(editingAppointment.endTime) || '09:30');
         setNotes(editingAppointment.notes || '');
       } else {
         // Reset form for new appointment
@@ -200,7 +244,7 @@ export function AppointmentForm({
       title: selectedAppointmentType, // Use appointment type as title
       patient: selectedPatient, // Patient name for display
       patientId: selectedPatientId, // Patient ID for database
-      date: selectedDate.toISOString().split('T')[0],
+      date: formatDateForDatabase(selectedDate),
       startTime: startTime,
       endTime: endTime,
       type: selectedAppointmentType,
@@ -261,7 +305,7 @@ export function AppointmentForm({
                   </SelectItem>
                 ))}
                 {patients.length === 0 && !loadingPatients && (
-                  <SelectItem value="" disabled>
+                  <SelectItem value="no-patients" disabled>
                     No patients found
                   </SelectItem>
                 )}
@@ -295,8 +339,8 @@ export function AppointmentForm({
             </label>
             <input
               type="date"
-              value={selectedDate.toISOString().split('T')[0]}
-              onChange={(e) => setSelectedDate(new Date(e.target.value))}
+              value={formatDateForInput(selectedDate)}
+              onChange={(e) => setSelectedDate(createDateFromInput(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>

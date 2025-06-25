@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +41,32 @@ interface PhoneInputProps {
 export function PhoneInput({ value, onChange, required }: PhoneInputProps) {
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // Default to US
   const [phoneNumber, setPhoneNumber] = useState("");
+
+  // Parse incoming phone number and set initial state
+  useEffect(() => {
+    if (value && value.trim()) {
+      // Find the country code in the value
+      const foundCountry = countries.find(country =>
+        value.startsWith(country.phoneCode)
+      );
+
+      if (foundCountry) {
+        setSelectedCountry(foundCountry);
+        // Extract the phone number part (remove country code and leading space)
+        const numberPart = value.substring(foundCountry.phoneCode.length).trim();
+        setPhoneNumber(numberPart);
+      } else {
+        // If no country code found, treat as US number (most common case)
+        setSelectedCountry(countries[0]); // US
+        // Use the value as-is since it's likely already formatted
+        setPhoneNumber(value);
+      }
+    } else {
+      // Reset to defaults if no value
+      setSelectedCountry(countries[0]);
+      setPhoneNumber("");
+    }
+  }, [value]);
 
   const formatPhoneNumber = (number: string, format: string) => {
     // Remove all non-digit characters

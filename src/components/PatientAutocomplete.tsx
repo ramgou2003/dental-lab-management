@@ -34,6 +34,13 @@ export function PatientAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Initialize searchTerm with value prop (for edit forms)
+  useEffect(() => {
+    if (value && value !== searchTerm) {
+      setSearchTerm(value);
+    }
+  }, [value]);
+
   // Search patients from database
   const searchPatients = async (query: string) => {
     if (query.length < 1) {

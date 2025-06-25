@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhoneInput } from "./PhoneInput";
@@ -124,7 +124,7 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Add New Patient</CardTitle>
+        <CardTitle className="text-blue-600">Add New Patient</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -154,6 +154,32 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
           </div>
 
           <div>
+            <Label className="text-base font-medium">Gender</Label>
+            <div className="flex gap-4 mt-2">
+              <div
+                className={`flex items-center justify-center px-4 py-2 rounded-md border-2 cursor-pointer transition-colors ${
+                  formData.gender === 'male'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                }`}
+                onClick={() => handleInputChange('gender', 'male')}
+              >
+                <span className="font-medium">Male</span>
+              </div>
+              <div
+                className={`flex items-center justify-center px-4 py-2 rounded-md border-2 cursor-pointer transition-colors ${
+                  formData.gender === 'female'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                }`}
+                onClick={() => handleInputChange('gender', 'female')}
+              >
+                <span className="font-medium">Female</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
             <Label htmlFor="dateOfBirth" className={errors.dateOfBirth ? "text-red-500" : ""}>
               Date of Birth <span className="text-red-500">*</span>
             </Label>
@@ -179,30 +205,9 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
             onAddressChange={handleInputChange}
           />
 
-          <div>
-            <Label className="text-base font-medium">Gender</Label>
-            <RadioGroup
-              value={formData.gender}
-              onValueChange={(value) => handleInputChange('gender', value)}
-              className="flex gap-6 mt-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="male" id="male" />
-                <Label htmlFor="male">Male</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="female" id="female" />
-                <Label htmlFor="female">Female</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <div className="flex gap-4 pt-4">
-            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+          <div className="flex justify-end pt-4">
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmitting}>
               {isSubmitting ? "Adding Patient..." : "Add Patient"}
-            </Button>
-            <Button type="button" variant="outline" onClick={onCancel} className="flex-1" disabled={isSubmitting}>
-              Cancel
             </Button>
           </div>
         </form>

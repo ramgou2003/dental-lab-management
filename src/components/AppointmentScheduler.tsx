@@ -52,8 +52,17 @@ export function AppointmentScheduler({
       return;
     }
 
+    // Format date in EST timezone
+    const formatDateForDatabase = (date: Date) => {
+      const estDate = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
+      const year = estDate.getFullYear();
+      const month = String(estDate.getMonth() + 1).padStart(2, '0');
+      const day = String(estDate.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     const appointmentData = {
-      date: selectedDate.toISOString().split('T')[0], // YYYY-MM-DD format
+      date: formatDateForDatabase(selectedDate),
       time: selectedTime,
       notes: appointmentNotes.trim() || undefined
     };
@@ -167,11 +176,12 @@ export function AppointmentScheduler({
             </div>
             {selectedDate && (
               <p className="text-sm text-gray-600 text-center">
-                Selected: {selectedDate.toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
+                Selected: {selectedDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  timeZone: 'America/New_York'
                 })}
               </p>
             )}

@@ -125,12 +125,15 @@ export function AppointmentDetailsDialog({
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Parse date string and create date in EST timezone
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'America/New_York'
     });
   };
 
