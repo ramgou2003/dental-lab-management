@@ -4,7 +4,6 @@ import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useLabScripts } from "@/hooks/useLabScripts";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
-import { useDeliveryItems } from "@/hooks/useDeliveryItems";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart,
@@ -28,7 +27,6 @@ import {
   Users,
   Calendar,
   Factory,
-  Package,
   TrendingUp,
   Clock,
   CheckCircle,
@@ -44,14 +42,24 @@ import {
   BarChart3,
   PieChart as PieChartIcon,
   Timer,
-  Stethoscope
+  Stethoscope,
+  FileText,
+  PlayCircle,
+  PauseCircle,
+  XCircle,
+  HourglassIcon,
+  Printer,
+  Cog,
+  Truck,
+  Search,
+  Settings,
+  MapPin
 } from "lucide-react";
 
 export function DashboardPage() {
   const { appointments } = useAppointments();
   const { labScripts } = useLabScripts();
   const { manufacturingItems } = useManufacturingItems();
-  const { deliveryItems } = useDeliveryItems();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -84,41 +92,33 @@ export function DashboardPage() {
   const activeManufacturing = manufacturingItems.filter(item =>
     ['printing', 'milling', 'inspection'].includes(item.status)
   ).length;
-  const readyForDelivery = deliveryItems.filter(item =>
-    item.delivery_status === 'ready-for-delivery'
+  const readyForDelivery = manufacturingItems.filter(item =>
+    item.status === 'completed'
   ).length;
 
-  // Appointment status distribution
-  const appointmentStatusData = [
-    { name: 'Confirmed', value: appointments.filter(a => a.status === 'confirmed').length, color: '#10B981' },
-    { name: 'Pending', value: appointments.filter(a => a.status === 'pending').length, color: '#F59E0B' },
-    { name: 'Completed', value: appointments.filter(a => a.status === 'completed').length, color: '#6366F1' },
-    { name: 'Cancelled', value: appointments.filter(a => a.status === 'cancelled').length, color: '#EF4444' }
-  ];
+  // Lab Scripts status distribution
+  const labScriptsPending = labScripts.filter(script => script.status === 'pending').length;
+  const labScriptsInProgress = labScripts.filter(script => script.status === 'in-progress').length;
+  const labScriptsOnHold = labScripts.filter(script => script.status === 'hold').length;
+  const labScriptsDelayed = labScripts.filter(script => script.status === 'delayed').length;
+  const labScriptsCompleted = labScripts.filter(script => script.status === 'completed').length;
 
-  // Manufacturing pipeline data
-  const manufacturingPipelineData = [
-    { name: 'New Scripts', value: labScripts.filter(s => s.status === 'pending').length },
-    { name: 'Printing', value: manufacturingItems.filter(m => m.status === 'printing').length },
-    { name: 'Milling', value: manufacturingItems.filter(m => m.status === 'milling').length },
-    { name: 'Inspection', value: manufacturingItems.filter(m => m.status === 'inspection').length },
-    { name: 'Ready', value: deliveryItems.filter(d => d.delivery_status === 'ready-for-delivery').length },
-    { name: 'Delivered', value: deliveryItems.filter(d => d.delivery_status === 'delivered').length }
-  ];
+  // Manufacturing status distribution
+  const manufacturingPendingPrinting = manufacturingItems.filter(item => item.status === 'pending-printing').length;
+  const manufacturingPendingMilling = manufacturingItems.filter(item => item.status === 'pending-milling').length;
+  const manufacturingInProduction = manufacturingItems.filter(item => item.status === 'in-production').length;
+  const manufacturingMilling = manufacturingItems.filter(item => item.status === 'milling').length;
+  const manufacturingInTransit = manufacturingItems.filter(item => item.status === 'in-transit').length;
+  const manufacturingQualityCheck = manufacturingItems.filter(item => item.status === 'quality-check').length;
+  const manufacturingCompleted = manufacturingItems.filter(item => item.status === 'completed').length;
 
-  // Weekly appointment trends (last 7 days)
-  const weeklyTrends = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
-    const dateStr = date.toISOString().split('T')[0];
-    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
 
-    return {
-      day: dayName,
-      appointments: appointments.filter(apt => apt.date === dateStr).length,
-      completed: appointments.filter(apt => apt.date === dateStr && apt.status === 'completed').length
-    };
-  });
+
+
+
+
+
+
 
   // Treatment type distribution
   const treatmentTypes = [
@@ -148,24 +148,6 @@ export function DashboardPage() {
       icon: Calendar,
       color: "bg-green-500",
       textColor: "text-green-600"
-    },
-    {
-      title: "Active Manufacturing",
-      value: activeManufacturing,
-      change: "-2",
-      trend: "down",
-      icon: Factory,
-      color: "bg-purple-500",
-      textColor: "text-purple-600"
-    },
-    {
-      title: "Ready for Delivery",
-      value: readyForDelivery,
-      change: "+8",
-      trend: "up",
-      icon: Package,
-      color: "bg-orange-500",
-      textColor: "text-orange-600"
     }
   ];
 
@@ -174,234 +156,514 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-50">
-      {/* Main Dashboard Content */}
-      <div className="h-full p-6">
-        <div className="h-full max-h-full grid grid-cols-12 gap-6">
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+      {/* Main Dashboard Content - Full height with padding all around */}
+      <div className="h-screen p-4 overflow-hidden">
+        {/* Top Row with Greeting and New Container */}
+        <div className="grid grid-cols-12 gap-4 mb-4">
+          {/* Greeting Container - 8 columns */}
+          <div className="col-span-8 group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-blue-500/5 hover:border-blue-300/70">
+            {/* Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-          {/* Left Column - Main Analytics */}
-          <div className="col-span-8 flex flex-col gap-6 min-h-0">
-
-            {/* Key Metrics Row */}
-            <div className="grid grid-cols-4 gap-4 h-28">
-              {keyMetrics.map((metric, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200 hover:-translate-y-1">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                      <metric.icon className="h-5 w-5 text-gray-700" />
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      {metric.trend === 'up' ? (
-                        <ArrowUpRight className="h-3 w-3 text-green-600" />
-                      ) : metric.trend === 'down' ? (
-                        <ArrowDownRight className="h-3 w-3 text-red-600" />
-                      ) : (
-                        <Minus className="h-3 w-3 text-gray-400" />
-                      )}
-                      <span className={`text-xs font-medium ${
-                        metric.trend === 'up' ? 'text-green-600' :
-                        metric.trend === 'down' ? 'text-red-600' : 'text-gray-500'
-                      }`}>
-                        {metric.change}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-xs font-medium text-gray-600 mb-1">{metric.title}</h3>
-                    <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Charts Section */}
-            <div className="flex-1 grid grid-cols-2 gap-6 min-h-0">
-
-              {/* Manufacturing Pipeline Chart */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Manufacturing Pipeline</h3>
-                    <p className="text-sm text-gray-500">Production workflow status</p>
-                  </div>
-                  <BarChart3 className="h-5 w-5 text-gray-400" />
-                </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={manufacturingPipelineData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 11, fill: '#64748b' }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 11, fill: '#64748b' }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                        }}
-                        cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
-                      />
-                      <Bar
-                        dataKey="value"
-                        fill="#3b82f6"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Weekly Trends Chart */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Weekly Trends</h3>
-                    <p className="text-sm text-gray-500">7-day appointment patterns</p>
-                  </div>
-                  <TrendingUp className="h-5 w-5 text-gray-400" />
-                </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={weeklyTrends} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis
-                        dataKey="day"
-                        tick={{ fontSize: 11, fill: '#64748b' }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 11, fill: '#64748b' }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px',
-                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="appointments"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        fill="#10b981"
-                        fillOpacity={0.1}
-                        name="Total Appointments"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="completed"
-                        stroke="#6366f1"
-                        strokeWidth={2}
-                        fill="#6366f1"
-                        fillOpacity={0.1}
-                        name="Completed"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+            <div className="relative flex items-center justify-start min-h-[5.5rem] pl-4">
+              {/* Greeting Text */}
+              <div className="flex flex-col justify-center">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 bg-clip-text text-transparent">
+                  {(() => {
+                    const hour = new Date().getHours();
+                    if (hour < 12) return "Good Morning";
+                    if (hour < 17) return "Good Afternoon";
+                    return "Good Evening";
+                  })()}
+                </h1>
+                <div className="flex items-center space-x-2 mt-1">
+                  <p className="text-sm text-slate-600 font-medium">Welcome back,</p>
+                  <span className="px-2 py-1 bg-gradient-to-r from-blue-100/80 to-indigo-100/80 text-blue-700 rounded-lg text-sm font-semibold border border-blue-200/50 shadow-sm">
+                    Dr. Sarah Chen
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Status & Insights */}
-          <div className="col-span-4 flex flex-col gap-6 min-h-0">
+          {/* Time & Date Container - 4 columns */}
+          <div className="col-span-4 group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-blue-500/5 hover:border-blue-300/70">
+            {/* Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-            {/* Appointment Status Distribution */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Appointment Status</h3>
-                  <p className="text-sm text-gray-500">Current distribution</p>
+            {/* Live Data - Top Right Corner */}
+            <div className="absolute top-4 right-4 flex items-center space-x-2">
+              <div className="px-3 py-1.5 bg-blue-500/10 rounded-full border border-blue-300/60 backdrop-blur-sm">
+                <span className="text-xs font-medium text-blue-700">Live Data</span>
+              </div>
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse border border-blue-200/30 shadow-sm"></div>
+            </div>
+
+            <div className="relative flex flex-col justify-center h-full min-h-[5.5rem] pt-2">
+              <div className="text-center">
+                {/* Current Time */}
+                <div className="mb-2">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                    {new Date().toLocaleTimeString('en-US', {
+                      timeZone: 'America/New_York',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">EST</p>
                 </div>
-                <PieChartIcon className="h-5 w-5 text-gray-400" />
+
+                {/* Current Date */}
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {new Date().toLocaleDateString('en-US', {
+                      timeZone: 'America/New_York',
+                      weekday: 'long'
+                    })}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {new Date().toLocaleDateString('en-US', {
+                      timeZone: 'America/New_York',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </p>
+                </div>
               </div>
-              <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={appointmentStatusData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={75}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {appointmentStatusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                {appointmentStatusData.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: item.color }}
-                      ></div>
-                      <span className="text-sm font-medium text-gray-700">{item.name}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="h-[calc(100%-6rem)] grid grid-cols-12 gap-4 max-h-full">
+
+          {/* Left Column - Main Analytics */}
+          <div className="col-span-8 flex flex-col gap-3 min-h-0">
+
+            {/* Key Metrics Row */}
+            <div className="grid grid-cols-4 gap-3">
+              {keyMetrics.map((metric, index) => (
+                <div key={index} className="relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4">
+                  {/* Gradient Background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-100"></div>
+
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl border border-blue-300/50">
+                        <metric.icon className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {metric.trend === 'up' ? (
+                          <div className="flex items-center space-x-1 px-2 py-1 bg-emerald-50 rounded-full border border-blue-200/30">
+                            <ArrowUpRight className="h-3 w-3 text-emerald-600" />
+                            <span className="text-xs font-semibold text-emerald-600">{metric.change}</span>
+                          </div>
+                        ) : metric.trend === 'down' ? (
+                          <div className="flex items-center space-x-1 px-2 py-1 bg-red-50 rounded-full border border-blue-200/30">
+                            <ArrowDownRight className="h-3 w-3 text-red-600" />
+                            <span className="text-xs font-semibold text-red-600">{metric.change}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1 px-2 py-1 bg-slate-50 rounded-full border border-blue-200/30">
+                            <Minus className="h-3 w-3 text-slate-500" />
+                            <span className="text-xs font-semibold text-slate-500">{metric.change}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900">{item.value}</span>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-600 mb-1">{metric.title}</h3>
+                      <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                        {metric.value}
+                      </p>
+                    </div>
                   </div>
-                ))}
+                </div>
+              ))}
+
+              {/* Search Container */}
+              <div className="col-span-2 relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4">
+                {/* Gradient Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-500/5 to-gray-500/5 rounded-2xl opacity-100"></div>
+
+                <div className="relative h-full flex flex-col justify-center">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl border border-blue-300/50">
+                      <Search className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-blue-50 rounded-full border border-blue-200/30">
+                      <Search className="h-3 w-3 text-blue-600" />
+                      <span className="text-xs font-semibold text-blue-600">Quick</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-600 mb-3">Search Patient</h3>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Enter patient name or ID..."
+                        className="w-full pl-10 pr-4 py-2 bg-white/80 border border-blue-200/50 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400/60 transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Treatment Types Distribution */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between mb-4">
+            {/* Lab Scripts Statistics Section */}
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-blue-200/40 p-2">
+              <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Treatment Types</h3>
-                  <p className="text-sm text-gray-500">Procedure breakdown</p>
+                  <h2 className="text-base font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                    Lab Scripts Overview
+                  </h2>
+                  <p className="text-xs text-slate-600">Real-time status distribution</p>
                 </div>
-                <Stethoscope className="h-5 w-5 text-gray-400" />
+                <div className="p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg border border-blue-300/50">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                </div>
               </div>
 
-              {/* Simple Progress List */}
-              <div className="space-y-3">
+              <div className="grid grid-cols-5 gap-2">
+              {/* Pending Lab Scripts */}
+              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl border border-blue-300/50">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-blue-50 rounded-full border border-blue-200/30">
+                      <Clock className="h-3 w-3 text-blue-600" />
+                      <span className="text-xs font-semibold text-blue-600">Pending</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-600 mb-1">Pending Scripts</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      {labScriptsPending}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* In Progress Lab Scripts */}
+              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-blue-300/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-xl border border-blue-300/50">
+                      <PlayCircle className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-emerald-50 rounded-full border border-blue-200/30">
+                      <Activity className="h-3 w-3 text-emerald-600" />
+                      <span className="text-xs font-semibold text-emerald-600">Active</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-600 mb-1">In Progress</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      {labScriptsInProgress}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* On Hold Lab Scripts */}
+              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 hover:border-blue-300/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-blue-300/50">
+                      <PauseCircle className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-amber-50 rounded-full border border-blue-200/30">
+                      <PauseCircle className="h-3 w-3 text-amber-600" />
+                      <span className="text-xs font-semibold text-amber-600">Hold</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-600 mb-1">On Hold</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      {labScriptsOnHold}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Delayed Lab Scripts */}
+              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-red-500/10 hover:border-blue-300/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 bg-gradient-to-br from-red-500/10 to-pink-500/10 rounded-xl border border-blue-300/50">
+                      <HourglassIcon className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-red-50 rounded-full border border-blue-200/30">
+                      <AlertTriangle className="h-3 w-3 text-red-600" />
+                      <span className="text-xs font-semibold text-red-600">Delayed</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-600 mb-1">Delayed</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      {labScriptsDelayed}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Completed Lab Scripts */}
+              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-green-500/10 hover:border-blue-300/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl border border-blue-300/50">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-green-50 rounded-full border border-blue-200/30">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span className="text-xs font-semibold text-green-600">Done</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-600 mb-1">Completed</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      {labScriptsCompleted}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+
+            {/* Manufacturing Overview Section */}
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-blue-200/40 p-3">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                    Manufacturing Overview
+                  </h2>
+                  <p className="text-sm text-slate-600">Production pipeline status</p>
+                </div>
+                <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl border border-blue-300/50">
+                  <Factory className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-3">
+                {/* Pending Printing */}
+                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg border border-blue-300/50">
+                        <Printer className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-50 rounded-full border border-blue-200/30">
+                        <Clock className="h-2.5 w-2.5 text-blue-600" />
+                        <span className="text-xs font-semibold text-blue-600">Print</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-medium text-slate-600 mb-1">Pending Printing</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                        {manufacturingPendingPrinting}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pending Milling */}
+                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/10 hover:border-blue-300/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="p-1.5 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 rounded-lg border border-blue-300/50">
+                        <Settings className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-purple-50 rounded-full border border-blue-200/30">
+                        <Clock className="h-2.5 w-2.5 text-purple-600" />
+                        <span className="text-xs font-semibold text-purple-600">Mill</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-medium text-slate-600 mb-1">Pending Milling</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                        {manufacturingPendingMilling}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* In Production */}
+                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-blue-300/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="p-1.5 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-lg border border-blue-300/50">
+                        <Cog className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-emerald-50 rounded-full border border-blue-200/30">
+                        <Activity className="h-2.5 w-2.5 text-emerald-600" />
+                        <span className="text-xs font-semibold text-emerald-600">Prod</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-medium text-slate-600 mb-1">In Production</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                        {manufacturingInProduction}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Milling */}
+                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-blue-300/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="p-1.5 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-lg border border-blue-300/50">
+                        <Cog className="h-4 w-4 text-indigo-600" />
+                      </div>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 rounded-full border border-blue-200/30">
+                        <Settings className="h-2.5 w-2.5 text-indigo-600" />
+                        <span className="text-xs font-semibold text-indigo-600">Mill</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-medium text-slate-600 mb-1">Milling</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                        {manufacturingMilling}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* In Transit */}
+                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/10 hover:border-blue-300/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="p-1.5 bg-gradient-to-br from-orange-500/10 to-amber-500/10 rounded-lg border border-blue-300/50">
+                        <Truck className="h-4 w-4 text-orange-600" />
+                      </div>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-orange-50 rounded-full border border-blue-200/30">
+                        <Truck className="h-2.5 w-2.5 text-orange-600" />
+                        <span className="text-xs font-semibold text-orange-600">Ship</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-medium text-slate-600 mb-1">In Transit</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                        {manufacturingInTransit}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quality Check */}
+                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 hover:border-blue-300/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-yellow-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="p-1.5 bg-gradient-to-br from-amber-500/10 to-yellow-500/10 rounded-lg border border-blue-300/50">
+                        <Search className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-amber-50 rounded-full border border-blue-200/30">
+                        <Search className="h-2.5 w-2.5 text-amber-600" />
+                        <span className="text-xs font-semibold text-amber-600">QC</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-medium text-slate-600 mb-1">Quality Check</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                        {manufacturingQualityCheck}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Completed */}
+                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-green-500/10 hover:border-blue-300/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="p-1.5 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg border border-blue-300/50">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-green-50 rounded-full border border-blue-200/30">
+                        <CheckCircle className="h-2.5 w-2.5 text-green-600" />
+                        <span className="text-xs font-semibold text-green-600">Done</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-medium text-slate-600 mb-1">Completed</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                        {manufacturingCompleted}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right Column - Status & Insights */}
+          <div className="col-span-4 flex flex-col gap-3 min-h-0 max-h-full overflow-hidden">
+
+
+
+            {/* Treatment Types Distribution */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="text-base font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    Treatment Types
+                  </h3>
+                  <p className="text-slate-600 text-xs">Procedure breakdown</p>
+                </div>
+                <div className="p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl border border-blue-300/50">
+                  <Stethoscope className="h-4 w-4 text-blue-600" />
+                </div>
+              </div>
+
+              {/* Enhanced Progress List */}
+              <div className="space-y-1.5">
                 {treatmentTypes.map((item, index) => {
                   const total = treatmentTypes.reduce((sum, t) => sum + t.value, 0);
                   const percentage = total > 0 ? (item.value / total) * 100 : 0;
 
                   return (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-150">
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        ></div>
-                        <div>
-                          <span className="text-sm font-medium text-gray-800">{item.name}</span>
-                          <p className="text-xs text-gray-500">{percentage.toFixed(0)}%</p>
+                    <div key={index} className="relative p-1.5 bg-gradient-to-r from-blue-50/50 to-blue-100/30 rounded-lg border border-blue-200/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className="w-2 h-2 rounded-full shadow-sm border border-blue-200/30"
+                            style={{ backgroundColor: item.color }}
+                          ></div>
+                          <span className="text-xs font-semibold text-slate-800">{item.name}</span>
                         </div>
+                        <span className="text-xs font-bold text-slate-900">{item.value}</span>
                       </div>
-                      <span className="text-lg font-semibold text-gray-900">{item.value}</span>
+                      {/* Progress bar */}
+                      <div className="w-full bg-blue-100/50 rounded-full h-0.5 mt-1 border border-blue-200/30">
+                        <div
+                          className="h-0.5 rounded-full transition-all duration-500"
+                          style={{
+                            backgroundColor: item.color,
+                            width: `${percentage}%`,
+                            opacity: 0.8
+                          }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5 font-medium">{percentage.toFixed(0)}%</p>
                     </div>
                   );
                 })}
@@ -409,76 +671,88 @@ export function DashboardPage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-1 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 flex flex-col">
+              <div className="flex items-center justify-between mb-2 flex-shrink-0">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Live Metrics</h3>
-                  <p className="text-sm text-gray-500">Real-time insights</p>
+                  <h3 className="text-base font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    Live Metrics
+                  </h3>
+                  <p className="text-slate-600 text-xs">Real-time insights</p>
                 </div>
-                <Activity className="h-5 w-5 text-gray-400" />
+                <div className="p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl border border-blue-300/50">
+                  <Activity className="h-3 w-3 text-blue-600" />
+                </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-150">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-500 rounded-lg">
-                      <Clock className="h-4 w-4 text-white" />
+              <div className="flex flex-col gap-2 flex-1 min-h-0">
+                <div className="relative p-2.5 bg-gradient-to-r from-blue-50/80 to-blue-100/50 rounded-lg border border-blue-300/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30">
+                        <Clock className="h-3 w-3 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-bold text-slate-800 block truncate">Pending Lab Scripts</span>
+                        <p className="text-xs text-slate-600 truncate">Awaiting processing</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-800">Pending Lab Scripts</span>
-                      <p className="text-xs text-gray-500">Awaiting processing</p>
-                    </div>
+                    <span className="text-lg font-bold text-blue-600 flex-shrink-0 ml-2">{pendingLabScripts}</span>
                   </div>
-                  <span className="text-xl font-bold text-blue-600">{pendingLabScripts}</span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors duration-150">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-500 rounded-lg">
-                      <CheckCircle className="h-4 w-4 text-white" />
+                <div className="relative p-2.5 bg-gradient-to-r from-emerald-50/80 to-emerald-100/50 rounded-lg border border-blue-300/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <div className="p-1.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30">
+                        <CheckCircle className="h-3 w-3 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-bold text-slate-800 block truncate">Completed Today</span>
+                        <p className="text-xs text-slate-600 truncate">Finished appointments</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-800">Completed Today</span>
-                      <p className="text-xs text-gray-500">Finished appointments</p>
-                    </div>
+                    <span className="text-lg font-bold text-emerald-600 flex-shrink-0 ml-2">
+                      {appointments.filter(a =>
+                        a.date === new Date().toISOString().split('T')[0] &&
+                        a.status === 'completed'
+                      ).length}
+                    </span>
                   </div>
-                  <span className="text-xl font-bold text-green-600">
-                    {appointments.filter(a =>
-                      a.date === new Date().toISOString().split('T')[0] &&
-                      a.status === 'completed'
-                    ).length}
-                  </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors duration-150">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-orange-500 rounded-lg">
-                      <AlertTriangle className="h-4 w-4 text-white" />
+                <div className="relative p-2.5 bg-gradient-to-r from-amber-50/80 to-amber-100/50 rounded-lg border border-blue-300/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <div className="p-1.5 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30">
+                        <AlertTriangle className="h-3 w-3 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-bold text-slate-800 block truncate">Overdue Items</span>
+                        <p className="text-xs text-slate-600 truncate">Require attention</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-800">Overdue Items</span>
-                      <p className="text-xs text-gray-500">Require attention</p>
-                    </div>
+                    <span className="text-lg font-bold text-amber-600 flex-shrink-0 ml-2">
+                      {labScripts.filter(script => {
+                        if (!script.due_date) return false;
+                        return new Date(script.due_date) < new Date() && script.status !== 'completed';
+                      }).length}
+                    </span>
                   </div>
-                  <span className="text-xl font-bold text-orange-600">
-                    {labScripts.filter(script => {
-                      if (!script.due_date) return false;
-                      return new Date(script.due_date) < new Date() && script.status !== 'completed';
-                    }).length}
-                  </span>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors duration-150">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-purple-500 rounded-lg">
-                      <Factory className="h-4 w-4 text-white" />
+                <div className="relative p-2.5 bg-gradient-to-r from-purple-50/80 to-purple-100/50 rounded-lg border border-blue-300/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <div className="p-1.5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30">
+                        <Factory className="h-3 w-3 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-bold text-slate-800 block truncate">In Manufacturing</span>
+                        <p className="text-xs text-slate-600 truncate">Active production</p>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-800">In Manufacturing</span>
-                      <p className="text-xs text-gray-500">Active production</p>
-                    </div>
+                    <span className="text-lg font-bold text-purple-600 flex-shrink-0 ml-2">{activeManufacturing}</span>
                   </div>
-                  <span className="text-xl font-bold text-purple-600">{activeManufacturing}</span>
                 </div>
               </div>
             </div>

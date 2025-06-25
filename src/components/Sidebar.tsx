@@ -69,7 +69,7 @@ export function Sidebar({
   const [isResizing, setIsResizing] = useState(false);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
-  const [currentTime, setCurrentTime] = useState(new Date());
+
 
   const handleLogout = () => {
     console.log("Logging out...");
@@ -79,44 +79,7 @@ export function Sidebar({
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
-  // Format time for expanded mode (24-hour format HH:MM:SS with day)
-  const formatTimeExpanded = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = {
-      timeZone: 'America/New_York', // EST timezone
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false // 24-hour format
-    };
-    const timeString = date.toLocaleTimeString('en-US', options);
 
-    const dayOptions: Intl.DateTimeFormatOptions = {
-      timeZone: 'America/New_York',
-      weekday: 'long'
-    };
-    const dayString = date.toLocaleDateString('en-US', dayOptions);
-
-    return { time: timeString, day: dayString };
-  };
-
-  // Format time for collapsed mode (24-hour format HH:MM with abbreviated day)
-  const formatTimeCollapsed = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = {
-      timeZone: 'America/New_York', // EST timezone
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false // 24-hour format
-    };
-    const timeString = date.toLocaleTimeString('en-US', options);
-
-    const dayOptions: Intl.DateTimeFormatOptions = {
-      timeZone: 'America/New_York',
-      weekday: 'short'
-    };
-    const dayString = date.toLocaleDateString('en-US', dayOptions);
-
-    return { time: timeString, day: dayString };
-  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (collapsed) return;
@@ -196,14 +159,7 @@ export function Sidebar({
     }
   }, [isResizing, startX, startWidth, width]);
 
-  // Update time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
 
-    return () => clearInterval(timer);
-  }, []);
 
   const sidebarWidth = collapsed ? 64 : width; // 64px = w-16
 
@@ -283,30 +239,6 @@ export function Sidebar({
       
       {/* Footer */}
       <div className="p-4 border-t border-gray-100 space-y-1 px-[11px]">
-        {/* Time Display Container */}
-        <div className="mb-2">
-          {collapsed ? (
-            // Collapsed mode: Clean elegant container with proper text visibility for narrow width
-            <div className="bg-white border-2 border-blue-300 rounded-lg h-12 flex flex-col justify-center px-1 transition-all duration-300 ease-in-out hover:border-blue-400 hover:shadow-lg shadow-sm">
-              <div className="text-blue-800 text-xs font-bold leading-tight text-center">
-                {formatTimeCollapsed(currentTime).time}
-              </div>
-              <div className="text-blue-600 text-xs font-medium leading-tight mt-0.5 text-center">
-                {formatTimeCollapsed(currentTime).day}
-              </div>
-            </div>
-          ) : (
-            // Expanded mode: Clean elegant container with enhanced spacing
-            <div className="bg-white border-2 border-blue-300 rounded-lg h-12 flex flex-col justify-center px-3 transition-all duration-300 ease-in-out hover:border-blue-400 hover:shadow-lg shadow-sm">
-              <div className="text-blue-800 text-base font-bold leading-tight">
-                {formatTimeExpanded(currentTime).time}
-              </div>
-              <div className="text-blue-600 text-sm font-medium leading-tight mt-1">
-                {formatTimeExpanded(currentTime).day}
-              </div>
-            </div>
-          )}
-        </div>
 
         <button onClick={onToggleCollapse} className="flex items-center w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200" title={collapsed ? "Expand" : "Collapse"}>
           {collapsed ? <ChevronRight className="h-5 w-5 flex-shrink-0" /> : <ChevronLeft className="h-5 w-5 flex-shrink-0" />}
