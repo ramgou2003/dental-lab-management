@@ -28,7 +28,7 @@ export interface ReportCard {
 
 export function useReportCards() {
   const [reportCards, setReportCards] = useState<ReportCard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false for faster UI
   const [error, setError] = useState<string | null>(null);
 
   const fetchReportCards = async () => {

@@ -11,6 +11,7 @@ interface CalendarHeaderProps {
   onNewAppointment: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  canCreateAppointments?: boolean;
 }
 
 export function CalendarHeader({
@@ -18,7 +19,8 @@ export function CalendarHeader({
   onDateChange,
   onNewAppointment,
   searchQuery,
-  onSearchChange
+  onSearchChange,
+  canCreateAppointments = true
 }: CalendarHeaderProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const navigateDate = (direction: 'prev' | 'next') => {
@@ -120,13 +122,15 @@ export function CalendarHeader({
           </div>
 
           {/* New Appointment Button */}
-          <Button
-            onClick={onNewAppointment}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Appointment
-          </Button>
+          {canCreateAppointments && (
+            <Button
+              onClick={onNewAppointment}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Appointment
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -54,7 +54,7 @@ export interface LabReportCardFormData {
 
 export function useLabReportCards() {
   const [labReportCards, setLabReportCards] = useState<LabReportCard[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false for faster UI
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 

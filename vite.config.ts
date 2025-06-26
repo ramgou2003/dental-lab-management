@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => ({
       },
       manifest: false, // We're using our custom manifest.json
       devOptions: {
-        enabled: true
+        enabled: false // Disable PWA in development to prevent caching issues
       }
     })
   ].filter(Boolean),

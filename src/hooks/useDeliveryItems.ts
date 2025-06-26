@@ -27,7 +27,7 @@ export interface DeliveryItem {
 
 export function useDeliveryItems() {
   const [deliveryItems, setDeliveryItems] = useState<DeliveryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false for faster UI
   const { toast } = useToast();
 
   const fetchDeliveryItems = async () => {

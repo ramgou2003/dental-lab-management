@@ -4,6 +4,7 @@ import { DayView } from "@/components/calendar/DayView";
 import { AppointmentForm } from "@/components/calendar/AppointmentForm";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { useAppointments, type Appointment } from "@/hooks/useAppointments";
+import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "@/components/ui/sonner";
 
 export function AppointmentsPage() {
@@ -19,6 +20,7 @@ export function AppointmentsPage() {
   const [initialFormEndTime, setInitialFormEndTime] = useState<string | undefined>(undefined);
   const [selectedAppointmentType, setSelectedAppointmentType] = useState<string | undefined>(undefined);
 
+  const { canCreateAppointments, canUpdateAppointments, canDeleteAppointments } = usePermissions();
   const {
     appointments,
     loading,
@@ -45,6 +47,10 @@ export function AppointmentsPage() {
   };
 
   const handleNewAppointment = () => {
+    if (!canCreateAppointments()) {
+      toast.error("You don't have permission to create appointments");
+      return;
+    }
     setEditingAppointment(null);
     setInitialFormDate(undefined);
     setInitialFormTime(undefined);
@@ -87,12 +93,20 @@ export function AppointmentsPage() {
   };
 
   const handleEditAppointment = (appointment: Appointment) => {
+    if (!canUpdateAppointments()) {
+      toast.error("You don't have permission to edit appointments");
+      return;
+    }
     setEditingAppointment(appointment);
     setShowAppointmentDetails(false);
     setShowAppointmentForm(true);
   };
 
   const handleDeleteAppointment = async (appointmentId: string) => {
+    if (!canDeleteAppointments()) {
+      toast.error("You don't have permission to delete appointments");
+      return;
+    }
     try {
       await deleteAppointment(appointmentId);
       setShowAppointmentDetails(false);
@@ -132,19 +146,8 @@ export function AppointmentsPage() {
 
   const filteredAppointments = getFilteredAppointments();
 
-  if (loading) {
-    return (
-      <div className="h-screen bg-gray-50 p-4 overflow-hidden">
-        <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 table-container-rounded flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Calendar...</h3>
-            <p className="text-gray-500">Please wait while we fetch your appointments.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Remove blocking loading state - let calendar render immediately
+  // Data will load in background and update when ready
 
   return (
     <div className="h-screen bg-gray-50 p-4 overflow-hidden">
@@ -157,6 +160,7 @@ export function AppointmentsPage() {
           onNewAppointment={handleNewAppointment}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          canCreateAppointments={canCreateAppointments()}
         />
 
         {/* Calendar Content - Scrollable */}
@@ -201,6 +205,8 @@ export function AppointmentsPage() {
         onEdit={handleEditAppointment}
         onDelete={handleDeleteAppointment}
         onStatusChange={handleStatusChange}
+        canUpdateAppointments={canUpdateAppointments()}
+        canDeleteAppointments={canDeleteAppointments()}
       />
 
 

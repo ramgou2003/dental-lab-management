@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhoneInput } from "./PhoneInput";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface NewPatientFormProps {
   onSubmit: (patientData: any) => void;
@@ -37,7 +37,6 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,27 +79,16 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
 
       if (error) {
         console.error('Error creating patient:', error);
-        toast({
-          title: "Error",
-          description: "Failed to create patient",
-          variant: "destructive",
-        });
+        toast.error("Failed to create patient");
         return;
       }
 
-      toast({
-        title: "Success",
-        description: "Patient created successfully",
-      });
+      toast.success("Patient created successfully");
 
       onSubmit(data);
     } catch (error) {
       console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create patient",
-        variant: "destructive",
-      });
+      toast.error("Failed to create patient");
     } finally {
       setIsSubmitting(false);
     }

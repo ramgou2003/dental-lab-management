@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhoneInput } from "./PhoneInput";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface Patient {
   id: string;
@@ -58,7 +58,6 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
 
   // Populate form with existing patient data
   useEffect(() => {
@@ -92,11 +91,7 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
     e.preventDefault();
     
     if (!validateForm()) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -129,28 +124,17 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
       if (error) {
         console.error('Error updating patient:', error);
         console.error('Error details:', error.message, error.details, error.hint);
-        toast({
-          title: "Error",
-          description: `Failed to update patient: ${error.message}`,
-          variant: "destructive",
-        });
+        toast.error(`Failed to update patient: ${error.message}`);
         return;
       }
 
-      toast({
-        title: "Success",
-        description: "Patient updated successfully",
-      });
+      toast.success("Patient updated successfully");
 
       onSubmit(data);
     } catch (error) {
       console.error('Error:', error);
       console.error('Caught error details:', error);
-      toast({
-        title: "Error",
-        description: `Failed to update patient: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive",
-      });
+      toast.error(`Failed to update patient: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }

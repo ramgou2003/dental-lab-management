@@ -5,6 +5,8 @@ import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { EditLabScriptForm } from "@/components/EditLabScriptForm";
 import { useLabScripts } from "@/hooks/useLabScripts";
 import { LabScript } from "@/hooks/useLabScripts";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/AuthGuard";
 import { FlaskConical, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, MoreHorizontal, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
@@ -16,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function LabPage() {
+  const { canCreateLabScripts, canUpdateLabScripts, canDeleteLabScripts } = usePermissions();
   const [activeTab, setActiveTab] = useState("orders");
   const [activeFilter, setActiveFilter] = useState("pending");
   const [showNewScriptForm, setShowNewScriptForm] = useState(false);
@@ -404,10 +407,10 @@ export function LabPage() {
             value: searchQuery,
             onChange: setSearchQuery
           }}
-          action={{
+          action={canCreateLabScripts() ? {
             label: "New Lab Script",
             onClick: handleNewOrder
-          }}
+          } : undefined}
         />
       </div>
       <div className="flex-1 px-6 pt-6 pb-2">
@@ -645,20 +648,24 @@ export function LabPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => originalScript && handleEditLabScript(originalScript)}
-                                  className="cursor-pointer"
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => originalScript && handleDeleteLabScript(originalScript)}
-                                  className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
+                                <PermissionGuard permission="lab_scripts.update">
+                                  <DropdownMenuItem
+                                    onClick={() => originalScript && handleEditLabScript(originalScript)}
+                                    className="cursor-pointer"
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
+                                <PermissionGuard permission="lab_scripts.delete">
+                                  <DropdownMenuItem
+                                    onClick={() => originalScript && handleDeleteLabScript(originalScript)}
+                                    className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>

@@ -7,6 +7,8 @@ import { useLabScripts } from "@/hooks/useLabScripts";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   BarChart,
   Bar,
@@ -60,11 +62,13 @@ import {
 
 export function DashboardPage() {
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
+  const { canAccessDashboard } = usePermissions();
   const { appointments } = useAppointments();
   const { labScripts } = useLabScripts();
   const { manufacturingItems } = useManufacturingItems();
   const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false for faster loading
 
   // Patient search state
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,23 +81,29 @@ export function DashboardPage() {
   // Current time state for real-time updates
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Fetch patients data
+  // Fetch patients data in background without blocking UI
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const { data, error } = await supabase
-          .from('patients')
-          .select('*');
+        // Add timeout to prevent hanging
+        const { data, error } = await Promise.race([
+          supabase.from('patients').select('*'),
+          new Promise<any>((_, reject) =>
+            setTimeout(() => reject(new Error('Patients fetch timeout')), 2000) // Reduced timeout
+          )
+        ]);
 
         if (error) throw error;
         setPatients(data || []);
       } catch (error) {
         console.error('Error fetching patients:', error);
-      } finally {
-        setLoading(false);
+        // Set empty array to allow dashboard to render
+        setPatients([]);
       }
+      // Don't set loading to false here - let the dashboard render immediately
     };
 
+    // Fetch in background without blocking UI
     fetchPatients();
   }, []);
 
@@ -283,7 +293,7 @@ export function DashboardPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mt-1">
                   <p className="text-xs sm:text-sm text-slate-600 font-medium">Welcome back,</p>
                   <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-blue-100/80 to-indigo-100/80 text-blue-700 rounded-md sm:rounded-lg text-xs sm:text-sm font-semibold border border-blue-200/50 shadow-sm mt-1 sm:mt-0 w-fit">
-                    Dr. Sarah Chen
+                    {userProfile ? userProfile.full_name : "User"}
                   </span>
                 </div>
               </div>

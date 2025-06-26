@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/AuthGuard";
 import { Eye } from "lucide-react";
 
 interface Patient {
@@ -326,16 +328,18 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
 
                 {/* Actions */}
                 <div className="px-2 flex items-center justify-center min-w-0">
-                  <Button
-                    onClick={() => onViewProfile?.(patient.id)}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1 h-8 px-3 text-xs min-w-0"
-                  >
-                    <Eye className="h-3 w-3 flex-shrink-0" />
-                    <span className="hidden sm:inline truncate">View Profile</span>
-                    <span className="sm:hidden truncate">View</span>
-                  </Button>
+                  <PermissionGuard permission="patients.read">
+                    <Button
+                      onClick={() => onViewProfile?.(patient.id)}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 h-8 px-3 text-xs min-w-0"
+                    >
+                      <Eye className="h-3 w-3 flex-shrink-0" />
+                      <span className="hidden sm:inline truncate">View Profile</span>
+                      <span className="sm:hidden truncate">View</span>
+                    </Button>
+                  </PermissionGuard>
                 </div>
               </div>
             ))

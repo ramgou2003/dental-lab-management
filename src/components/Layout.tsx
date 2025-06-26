@@ -58,6 +58,7 @@ const Layout = () => {
     if (path === "/report-cards") return "report-cards";
     if (path === "/appliance-delivery") return "appliance-delivery";
     if (path === "/manufacturing") return "manufacturing";
+    if (path === "/user-management") return "user-management";
     if (path === "/settings") return "settings";
     if (path === "/profile") return "profile";
     return "dashboard";

@@ -1,7 +1,9 @@
-import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
+import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, GripVertical, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface SidebarProps {
   activeSection: string;
@@ -49,6 +51,12 @@ const navigation = [
     section: "appliance-delivery",
     icon: Package
   }, {
+    name: "User Management",
+    href: "/user-management",
+    section: "user-management",
+    icon: Shield,
+    adminOnly: true
+  }, {
     name: "Settings",
     href: "/settings",
     section: "settings",
@@ -71,8 +79,16 @@ export function Sidebar({
   const [startWidth, setStartWidth] = useState(0);
 
 
-  const handleLogout = () => {
-    console.log("Logging out...");
+  const { signOut, userProfile } = useAuth();
+  const { canAccessUserManagement } = usePermissions();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -224,6 +240,11 @@ export function Sidebar({
       {/* Navigation */}
       <nav className="flex-1 p-4 px-[9px] space-y-1">
         {navigation.map(item => {
+        // Hide admin-only items for non-admin users
+        if (item.adminOnly && !canAccessUserManagement) {
+          return null;
+        }
+
         const isActive = activeSection === item.section;
         return <div key={item.section} className="relative">
             <button onClick={() => navigate(item.href)} className={cn("flex items-center justify-start w-full text-left px-3 py-3.5 rounded-lg transition-colors duration-200 relative h-12", isActive ? "bg-indigo-50 text-indigo-700 border border-indigo-200" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900")} title={collapsed ? item.name : undefined}>
@@ -258,11 +279,15 @@ export function Sidebar({
         <div className="border-t border-gray-100 pt-3 mt-3">
           <button onClick={() => navigate('/profile')} className="flex items-center justify-start w-full text-left hover:bg-gray-50 rounded-lg py-1.5 pl-0.5 pr-1 transition-colors duration-200">
             <div className="bg-blue-600 text-white rounded-full size-9 flex-shrink-0 flex items-center justify-center font-semibold text-sm">
-              {getInitials("Amelia", "Stone")}
+              {userProfile ? getInitials(userProfile.first_name, userProfile.last_name) : "U"}
             </div>
             <div className={`transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden pointer-events-none' : 'opacity-100 ml-3'}`}>
-              <h1 className="text-gray-900 text-sm font-semibold whitespace-nowrap">Dr. Amelia Stone</h1>
-              <p className="text-gray-500 text-xs whitespace-nowrap">General Dentistry</p>
+              <h1 className="text-gray-900 text-sm font-semibold whitespace-nowrap">
+                {userProfile ? userProfile.full_name : "User"}
+              </h1>
+              <p className="text-gray-500 text-xs whitespace-nowrap">
+                {userProfile ? userProfile.email : ""}
+              </p>
             </div>
           </button>
         </div>

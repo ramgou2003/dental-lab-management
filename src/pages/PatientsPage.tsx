@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/AuthGuard";
 
 import { PatientTabs } from "@/components/PatientTabs";
 import { PatientsTable } from "@/components/PatientsTable";
@@ -10,6 +12,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export function PatientsPage() {
   const navigate = useNavigate();
+  const { canCreatePatients } = usePermissions();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
@@ -44,10 +47,10 @@ export function PatientsPage() {
             value: searchTerm,
             onChange: setSearchTerm
           }}
-          action={{
+          action={canCreatePatients() ? {
             label: "Add Patient",
             onClick: handleNewPatient
-          }}
+          } : undefined}
         />
       </div>
       <div className="flex-1 px-4 pt-4">

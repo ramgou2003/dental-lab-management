@@ -23,6 +23,8 @@ interface AppointmentDetailsDialogProps {
   onEdit: (appointment: Appointment) => void;
   onDelete: (appointmentId: string) => void;
   onStatusChange: (appointmentId: string, newStatus: Appointment['status']) => void;
+  canUpdateAppointments?: boolean;
+  canDeleteAppointments?: boolean;
 }
 
 export function AppointmentDetailsDialog({
@@ -31,7 +33,9 @@ export function AppointmentDetailsDialog({
   appointment,
   onEdit,
   onDelete,
-  onStatusChange
+  onStatusChange,
+  canUpdateAppointments = true,
+  canDeleteAppointments = true
 }: AppointmentDetailsDialogProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -299,24 +303,30 @@ export function AppointmentDetailsDialog({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-between pt-6 border-t">
-          <Button
-            variant="outline"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-red-600 border-red-200 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-          
-          <Button
-            onClick={handleEdit}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-        </div>
+        {(canUpdateAppointments || canDeleteAppointments) && (
+          <div className="flex justify-between pt-6 border-t">
+            {canDeleteAppointments && (
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
+
+            {canUpdateAppointments && (
+              <Button
+                onClick={handleEdit}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Delete Confirmation */}
         {showDeleteConfirm && (

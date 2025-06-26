@@ -21,7 +21,7 @@ export interface Appointment {
 
 export function useAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false for faster UI
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
