@@ -20,7 +20,8 @@ import {
   Shield,
   UserCheck,
   UserX,
-  UserMinus
+  UserMinus,
+  AlertTriangle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -28,6 +29,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,6 +70,9 @@ export function UserManagementPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { canCreateUsers, canUpdateUsers, canDeleteUsers, canManageUserRoles } = usePermissions();
   const { userRoles } = useAuth();
 
@@ -105,11 +119,7 @@ export function UserManagementPage() {
 
       if (error) {
         console.error('Error fetching users:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch users",
-          variant: "destructive",
-        });
+        toast.error("Failed to fetch users");
         return;
       }
 
@@ -163,11 +173,7 @@ export function UserManagementPage() {
       setUsers(processedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
+      toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -202,11 +208,7 @@ export function UserManagementPage() {
       const userToUpdate = users.find(u => u.id === userId);
 
       if (userToUpdate && !canEditUser(userToUpdate)) {
-        toast({
-          title: "Access Denied",
-          description: "You cannot modify super admin accounts",
-          variant: "destructive",
-        });
+        toast.error("You cannot modify super admin accounts");
         return;
       }
 
@@ -216,29 +218,81 @@ export function UserManagementPage() {
         .eq('id', userId);
 
       if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to update user status",
-          variant: "destructive",
-        });
+        toast.error("Failed to update user status");
         return;
       }
 
-      toast({
-        title: "Success",
-        description: "User status updated successfully",
-      });
+      toast.success("User status updated successfully");
 
       // Refresh users list
       fetchUsers();
     } catch (error) {
       console.error('Error updating user status:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
+      toast.error("An unexpected error occurred");
     }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      // Check if user can be deleted
+      if (!canEditUser(userToDelete)) {
+        toast.error("You cannot delete super admin accounts");
+        return;
+      }
+
+      // First, delete user roles
+      const { error: rolesError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userToDelete.id);
+
+      if (rolesError) {
+        console.error('Error deleting user roles:', rolesError);
+        toast.error("Failed to delete user roles. Please try again.");
+        return;
+      }
+
+      // Then delete user profile
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', userToDelete.id);
+
+      if (profileError) {
+        console.error('Error deleting user profile:', profileError);
+        toast.error("Failed to delete user profile. Please try again.");
+        return;
+      }
+
+      // Finally, delete from auth.users
+      const { error: authError } = await supabase.auth.admin.deleteUser(userToDelete.id);
+
+      if (authError) {
+        console.error('Error deleting auth user:', authError);
+        // Even if auth deletion fails, the profile is already deleted
+        toast.success(`User ${userToDelete.full_name} profile deleted. Auth cleanup may be needed.`);
+      } else {
+        toast.success(`User ${userToDelete.full_name} has been deleted successfully.`);
+      }
+
+      // Refresh users list
+      fetchUsers();
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error("An unexpected error occurred while deleting the user.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openDeleteDialog = (user: UserProfile) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
   };
 
   const filteredUsers = users.filter(user =>
@@ -387,7 +441,13 @@ export function UserManagementPage() {
                             </PermissionGuard>
 
                             <PermissionGuard permission="users.delete">
-                              <DropdownMenuItem className="text-red-600">
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  openDeleteDialog(user);
+                                }}
+                              >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete User
                               </DropdownMenuItem>
@@ -414,6 +474,52 @@ export function UserManagementPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete User Account
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p>Are you sure you want to delete <strong>{userToDelete?.full_name}</strong>?</p>
+                <p className="mt-2">This action cannot be undone and will:</p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Permanently delete the user account</li>
+                  <li>Remove all associated roles and permissions</li>
+                  <li>Delete all user profile information</li>
+                  <li>Revoke access to the system immediately</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete User
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
