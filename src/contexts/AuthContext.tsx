@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { authCache } from '@/utils/authCache';
+import { sessionManager } from '@/utils/sessionManager';
 
 interface UserProfile {
   id: string;
@@ -212,6 +213,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setInitialLoadComplete(true);
     }, 3000); // Reduced to 3 seconds
 
+    // Initialize session manager for automatic token refresh
+    sessionManager.initialize().catch(error => {
+      console.error('Error initializing session manager:', error);
+    });
+
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
@@ -263,27 +269,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setInitialLoadComplete(true);
     });
 
-    // Listen for auth changes with optimized handling
+    // Listen for auth changes with improved token refresh handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
-        setSession(session);
-        setUser(session?.user ?? null);
+        console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
 
-        if (session?.user && event !== 'TOKEN_REFRESHED') {
-          // Only fetch user data for significant auth events, not token refresh
-          if (initialLoadComplete) {
-            // If initial load is complete, fetch in background
-            fetchUserData(session.user.id).catch(error => {
-              console.error('Error fetching user data on auth change:', error);
-            });
-          }
-        } else if (!session?.user) {
-          // User signed out, clear everything
-          authCache.clear();
-          setUserProfile(null);
-          setUserRoles([]);
-          setUserPermissions([]);
+        // Handle different auth events
+        switch (event) {
+          case 'SIGNED_IN':
+            setSession(session);
+            setUser(session?.user ?? null);
+            if (session?.user && initialLoadComplete) {
+              fetchUserData(session.user.id).catch(error => {
+                console.error('Error fetching user data on sign in:', error);
+              });
+            }
+            break;
+
+          case 'SIGNED_OUT':
+            // User signed out, clear everything
+            authCache.clear();
+            setSession(null);
+            setUser(null);
+            setUserProfile(null);
+            setUserRoles([]);
+            setUserPermissions([]);
+            break;
+
+          case 'TOKEN_REFRESHED':
+            // Token refreshed successfully, update session but don't refetch user data
+            setSession(session);
+            setUser(session?.user ?? null);
+            console.log('Token refreshed successfully');
+            break;
+
+          case 'USER_UPDATED':
+            setSession(session);
+            setUser(session?.user ?? null);
+            break;
+
+          default:
+            setSession(session);
+            setUser(session?.user ?? null);
         }
 
         if (initialLoadComplete) {
@@ -295,6 +322,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       clearTimeout(timeoutId);
       subscription.unsubscribe();
+      sessionManager.cleanup();
     };
   }, [initialLoadComplete]);
 

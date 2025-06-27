@@ -23,6 +23,11 @@ export function LoginForm() {
   // Get the intended destination or default to dashboard
   const from = location.state?.from?.pathname || '/dashboard';
 
+  // Check for account inactive reason from URL params
+  const urlParams = new URLSearchParams(location.search);
+  const reason = urlParams.get('reason');
+  const isAccountInactive = reason === 'account_inactive';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -62,6 +67,15 @@ export function LoginForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isAccountInactive && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Your account has been deactivated. Please contact your administrator to reactivate your account.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />

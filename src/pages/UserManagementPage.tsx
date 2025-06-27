@@ -222,6 +222,11 @@ export function UserManagementPage() {
         return;
       }
 
+      // If user is being deactivated, force logout
+      if (newStatus !== 'active') {
+        await forceUserLogout(userId, `Account status changed to ${newStatus}`);
+      }
+
       toast.success("User status updated successfully");
 
       // Refresh users list
@@ -229,6 +234,24 @@ export function UserManagementPage() {
     } catch (error) {
       console.error('Error updating user status:', error);
       toast.error("An unexpected error occurred");
+    }
+  };
+
+  const forceUserLogout = async (userId: string, reason: string) => {
+    try {
+      const { error } = await supabase.rpc('force_user_logout', {
+        target_user_id: userId,
+        reason: reason
+      });
+
+      if (error) {
+        console.error('Error forcing user logout:', error);
+        // Don't show error to admin, as the status change was successful
+      } else {
+        console.log('User logout forced successfully');
+      }
+    } catch (error) {
+      console.error('Error in force logout:', error);
     }
   };
 
