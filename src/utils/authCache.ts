@@ -39,16 +39,33 @@ export const authCache = {
   load: (): CachedUserData | null => {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
-      if (!cached) return null;
+      if (!cached) {
+        console.log('No cached user data found');
+        return null;
+      }
 
       const data: CachedUserData = JSON.parse(cached);
-      
+
       // Check if cache is still valid
       if (Date.now() - data.timestamp > CACHE_DURATION) {
+        console.log('Cached user data expired, clearing cache');
         localStorage.removeItem(CACHE_KEY);
         return null;
       }
 
+      // Validate cached data structure
+      if (!data.userProfile || !Array.isArray(data.userRoles) || !Array.isArray(data.userPermissions)) {
+        console.warn('Invalid cached data structure, clearing cache');
+        localStorage.removeItem(CACHE_KEY);
+        return null;
+      }
+
+      console.log('Loaded cached user data:', {
+        hasProfile: !!data.userProfile,
+        rolesCount: data.userRoles.length,
+        permissionsCount: data.userPermissions.length,
+        age: Math.round((Date.now() - data.timestamp) / 1000 / 60) + ' minutes'
+      });
       return data;
     } catch (error) {
       console.warn('Failed to load cached user data:', error);

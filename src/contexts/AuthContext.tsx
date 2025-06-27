@@ -98,6 +98,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserData = async (userId: string) => {
     try {
       console.log('Fetching user data for:', userId);
+      console.log('Current user profile state:', userProfile ? 'Has profile' : 'No profile');
+      console.log('Current user roles state:', userRoles.length, 'roles');
 
       // Fetch all data in parallel with shorter timeouts
       const [profileResult, rolesResult] = await Promise.allSettled([
@@ -163,6 +165,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           console.log('User profile fetched successfully:', profile);
+          console.log('Profile data:', {
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            status: profile.status
+          });
           profileData = profile;
           setUserProfile(profile);
         }
@@ -356,10 +364,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             break;
 
           case 'TOKEN_REFRESHED':
-            // Token refreshed successfully, update session but don't refetch user data
+            // Token refreshed successfully, update session and refetch user data to ensure consistency
             setSession(session);
             setUser(session?.user ?? null);
             console.log('Token refreshed successfully');
+
+            // Refetch user data to ensure profile and roles are up to date
+            if (session?.user && initialLoadComplete) {
+              console.log('Refreshing user data after token refresh');
+              fetchUserData(session.user.id).catch(error => {
+                console.error('Error refreshing user data after token refresh:', error);
+                // Don't clear data on refresh error, keep existing data
+              });
+            }
             break;
 
           case 'USER_UPDATED':
@@ -428,9 +445,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Refresh user data
   const refreshUserData = async () => {
     if (user) {
+      console.log('Manually refreshing user data for:', user.id);
+      await fetchUserData(user.id);
+    } else {
+      console.warn('Cannot refresh user data: no user available');
+    }
+  };
+
+  // Add a function to check and restore user data if missing
+  const ensureUserData = async () => {
+    if (user && !userProfile && !loading) {
+      console.log('User data missing, attempting to restore for:', user.id);
       await fetchUserData(user.id);
     }
   };
+
+  // Periodically check if user data needs to be restored
+  useEffect(() => {
+    if (!loading && user && !userProfile) {
+      console.log('Detected missing user profile, scheduling restore attempt');
+      const timer = setTimeout(() => {
+        ensureUserData();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, userProfile, loading]);
 
   const value: AuthContextType = {
     user,

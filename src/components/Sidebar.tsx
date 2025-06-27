@@ -79,8 +79,18 @@ export function Sidebar({
   const [startWidth, setStartWidth] = useState(0);
 
 
-  const { signOut, userProfile } = useAuth();
+  const { signOut, userProfile, loading } = useAuth();
   const { canAccessUserManagement } = usePermissions();
+
+  // Debug logging for user profile changes
+  useEffect(() => {
+    console.log('Sidebar: User profile changed:', {
+      hasProfile: !!userProfile,
+      fullName: userProfile?.full_name,
+      email: userProfile?.email,
+      loading
+    });
+  }, [userProfile, loading]);
 
   const handleLogout = async () => {
     try {

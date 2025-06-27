@@ -47,7 +47,7 @@ export class SessionManager {
 
       // Listen for auth state changes
       supabase.auth.onAuthStateChange((event, session) => {
-        console.log('SessionManager: Auth state changed:', event);
+        console.log('SessionManager: Auth state changed:', event, session ? 'Session exists' : 'No session');
 
         try {
           if (event === 'SIGNED_IN' && session?.user) {
@@ -63,7 +63,14 @@ export class SessionManager {
             this.clearRefreshTimer();
             this.stopUserStatusMonitoring();
           } else if (event === 'TOKEN_REFRESHED' && session) {
+            console.log('SessionManager: Token refreshed, updating session tracking');
             this.scheduleTokenRefresh(session);
+
+            // Ensure user ID is maintained after token refresh
+            if (session.user && !this.currentUserId) {
+              this.currentUserId = session.user.id;
+              console.log('SessionManager: Restored user ID after token refresh');
+            }
           }
         } catch (authError) {
           console.error('SessionManager: Error handling auth state change:', authError);
