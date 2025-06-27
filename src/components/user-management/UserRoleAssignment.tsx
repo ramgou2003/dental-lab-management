@@ -129,20 +129,27 @@ export function UserRoleAssignment({
     }
 
     try {
-      // Get current active role IDs
+      // Get all current role IDs (both active and inactive)
+      const currentRoleIds = currentRoles.map(ur => ur.role_id);
+
+      // Get currently active role IDs
       const currentActiveRoleIds = currentRoles
         .filter(ur => ur.status === 'active')
         .map(ur => ur.role_id);
 
       // Determine roles to add and remove
-      const rolesToAdd = selectedRoles.filter(roleId => !currentActiveRoleIds.includes(roleId));
+      const rolesToAdd = selectedRoles.filter(roleId => !currentRoleIds.includes(roleId));
       const rolesToRemove = currentActiveRoleIds.filter(roleId => !selectedRoles.includes(roleId));
+      const rolesToReactivate = selectedRoles.filter(roleId => {
+        const existingRole = currentRoles.find(ur => ur.role_id === roleId);
+        return existingRole && existingRole.status === 'inactive';
+      });
 
-      // Remove roles (set status to inactive)
+      // Remove roles (delete the rows completely)
       if (rolesToRemove.length > 0) {
         const { error: removeError } = await supabase
           .from('user_roles')
-          .update({ status: 'inactive' })
+          .delete()
           .eq('user_id', userId)
           .in('role_id', rolesToRemove);
 
@@ -153,7 +160,7 @@ export function UserRoleAssignment({
         }
       }
 
-      // Add new roles
+      // Add completely new roles
       if (rolesToAdd.length > 0) {
         const newUserRoles = rolesToAdd.map(roleId => ({
           user_id: userId,
@@ -163,10 +170,7 @@ export function UserRoleAssignment({
 
         const { error: addError } = await supabase
           .from('user_roles')
-          .upsert(newUserRoles, {
-            onConflict: 'user_id,role_id',
-            ignoreDuplicates: false
-          });
+          .insert(newUserRoles);
 
         if (addError) {
           console.error('Error adding roles:', addError);
@@ -175,12 +179,7 @@ export function UserRoleAssignment({
         }
       }
 
-      // Reactivate roles that were previously inactive
-      const rolesToReactivate = selectedRoles.filter(roleId => {
-        const existingRole = currentRoles.find(ur => ur.role_id === roleId);
-        return existingRole && existingRole.status === 'inactive';
-      });
-
+      // Reactivate previously inactive roles
       if (rolesToReactivate.length > 0) {
         const { error: reactivateError } = await supabase
           .from('user_roles')

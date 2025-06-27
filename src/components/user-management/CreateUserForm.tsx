@@ -157,7 +157,7 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
 
       if (!existingProfile) {
         console.log('User profile not found, creating manually...');
-        // Create user profile manually
+        // Create user profile manually (don't include full_name as it's generated)
         const { error: createProfileError } = await supabase
           .from('user_profiles')
           .insert({
@@ -165,7 +165,6 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
             email: formData.email,
             first_name: formData.firstName,
             last_name: formData.lastName,
-            full_name: `${formData.lastName}, ${formData.firstName}`,
             phone: formData.phone,
             status: formData.status
           });
@@ -176,13 +175,12 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
           return;
         }
       } else {
-        // Update existing user profile with additional info
+        // Update existing user profile with additional info (don't update full_name as it's generated)
         const { error: profileError } = await supabase
           .from('user_profiles')
           .update({
             phone: formData.phone,
-            status: formData.status,
-            full_name: `${formData.lastName}, ${formData.firstName}`
+            status: formData.status
           })
           .eq('id', authData.user.id);
 
@@ -191,31 +189,32 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
         }
       }
 
-      // Assign roles to user
+      // Assign roles to user using database function
       if (formData.selectedRoles.length > 0) {
-        const roleAssignments = formData.selectedRoles.map(roleId => ({
-          user_id: authData.user!.id,
-          role_id: roleId,
-          status: 'active'
-        }));
+        console.log('Assigning roles to user:', authData.user!.id);
+        console.log('Selected roles:', formData.selectedRoles);
 
-        console.log('Assigning roles:', roleAssignments);
+        const { data: rolesResult, error: rolesError } = await supabase.rpc('assign_user_roles_simple', {
+          target_user_id: authData.user!.id,
+          role_ids: formData.selectedRoles
+        });
 
-        const { error: rolesError } = await supabase
-          .from('user_roles')
-          .insert(roleAssignments);
+        console.log('Role assignment response:', { rolesResult, rolesError });
 
         if (rolesError) {
-          console.error('Error assigning roles:', rolesError);
-          toast.warning("User created but failed to assign some roles");
+          console.error('Error calling assign_user_roles_simple function:', rolesError);
+          toast.warning("User created but failed to assign some roles. Please assign roles manually.");
+        } else if (rolesResult && !rolesResult.success) {
+          console.error('Role assignment failed:', rolesResult);
+          toast.warning(`User created but failed to assign roles: ${rolesResult.error || 'Unknown error'}`);
         } else {
-          console.log('Roles assigned successfully');
+          console.log('Roles assigned successfully:', rolesResult);
+          toast.success(`User created successfully with ${rolesResult.assigned_count} role(s) assigned`);
         }
       } else {
         console.log('No roles selected for user');
+        toast.success("User created successfully");
       }
-
-      toast.success("User created successfully");
 
       // Reset form and close dialog
       setFormData({

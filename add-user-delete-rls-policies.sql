@@ -61,13 +61,13 @@ WITH CHECK (
   has_users_read_permission() OR is_super_admin()
 );
 
--- 6. Add policy to allow users with users.create permission to insert user roles
-CREATE POLICY "Allow users with users.create permission to insert user roles"
+-- 6. Add policy to allow users with users.create or users.manage_roles permission to insert user roles
+CREATE POLICY "Allow users with users.create or users.manage_roles permission to insert user roles"
 ON public.user_roles
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  has_users_read_permission() OR is_super_admin()
+  has_users_read_permission() OR is_super_admin() OR user_has_permission('users.create') OR user_has_permission('users.manage_roles')
 );
 
 -- 7. Verify the policies were created
