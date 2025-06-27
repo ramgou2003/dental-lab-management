@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseAdmin, isAdminClientAvailable } from '@/lib/supabaseAdmin';
 import { toast } from 'sonner';
 
 export interface UserDeletionPreview {
@@ -75,33 +76,38 @@ export async function deleteUserFromDatabase(userId: string): Promise<UserDeleti
 
 /**
  * Delete user from Supabase Auth using Admin API
- * Note: This requires the service role key and should be done server-side in production
+ * Uses service role key for admin operations
  */
 export async function deleteUserFromAuth(userId: string): Promise<boolean> {
   try {
     console.log('Attempting to delete user from Supabase Auth:', userId);
 
+    // Check if admin client is available
+    if (!isAdminClientAvailable() || !supabaseAdmin) {
+      console.error('Admin client not available - service role key missing');
+      console.warn('To enable auth deletion, add VITE_SUPABASE_SERVICE_ROLE_KEY to environment variables');
+      return false;
+    }
+
+    console.log('Using admin client with service role key for auth deletion');
+
     // Use the admin API to delete the user
-    const { data, error } = await supabase.auth.admin.deleteUser(userId);
+    const { data, error } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (error) {
-      console.error('Error deleting user from auth:', error);
+      console.error('Auth deletion failed:', error.message);
       console.error('Auth error details:', {
         message: error.message,
         status: error.status,
         name: error.name
       });
-
-      // Don't throw error for auth deletion failures - log it but continue
-      console.warn('Auth deletion failed, but database deletion may have succeeded');
       return false;
     }
 
-    console.log('User successfully deleted from Supabase Auth:', data);
+    console.log('✅ User successfully deleted from Supabase Auth:', data);
     return true;
   } catch (error) {
     console.error('Error in deleteUserFromAuth:', error);
-    // Don't throw error - return false to indicate failure but allow process to continue
     return false;
   }
 }
@@ -139,13 +145,23 @@ export async function deleteUserCompletely(
         }
       );
     } else {
-      toast.success(
-        `User ${userEmail} has been deleted from the database.`,
-        {
-          description: 'Authentication deletion may have failed. User data has been removed.',
-          duration: 6000
-        }
-      );
+      if (isAdminClientAvailable()) {
+        toast.success(
+          `User ${userEmail} has been deleted from the database.`,
+          {
+            description: 'Database deletion successful. Authentication deletion failed - check console for details.',
+            duration: 6000
+          }
+        );
+      } else {
+        toast.success(
+          `User ${userEmail} has been deleted from the database.`,
+          {
+            description: 'Database deletion successful. Authentication deletion requires service role key configuration.',
+            duration: 8000
+          }
+        );
+      }
     }
 
     return {
@@ -160,8 +176,8 @@ export async function deleteUserCompletely(
       toast.success(
         `User ${userEmail} has been deleted from the database.`,
         {
-          description: 'Some cleanup operations may have failed, but user data has been removed.',
-          duration: 6000
+          description: 'User data removed successfully. Authentication record may still exist and requires manual cleanup.',
+          duration: 8000
         }
       );
 
