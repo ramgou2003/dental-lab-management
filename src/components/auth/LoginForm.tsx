@@ -52,53 +52,80 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-indigo-600 p-3 rounded-full">
-              <LogIn className="h-6 w-6 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 px-4 py-8 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-indigo-400/20 to-blue-600/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-blue-400/20 to-indigo-600/20 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="w-full max-w-md space-y-8 relative z-10">
+        {/* Company Logo */}
+        <div className="text-center animate-fade-in">
+          <img
+            src="/logo-wide.png"
+            alt="NYDI - Dental Lab Management"
+            className="mx-auto h-16 w-auto mb-6 drop-shadow-sm hover:drop-shadow-md transition-all duration-300"
+            onError={(e) => {
+              // Fallback to text logo if image fails to load
+              e.currentTarget.style.display = 'none';
+              const fallback = document.createElement('div');
+              fallback.className = 'text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent mb-6';
+              fallback.textContent = 'NYDI';
+              e.currentTarget.parentNode?.appendChild(fallback);
+            }}
+          />
+        </div>
+
+        <Card className="backdrop-blur-sm bg-white/95 shadow-xl border-0 ring-1 ring-gray-200/50 animate-slide-up hover:shadow-2xl transition-all duration-300">
+          <CardHeader className="space-y-6 pb-8">
+            <div className="text-center space-y-2">
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                Welcome Back
+              </CardTitle>
+              <CardDescription className="text-gray-600 text-base">
+                Sign in to your dental lab management account
+              </CardDescription>
             </div>
-          </div>
-          <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to your dental lab management account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          </CardHeader>
+        <CardContent className="px-8 pb-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {isAccountInactive && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="border-red-200 bg-red-50">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
+                <AlertDescription className="text-red-800">
                   Your account has been deactivated. Please contact your administrator to reactivate your account.
                 </AlertDescription>
               </Alert>
             )}
 
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="border-red-200 bg-red-50">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="text-red-800">{error}</AlertDescription>
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Email Address
+              </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Enter your email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full"
+                className="h-12 px-4 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg transition-colors"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-3">
+              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                Password
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -108,74 +135,88 @@ export function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="w-full pr-10"
+                  className="h-12 px-4 pr-12 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 transition-colors"
                   disabled={loading}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
+                    <EyeOff className="h-5 w-5" />
                   ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
+                    <Eye className="h-5 w-5" />
                   )}
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pt-2">
               <div className="flex items-center space-x-2">
                 <input
                   id="remember"
                   type="checkbox"
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded transition-colors"
                 />
-                <Label htmlFor="remember" className="text-sm text-gray-600">
+                <Label htmlFor="remember" className="text-sm text-gray-600 cursor-pointer">
                   Remember me
                 </Label>
               </div>
               <Link
-                to="/forgot-password"
-                className="text-sm text-indigo-600 hover:text-indigo-500"
+                to="/contact-admin"
+                className="text-sm text-indigo-600 hover:text-indigo-500 font-medium transition-colors"
               >
-                Forgot password?
+                Need help?
               </Link>
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700"
+              className="w-full h-12 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Signing in...
                 </>
               ) : (
                 <>
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Sign in
+                  <LogIn className="mr-2 h-5 w-5" />
+                  Sign In
                 </>
               )}
             </Button>
           </form>
+        </CardContent>
 
-          <div className="mt-6 text-center">
+        {/* Footer */}
+        <div className="px-8 pb-8 pt-4 border-t border-gray-100">
+          <div className="text-center space-y-4">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
               <Link
                 to="/contact-admin"
-                className="text-indigo-600 hover:text-indigo-500 font-medium"
+                className="text-indigo-600 hover:text-indigo-500 font-medium transition-colors"
               >
                 Contact your administrator
               </Link>
             </p>
+
+            <div className="flex items-center justify-center space-x-4 text-xs text-gray-500">
+              <span>© 2024 NYDI</span>
+              <span>•</span>
+              <Link to="/contact-admin" className="hover:text-gray-700 transition-colors">
+                Support
+              </Link>
+              <span>•</span>
+              <span>Dental Lab Management</span>
+            </div>
           </div>
-        </CardContent>
+        </div>
       </Card>
+      </div>
     </div>
   );
 }
