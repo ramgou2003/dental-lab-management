@@ -213,10 +213,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setInitialLoadComplete(true);
     }, 3000); // Reduced to 3 seconds
 
-    // Initialize session manager for automatic token refresh
-    sessionManager.initialize().catch(error => {
-      console.error('Error initializing session manager:', error);
-    });
+    // Initialize session manager for automatic token refresh (silently, non-blocking)
+    setTimeout(() => {
+      sessionManager.initialize().catch(error => {
+        console.warn('SessionManager initialization failed, continuing without advanced features:', error);
+      });
+    }, 2000); // Delay to ensure auth context is fully ready
 
     // Get initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {

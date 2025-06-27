@@ -29,37 +29,49 @@ export class SessionManager {
     try {
       // Get current session
       const { data: { session }, error } = await supabase.auth.getSession();
-      
+
       if (error) {
-        console.error('Error getting session:', error);
+        console.error('SessionManager: Error getting session:', error);
         return;
       }
 
       if (session?.user) {
         this.currentUserId = session.user.id;
         this.scheduleTokenRefresh(session);
-        this.startUserStatusMonitoring();
+
+        // Start monitoring with a small delay to ensure auth context is ready
+        setTimeout(() => {
+          this.startUserStatusMonitoring();
+        }, 1000);
       }
 
       // Listen for auth state changes
       supabase.auth.onAuthStateChange((event, session) => {
         console.log('SessionManager: Auth state changed:', event);
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          this.currentUserId = session.user.id;
-          this.scheduleTokenRefresh(session);
-          this.startUserStatusMonitoring();
-        } else if (event === 'SIGNED_OUT') {
-          this.currentUserId = null;
-          this.clearRefreshTimer();
-          this.stopUserStatusMonitoring();
-        } else if (event === 'TOKEN_REFRESHED' && session) {
-          this.scheduleTokenRefresh(session);
+        try {
+          if (event === 'SIGNED_IN' && session?.user) {
+            this.currentUserId = session.user.id;
+            this.scheduleTokenRefresh(session);
+
+            // Start monitoring with a small delay
+            setTimeout(() => {
+              this.startUserStatusMonitoring();
+            }, 1000);
+          } else if (event === 'SIGNED_OUT') {
+            this.currentUserId = null;
+            this.clearRefreshTimer();
+            this.stopUserStatusMonitoring();
+          } else if (event === 'TOKEN_REFRESHED' && session) {
+            this.scheduleTokenRefresh(session);
+          }
+        } catch (authError) {
+          console.error('SessionManager: Error handling auth state change:', authError);
         }
       });
 
     } catch (error) {
-      console.error('Error initializing session manager:', error);
+      console.error('SessionManager: Error initializing session manager:', error);
     }
   }
 
@@ -206,15 +218,23 @@ export class SessionManager {
   private startUserStatusMonitoring(): void {
     if (!this.currentUserId) return;
 
-    // Set up real-time listening for user status changes
-    this.setupRealtimeStatusListener();
+    try {
+      // Set up real-time listening for user status changes
+      this.setupRealtimeStatusListener();
 
-    // Check user status every 30 seconds as backup
-    this.statusCheckTimer = setInterval(async () => {
-      await this.checkUserStatus();
-    }, 30 * 1000);
+      // Check user status every 30 seconds as backup
+      this.statusCheckTimer = setInterval(async () => {
+        try {
+          await this.checkUserStatus();
+        } catch (error) {
+          console.warn('SessionManager: Error in status check:', error);
+        }
+      }, 30 * 1000);
 
-    console.log('SessionManager: Started user status monitoring');
+      console.log('SessionManager: Started user status monitoring');
+    } catch (error) {
+      console.warn('SessionManager: Failed to start user status monitoring:', error);
+    }
   }
 
   /**
@@ -223,34 +243,46 @@ export class SessionManager {
   private setupRealtimeStatusListener(): void {
     if (!this.currentUserId) return;
 
-    // Listen for changes to the current user's profile
-    this.realtimeChannel = supabase
-      .channel('user-status-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'user_profiles',
-          filter: `id=eq.${this.currentUserId}`
-        },
-        (payload) => {
-          console.log('SessionManager: Real-time user status change detected:', payload);
-          this.handleRealtimeStatusChange(payload);
-        }
-      )
-      .subscribe((status) => {
-        console.log('SessionManager: Real-time subscription status:', status);
-      });
+    try {
+      // Listen for changes to the current user's profile
+      this.realtimeChannel = supabase
+        .channel('user-status-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'user_profiles',
+            filter: `id=eq.${this.currentUserId}`
+          },
+          (payload) => {
+            console.log('SessionManager: Real-time user status change detected:', payload);
+            this.handleRealtimeStatusChange(payload);
+          }
+        )
+        .subscribe((status) => {
+          console.log('SessionManager: Real-time subscription status:', status);
+          if (status === 'SUBSCRIPTION_ERROR') {
+            console.warn('SessionManager: Real-time subscription failed, falling back to polling');
+          }
+        });
 
-    // Also listen for force logout notifications
-    const forceLogoutChannel = supabase
-      .channel(`force-logout-${this.currentUserId}`)
-      .on('broadcast', { event: 'force_logout' }, (payload) => {
-        console.log('SessionManager: Force logout received:', payload);
-        this.handleForceLogout(payload.payload);
-      })
-      .subscribe();
+      // Also listen for force logout notifications
+      const forceLogoutChannel = supabase
+        .channel(`force-logout-${this.currentUserId}`)
+        .on('broadcast', { event: 'force_logout' }, (payload) => {
+          console.log('SessionManager: Force logout received:', payload);
+          this.handleForceLogout(payload.payload);
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIPTION_ERROR') {
+            console.warn('SessionManager: Force logout subscription failed');
+          }
+        });
+    } catch (error) {
+      console.error('SessionManager: Error setting up real-time listeners:', error);
+      // Continue without real-time features if they fail
+    }
   }
 
   /**

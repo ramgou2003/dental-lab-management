@@ -41,11 +41,26 @@ export function LoginForm() {
         toast.error(`Login Failed: ${error.message}`);
       } else {
         toast.success("Welcome back! You have been successfully logged in.");
-        navigate(from, { replace: true });
+
+        // Small delay to ensure auth context is fully updated
+        setTimeout(() => {
+          navigate(from, { replace: true });
+        }, 100);
       }
     } catch (err) {
-      setError('An unexpected error occurred');
-      toast.error("An unexpected error occurred. Please try again.");
+      console.error('Login error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+
+      // Only show error if it's not related to session manager initialization
+      if (!errorMessage.includes('SessionManager') && !errorMessage.includes('subscription')) {
+        setError(errorMessage);
+        toast.error(`Login Failed: ${errorMessage}`);
+      } else {
+        // Session manager errors shouldn't prevent login
+        console.warn('Session manager error during login, continuing anyway:', err);
+        toast.success("Welcome back! You have been successfully logged in.");
+        navigate(from, { replace: true });
+      }
     } finally {
       setLoading(false);
     }
