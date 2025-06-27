@@ -44,6 +44,12 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/auth/AuthGuard';
 import { toast } from 'sonner';
+import {
+  deleteUserCompletely,
+  previewUserDeletion,
+  validateUserDeletion,
+  showUserDeletionConfirmation
+} from '@/utils/userDeletion';
 
 interface UserProfile {
   id: string;
@@ -266,40 +272,31 @@ export function UserManagementPage() {
         return;
       }
 
-      // First, delete user roles
-      const { error: rolesError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userToDelete.id);
+      // Validate user deletion and show warnings
+      const validation = await validateUserDeletion(userToDelete.id);
 
-      if (rolesError) {
-        console.error('Error deleting user roles:', rolesError);
-        toast.error("Failed to delete user roles. Please try again.");
+      if (!validation.canDelete) {
+        toast.error("Cannot delete user: " + validation.blockers.join(', '));
         return;
       }
 
-      // Then delete user profile
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('id', userToDelete.id);
-
-      if (profileError) {
-        console.error('Error deleting user profile:', profileError);
-        toast.error("Failed to delete user profile. Please try again.");
-        return;
+      // Show warnings if any
+      if (validation.warnings.length > 0) {
+        const warningMessage = "⚠️ Deletion will affect:\n" + validation.warnings.join('\n');
+        const confirmed = window.confirm(
+          warningMessage + "\n\nDo you want to continue?"
+        );
+        if (!confirmed) {
+          return;
+        }
       }
 
-      // Finally, delete from auth.users
-      const { error: authError } = await supabase.auth.admin.deleteUser(userToDelete.id);
+      // Preview deletion details
+      const preview = await previewUserDeletion(userToDelete.id);
+      console.log('Deletion preview:', preview);
 
-      if (authError) {
-        console.error('Error deleting auth user:', authError);
-        // Even if auth deletion fails, the profile is already deleted
-        toast.success(`User ${userToDelete.full_name} profile deleted. Auth cleanup may be needed.`);
-      } else {
-        toast.success(`User ${userToDelete.full_name} has been deleted successfully.`);
-      }
+      // Perform comprehensive deletion
+      await deleteUserCompletely(userToDelete.id, userToDelete.email);
 
       // Refresh users list
       fetchUsers();
@@ -307,7 +304,7 @@ export function UserManagementPage() {
       setUserToDelete(null);
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error("An unexpected error occurred while deleting the user.");
+      // Error handling is done in deleteUserCompletely function
     } finally {
       setIsDeleting(false);
     }
@@ -508,14 +505,25 @@ export function UserManagementPage() {
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div>
-                <p>Are you sure you want to delete <strong>{userToDelete?.full_name}</strong>?</p>
-                <p className="mt-2">This action cannot be undone and will:</p>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Permanently delete the user account</li>
-                  <li>Remove all associated roles and permissions</li>
-                  <li>Delete all user profile information</li>
-                  <li>Revoke access to the system immediately</li>
-                </ul>
+                <p>Are you sure you want to <strong className="text-red-600">PERMANENTLY DELETE</strong> user:</p>
+                <div className="bg-gray-50 p-3 rounded-lg mt-2 mb-3">
+                  <p><strong>Name:</strong> {userToDelete?.full_name}</p>
+                  <p><strong>Email:</strong> {userToDelete?.email}</p>
+                  <p><strong>Status:</strong> {userToDelete?.status}</p>
+                </div>
+
+                <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
+                  <p className="font-semibold text-red-800 mb-2">⚠️ This action will PERMANENTLY:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
+                    <li>Delete the user from all database tables</li>
+                    <li>Remove their authentication account</li>
+                    <li>Delete all associated roles and permissions</li>
+                    <li>Remove all user activity logs and audit trails</li>
+                    <li>Clear all references to this user in the system</li>
+                    <li>Immediately revoke all access to the platform</li>
+                  </ul>
+                  <p className="mt-2 font-semibold text-red-800">This action CANNOT be undone!</p>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
