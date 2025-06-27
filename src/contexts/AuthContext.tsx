@@ -52,6 +52,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
+  // Helper function to create user profile if missing
+  const createUserProfileIfMissing = async (userId: string) => {
+    try {
+      // Get user info from auth
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user || user.id !== userId) {
+        console.error('Cannot get user info for profile creation:', userError);
+        return;
+      }
+
+      // Extract name from email or use defaults
+      const email = user.email || '';
+      const emailParts = email.split('@')[0].split('.');
+      const firstName = emailParts[0] || 'User';
+      const lastName = emailParts[1] || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+
+      console.log('Creating user profile for:', { userId, email, firstName, lastName });
+
+      // Create user profile
+      const { error: insertError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: userId,
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: fullName,
+          status: 'active'
+        });
+
+      if (insertError) {
+        console.error('Error creating user profile:', insertError);
+      } else {
+        console.log('User profile created successfully');
+      }
+    } catch (error) {
+      console.error('Error in createUserProfileIfMissing:', error);
+    }
+  };
+
   // Optimized fetch user profile and roles in parallel
   const fetchUserData = async (userId: string) => {
     try {
@@ -107,11 +149,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: profile, error: profileError } = profileResult.value;
         if (profileError) {
           console.error('Error fetching user profile:', profileError);
+          console.error('Profile error details:', {
+            code: profileError.code,
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint
+          });
           if (profileError.code === 'PGRST116') {
-            console.log('User profile not found, user may need profile creation');
+            console.log('User profile not found, attempting to create profile...');
+            await createUserProfileIfMissing(userId);
+          } else if (profileError.code === '42501') {
+            console.error('RLS policy blocking user profile access');
           }
         } else {
-          console.log('User profile fetched:', profile);
+          console.log('User profile fetched successfully:', profile);
           profileData = profile;
           setUserProfile(profile);
         }
@@ -124,10 +175,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: rolesResponse, error: rolesError } = rolesResult.value;
         if (rolesError) {
           console.error('Error fetching user roles:', rolesError);
+          console.error('Roles error details:', {
+            code: rolesError.code,
+            message: rolesError.message,
+            details: rolesError.details,
+            hint: rolesError.hint
+          });
           setUserRoles([]);
           setUserPermissions([]);
         } else {
-          console.log('User roles fetched:', rolesResponse);
+          console.log('User roles fetched successfully:', rolesResponse);
 
           // Process roles and permissions in one go
           const roles: UserRole[] = (rolesResponse || []).map((userRole: any) => {
