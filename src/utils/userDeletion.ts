@@ -79,21 +79,30 @@ export async function deleteUserFromDatabase(userId: string): Promise<UserDeleti
  */
 export async function deleteUserFromAuth(userId: string): Promise<boolean> {
   try {
-    // In a production environment, this should be done via a secure server endpoint
-    // For now, we'll use the management API directly
-    
-    // Note: This requires admin privileges and service role key
-    const { error } = await supabase.auth.admin.deleteUser(userId);
+    console.log('Attempting to delete user from Supabase Auth:', userId);
+
+    // Use the admin API to delete the user
+    const { data, error } = await supabase.auth.admin.deleteUser(userId);
 
     if (error) {
       console.error('Error deleting user from auth:', error);
-      throw new Error(`Auth deletion failed: ${error.message}`);
+      console.error('Auth error details:', {
+        message: error.message,
+        status: error.status,
+        name: error.name
+      });
+
+      // Don't throw error for auth deletion failures - log it but continue
+      console.warn('Auth deletion failed, but database deletion may have succeeded');
+      return false;
     }
 
+    console.log('User successfully deleted from Supabase Auth:', data);
     return true;
   } catch (error) {
     console.error('Error in deleteUserFromAuth:', error);
-    throw error;
+    // Don't throw error - return false to indicate failure but allow process to continue
+    return false;
   }
 }
 
@@ -107,23 +116,37 @@ export async function deleteUserCompletely(
   databaseResult: UserDeletionResult;
   authResult: boolean;
 }> {
+  let databaseResult: UserDeletionResult | null = null;
+  let authResult = false;
+
   try {
     // Step 1: Delete from database first
     console.log('Deleting user from database...');
-    const databaseResult = await deleteUserFromDatabase(userId);
-    
-    // Step 2: Delete from Supabase Auth
-    console.log('Deleting user from authentication...');
-    const authResult = await deleteUserFromAuth(userId);
+    databaseResult = await deleteUserFromDatabase(userId);
+    console.log('Database deletion successful:', databaseResult);
 
-    // Step 3: Show success message
-    toast.success(
-      `User ${userEmail} has been completely deleted from the system.`,
-      {
-        description: 'All user data and authentication records have been removed.',
-        duration: 5000
-      }
-    );
+    // Step 2: Delete from Supabase Auth (don't fail if this fails)
+    console.log('Deleting user from authentication...');
+    authResult = await deleteUserFromAuth(userId);
+
+    // Step 3: Show appropriate success message
+    if (authResult) {
+      toast.success(
+        `User ${userEmail} has been completely deleted from the system.`,
+        {
+          description: 'All user data and authentication records have been removed.',
+          duration: 5000
+        }
+      );
+    } else {
+      toast.success(
+        `User ${userEmail} has been deleted from the database.`,
+        {
+          description: 'Authentication deletion may have failed. User data has been removed.',
+          duration: 6000
+        }
+      );
+    }
 
     return {
       databaseResult,
@@ -131,27 +154,33 @@ export async function deleteUserCompletely(
     };
   } catch (error) {
     console.error('Error in complete user deletion:', error);
-    
-    // If database deletion succeeded but auth failed, log it
-    if (error instanceof Error && error.message.includes('Auth deletion failed')) {
-      toast.error(
-        'User deleted from database but authentication deletion failed.',
+
+    // If database deletion succeeded but we're here due to other errors
+    if (databaseResult) {
+      toast.success(
+        `User ${userEmail} has been deleted from the database.`,
         {
-          description: 'The user may still be able to login. Contact system administrator.',
-          duration: 8000
+          description: 'Some cleanup operations may have failed, but user data has been removed.',
+          duration: 6000
         }
       );
+
+      return {
+        databaseResult,
+        authResult
+      };
     } else {
+      // Database deletion failed
       toast.error(
-        'Failed to delete user completely.',
+        'Failed to delete user from database.',
         {
           description: error instanceof Error ? error.message : 'An unexpected error occurred.',
           duration: 5000
         }
       );
+
+      throw error;
     }
-    
-    throw error;
   }
 }
 
