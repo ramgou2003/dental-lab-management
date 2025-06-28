@@ -10,8 +10,6 @@ import { CreateUserForm } from '@/components/user-management/CreateUserForm';
 import { EditUserForm } from '@/components/user-management/EditUserForm';
 import { RoleManagement } from '@/components/user-management/RoleManagement';
 import { UserRoleAssignment } from '@/components/user-management/UserRoleAssignment';
-import { SignInAsUser } from '@/components/user-management/SignInAsUser';
-import { ImpersonationAuditLog } from '@/components/user-management/ImpersonationAuditLog';
 import {
   Users,
   Search,
@@ -356,12 +354,9 @@ export function UserManagementPage() {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <ImpersonationAuditLog />
-                <PermissionGuard permission="users.create">
-                  <CreateUserForm onUserCreated={fetchUsers} />
-                </PermissionGuard>
-              </div>
+              <PermissionGuard permission="users.create">
+                <CreateUserForm onUserCreated={fetchUsers} />
+              </PermissionGuard>
             </div>
 
             {/* Users List */}
@@ -445,16 +440,6 @@ export function UserManagementPage() {
                                 asDropdownItem={true}
                               />
                             </PermissionGuard>
-
-                            {/* Sign in as User - Only for Super Admins and Active Users */}
-                            {user.status === 'active' && (
-                              <SignInAsUser
-                                userId={user.id}
-                                userName={user.full_name}
-                                userEmail={user.email}
-                                asDropdownItem={true}
-                              />
-                            )}
 
                             <PermissionGuard permission="users.change_status">
                               {user.status === 'active' ? (

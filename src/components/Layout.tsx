@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
-import { ImpersonationBanner } from "@/components/ui/ImpersonationBanner";
 
 const Layout = () => {
   // Initialize sidebar state from localStorage or default to false (expanded)
@@ -94,18 +93,15 @@ const Layout = () => {
         onResizeStart={handleResizeStart}
         onResizeEnd={handleResizeEnd}
       />
-      <div className="flex-1 flex flex-col">
-        <ImpersonationBanner />
-        <main
-          className="flex-1 bg-white overflow-auto"
-          style={{
-            marginLeft: `${mainMarginLeft}px`,
-            transition: 'none' // Remove all transitions for smooth real-time resizing
-          }}
-        >
-          <Outlet />
-        </main>
-      </div>
+      <main
+        className="flex-1 bg-white overflow-auto"
+        style={{
+          marginLeft: `${mainMarginLeft}px`,
+          transition: 'none' // Remove all transitions for smooth real-time resizing
+        }}
+      >
+        <Outlet />
+      </main>
     </div>
   );
 };

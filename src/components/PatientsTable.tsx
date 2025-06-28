@@ -123,14 +123,15 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
   };
 
   const getArchTypeDisplay = (patient: Patient) => {
-    const hasUpper = patient.upper_arch;
-    const hasLower = patient.lower_arch;
+    // Base arch type on actual treatments, not arch boolean flags
+    const hasUpperTreatment = patient.upper_treatment && patient.upper_treatment !== 'NO TREATMENT';
+    const hasLowerTreatment = patient.lower_treatment && patient.lower_treatment !== 'NO TREATMENT';
 
-    if (hasUpper && hasLower) {
+    if (hasUpperTreatment && hasLowerTreatment) {
       return { type: 'dual', text: 'Dual' };
-    } else if (hasUpper) {
+    } else if (hasUpperTreatment) {
       return { type: 'upper', text: 'Upper' };
-    } else if (hasLower) {
+    } else if (hasLowerTreatment) {
       return { type: 'lower', text: 'Lower' };
     }
 

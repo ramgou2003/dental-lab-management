@@ -18,13 +18,6 @@ interface UserProfile {
   last_login?: string;
 }
 
-interface ImpersonationState {
-  isImpersonating: boolean;
-  originalAdmin?: UserProfile;
-  impersonationId?: string;
-  startedAt?: string;
-}
-
 interface UserRole {
   id: string;
   name: string;
@@ -40,16 +33,12 @@ interface AuthContextType {
   userPermissions: string[];
   session: Session | null;
   loading: boolean;
-  impersonation: ImpersonationState;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (roleName: string) => boolean;
   refreshUserData: () => Promise<void>;
-  startImpersonation: (targetUserId: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
-  endImpersonation: () => Promise<{ success: boolean; error?: string }>;
-  canImpersonate: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,9 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-  const [impersonation, setImpersonation] = useState<ImpersonationState>({
-    isImpersonating: false
-  });
 
   // Helper function to create user profile if missing
   const createUserProfileIfMissing = async (userId: string) => {
@@ -456,91 +442,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return userRoles.some(role => role.name === roleName);
   };
 
-  // Check if current user can impersonate others
-  const canImpersonate = (): boolean => {
-    return hasRole('super_admin') && !impersonation.isImpersonating;
-  };
-
-  // Start impersonating another user
-  const startImpersonation = async (targetUserId: string, reason: string = 'Administrative support') => {
-    try {
-      if (!canImpersonate()) {
-        return { success: false, error: 'Insufficient permissions to impersonate users' };
-      }
-
-      console.log('Starting impersonation for user:', targetUserId, 'with reason:', reason);
-
-      const { data: result, error } = await supabase.rpc('start_user_impersonation', {
-        target_user_id: targetUserId,
-        reason: reason,
-        ip_address: null, // Could be enhanced to get actual IP
-        user_agent: navigator.userAgent
-      });
-
-      console.log('Impersonation result:', result, 'error:', error);
-
-      if (error) {
-        console.error('Error starting impersonation:', error);
-        return { success: false, error: error.message || 'Database error occurred' };
-      }
-
-      if (!result || !result.success) {
-        return { success: false, error: result?.error || 'Failed to start impersonation' };
-      }
-
-      // Store original admin info
-      setImpersonation({
-        isImpersonating: true,
-        originalAdmin: userProfile!,
-        impersonationId: result.impersonation_id,
-        startedAt: result.started_at
-      });
-
-      // Fetch the target user's data
-      await fetchUserData(targetUserId);
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error in startImpersonation:', error);
-      return { success: false, error: 'An unexpected error occurred' };
-    }
-  };
-
-  // End impersonation and return to original admin account
-  const endImpersonation = async () => {
-    try {
-      if (!impersonation.isImpersonating || !impersonation.impersonationId) {
-        return { success: false, error: 'No active impersonation session' };
-      }
-
-      const { data: result, error } = await supabase.rpc('end_user_impersonation', {
-        impersonation_id: impersonation.impersonationId
-      });
-
-      if (error) {
-        console.error('Error ending impersonation:', error);
-        return { success: false, error: error.message };
-      }
-
-      if (!result.success) {
-        return { success: false, error: result.error };
-      }
-
-      // Restore original admin data
-      const originalAdmin = impersonation.originalAdmin;
-      setImpersonation({ isImpersonating: false });
-
-      if (originalAdmin) {
-        await fetchUserData(originalAdmin.id);
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error in endImpersonation:', error);
-      return { success: false, error: 'An unexpected error occurred' };
-    }
-  };
-
   // Refresh user data
   const refreshUserData = async () => {
     if (user) {
@@ -577,16 +478,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     userPermissions,
     session,
     loading,
-    impersonation,
     signIn,
     signUp,
     signOut,
     hasPermission,
     hasRole,
     refreshUserData,
-    startImpersonation,
-    endImpersonation,
-    canImpersonate,
   };
 
   return (

@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -240,9 +241,14 @@ export function PatientProfilePage() {
   };
 
   const isStep2Complete = () => {
+    // Check if morning medications field is properly filled
+    const morningMedicationsValid = ivSedationFormData.morningMedications &&
+      (ivSedationFormData.morningMedications === 'no' ||
+       (ivSedationFormData.morningMedications !== 'yes' && ivSedationFormData.morningMedications.trim().length > 0));
+
     const basicFields = !!(
       ivSedationFormData.npoStatus &&
-      ivSedationFormData.morningMedications &&
+      morningMedicationsValid &&
       ivSedationFormData.asaClassification &&
       ivSedationFormData.mallampatiScore &&
       ivSedationFormData.allergies &&
@@ -257,7 +263,12 @@ export function PatientProfilePage() {
       ? !!(ivSedationFormData.pregnancyRisk)
       : true;
 
-    return basicFields && femaleFieldsComplete;
+    // Check A1C level is required only if Diabetes is selected
+    const a1cFieldComplete = ivSedationFormData.endocrineRenalProblems?.includes('Diabetes')
+      ? !!(ivSedationFormData.lastA1CLevel && ivSedationFormData.lastA1CLevel.trim().length > 0)
+      : true;
+
+    return basicFields && femaleFieldsComplete && a1cFieldComplete;
   };
 
   const isStep3Complete = () => {
@@ -391,7 +402,9 @@ export function PatientProfilePage() {
       surgicalJawRecords: { upper: false, lower: false },
       surgicalTissueScan: { upper: false, lower: false },
       // Fractured appliance option
-      fracturedAppliancePictures: null // null = not selected, true = yes, false = no
+      fracturedAppliancePictures: null, // null = not selected, true = yes, false = no
+      // CBCT option
+      cbctTaken: null // null = not selected, true = yes, false = no
     }
   });
 
@@ -1573,7 +1586,9 @@ export function PatientProfilePage() {
           lower: sheet.surgical_tissue_scan_lower || false
         },
         // Fractured appliance option
-        fracturedAppliancePictures: sheet.fractured_appliance_pictures
+        fracturedAppliancePictures: sheet.fractured_appliance_pictures,
+        // CBCT option
+        cbctTaken: sheet.cbct_taken
       }
     });
 
@@ -1797,6 +1812,12 @@ export function PatientProfilePage() {
 
       case 2: // Step 2: Pre-Assessment
         if (!ivSedationFormData.npoStatus) errors.push('NPO Status');
+        // Morning medications validation
+        if (!ivSedationFormData.morningMedications ||
+            (ivSedationFormData.morningMedications !== 'no' &&
+             ivSedationFormData.morningMedications === 'yes')) {
+          errors.push('Morning Medications (please specify medications if Yes is selected)');
+        }
         if (!ivSedationFormData.allergies || ivSedationFormData.allergies.length === 0) errors.push('Allergies');
         // Female Patients Only section is optional - removed from required validation
         if (!ivSedationFormData.anesthesiaHistory) errors.push('Anesthesia History');
@@ -1805,6 +1826,10 @@ export function PatientProfilePage() {
         if (!ivSedationFormData.gastrointestinalProblems || ivSedationFormData.gastrointestinalProblems.length === 0) errors.push('Gastrointestinal Problems');
         if (!ivSedationFormData.neurologicProblems || ivSedationFormData.neurologicProblems.length === 0) errors.push('Neurologic Problems');
         if (!ivSedationFormData.endocrineRenalProblems || ivSedationFormData.endocrineRenalProblems.length === 0) errors.push('Endocrine/Renal Problems');
+        // A1C Level is required only if Diabetes is selected
+        if (ivSedationFormData.endocrineRenalProblems?.includes('Diabetes') && (!ivSedationFormData.lastA1CLevel || ivSedationFormData.lastA1CLevel.trim().length === 0)) {
+          errors.push('Last A1C Level (required when Diabetes is selected)');
+        }
         if (!ivSedationFormData.miscellaneous || ivSedationFormData.miscellaneous.length === 0) errors.push('Miscellaneous');
         if (!ivSedationFormData.socialHistory || ivSedationFormData.socialHistory.length === 0) errors.push('Social History');
         if (!ivSedationFormData.wellDevelopedNourished) errors.push('Patient Assessment');
@@ -2358,6 +2383,11 @@ export function PatientProfilePage() {
         }
       }
 
+      // CBCT is always required for all reason selections
+      if (dataCollected.cbctTaken === null) {
+        missingPictures.push("CBCT (Yes or No)");
+      }
+
       // Show validation error if any picture fields are missing
       if (missingPictures.length > 0) {
         setFormMessage({
@@ -2398,6 +2428,7 @@ export function PatientProfilePage() {
         surgical_pictures: dataCollectionFormData.dataCollected.surgicalPictures,
         follow_up_pictures: dataCollectionFormData.dataCollected.followUpPictures,
         fractured_appliance_pictures: dataCollectionFormData.dataCollected.fracturedAppliancePictures,
+        cbct_taken: dataCollectionFormData.dataCollected.cbctTaken,
 
         // 3D scan data
         pre_surgical_jaw_records_upper: dataCollectionFormData.dataCollected.preSurgicalJawRecords?.upper || false,
@@ -4471,7 +4502,7 @@ export function PatientProfilePage() {
                   <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${
                     currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'
                   }`}>
-                    Pictures
+                    Pictures/CBCT
                   </span>
                   <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${
                     currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
@@ -4639,43 +4670,45 @@ export function PatientProfilePage() {
                   <div className="h-full flex flex-col space-y-4 overflow-hidden">
                     <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                       <FileText className="h-5 w-5 text-indigo-600" />
-                      Data Collection & Current Appliances
+                      Current Appliances
                     </h3>
 
-                    {/* Current Appliances Row - Balanced sizing */}
-                    <div className="max-w-full">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {/* Current Upper Appliance */}
-                        <div className="flex flex-col bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                          <Label htmlFor="currentUpperAppliance" className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-2">
-                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            Current Upper Appliance
-                          </Label>
-                          <Input
-                            id="currentUpperAppliance"
-                            value={dataCollectionFormData.currentUpperAppliance}
-                            onChange={(e) => handleDataCollectionFormChange('currentUpperAppliance', e.target.value)}
-                            placeholder="Enter current upper appliance..."
-                            className="h-10 text-sm"
-                          />
-                        </div>
+                    {/* Current Appliances Row - Only show for non-pre-surgical reasons */}
+                    {!dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
+                      <div className="max-w-full">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {/* Current Upper Appliance */}
+                          <div className="flex flex-col bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                            <Label htmlFor="currentUpperAppliance" className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-2">
+                              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                              Current Upper Appliance
+                            </Label>
+                            <Input
+                              id="currentUpperAppliance"
+                              value={dataCollectionFormData.currentUpperAppliance}
+                              onChange={(e) => handleDataCollectionFormChange('currentUpperAppliance', e.target.value)}
+                              placeholder="Enter current upper appliance..."
+                              className="h-10 text-sm"
+                            />
+                          </div>
 
-                        {/* Current Lower Appliance */}
-                        <div className="flex flex-col bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                          <Label htmlFor="currentLowerAppliance" className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-2">
-                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                            Current Lower Appliance
-                          </Label>
-                          <Input
-                            id="currentLowerAppliance"
-                            value={dataCollectionFormData.currentLowerAppliance}
-                            onChange={(e) => handleDataCollectionFormChange('currentLowerAppliance', e.target.value)}
-                            placeholder="Enter current lower appliance..."
-                            className="h-10 text-sm"
-                          />
+                          {/* Current Lower Appliance */}
+                          <div className="flex flex-col bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                            <Label htmlFor="currentLowerAppliance" className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-2">
+                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                              Current Lower Appliance
+                            </Label>
+                            <Input
+                              id="currentLowerAppliance"
+                              value={dataCollectionFormData.currentLowerAppliance}
+                              onChange={(e) => handleDataCollectionFormChange('currentLowerAppliance', e.target.value)}
+                              placeholder="Enter current lower appliance..."
+                              className="h-10 text-sm"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Data Collection Checklist - Enhanced with larger elements */}
                     <div className="flex-1 overflow-y-auto">
@@ -4870,6 +4903,50 @@ export function PatientProfilePage() {
                               </div>
                             </div>
                           )}
+
+                          {/* CBCT Section - Always show for all reason selections */}
+                          <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
+                            dataCollectionFormData.dataCollected.cbctTaken === null
+                              ? 'border-red-300 bg-red-50 shadow-sm'
+                              : 'border-gray-200 shadow-sm hover:shadow-md'
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                CBCT (Yes or No) <span className="text-red-500 text-base">*</span>
+                              </h5>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDataCollectionToggle('cbctTaken', null, true)}
+                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    dataCollectionFormData.dataCollected.cbctTaken === true
+                                      ? 'bg-green-500 text-white shadow-md'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-300 hover:border-green-400'
+                                  }`}
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Yes
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDataCollectionToggle('cbctTaken', null, false)}
+                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                    dataCollectionFormData.dataCollected.cbctTaken === false
+                                      ? 'bg-red-500 text-white shadow-md'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-300 hover:border-red-400'
+                                  }`}
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                  No
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -5496,6 +5573,23 @@ export function PatientProfilePage() {
                                   : 'bg-red-100 text-red-800'
                               }`}>
                                 {selectedDataCollectionSheet.fractured_appliance_pictures ? 'Collected' : 'Not Collected'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        {selectedDataCollectionSheet.cbct_taken !== null && (
+                          <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors duration-200">
+                            <span className="text-sm font-medium text-purple-900">CBCT</span>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${
+                                selectedDataCollectionSheet.cbct_taken ? 'bg-green-500' : 'bg-red-500'
+                              }`}></div>
+                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                                selectedDataCollectionSheet.cbct_taken
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {selectedDataCollectionSheet.cbct_taken ? 'Yes' : 'No'}
                               </span>
                             </div>
                           </div>
@@ -6236,11 +6330,11 @@ export function PatientProfilePage() {
 
                         <div>
                           <p className="text-sm text-blue-800 mb-2">Have you taken any current medications this morning?</p>
-                          <div className="flex gap-3">
+                          <div className="flex gap-3 mb-3">
                             <button
                               type="button"
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                ivSedationFormData.morningMedications === 'yes'
+                                ivSedationFormData.morningMedications && ivSedationFormData.morningMedications !== 'no'
                                   ? 'bg-red-600 text-white'
                                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
@@ -6260,6 +6354,23 @@ export function PatientProfilePage() {
                               NO
                             </button>
                           </div>
+
+                          {/* Show text field when YES is selected */}
+                          {ivSedationFormData.morningMedications && ivSedationFormData.morningMedications !== 'no' && (
+                            <div className="mt-3">
+                              <Label htmlFor="morningMedicationsDetails" className="text-sm font-medium text-gray-700 mb-2 block">
+                                Please list the medications taken this morning:
+                              </Label>
+                              <Textarea
+                                id="morningMedicationsDetails"
+                                value={ivSedationFormData.morningMedications === 'yes' ? '' : ivSedationFormData.morningMedications}
+                                onChange={(e) => updateIVSedationFormField('morningMedications', e.target.value)}
+                                placeholder="List medications, dosages, and times taken..."
+                                rows={3}
+                                className="w-full text-sm"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -6269,12 +6380,12 @@ export function PatientProfilePage() {
                       <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Allergies</h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                         {[
-                          'N/A', 'Penicillin', 'Sulfa', 'Codeine', 'Aspirin', 'Ibuprofen',
+                          'NKDA', 'Penicillin', 'Sulfa', 'Codeine', 'Aspirin', 'Ibuprofen',
                           'Latex', 'Iodine', 'Shellfish', 'Nuts', 'Eggs', 'Dairy',
                           'Environmental', 'Seasonal', 'Other'
                         ].map((allergy) => {
-                          const isNA = ivSedationFormData.allergies?.includes('N/A');
-                          const isDisabled = isNA && allergy !== 'N/A';
+                          const isNA = ivSedationFormData.allergies?.includes('NKDA');
+                          const isDisabled = isNA && allergy !== 'NKDA';
 
                           return (
                             <button
@@ -6283,7 +6394,7 @@ export function PatientProfilePage() {
                               disabled={isDisabled}
                               className={`px-3 py-2 rounded text-xs font-medium transition-colors ${
                                 ivSedationFormData.allergies?.includes(allergy)
-                                  ? 'bg-blue-600 text-white'
+                                  ? 'bg-red-600 text-white'
                                   : isDisabled
                                     ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                     : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
@@ -6292,12 +6403,12 @@ export function PatientProfilePage() {
                                 const currentAllergies = ivSedationFormData.allergies || [];
                                 let updatedAllergies;
 
-                                if (allergy === 'N/A') {
-                                  // If clicking N/A, clear all other allergies and set only N/A
-                                  updatedAllergies = currentAllergies.includes('N/A') ? [] : ['N/A'];
+                                if (allergy === 'NKDA') {
+                                  // If clicking NKDA, clear all other allergies and set only NKDA
+                                  updatedAllergies = currentAllergies.includes('NKDA') ? [] : ['NKDA'];
                                 } else {
-                                  // If clicking any other allergy, remove N/A if it exists and toggle the clicked allergy
-                                  const allergiesWithoutNA = currentAllergies.filter(a => a !== 'N/A');
+                                  // If clicking any other allergy, remove NKDA if it exists and toggle the clicked allergy
+                                  const allergiesWithoutNA = currentAllergies.filter(a => a !== 'NKDA');
                                   updatedAllergies = allergiesWithoutNA.includes(allergy)
                                     ? allergiesWithoutNA.filter(a => a !== allergy)
                                     : [...allergiesWithoutNA, allergy];
@@ -6391,7 +6502,7 @@ export function PatientProfilePage() {
                             'Previous Anesthetic without any problems or complications',
                             'Family Hx of Anesthetic Complications',
                             'Malignant Hyperthermia',
-                            'Others'
+                            'Other'
                           ].map((option) => (
                             <button
                               key={option}
@@ -6403,8 +6514,8 @@ export function PatientProfilePage() {
                               }`}
                               onClick={() => {
                                 updateIVSedationFormField('anesthesiaHistory', option);
-                                // Clear "Others" text field if a different option is selected
-                                if (option !== 'Others' && ivSedationFormData.anesthesiaHistory === 'Others') {
+                                // Clear "Other" text field if a different option is selected
+                                if (option !== 'Other' && ivSedationFormData.anesthesiaHistory === 'Other') {
                                   updateIVSedationFormField('anesthesiaHistoryOther', '');
                                 }
                               }}
@@ -6414,8 +6525,8 @@ export function PatientProfilePage() {
                           ))}
                         </div>
 
-                        {/* Others Anesthesia History Text Field */}
-                        {ivSedationFormData.anesthesiaHistory === 'Others' && (
+                        {/* Other Anesthesia History Text Field */}
+                        {ivSedationFormData.anesthesiaHistory === 'Other' && (
                           <div className="mt-3">
                             <Label htmlFor="anesthesiaHistoryOther" className="text-xs text-blue-800">Please specify</Label>
                             <Input
@@ -6435,11 +6546,11 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Respiratory Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'N/A', 'Asthma', 'Anemia', 'Reactive Airway', 'Bronchitis', 'COPD',
-                            'Dyspnea', 'Orthopnea', 'Recent URI', 'SOB', 'Tuberculosis', 'Others'
+                            'NKDA', 'Asthma', 'Anemia', 'Reactive Airway', 'Bronchitis', 'COPD',
+                            'Dyspnea', 'Orthopnea', 'Recent URI', 'SOB', 'Tuberculosis', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.respiratoryProblems?.includes('N/A');
-                            const isDisabled = isNA && problem !== 'N/A';
+                            const isNA = ivSedationFormData.respiratoryProblems?.includes('NKDA');
+                            const isDisabled = isNA && problem !== 'NKDA';
 
                             return (
                               <button
@@ -6457,10 +6568,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.respiratoryProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'N/A') {
-                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  if (problem === 'NKDA') {
+                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -6468,8 +6579,8 @@ export function PatientProfilePage() {
 
                                   updateIVSedationFormField('respiratoryProblems', updated);
 
-                                  // Clear "Others" text field if "Others" option is unselected
-                                  if (problem === 'Others' && current.includes('Others') && !updated.includes('Others')) {
+                                  // Clear "Other" text field if "Other" option is unselected
+                                  if (problem === 'Other' && current.includes('Other') && !updated.includes('Other')) {
                                     updateIVSedationFormField('respiratoryProblemsOther', '');
                                   }
                                 }}
@@ -6480,8 +6591,8 @@ export function PatientProfilePage() {
                           })}
                         </div>
 
-                        {/* Others Respiratory Problems Text Field */}
-                        {ivSedationFormData.respiratoryProblems?.includes('Others') && (
+                        {/* Other Respiratory Problems Text Field */}
+                        {ivSedationFormData.respiratoryProblems?.includes('Other') && (
                           <div className="mt-3">
                             <Label htmlFor="respiratoryProblemsOther" className="text-xs text-blue-800">Please specify other respiratory problems</Label>
                             <Input
@@ -6501,11 +6612,11 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Cardiovascular Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'N/A', 'Anemia', 'Congestive Heart Failure (CHF)', 'Dysrhythmia', 'Murmur', 'Hypertension (HTN)',
+                            'NKDA', 'Anemia', 'Congestive Heart Failure (CHF)', 'Dysrhythmia', 'Murmur', 'Hypertension (HTN)',
                             'Myocardial Infarction (MI)', 'Valvular DX', 'Rheumatic Fever', 'Sickle Cell Disease', 'Congenital Heart DX', 'Pacemaker', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.cardiovascularProblems?.includes('N/A');
-                            const isDisabled = isNA && problem !== 'N/A';
+                            const isNA = ivSedationFormData.cardiovascularProblems?.includes('NKDA');
+                            const isDisabled = isNA && problem !== 'NKDA';
 
                             return (
                               <button
@@ -6523,10 +6634,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.cardiovascularProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'N/A') {
-                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  if (problem === 'NKDA') {
+                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -6567,10 +6678,10 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Gastrointestinal Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'N/A', 'Cirrhosis', 'Hepatitis', 'Reflux', 'Ulcers', 'Oesophageal Issues', 'Other'
+                            'NKDA', 'Cirrhosis', 'Hepatitis', 'Reflux', 'Ulcers', 'Oesophageal Issues', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.gastrointestinalProblems?.includes('N/A');
-                            const isDisabled = isNA && problem !== 'N/A';
+                            const isNA = ivSedationFormData.gastrointestinalProblems?.includes('NKDA');
+                            const isDisabled = isNA && problem !== 'NKDA';
 
                             return (
                               <button
@@ -6588,10 +6699,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.gastrointestinalProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'N/A') {
-                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  if (problem === 'NKDA') {
+                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -6635,10 +6746,10 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Neurologic Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'N/A', 'Cerebral Vascular Accident (CVA)', 'Headaches', 'Transient Ischemic Attack (TIA)', 'Syncope', 'Seizures', 'Other'
+                            'NKDA', 'Cerebral Vascular Accident (CVA)', 'Headaches', 'Transient Ischemic Attack (TIA)', 'Syncope', 'Seizures', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.neurologicProblems?.includes('N/A');
-                            const isDisabled = isNA && problem !== 'N/A';
+                            const isNA = ivSedationFormData.neurologicProblems?.includes('NKDA');
+                            const isDisabled = isNA && problem !== 'NKDA';
 
                             return (
                               <button
@@ -6656,10 +6767,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.neurologicProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'N/A') {
-                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  if (problem === 'NKDA') {
+                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -6700,10 +6811,10 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Endocrine/Renal Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'N/A', 'Diabetes', 'Dialysis', 'Thyroid DX', 'Renal Failure', 'Other'
+                            'NKDA', 'Diabetes', 'Dialysis', 'Thyroid DX', 'Renal Failure', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.endocrineRenalProblems?.includes('N/A');
-                            const isDisabled = isNA && problem !== 'N/A';
+                            const isNA = ivSedationFormData.endocrineRenalProblems?.includes('NKDA');
+                            const isDisabled = isNA && problem !== 'NKDA';
 
                             return (
                               <button
@@ -6721,10 +6832,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.endocrineRenalProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'N/A') {
-                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  if (problem === 'NKDA') {
+                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'N/A');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -6735,6 +6846,11 @@ export function PatientProfilePage() {
                                   // Clear "Other" text field if "Other" option is unselected
                                   if (problem === 'Other' && current.includes('Other') && !updated.includes('Other')) {
                                     updateIVSedationFormField('endocrineRenalProblemsOther', '');
+                                  }
+
+                                  // Clear A1C field if "Diabetes" option is unselected
+                                  if (problem === 'Diabetes' && current.includes('Diabetes') && !updated.includes('Diabetes')) {
+                                    updateIVSedationFormField('lastA1CLevel', '');
                                   }
                                 }}
                               >
@@ -6759,18 +6875,25 @@ export function PatientProfilePage() {
                           </div>
                         )}
 
-                        {/* A1C Level Input */}
-                        <div className="mt-3">
-                          <Label htmlFor="lastA1CLevel" className="text-xs text-blue-800">Last A1C Level</Label>
-                          <Input
-                            id="lastA1CLevel"
-                            type="text"
-                            value={ivSedationFormData.lastA1CLevel || ''}
-                            onChange={(e) => updateIVSedationFormField('lastA1CLevel', e.target.value)}
-                            placeholder="Enter A1C level"
-                            className="text-sm h-8 border-blue-300 focus:border-blue-500"
-                          />
-                        </div>
+                        {/* A1C Level Input - Only show when Diabetes is selected */}
+                        {ivSedationFormData.endocrineRenalProblems?.includes('Diabetes') && (
+                          <div className="mt-3">
+                            <Label htmlFor="lastA1CLevel" className="text-xs text-blue-800">
+                              Last A1C Level <span className="text-red-500">*</span>
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                id="lastA1CLevel"
+                                type="text"
+                                value={ivSedationFormData.lastA1CLevel || ''}
+                                onChange={(e) => updateIVSedationFormField('lastA1CLevel', e.target.value)}
+                                placeholder="7.2"
+                                className="text-sm h-8 border-blue-300 focus:border-blue-500 w-20"
+                              />
+                              <span className="text-sm font-medium text-blue-800">%</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -6779,14 +6902,14 @@ export function PatientProfilePage() {
                       <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Miscellaneous</h3>
                       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1">
                         {[
-                          'N/A', 'Artificial Valve', 'Heart Birth Defect', 'Bypass', 'Seizures', 'Stroke',
+                          'NKDA', 'Artificial Valve', 'Heart Birth Defect', 'Bypass', 'Seizures', 'Stroke',
                           'Parkinson\'s Disease', 'Dementia (Alzheimer\'s)', 'Anxiety', 'Schizophrenia', 'Eating Disorder',
                           'HIV', 'AIDS', 'Rheumatoid Arthritis', 'Lupus', 'Fibromyalgia', 'Immunosuppressive Disease',
                           'Prolonged Bleeding', 'Platelet Disorder', 'Sickle Cell', 'Hemophilia', 'Chronic Kidney Disease',
                           'Osteoporosis', 'Artificial Joint', 'Muscle Weakness', 'Cancer', 'Chemotherapy', 'Other'
                         ].map((condition) => {
-                          const isNA = ivSedationFormData.miscellaneous?.includes('N/A');
-                          const isDisabled = isNA && condition !== 'N/A';
+                          const isNA = ivSedationFormData.miscellaneous?.includes('NKDA');
+                          const isDisabled = isNA && condition !== 'NKDA';
 
                           return (
                             <button
@@ -6804,10 +6927,10 @@ export function PatientProfilePage() {
                                 const current = ivSedationFormData.miscellaneous || [];
                                 let updated: string[];
 
-                                if (condition === 'N/A') {
-                                  updated = current.includes('N/A') ? [] : ['N/A'];
+                                if (condition === 'NKDA') {
+                                  updated = current.includes('NKDA') ? [] : ['NKDA'];
                                 } else {
-                                  const conditionsWithoutNA = current.filter(c => c !== 'N/A');
+                                  const conditionsWithoutNA = current.filter(c => c !== 'NKDA');
                                   updated = conditionsWithoutNA.includes(condition)
                                     ? conditionsWithoutNA.filter(c => c !== condition)
                                     : [...conditionsWithoutNA, condition];
@@ -6850,10 +6973,10 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Social History</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'N/A', 'Tobacco', 'ETOH Consumption', 'Recreational Drugs', 'Other'
+                            'NKDA', 'Tobacco', 'ETOH Consumption', 'Recreational Drugs', 'Other'
                           ].map((habit) => {
-                            const isNA = ivSedationFormData.socialHistory?.includes('N/A');
-                            const isDisabled = isNA && habit !== 'N/A';
+                            const isNA = ivSedationFormData.socialHistory?.includes('NKDA');
+                            const isDisabled = isNA && habit !== 'NKDA';
 
                             return (
                               <button
@@ -6871,10 +6994,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.socialHistory || [];
                                   let updated: string[];
 
-                                  if (habit === 'N/A') {
-                                    updated = current.includes('N/A') ? [] : ['N/A'];
+                                  if (habit === 'NKDA') {
+                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
                                   } else {
-                                    const habitsWithoutNA = current.filter(h => h !== 'N/A');
+                                    const habitsWithoutNA = current.filter(h => h !== 'NKDA');
                                     updated = habitsWithoutNA.includes(habit)
                                       ? habitsWithoutNA.filter(h => h !== habit)
                                       : [...habitsWithoutNA, habit];
@@ -8902,7 +9025,14 @@ export function PatientProfilePage() {
                     </div>
                     <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                       <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Morning Medications</div>
-                      <div className="text-sm font-semibold text-gray-900">{ivSedationFormData.morningMedications || 'Not specified'}</div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {ivSedationFormData.morningMedications === 'no'
+                          ? 'No'
+                          : ivSedationFormData.morningMedications && ivSedationFormData.morningMedications !== 'yes'
+                            ? ivSedationFormData.morningMedications
+                            : 'Not specified'
+                        }
+                      </div>
                     </div>
                     <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                       <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">ASA Classification</div>
@@ -9118,7 +9248,7 @@ export function PatientProfilePage() {
                               <span className="text-sm text-teal-800 ml-2">{ivSedationFormData.endocrineRenalProblemsOther}</span>
                             </div>
                           )}
-                          {ivSedationFormData.lastA1CLevel && (
+                          {ivSedationFormData.endocrineRenalProblems?.includes('Diabetes') && ivSedationFormData.lastA1CLevel && (
                             <div className="p-2 bg-teal-50 rounded border border-teal-200">
                               <span className="text-xs font-medium text-teal-600">Last A1C Level:</span>
                               <span className="text-sm text-teal-800 ml-2">{ivSedationFormData.lastA1CLevel}</span>
@@ -9782,7 +9912,14 @@ export function PatientProfilePage() {
                       </div>
                       <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                         <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Morning Medications</div>
-                        <div className="text-sm font-semibold text-gray-900">{selectedIVSedationSheet.morning_medications || 'Not specified'}</div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {selectedIVSedationSheet.morning_medications === 'no'
+                            ? 'No'
+                            : selectedIVSedationSheet.morning_medications && selectedIVSedationSheet.morning_medications !== 'yes'
+                              ? selectedIVSedationSheet.morning_medications
+                              : 'Not specified'
+                          }
+                        </div>
                       </div>
                       <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                         <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">ASA Classification</div>
@@ -9998,7 +10135,7 @@ export function PatientProfilePage() {
                                 <span className="text-sm text-teal-800 ml-2">{selectedIVSedationSheet.endocrine_renal_problems_other}</span>
                               </div>
                             )}
-                            {selectedIVSedationSheet.last_a1c_level && (
+                            {selectedIVSedationSheet.endocrine_renal_problems?.includes('Diabetes') && selectedIVSedationSheet.last_a1c_level && (
                               <div className="p-2 bg-teal-50 rounded border border-teal-200">
                                 <span className="text-xs font-medium text-teal-600">Last A1C Level:</span>
                                 <span className="text-sm text-teal-800 ml-2">{selectedIVSedationSheet.last_a1c_level}</span>

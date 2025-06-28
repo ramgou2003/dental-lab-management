@@ -76,6 +76,7 @@ export type Database = {
           surgical_pictures: boolean | null
           follow_up_pictures: boolean | null
           fractured_appliance_pictures: boolean | null
+          cbct_taken: boolean | null
           pre_surgical_jaw_records_upper: boolean | null
           pre_surgical_jaw_records_lower: boolean | null
           facial_scan: boolean | null
@@ -106,6 +107,7 @@ export type Database = {
           surgical_pictures?: boolean | null
           follow_up_pictures?: boolean | null
           fractured_appliance_pictures?: boolean | null
+          cbct_taken?: boolean | null
           pre_surgical_jaw_records_upper?: boolean | null
           pre_surgical_jaw_records_lower?: boolean | null
           facial_scan?: boolean | null
@@ -136,6 +138,7 @@ export type Database = {
           surgical_pictures?: boolean | null
           follow_up_pictures?: boolean | null
           fractured_appliance_pictures?: boolean | null
+          cbct_taken?: boolean | null
           pre_surgical_jaw_records_upper?: boolean | null
           pre_surgical_jaw_records_lower?: boolean | null
           facial_scan?: boolean | null
