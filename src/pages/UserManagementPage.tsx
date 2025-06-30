@@ -44,6 +44,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/auth/AuthGuard';
 import { toast } from 'sonner';
+import { PageLoadingAnimation } from '@/components/PageLoadingAnimation';
 import {
   deleteUserCompletely,
   previewUserDeletion,
@@ -369,10 +370,10 @@ export function UserManagementPage() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                <p className="text-gray-500 mt-2">Loading users...</p>
-              </div>
+              <PageLoadingAnimation
+                message="Loading user accounts..."
+                pageType="users"
+              />
             ) : filteredUsers.length === 0 ? (
               <div className="text-center py-8">
                 <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />

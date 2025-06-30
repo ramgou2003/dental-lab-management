@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { PageLoadingAnimation } from "@/components/PageLoadingAnimation";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/AuthGuard";
 import { Eye } from "lucide-react";
@@ -179,9 +180,10 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
     return (
       <div className="px-4 py-3">
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="p-8 text-center">
-            <p className="text-slate-600">Loading patients...</p>
-          </div>
+          <PageLoadingAnimation
+            message="Loading patient records..."
+            pageType="patients"
+          />
         </div>
       </div>
     );

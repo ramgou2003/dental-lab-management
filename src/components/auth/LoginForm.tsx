@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, Loader2, LogIn, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, LogIn, AlertCircle, Shield, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function LoginForm() {
@@ -92,7 +92,33 @@ export function LoginForm() {
           />
         </div>
 
-        <Card className="backdrop-blur-sm bg-white/95 shadow-xl border-0 ring-1 ring-gray-200/50 animate-slide-up hover:shadow-2xl transition-all duration-300">
+        <Card className="backdrop-blur-sm bg-white/95 shadow-xl border-0 ring-1 ring-gray-200/50 animate-slide-up hover:shadow-2xl transition-all duration-300 relative overflow-hidden">
+          {/* Loading Overlay */}
+          {loading && (
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 relative">
+                  <Loader2 className="h-16 w-16 animate-spin text-blue-600 absolute inset-0" />
+                  <div className="absolute inset-2 bg-white rounded-full shadow-inner"></div>
+                  <div className="absolute inset-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full animate-pulse"></div>
+                </div>
+                <div className="flex justify-center space-x-6 mb-4">
+                  <div className="animate-float delay-0">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Lock className="h-4 w-4 text-blue-600" />
+                    </div>
+                  </div>
+                  <div className="animate-float delay-300">
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <Shield className="h-4 w-4 text-indigo-600" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-blue-700 font-medium animate-fade-in">Verifying credentials...</p>
+              </div>
+            </div>
+          )}
+
           <CardHeader className="space-y-6 pb-8">
             <div className="text-center space-y-2">
               <CardTitle className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
@@ -188,14 +214,30 @@ export function LoginForm() {
 
             <Button
               type="submit"
-              className="w-full h-12 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+              className={`w-full h-12 font-semibold rounded-lg shadow-lg transition-all duration-200 ${
+                loading
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 hover:shadow-xl transform hover:scale-[1.02]'
+              } text-white`}
               disabled={loading}
             >
               {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Signing in...
-                </>
+                <div className="flex items-center justify-center space-x-3">
+                  <div className="relative">
+                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    <div className="absolute inset-0 bg-white/20 rounded-full animate-pulse"></div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Shield className="h-4 w-4 text-white/80 animate-pulse" />
+                    <span className="animate-fade-in">Authenticating...</span>
+                    <Lock className="h-4 w-4 text-white/80 animate-pulse delay-300" />
+                  </div>
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-1 bg-white rounded-full animate-bounce"></div>
+                    <div className="w-1 h-1 bg-white rounded-full animate-bounce delay-100"></div>
+                    <div className="w-1 h-1 bg-white rounded-full animate-bounce delay-200"></div>
+                  </div>
+                </div>
               ) : (
                 <>
                   <LogIn className="mr-2 h-5 w-5" />

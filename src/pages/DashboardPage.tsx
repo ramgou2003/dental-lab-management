@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
+import { CompactPageLoadingAnimation } from "@/components/PageLoadingAnimation";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useLabScripts } from "@/hooks/useLabScripts";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
@@ -430,11 +431,11 @@ export function DashboardPage() {
                           className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
                         >
                           {searchLoading ? (
-                            <div className="p-3 text-center text-gray-500">
-                              <div className="flex items-center justify-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-                                Searching...
-                              </div>
+                            <div className="p-4">
+                              <CompactPageLoadingAnimation
+                                message="Searching patients..."
+                                size="sm"
+                              />
                             </div>
                           ) : searchResults.length > 0 ? (
                             <div className="py-1">

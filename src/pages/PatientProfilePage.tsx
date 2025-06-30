@@ -55,9 +55,12 @@ import {
   MoreVertical,
   Edit2,
   Trash2,
-  X
+  X,
+  Printer,
+  Download
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
+import { generateIVSedationFormPDF, printIVSedationForm } from "@/utils/pdfGenerator";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
 import { ClinicalReportCardForm } from "@/components/ClinicalReportCardForm";
 import { ViewClinicalReportCard } from "@/components/ViewClinicalReportCard";
@@ -2257,6 +2260,43 @@ export function PatientProfilePage() {
   const handleIVSedationPreviewClose = () => {
     setShowIVSedationPreview(false);
     setSelectedIVSedationSheet(null);
+  };
+
+  // IV Sedation Print and PDF Handlers
+  const handlePrintIVSedationForm = async () => {
+    try {
+      await printIVSedationForm('iv-sedation-preview-content');
+      toast({
+        title: "Success",
+        description: "IV Sedation form sent to printer",
+      });
+    } catch (error) {
+      console.error('Error printing IV Sedation form:', error);
+      toast({
+        title: "Error",
+        description: "Failed to print IV Sedation form",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadIVSedationPDF = async () => {
+    if (!selectedIVSedationSheet) return;
+
+    try {
+      await generateIVSedationFormPDF(selectedIVSedationSheet);
+      toast({
+        title: "Success",
+        description: "IV Sedation form PDF downloaded successfully",
+      });
+    } catch (error) {
+      console.error('Error generating IV Sedation PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate IV Sedation form PDF",
+        variant: "destructive",
+      });
+    }
   };
 
   // Surgical Recall Sheet Handlers
@@ -9821,15 +9861,37 @@ export function PatientProfilePage() {
       <Dialog open={showIVSedationPreview} onOpenChange={handleIVSedationPreviewClose}>
         <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden p-0">
           <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3 border-b">
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
-              <Activity className="h-6 w-6 text-blue-600" />
-              IV Sedation Form Preview
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                <Activity className="h-6 w-6 text-blue-600" />
+                IV Sedation Form Preview
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handlePrintIVSedationForm}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 h-9 px-3 text-sm font-medium border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
+                <Button
+                  onClick={handleDownloadIVSedationPDF}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 h-9 px-3 text-sm font-medium border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+                >
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </Button>
+              </div>
+            </div>
           </DialogHeader>
 
           {selectedIVSedationSheet && (
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-8">
+              <div id="iv-sedation-preview-content" className="space-y-8">
                 {/* Patient Information - Compact */}
                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">

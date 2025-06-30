@@ -7,6 +7,10 @@ import OrientationGuard from "@/components/OrientationGuard";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthGuard, PermissionGuard } from "@/components/auth/AuthGuard";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { AuthAnimationDemo } from "@/components/auth/AuthAnimationDemo";
+import { AppLoadingScreen } from "@/components/AppLoadingScreen";
+import { useState, useEffect } from "react";
+import "@/utils/authTestUtils"; // Load auth test utilities
 import Layout from "./components/Layout";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AppointmentsPage } from "./pages/AppointmentsPage";
@@ -34,14 +38,30 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <Sonner />
-        {/* <PWAInstallPrompt /> */}
-        <OrientationGuard>
-          <BrowserRouter>
+const App = () => {
+  const [isAppLoading, setIsAppLoading] = useState(true);
+
+  useEffect(() => {
+    // Show startup animation for 3 seconds
+    const timer = setTimeout(() => {
+      setIsAppLoading(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isAppLoading) {
+    return <AppLoadingScreen />;
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <Sonner />
+          {/* <PWAInstallPrompt /> */}
+          <OrientationGuard>
+            <BrowserRouter>
             <Routes>
               {/* Public routes */}
               <Route
@@ -57,6 +77,14 @@ const App = () => (
                 element={
                   <AuthGuard requireAuth={false}>
                     <ContactAdminPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/auth-demo"
+                element={
+                  <AuthGuard requireAuth={false}>
+                    <AuthAnimationDemo />
                   </AuthGuard>
                 }
               />
@@ -139,11 +167,12 @@ const App = () => (
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </OrientationGuard>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+            </BrowserRouter>
+          </OrientationGuard>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
+import { AuthStateWrapper } from "./auth/AuthStateWrapper";
+import { SessionManager } from "./auth/SessionManager";
 
 const Layout = () => {
   // Initialize sidebar state from localStorage or default to false (expanded)
@@ -83,26 +85,30 @@ const Layout = () => {
   };
 
   return (
-    <div className={`min-h-screen flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}>
-      <Sidebar
-        activeSection={getCurrentSection()}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        width={sidebarWidth}
-        onWidthChange={handleWidthChange}
-        onResizeStart={handleResizeStart}
-        onResizeEnd={handleResizeEnd}
-      />
-      <main
-        className="flex-1 bg-white overflow-auto"
-        style={{
-          marginLeft: `${mainMarginLeft}px`,
-          transition: 'none' // Remove all transitions for smooth real-time resizing
-        }}
-      >
-        <Outlet />
-      </main>
-    </div>
+    <AuthStateWrapper>
+      <SessionManager>
+        <div className={`min-h-screen flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}>
+          <Sidebar
+            activeSection={getCurrentSection()}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            width={sidebarWidth}
+            onWidthChange={handleWidthChange}
+            onResizeStart={handleResizeStart}
+            onResizeEnd={handleResizeEnd}
+          />
+          <main
+            className="flex-1 bg-white overflow-auto"
+            style={{
+              marginLeft: `${mainMarginLeft}px`,
+              transition: 'none' // Remove all transitions for smooth real-time resizing
+            }}
+          >
+            <Outlet />
+          </main>
+        </div>
+      </SessionManager>
+    </AuthStateWrapper>
   );
 };
 

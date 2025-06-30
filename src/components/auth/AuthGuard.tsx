@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { AuthLoadingAnimation, AuthVerifyingAnimation } from './AuthLoadingAnimation';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -30,15 +31,9 @@ export function AuthGuard({
     return () => clearTimeout(timer);
   }, [loading]);
 
-  // Show minimal loading only for very brief periods
+  // Show beautiful loading animation for authentication
   if (loading && !forceLoad) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
-        </div>
-      </div>
-    );
+    return <AuthVerifyingAnimation />;
   }
 
   // If authentication is required but user is not authenticated
@@ -74,8 +69,15 @@ export function PermissionGuard({
   // Show loading while checking permissions
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-4">
-        <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="w-8 h-8 mx-auto mb-3 relative">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600 absolute inset-0" />
+            <div className="absolute inset-1 bg-white rounded-full shadow-inner"></div>
+            <div className="absolute inset-2 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full animate-pulse"></div>
+          </div>
+          <p className="text-sm text-gray-600 animate-fade-in">Checking permissions...</p>
+        </div>
       </div>
     );
   }
