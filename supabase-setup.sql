@@ -1,0 +1,2 @@
+-- Dropdown options functionality has been removed
+-- All dropdown options are now hardcoded in the components
