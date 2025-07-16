@@ -39,10 +39,5 @@
   "env": {
     "VITE_SUPABASE_URL": "https://tofoatpggdudjvgoixwp.supabase.co",
     "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvZm9hdHBnZ2R1ZGp2Z29peHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyOTE5NTEsImV4cCI6MjA2NDg2Nzk1MX0.szgJXH6rKE7DY4uB6SvITfNQXJeOjJUB5lZQGsiqIGs"
-  },
-  "functions": {
-    "app/api/**/*.js": {
-      "maxDuration": 30
-    }
   }
 }
