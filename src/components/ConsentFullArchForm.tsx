@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
-import { FileText, User, Calendar, AlertTriangle, Stethoscope, Pill, CheckCircle, Edit } from "lucide-react";
+import { FileText, User, Calendar, AlertTriangle, Stethoscope, CheckCircle, Edit, DollarSign, Camera, Shield, Check, ChevronLeft, ChevronRight, Pill, Clock, Mail } from "lucide-react";
 
 interface ConsentFullArchFormProps {
   onSubmit: (formData: any) => void;
@@ -18,23 +20,165 @@ interface ConsentFullArchFormProps {
 }
 
 export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: ConsentFullArchFormProps) {
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Step configuration for progress indicator
+  const steps = [
+    { id: "overview", label: "Overview", index: 1 },
+    { id: "patient-info", label: "Patient Info", index: 2 },
+    { id: "treatment", label: "Treatment", index: 3 },
+    { id: "risks", label: "Risks", index: 4 },
+    { id: "sedation", label: "Sedation", index: 5 },
+    { id: "financial", label: "Financial", index: 6 },
+    { id: "media", label: "Media", index: 7 },
+    { id: "opioid", label: "Opioid", index: 8 },
+    { id: "final", label: "Final", index: 9 }
+  ];
+
+  const getCurrentStepIndex = () => {
+    const currentStep = steps.find(step => step.id === activeTab);
+    return currentStep ? currentStep.index : 1;
+  };
+
+  const isStepCompleted = (stepId: string) => {
+    const stepIndex = steps.find(step => step.id === stepId)?.index || 0;
+    return stepIndex < getCurrentStepIndex();
+  };
+
+  // Navigation functions
+  const getCurrentArrayIndex = () => {
+    return steps.findIndex(step => step.id === activeTab);
+  };
+
+  const goToNextStep = () => {
+    const currentIndex = getCurrentArrayIndex();
+    if (currentIndex < steps.length - 1) {
+      setActiveTab(steps[currentIndex + 1].id);
+    }
+  };
+
+  const goToPreviousStep = () => {
+    const currentIndex = getCurrentArrayIndex();
+    if (currentIndex > 0) {
+      setActiveTab(steps[currentIndex - 1].id);
+    }
+  };
+
+  const isFirstStep = getCurrentArrayIndex() === 0;
+  const isLastStep = getCurrentArrayIndex() === steps.length - 1;
   const [formData, setFormData] = useState({
-    // Patient Information
+    // Patient & Interpreter Information
     patientName: patientName,
+    chartNumber: "",
     date: new Date().toISOString().split('T')[0],
+    time: "",
+    primaryLanguage: "english",
+    otherLanguageText: "",
+    interpreterRequired: "no",
+    interpreterName: "",
+    interpreterCredential: "",
+    patientInfoInitials: "",
 
-    // Treatment Plan Selections (only checkboxes we keep)
-    treatmentPlan: [] as string[],
+    // Treatment Description & Alternatives
+    archType: "", // "upper", "lower", "dual"
+    upperJaw: "",
+    upperTeethRegions: "",
+    upperImplants: "",
+    upperGraftMaterial: {
+      allograft: false,
+      xenograft: false,
+      autograft: false
+    },
+    upperProsthesis: {
+      zirconia: false,
+      overdenture: false
+    },
+    upperSameDayLoad: "",
+    lowerJaw: "",
+    lowerTeethRegions: "",
+    lowerImplants: "",
+    lowerGraftMaterial: {
+      allograft: false,
+      xenograft: false,
+      autograft: false
+    },
+    lowerProsthesis: {
+      zirconia: false,
+      overdenture: false
+    },
+    lowerSameDayLoad: "",
+    sedationPlan: {
+      localOnly: false,
+      nitrous: false,
+      ivConscious: false,
+      generalHospital: false
+    },
+    asaPhysicalStatus: "",
+    plannedDrugs: {
+      midazolam: { dose: "", unit: "mg" },
+      fentanyl: { dose: "", unit: "µg" },
+      ketamine: { dose: "", unit: "mg" },
+      dexamethasone: { dose: "", unit: "mg" }
+    },
+    alternativesInitials: {
+      noTreatment: "",
+      conventionalDentures: "",
+      segmentedExtraction: "",
+      removableOverdentures: "",
+      zygomaticImplants: ""
+    },
+    treatmentDescriptionInitials: "",
 
-    // Post-operative Instructions Acknowledgment
-    postOpInstructionsAcknowledged: false,
+    // Material Risks
+    risksUnderstood: false,
+    materialRisksInitials: "",
 
-    // Signatures
-    patientSignature: "", // Will store base64 image data
+    // Sedation & Anesthesia Consent
+    escortName: "",
+    escortPhone: "",
+    medicationsDisclosed: false,
+    declineIVSedation: false,
+    sedationInitials: "",
+    anesthesiaProviderInitials: "",
+
+    // Financial Disclosure
+    surgicalExtractions: { count: "", fee: "", covered: "" },
+    implantFixtures: { count: "", fee: "", covered: "" },
+    zirconiabridge: { fee: "", covered: "" },
+    ivSedation: { fee: "", covered: "" },
+    financialInitials: "",
+
+    // Photo/Video Authorization
+    internalRecordKeeping: "",
+    professionalEducation: "",
+    marketingSocialMedia: "",
+    hipaaEmailSms: false,
+    hipaaEmail: "",
+    hipaaPhone: "",
+    photoVideoInitials: "",
+
+    // Opioid Consent
+    opioidInitials: "",
+    smallestOpioidSupply: false,
+
+    // Final Acknowledgment & Signatures
+    surgeonName: "",
+    surgeonSignature: "",
+    surgeonDate: "",
+    anesthesiaProviderName: "",
+    anesthesiaProviderSignature: "",
+    anesthesiaProviderDate: "",
+    patientSignature: "",
     patientSignatureDate: new Date().toISOString().split('T')[0],
     witnessName: "",
-    witnessSignature: "", // Will store base64 image data
-    witnessSignatureDate: new Date().toISOString().split('T')[0]
+    witnessSignature: "",
+    witnessSignatureDate: new Date().toISOString().split('T')[0],
+    finalInitials: "",
+
+    // Patient Acknowledgment Checkboxes
+    acknowledgmentRead: false,
+    acknowledgmentOutcome: false,
+    acknowledgmentAuthorize: false
   });
 
   // Auto-sync patient name when it changes
@@ -44,80 +188,141 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
     }
   }, [patientName, formData.patientName]);
 
-  // Auto-sync patient name when it changes
-  useEffect(() => {
-    if (patientName && patientName !== formData.patientName) {
-      setFormData(prev => ({ ...prev, patientName: patientName }));
-    }
-  }, [patientName, formData.patientName]);
-
   // Signature dialog states
-  const [patientSignatureDialogOpen, setPatientSignatureDialogOpen] = useState(false);
-  const [witnessSignatureDialogOpen, setWitnessSignatureDialogOpen] = useState(false);
+  const [signatureDialogs, setSignatureDialogs] = useState({
+    patientInfoInitials: false,
+    treatmentDescriptionInitials: false,
+    materialRisksInitials: false,
+    sedationInitials: false,
+    anesthesiaProviderInitials: false,
+    financialInitials: false,
+    photoVideoInitials: false,
+    opioidInitials: false,
+    finalInitials: false,
+    surgeonSignature: false,
+    anesthesiaProviderSignature: false,
+    patientSignature: false,
+    witnessSignature: false,
+    alternativesNoTreatment: false,
+    alternativesConventionalDentures: false,
+    alternativesSegmentedExtraction: false,
+    alternativesRemovableOverdentures: false,
+    alternativesZygomaticImplants: false
+  });
 
-  const treatmentOptions = [
-    "Implant Supported Denture (Lower)",
-    "Implant Supported Denture (Upper)",
-    "Implant Supported Denture (Dual Arch)",
-    "Surgical Revision",
-    "Denture (Upper)",
-    "Fixed Implant Nano-ceramic Bridge (Dual Arch)",
-    "Multiple Implants",
-    "Extraction(s)",
-    "Fixed Implant Nano-ceramic Bridge (Lower)",
-    "Single Implant",
-    "Wisdom Teeth Extraction",
-    "Fixed Implant Nano-ceramic Bridge (Upper)",
-    "Extractions and Implant Placement",
-    "Denture (Lower)",
-    "Fixed Implant Zirconia Bridge (Lower)",
-    "Fixed Implant Zirconia Bridge (Dual Arch)",
-    "Fixed Implant Zirconia Bridge (Upper)"
-  ];
-
-  const handleTreatmentPlanChange = (option: string, checked: boolean) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
-      treatmentPlan: checked
-        ? [...prev.treatmentPlan, option]
-        : prev.treatmentPlan.filter(item => item !== option)
+      [field]: value
     }));
   };
 
-  // Signature handlers
-  const handlePatientSignatureSave = (signature: string) => {
-    setFormData(prev => ({ ...prev, patientSignature: signature }));
+  const handleNestedInputChange = (parentField: string, childField: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [parentField]: {
+        ...prev[parentField as keyof typeof prev] as any,
+        [childField]: value
+      }
+    }));
   };
 
-  const handleWitnessSignatureSave = (signature: string) => {
-    setFormData(prev => ({ ...prev, witnessSignature: signature }));
+  const handleDrugChange = (drugName: string, field: 'dose' | 'unit', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      plannedDrugs: {
+        ...prev.plannedDrugs,
+        [drugName]: {
+          ...prev.plannedDrugs[drugName as keyof typeof prev.plannedDrugs],
+          [field]: value
+        }
+      }
+    }));
   };
 
-  const handlePatientSignatureClear = () => {
-    setFormData(prev => ({ ...prev, patientSignature: "" }));
+  const handleSignatureDialogOpen = (type: string) => {
+    setSignatureDialogs(prev => ({
+      ...prev,
+      [type]: true
+    }));
   };
 
-  const handleWitnessSignatureClear = () => {
-    setFormData(prev => ({ ...prev, witnessSignature: "" }));
+  const handleSignatureDialogClose = (type: string) => {
+    setSignatureDialogs(prev => ({
+      ...prev,
+      [type]: false
+    }));
+  };
+
+  const handleSignatureSave = (type: string, signature: string) => {
+    if (type.includes('alternatives')) {
+      const alternativeType = type.replace('alternatives', '').toLowerCase();
+      setFormData(prev => ({
+        ...prev,
+        alternativesInitials: {
+          ...prev.alternativesInitials,
+          [alternativeType]: signature
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [type]: signature
+      }));
+    }
+    handleSignatureDialogClose(type);
+  };
+
+  const handleSignatureClear = (type: string) => {
+    if (type.includes('alternatives')) {
+      const alternativeType = type.replace('alternatives', '').toLowerCase();
+      setFormData(prev => ({
+        ...prev,
+        alternativesInitials: {
+          ...prev.alternativesInitials,
+          [alternativeType]: ''
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [type]: ''
+      }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate required fields
-    const requiredFields = ['patientName', 'patientSignatureDate', 'witnessName', 'witnessSignatureDate'];
+    const requiredFields = ['patientName', 'chartNumber', 'date', 'time'];
     const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
 
-    // Check if signatures are drawn
-    if (!formData.patientSignature) {
-      missingFields.push('Patient Signature (please draw your signature)');
-    }
-    if (!formData.witnessSignature) {
-      missingFields.push('Witness Signature (please draw witness signature)');
+    // Check if all required signatures/initials are completed
+    const requiredSignatures = [
+      'patientInfoInitials',
+      'treatmentDescriptionInitials',
+      'materialRisksInitials',
+      'sedationInitials',
+      'financialInitials',
+      'photoVideoInitials',
+      'opioidInitials',
+      'finalInitials',
+      'patientSignature',
+      'witnessSignature'
+    ];
+
+    const missingSignatures = requiredSignatures.filter(sig => !formData[sig as keyof typeof formData]);
+
+    // Check alternatives initials
+    const alternativesFields = Object.values(formData.alternativesInitials);
+    if (alternativesFields.some(field => !field)) {
+      missingSignatures.push('All alternatives must be initialed');
     }
 
-    if (missingFields.length > 0) {
-      alert(`Please complete all required fields: ${missingFields.join(', ')}`);
+    if (missingFields.length > 0 || missingSignatures.length > 0) {
+      const allMissing = [...missingFields, ...missingSignatures];
+      alert(`Please complete all required fields: ${allMissing.join(', ')}`);
       return;
     }
 
@@ -125,629 +330,3305 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <DialogHeader className="mb-6">
+    <div className="h-[80vh] flex flex-col">
+      {/* Fixed Header - Full Width */}
+      <DialogHeader className="flex-shrink-0 mb-6 w-full">
         <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
           <FileText className="h-6 w-6" />
           Consent Packet for Full Arch Surgery
         </DialogTitle>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Patient Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <User className="h-5 w-5 text-blue-600" />
-              Patient Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="patientName" className="text-sm font-semibold">
-                <span className="text-red-500">*</span> Patient Name
-              </Label>
-              <Input
-                id="patientName"
-                value={formData.patientName}
-                readOnly
-                className="mt-1 bg-gray-50 cursor-not-allowed"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="date" className="text-sm font-semibold">
-                <span className="text-red-500">*</span> Date
-              </Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                className="mt-1"
-                required
-              />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Content Container with max-width */}
+      <div className="max-w-6xl mx-auto flex-1 flex flex-col min-h-0 w-full">
 
-        {/* Treatment Plan */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Stethoscope className="h-5 w-5 text-green-600" />
-              Treatment Plan
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {treatmentOptions.map((option) => (
+      {/* Fixed Step Progress Indicator */}
+      <div className="flex-shrink-0 px-6 pt-6 pb-6">
+        <div className="flex items-center justify-between w-full gap-2">
+          {steps.map((step, index) => (
+            <div key={step.id} className="flex flex-col items-center flex-1">
+              <div className="relative flex items-center justify-center pb-2">
                 <button
-                  key={option}
                   type="button"
-                  onClick={() => handleTreatmentPlanChange(option, !formData.treatmentPlan.includes(option))}
-                  className={`
-                    relative p-3 rounded-lg border-2 text-left transition-all duration-200 hover:shadow-md
-                    ${formData.treatmentPlan.includes(option)
-                      ? 'border-green-500 bg-green-50 text-green-800 shadow-sm'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                    }
-                  `}
+                  onClick={() => setActiveTab(step.id)}
+                  className={`text-sm font-medium cursor-pointer hover:text-blue-700 transition-colors ${
+                    activeTab === step.id ? 'text-blue-600' :
+                    isStepCompleted(step.id) ? 'text-blue-600' : 'text-gray-400'
+                  }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium pr-2">{option}</span>
-                    <div className={`
-                      w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
-                      ${formData.treatmentPlan.includes(option)
-                        ? 'border-green-500 bg-green-500'
-                        : 'border-gray-300'
-                      }
-                    `}>
-                      {formData.treatmentPlan.includes(option) && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
+                  {step.label}
+                </button>
+                {isStepCompleted(step.id) && (
+                  <div className="absolute -top-5 w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                  </div>
+                )}
+              </div>
+              <div className={`h-1 w-full rounded-full ${
+                activeTab === step.id ? 'bg-blue-600' :
+                isStepCompleted(step.id) ? 'bg-blue-600' : 'bg-gray-300'
+              }`}></div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-hidden px-6">
+          {/* Overview Tab */}
+          {activeTab === "overview" && (
+            <div className="space-y-6 h-full overflow-y-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  Welcome and Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800 mb-3">
+                    <strong>Today we discussed in detail your full-arch implant treatment, including:</strong>
+                  </p>
+                  <ol className="text-sm text-blue-800 space-y-1 ml-4 list-decimal">
+                    <li>Exactly which teeth and implant fixtures are planned</li>
+                    <li>Reasonable alternatives (from doing nothing to various denture/bridge options)</li>
+                    <li>All material risks and their approximate likelihoods</li>
+                    <li>The sedation/anesthesia plan and associated safety measures</li>
+                    <li>Financial obligations, insurance notice, and your No Surprises Act rights</li>
+                    <li>How we'll use any photos/videos or communicate by email/SMS</li>
+                  </ol>
+                  <p className="text-sm text-blue-800 mt-3">
+                    You've had the opportunity to ask questions, to see the statistical ranges for each complication, and to confirm that you understand each element. If anything remains unclear at any point, please let us know right away—your signature on the following pages certifies that you have been fully informed and that we have addressed your questions thoroughly.
+                  </p>
+                </div>
+
+                <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-800 font-medium">
+                    <strong>Important Note:</strong> Patient must initial the lower-right corner of every page throughout this consent packet.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            </div>
+          )}
+
+          {/* Patient & Interpreter Information Tab */}
+          {activeTab === "patient-info" && (
+            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <User className="h-5 w-5 text-blue-600" />
+                  Patient & Interpreter Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="patientName" className="text-sm font-semibold">
+                      <span className="text-red-500">*</span> Patient Full Legal Name
+                    </Label>
+                    <Input
+                      id="patientName"
+                      value={formData.patientName}
+                      readOnly
+                      className="mt-1 bg-gray-50 cursor-not-allowed"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="chartNumber" className="text-sm font-semibold">
+                      <span className="text-red-500">*</span> Chart #
+                    </Label>
+                    <Input
+                      id="chartNumber"
+                      value={formData.chartNumber}
+                      onChange={(e) => handleInputChange('chartNumber', e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="date" className="text-sm font-semibold">
+                      <span className="text-red-500">*</span> Date (dd-MMM-yyyy)
+                    </Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => handleInputChange('date', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="time" className="text-sm font-semibold">
+                      <span className="text-red-500">*</span> Time (24 h)
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="time"
+                        type="time"
+                        value={formData.time}
+                        onChange={(e) => handleInputChange('time', e.target.value)}
+                        required
+                        className="pr-32"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const now = new Date();
+                          const currentTime = now.toTimeString().slice(0, 5); // Format: HH:MM
+                          handleInputChange('time', currentTime);
+                        }}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 px-2 flex items-center gap-1 border border-blue-300 bg-white hover:bg-blue-50 text-blue-600 text-xs rounded-md"
+                        title="Set current time"
+                      >
+                        <Clock className="h-3.5 w-3.5" />
+                        Current Time
+                      </Button>
                     </div>
                   </div>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pre-Operative Instructions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
-              Pre-Operative Instructions for Full Arch Surgery
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800 mb-2">
-                If you have any questions or concerns about your surgery, please contact our office at (585) 394-5910 or by email at contact@nysdentalimplants.com
-              </p>
-            </div>
-
-            <div className="space-y-3 text-sm">
-              <p>We will be reviewing your medical history with you prior to your surgery. Please let us know if there has been any change in your history since we last met.</p>
-
-              <p>Brush your teeth before you come in. If you use mouthwash, do not swallow it.</p>
-
-              <p>Unless specified by our office, do not discontinue any medicines prescribed by your other health providers.</p>
-
-              <p>No fluid or food ingestion 8 hrs. prior if you are scheduled for IV sedation (please see below).</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* IV Sedation Instructions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Stethoscope className="h-5 w-5 text-indigo-600" />
-              I.V. (INTRAVENOUS) CONSCIOUS SEDATION INSTRUCTIONS
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3 text-sm">
-              <p><strong>1.</strong> To reduce the chance of complications, do not eat or drink anything (including water) for at least <strong>EIGHT</strong> hours prior to your Appointment.</p>
-
-              <p><strong>2.</strong> If your surgery is in the morning, do not eat or drink anything between bedtime and your scheduled appointment.</p>
-
-              <p><strong>3.</strong> If your surgery is in the afternoon, a light breakfast before 7:00 am is encouraged.</p>
-
-              <p><strong>4.</strong> A responsible adult, 18 years or older, should accompany you to the office and remain in the office during the entire procedure. Following the sedation, this responsible adult should remain with you for the next 24 hours.</p>
-
-              <p><strong>5.</strong> Please wear clothing that is not restrictive to the neck or arms. Please wear loose-fitting tops on which the sleeves can be rolled up to the shoulder. Also, please be sure to wear shoes that are securely fastened; no flip-flops, or loose-fitting sandals.</p>
-
-              <p><strong>6.</strong> Do not wear perfume, body lotion or jewellery. Remove all nail polish.</p>
-
-              <p><strong>7.</strong> Remove contact lenses before surgery.</p>
-
-              <p><strong>8.</strong> Do not drive to the office, please ask a responsible adult to drive you to the office. Following the sedation, you should refrain from driving an automobile or engaging in any activity that requires alertness for the next 24 hours.</p>
-
-              <p className="mt-4">If you have any questions about the I.V. Sedation process, please feel free to contact Dr. Germain Jean Charles at (585) 394-5910 or by email at contact@nysdentalimplants.com, prior to the procedure.</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pre-operative Medications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Pill className="h-5 w-5 text-purple-600" />
-              Surgical Pre-operative Medications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800 font-medium mb-2">
-                All patients are required to begin the regimen below before surgery unless otherwise exempt or allergic to the medications prescribed. All medications will be called directly to the pharmacy THREE (3) days prior to your Appointment, please call the office if additional arrangements need to be made.
-              </p>
-              <p className="text-sm text-red-800 font-bold">
-                Please DO NOT TAKE THESE MEDICATION THE MORNING OF SURGERY:
-              </p>
-            </div>
-
-            <div className="space-y-4 text-sm">
-              <div className="border border-gray-200 rounded-lg p-4">
-                <p className="font-semibold mb-2">Medication Name: <strong>Medrol 4mg Dose Pack</strong></p>
-                <p>Purpose and Directions: Helps suppress bruising and swelling. Please take as directed until finished (6 days). Please take the loading dose (located on the lower right of the packet), then continue with directions as located under each row in the packet</p>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-4">
-                <p className="font-semibold mb-2">Medication Name: <strong>Amoxicillin 500mg x 30 tabs</strong> (Another Antibiotic may have been prescribed if allergic)</p>
-                <p>Directions: Please take one (1) tablet by mouth THREE (3) times a day. Please begin regimen 3 DAYS BEFORE surgery and continue after surgery.</p>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-4">
-                <p className="font-semibold mb-2">Medication Name: <strong>Diazepam 10 mg (Valium)</strong></p>
-                <p>Directions: Please take one (1) tablet the night before surgery</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Informed Consent for Full-Arch Surgery */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
-              Informed Consent for Full-Arch Surgery
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-              <p className="mb-3">
-                <span className="font-semibold">TO THE PATIENT:</span> You have the right as a patient, to be informed about your condition and about the recommended surgical, medical, or diagnostic procedures to be used that can help you make an informed decision before undergoing any procedures. You also have the right to know the risks and potential complications that may be involved by undergoing the procedures prescribed. This disclosure is not meant to scare or intimidate you; it is simply an effort to make you better informed so you can give or withhold your consent to the procedures being performed.
-              </p>
-              <p className="font-semibold">
-                The following consent packet covers all procedures that are performed concurrently or in sequence in our full-arch rehabilitation process that includes but not limited to: Dental Extraction; Guided Tissue Regeneration (GTR) or bone grafting; Biopsy, Implant Placement; Nitrous Oxide and/or IV sedation.
-              </p>
-            </div>
-
-            <div className="text-sm">
-              <p>The consequence of not performing the necessary steps to rehabilitate my mouth may include but not limited to the following: Continuation, growth, and/or spread of infection; Pain and swelling; Systemic infection such as fever, sepsis, and (in rare cases) death; and Aspiration (inhaling) of loose teeth or tooth fragments.</p>
-            </div>
-
-            <div className="space-y-4 text-sm">
-              <div>
-                <p className="font-semibold mb-2">AUTHORIZATION:</p>
-                <p>I understand that the Full Arch Treatment with the office will involve the extraction of all my remaining teeth (if applicable) followed by grafting as necessary and subsequent immediate implant placement if adequate condition permits. The procedural sequence has been presented and explained to me in pre-consultation prior to this consent.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">RISKS:</p>
-                <p>I understand that Oral Surgery and/or Dental Extractions; GTR or Grafting; Implant placement involve possible inherent risks such as, but not limited to the following: Pain and swelling; Injury to surrounding soft tissues; Reversible or irreversible nerve damage; Dry socket (a painful, noninfectious complication); Infection; Adverse reactions to medications, local anesthetic injection or IV catheter placement. Retained fragments of teeth in the jaw (if the risk of removal outweighs the benefit); Perforation of the maxillary sinus, possibly requiring further treatment; and In rare cases, fracture of the jaw requiring further treatment; Delay in delivering final prosthesis.</p>
-              </div>
-
-              <div>
-                <p>I understand the procedures involved in Full-Arch Rehabilitation are permanent and that I give consent to have them performed on me today. I was presented with other treatment options such as NO TREATMENT AT ALL; I was invited and encouraged to ask questions which were answered to my satisfaction. I, NOW voluntarily, agree to proceed with Full-Arch Rehabilitation involving dental implants. The fee(s) for this service have been explained to me and are satisfactory.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">PURPOSE OF EXTRACTION:</p>
-                <p>The extraction of all the remaining teeth helps to eliminate and treat any existing sites of infection if present and/or pain. It also allows for the establishment of solid foundation for the new guided prosthesis.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">PURPOSE OF GRAFTING:</p>
-                <p>The grafting procedure serves as an attempt to regenerate bone to an area where bone loss or atrophy occurred due to dental infection or previous loss of teeth.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">PURPOSE OF IMPLANT PLACEMENT:</p>
-                <p>The placement of the titanium implant(s) in the jaw will serve as a root replacement/anchor to stabilize a final prosthesis such as a <strong>FIXED BRIDGE or A REMOVABLE DENTURE</strong>. I understand that the FINAL PROSTHESIS is another procedure that will be performed later after all healing is completed. The implants may be left to heal underneath your gums for a few months before the final restoration is placed. In such case, you will be placed on a regular conventional complete denture awaiting complete healing of the implants.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">NO GUARANTEE OF TREATMENT RESULTS:</p>
-                <p>I understand that there is no way to accurately predict the healing of a specific patient including the final height of the gums, and that there has been no guarantee given.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">IMPORTANCE OF PATIENT COMPLIANCE:</p>
-                <p>I understand that meticulous oral hygiene must be maintained, and that smoking, excessive alcohol consumption, and improper diet practice must be avoided. Failure to maintain good oral hygiene or modify any nefarious behavior may affect the healing of the grafted material and/or the osseointegration of the implants which may lead to subsequent graft and/or implant failure.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">PERIODIC CHECKUPS:</p>
-                <p>I understand that periodic exams and cleanings which are FREE for a period of two years are important to the success of my Full-Arch Rehabilitation. Failure to maintain these checkups without notice will void my warranty. Any changes to MY BITE or discomfort at the surgical site must be reported immediately as it may compromise long term survival of MY implants.</p>
-              </div>
-
-              <div>
-                <p>By signing this form, I am freely giving my consent to allow and authorize Dr. Charles and/or his associates to render any treatment necessary or advisable to my dental conditions, including any and all anesthetics and/or medications. I will follow the verbal and written postoperative instructions and return for all follow-up appointments as covered in the procedure sequence sheet.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Authorization */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              Authorization
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <div className="space-y-4">
-              <div>
-                <p className="font-semibold mb-2">AUTHORIZATION:</p>
-                <p>I hereby authorize Dr. Charles and his assistant(s) to extract MY remaining teeth (if applicable) as a baseline preparation for Full-Arch Rehabilitation.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">AUTHORIZATION:</p>
-                <p>I hereby authorize Dr. Charles and his assistant(s) to perform <strong>guided tissue regeneration (GTR)/Grafting</strong> as needed for my Full-Arch Rehabilitation using Autogenous graft (my OWN bone) and Allograft materials (sterile human donor bone) in combination with resorbable collagen membrane as needed.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">AUTHORIZATION:</p>
-                <p>I hereby authorize Dr. Charles and his assistant(s) to insert <strong>dental implant(s)</strong> in my jaw as needed.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Informed Consent for Conscious Sedation */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Stethoscope className="h-5 w-5 text-indigo-600" />
-              Informed Consent for Conscious Sedation
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <div className="space-y-4">
-              <div>
-                <p className="font-semibold mb-2">DIAGNOSIS:</p>
-                <p>I have been informed that my treatment can be performed with a variety of types of anesthetics, including local anesthesia, local anesthesia with Nitrous Oxide sedation or local anesthesia with IV conscious sedation. Dr. Germain Jean-Charles has recommended Intra-Venous (IV) conscious sedation in addition to other possible forms of anesthetic to alleviate the stress involved with this type of procedure.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">RECOMMENDED TREATMENT:</p>
-                <p>I understand that in IV conscious sedation, small doses of various medications will be administered to produce a state of relaxation, reduced perception of pain, and drowsiness. While in the relaxation state, local anesthetics will be administered to ensure proper anesthesia in the areas of my mouth to be operated on comfortably and pain free. I understand that the drugs to be used may include midazolam and fentanyl. I recognize that I must do several things prior to conscious sedation: I must refrain from eating and drinking for at least <strong>eight (8) hours</strong> before my appointment. I must not wear necklaces, earrings, fingernail polish, perfumes, colognes, or aftershaves. I must wear warm comfortable clothing with a short sleeve shirt/blouse.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">EXPECTED BENEFITS:</p>
-                <p>The purpose of conscious sedation is to lessen the significant and undesirable side effects of long or stressful dental procedures by chemically reducing the fear, apprehension, and stresses sometimes associated with these procedures.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">Principal Risks and Complications:</p>
-                <p>I understand that occasional complications may be associated with conscious sedation including pain, facial swelling or bruising, inflammation of a vein (phlebitis), infection, bleeding, discoloration, nausea, vomiting, and allergic reaction. I further understand that, in extremely rare instances, cardiac arrest, damage to the brain or other organ supplied by an artery, and even death, can occur. To help minimize risks and complications, I have disclosed to the doctor and the staff all drugs and medications that I am taking. I have also disclosed any abnormalities in my current physical status or past medical history. This includes any history of drug or alcohol abuse and any unusual reactions to medications or anesthetics.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">ALTERNATIVES TO SUGGESTED TREATMENT:</p>
-                <p>Alternatives to conscious sedation include local anesthesia, intramuscular sedation, and general anesthesia in the hospital or in a surgical center. Local anesthesia alone may not adequately dispel my fear, anxiety, or stress. If certain medical conditions are present, it may present a greater risk. There may be less control of proper dosage with oral sedation than with IV conscious sedation<strong>.</strong></p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">NECESSARY FOLLOW-UP CARE AND SELF CARE:</p>
-                <p>I understand that I must refrain from drinking alcoholic beverages and taking certain medications for a twenty-four (24) hour period following the administration of conscious sedation. I also understand that a responsible adult needs to drive me home and remain with me until the effects of the sedation have worn off and that I should not attempt to drive or operate any machinery for the remainder of the day on which I receive sedation.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">NO WARRANTY OR GUARANTEE:</p>
-                <p>I hereby acknowledge that no guarantee, warranty, or assurance has been given to me that the proposed treatment will be successful. I recognize that, as noted above, there are risks and potential complications in the administration of conscious sedation.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">PATIENT CONSENT:</p>
-                <p>I have been fully informed of the nature of IV conscious sedation, the procedure to be utilized, the risks and benefits of this form of sedation, the alternatives available, and the necessity for follow-up. I have had an opportunity to ask any questions I may have in connection with the procedure, and to discuss my concerns with my Dentist. After thorough consideration, I hereby consent to the administration of IV conscious sedation as presented to me during consultation and explained in this document.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">AUTHORIZATION:</p>
-                <p>I CERTIFY THAT I HAVE READ AND FULLY UNDERSTOOD THIS DOCUMENT AND THEREFORE AGREED TO THE ADMINISTRATION OF IV CONCIOUS SEDATION FOR MY PROCEDURE.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Post-operative Instructions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-              Post-operative Instructions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-4 text-sm">
-              <div>
-                <p className="font-semibold mb-2">DO NOT DISTURB THE AREA:</p>
-                <p>For the next few days, and especially the first 24 hours, it is important to allow your body to form a good clot and start the natural healing process. Swishing, sucking through a straw, and smoking can all dislodge the clot. Keep anything sharp from entering the site of implant placement (crunchy food, toothpicks, eating utensils). Be sure to limit chewing too heavily and adopt soft diet during the healing phase of the implants.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">BLEEDING:</p>
-                <p>When you leave the office, you might be biting on a gauze pad to control bleeding. Keep slight pressure on this gauze for at least 30 minutes. Do not change the gauze during this time; it needs to remain undisturbed while a clot forms to stop any bleeding. After 30 minutes, you may remove it. Small amounts of blood in the saliva can make your saliva appear quite red. This is normal and may be noticed the rest of the day after the procedure.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">SMOKING:</p>
-                <p>Smoking should be stopped following any surgery. Specially in implant surgery, we advise patient to abstain or quit the habit for better implant long term survival. Healing and success of the surgery will be substantially reduced by the cigarette smoke chemicals in your body. Also, the suction created when inhaling cigarettes can affect implant long term survival. Smokers are at greater risk of developing painful post-operative problems.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">PAIN:</p>
-                <p>Some discomfort is normal after surgery. To minimize pain, Take the medications as prescribed as soon as the anesthetic wears off and before bedtime to maintain comfort. Do not exceed the dose on the label. Taking with food or milk will help reduce upset stomach. Avoid driving or operating heavy machinery when taking pain prescriptions. Do not drink alcohol while taking prescription pain medications.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">NAUSEA:</p>
-                <p>This is most often caused by taking pain medications on an empty stomach. Avoid taking your medications on an empty stomach to reduce nausea and use water to take them.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">SWELLING:</p>
-                <p>Applying an ice bag to the face over the side of surgery will help minimize or contain swelling. Apply the ice pack 10 minutes on and then 15 minutes off. Do this for the first day.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">NUMBNESS:</p>
-                <p>The local anesthetic will cause you to be numb for several hours after you leave the office. Be careful not to bite, chew, pinch, or scratch the numb area. Sometimes surgical procedures in the mouth cause residual numbness or tingling for six weeks or longer.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">BRUSHING:</p>
-                <p>Do not brush your teeth for the first 8 hours after surgery. You may resume brushing your teeth gently the following days after surgery, but do not brush the surgical site.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">RINSING:</p>
-                <p>Avoid all rinsing or swishing for 24 hours after extraction. Rinsing can disturb the formation of a healing blood clot which is essential to proper healing. This could cause bleeding and risk of post-operative complications. After 24 hours you may begin rinsing gently with a saltwater solution (1/2 teaspoon salt + 1/2 teaspoon soda + 8 ounces' warm water) or the chlorhexidine rinse twice a day morning and evening with 20 ml for two minutes and expectorate for a duration of two weeks.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">DIET:</p>
-                <p>Eat soft foods for the first two days. Maintain a good, balanced soft food diet for the first 6-8 weeks period that allow your implants to integrate with your bone. Failure to adhere to a soft diet during that healing phase will affect your implant success and your smile. AVOID FORCEFUL EATING OR CRUNCHING ON THE SITE OF IMPLANT PLACEMENT. Drink plenty of water. Avoid alcohol for 48 hours.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">ACTIVITY:</p>
-                <p>After leaving the office, rest and avoid strenuous activities for the remainder of the day. Keeping blood pressure lower will reduce bleeding and aid healing. Make sure a responsible adult can stay with 8 hrs. following surgery specially if your surgery was under IV sedation.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold mb-2">ANTIBIOTICS:</p>
-                <p>Take all antibiotic pill as directed until they are gone. Women: some antibiotics can reduce the effectiveness of birth control pills. Use alternate birth control methods for two months.</p>
-              </div>
-            </div>
-
-            {/* Single acknowledgment checkbox */}
-            <div className="border-t pt-4 mt-6">
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="postOpInstructionsAcknowledged"
-                  checked={formData.postOpInstructionsAcknowledged}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, postOpInstructionsAcknowledged: checked as boolean }))}
-                />
-                <Label htmlFor="postOpInstructionsAcknowledged" className="text-sm cursor-pointer font-medium">
-                  I acknowledge that I have read and understand all the post-operative instructions above.
-                </Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Post-operative Medications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Pill className="h-5 w-5 text-green-600" />
-              Surgical Post-operative Medications
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-800 font-medium mb-2">
-                After your surgery: A small amount of Opioid-based analgesics is prescribed in some situations, please use with caution to avoid dependence:
-              </p>
-            </div>
-
-            <div className="space-y-4 text-sm">
-              <div className="border border-gray-200 rounded-lg p-4">
-                <p className="font-semibold mb-2">Medication Name: Amoxicillin 500mg (Another Antibiotics may have been prescribed if allergic)</p>
-                <p><strong>Directions:</strong> Following your surgery, take one (1) tablet every 8 hours until finished</p>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-4">
-                <p className="font-semibold mb-2">Medication Name: Motrin 800mg or Ibuprofen 800mg</p>
-                <p><strong>Directions:</strong> Following surgery take one (1) tablet every 4-6 hours as needed for pain. Stay on this medication for 2-3 days to keep inflammation down.</p>
-              </div>
-
-              <div className="border border-gray-200 rounded-lg p-4">
-                <p className="font-semibold mb-2">24 hours After Surgery:</p>
-                <p className="font-semibold mb-1">Medication Name: Chlorhexidine</p>
-                <p><strong>Directions:</strong> 15ml 3x A Day for 5 minutes.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Signatures */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <User className="h-5 w-5 text-gray-600" />
-              Signatures
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x md:divide-gray-200">
-              {/* Patient Column */}
-              <div className="space-y-4 md:pr-6">
-                <h4 className="font-semibold text-gray-900 border-b pb-2 text-center">Patient Information</h4>
-
-                <div>
-                  <Label htmlFor="patientNameForSignature" className="text-sm font-semibold">
-                    <span className="text-red-500">*</span> Printed Name of Patient
-                  </Label>
-                  <Input
-                    id="patientNameForSignature"
-                    value={formData.patientName}
-                    readOnly
-                    className="mt-1 bg-gray-50 cursor-not-allowed"
-                    required
-                  />
                 </div>
 
-                <div>
-                  <Label htmlFor="patientSignatureDate" className="text-sm font-semibold">
-                    <span className="text-red-500">*</span> Date Signed
-                  </Label>
-                  <Input
-                    id="patientSignatureDate"
-                    type="date"
-                    value={formData.patientSignatureDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, patientSignatureDate: e.target.value }))}
-                    className="mt-1"
-                    required
-                  />
+                <div className="space-y-6">
+                  <div>
+                    <Label className="text-sm font-semibold mb-3 block">Primary Language Used</Label>
+                    <RadioGroup
+                      value={formData.primaryLanguage}
+                      onValueChange={(value) => handleInputChange('primaryLanguage', value)}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-center space-x-3 flex-wrap">
+                        <div className="flex items-center">
+                          <RadioGroupItem value="english" id="english" className="sr-only" />
+                          <Label
+                            htmlFor="english"
+                            className={`flex items-center justify-center px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 min-w-[120px] ${
+                              formData.primaryLanguage === 'english'
+                                ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+                            }`}
+                          >
+                            English
+                          </Label>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="other" id="other" className="sr-only" />
+                          <Label
+                            htmlFor="other"
+                            className={`flex items-center justify-center px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 min-w-[120px] ${
+                              formData.primaryLanguage === 'other'
+                                ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+                            }`}
+                          >
+                            Other Language
+                          </Label>
+                          {formData.primaryLanguage === 'other' && (
+                            <Input
+                              placeholder="Specify language"
+                              className="w-48"
+                              value={formData.otherLanguageText}
+                              onChange={(e) => handleInputChange('otherLanguageText', e.target.value)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold mb-3 block">Interpreter Required?</Label>
+                    <RadioGroup
+                      value={formData.interpreterRequired}
+                      onValueChange={(value) => handleInputChange('interpreterRequired', value)}
+                      className="space-y-4"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <RadioGroupItem value="yes" id="interpreterYes" className="sr-only" />
+                          <Label
+                            htmlFor="interpreterYes"
+                            className={`flex items-center justify-center px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 min-w-[120px] ${
+                              formData.interpreterRequired === 'yes'
+                                ? 'border-green-500 bg-green-50 text-green-700 font-medium'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+                            }`}
+                          >
+                            Yes, Interpreter Required
+                          </Label>
+                        </div>
+
+                        {formData.interpreterRequired === 'yes' && (
+                          <div className="ml-6 bg-green-50 p-4 rounded-lg border border-green-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="interpreterName" className="text-sm font-medium">Interpreter Name</Label>
+                                <Input
+                                  id="interpreterName"
+                                  value={formData.interpreterName}
+                                  onChange={(e) => handleInputChange('interpreterName', e.target.value)}
+                                  placeholder="Enter interpreter name"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="interpreterCredential" className="text-sm font-medium">Credential/ID</Label>
+                                <Input
+                                  id="interpreterCredential"
+                                  value={formData.interpreterCredential}
+                                  onChange={(e) => handleInputChange('interpreterCredential', e.target.value)}
+                                  placeholder="Enter credential or ID"
+                                  className="mt-1"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-start space-x-3">
+                        <RadioGroupItem value="no" id="interpreterNo" className="sr-only" />
+                        <Label
+                          htmlFor="interpreterNo"
+                          className={`flex-1 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 text-sm ${
+                            formData.interpreterRequired === 'no'
+                              ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                              : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+                          }`}
+                        >
+                          <strong>No</strong> → I attest that I am sufficiently fluent in English to understand all content of this packet, that it was explained to me in English, and that I had the opportunity to request an interpreter but declined.
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-semibold">
-                    <span className="text-red-500">*</span> Patient Signature
-                  </Label>
-                  <div className="mt-1">
-                    {formData.patientSignature ? (
+                <Separator />
+
+                <div className="flex flex-col items-end space-y-3">
+                  <div className="flex items-center justify-center">
+                    {formData.patientInfoInitials ? (
                       <SignaturePreview
-                        signature={formData.patientSignature}
-                        onEdit={() => setPatientSignatureDialogOpen(true)}
-                        onClear={handlePatientSignatureClear}
-                        label="Patient Signature"
+                        signature={formData.patientInfoInitials}
+                        onEdit={() => handleSignatureDialogOpen('patientInfoInitials')}
+                        onClear={() => handleSignatureClear('patientInfoInitials')}
+                        className="w-64 h-16 border border-gray-300 rounded-md"
                       />
                     ) : (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setPatientSignatureDialogOpen(true)}
-                        className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2"
+                        onClick={() => handleSignatureDialogOpen('patientInfoInitials')}
+                        className="w-64 h-16 border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2"
                       >
                         <Edit className="h-4 w-4" />
                         Sign Here
                       </Button>
                     )}
                   </div>
+                  <div className="w-64 border-t border-gray-300 pt-2">
+                    <div className="flex items-center justify-center">
+                      <Label className="text-sm font-semibold">Patient Signature</Label>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+            </div>
+          )}
 
-              {/* Witness Column */}
-              <div className="space-y-4 md:pl-6">
-                <h4 className="font-semibold text-gray-900 border-b pb-2 text-center">Witness Information</h4>
+          {/* Treatment Description & Alternatives Tab */}
+          {activeTab === "treatment" && (
+            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Stethoscope className="h-5 w-5 text-blue-600" />
+                  Treatment Description & Alternatives
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 w-full overflow-hidden">
+                {/* Arch Type Selection */}
+                <Card className="border-2 border-blue-200 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Stethoscope className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Treatment Arch Selection
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium text-gray-700">Which arch(es) require treatment?</Label>
+                      <RadioGroup
+                        value={formData.archType}
+                        onValueChange={(value) => {
+                          handleInputChange('archType', value);
+                          // Reset jaw selections when arch type changes
+                          if (value === 'upper') {
+                            handleInputChange('upperJaw', 'yes');
+                            handleInputChange('lowerJaw', '');
+                            handleInputChange('upperSameDayLoad', '');
+                            handleInputChange('lowerSameDayLoad', '');
+                          } else if (value === 'lower') {
+                            handleInputChange('upperJaw', '');
+                            handleInputChange('lowerJaw', 'yes');
+                            handleInputChange('upperSameDayLoad', '');
+                            handleInputChange('lowerSameDayLoad', '');
+                          } else if (value === 'dual') {
+                            handleInputChange('upperJaw', 'yes');
+                            handleInputChange('lowerJaw', 'yes');
+                            handleInputChange('upperSameDayLoad', '');
+                            handleInputChange('lowerSameDayLoad', '');
+                          }
+                        }}
+                        className="flex flex-wrap gap-4"
+                      >
+                        <div className="flex items-center space-x-1">
+                          <RadioGroupItem value="upper" id="archUpper" className="sr-only" />
+                          <Label
+                            htmlFor="archUpper"
+                            className={`px-6 py-3 rounded-lg border cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${
+                              formData.archType === 'upper'
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                            }`}
+                          >
+                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 font-semibold text-xs">U</span>
+                            </div>
+                            Upper Arch Only
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <RadioGroupItem value="lower" id="archLower" className="sr-only" />
+                          <Label
+                            htmlFor="archLower"
+                            className={`px-6 py-3 rounded-lg border cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${
+                              formData.archType === 'lower'
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                            }`}
+                          >
+                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 font-semibold text-xs">L</span>
+                            </div>
+                            Lower Arch Only
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <RadioGroupItem value="dual" id="archDual" className="sr-only" />
+                          <Label
+                            htmlFor="archDual"
+                            className={`px-6 py-3 rounded-lg border cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${
+                              formData.archType === 'dual'
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1">
+                              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-semibold text-xs">U</span>
+                              </div>
+                              <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-semibold text-xs">L</span>
+                              </div>
+                            </div>
+                            Dual Arch (Both)
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div>
-                  <Label htmlFor="witnessName" className="text-sm font-semibold">
-                    <span className="text-red-500">*</span> Printed Witness Name
-                  </Label>
-                  <Input
-                    id="witnessName"
-                    value={formData.witnessName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, witnessName: e.target.value }))}
-                    className="mt-1"
-                    required
-                  />
+                {/* Treatment Planning Cards - Show based on arch selection */}
+                <div className="space-y-6">
+                  {/* Single Arch Layouts */}
+                  {formData.archType === 'upper' && (
+                    <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-3 text-lg">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-blue-600 font-semibold text-sm">U</span>
+                          </div>
+                          Upper Arch Treatment Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Teeth/Regions and Implants */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="upperTeethRegions" className="text-sm font-medium text-gray-700">
+                              Teeth/Regions
+                            </Label>
+                            <Input
+                              id="upperTeethRegions"
+                              value={formData.upperTeethRegions}
+                              onChange={(e) => handleInputChange('upperTeethRegions', e.target.value)}
+                              placeholder="Enter teeth/regions"
+                              className="h-10"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="upperImplants" className="text-sm font-medium text-gray-700">
+                              # Implants
+                            </Label>
+                            <Input
+                              id="upperImplants"
+                              type="number"
+                              value={formData.upperImplants}
+                              onChange={(e) => handleInputChange('upperImplants', e.target.value)}
+                              placeholder="Number of implants"
+                              className="h-10"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Graft Material */}
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium text-gray-700">Graft Material</Label>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="upperAllograft"
+                                checked={formData.upperGraftMaterial.allograft}
+                                onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, allograft: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="upperAllograft"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.upperGraftMaterial.allograft
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Allograft
+                              </Label>
+                            </div>
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="upperXenograft"
+                                checked={formData.upperGraftMaterial.xenograft}
+                                onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, xenograft: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="upperXenograft"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.upperGraftMaterial.xenograft
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Xenograft
+                              </Label>
+                            </div>
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="upperAutograft"
+                                checked={formData.upperGraftMaterial.autograft}
+                                onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, autograft: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="upperAutograft"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.upperGraftMaterial.autograft
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Autograft
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Prosthesis */}
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium text-gray-700">Prosthesis</Label>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="upperZirconia"
+                                checked={formData.upperProsthesis.zirconia}
+                                onCheckedChange={(checked) => handleInputChange('upperProsthesis', {...formData.upperProsthesis, zirconia: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="upperZirconia"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.upperProsthesis.zirconia
+                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Fixed Zirconia Bridge
+                              </Label>
+                            </div>
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="upperOverdenture"
+                                checked={formData.upperProsthesis.overdenture}
+                                onCheckedChange={(checked) => handleInputChange('upperProsthesis', {...formData.upperProsthesis, overdenture: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="upperOverdenture"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.upperProsthesis.overdenture
+                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Removable Overdenture
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Same-day Load */}
+                        <div className="flex items-center gap-4">
+                          <Label className="text-sm font-medium text-gray-700 w-32">Same-day Load:</Label>
+                          <RadioGroup
+                            value={formData.upperSameDayLoad}
+                            onValueChange={(value) => handleInputChange('upperSameDayLoad', value)}
+                            className="flex gap-4"
+                          >
+                            <div className="flex items-center space-x-1">
+                              <RadioGroupItem value="yes" id="upperSameDayYes" className="sr-only" />
+                              <Label
+                                htmlFor="upperSameDayYes"
+                                className={`px-6 py-3 rounded-lg border cursor-pointer text-base font-medium transition-all ${
+                                  formData.upperSameDayLoad === 'yes'
+                                    ? 'border-green-500 bg-green-50 text-green-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Yes
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <RadioGroupItem value="no" id="upperSameDayNo" className="sr-only" />
+                              <Label
+                                htmlFor="upperSameDayNo"
+                                className={`px-6 py-3 rounded-lg border cursor-pointer text-base font-medium transition-all ${
+                                  formData.upperSameDayLoad === 'no'
+                                    ? 'border-red-500 bg-red-50 text-red-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                No
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {formData.archType === 'lower' && (
+                    <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-3 text-lg">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-blue-600 font-semibold text-sm">L</span>
+                          </div>
+                          Lower Arch Treatment Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Teeth/Regions and Implants */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="lowerTeethRegions" className="text-sm font-medium text-gray-700">
+                              Teeth/Regions
+                            </Label>
+                            <Input
+                              id="lowerTeethRegions"
+                              value={formData.lowerTeethRegions}
+                              onChange={(e) => handleInputChange('lowerTeethRegions', e.target.value)}
+                              placeholder="Enter teeth/regions"
+                              className="h-10"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="lowerImplants" className="text-sm font-medium text-gray-700">
+                              # Implants
+                            </Label>
+                            <Input
+                              id="lowerImplants"
+                              type="number"
+                              value={formData.lowerImplants}
+                              onChange={(e) => handleInputChange('lowerImplants', e.target.value)}
+                              placeholder="Number of implants"
+                              className="h-10"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Graft Material */}
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium text-gray-700">Graft Material</Label>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="lowerAllograft"
+                                checked={formData.lowerGraftMaterial.allograft}
+                                onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, allograft: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="lowerAllograft"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.lowerGraftMaterial.allograft
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Allograft
+                              </Label>
+                            </div>
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="lowerXenograft"
+                                checked={formData.lowerGraftMaterial.xenograft}
+                                onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, xenograft: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="lowerXenograft"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.lowerGraftMaterial.xenograft
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Xenograft
+                              </Label>
+                            </div>
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="lowerAutograft"
+                                checked={formData.lowerGraftMaterial.autograft}
+                                onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, autograft: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="lowerAutograft"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.lowerGraftMaterial.autograft
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Autograft
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Prosthesis */}
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium text-gray-700">Prosthesis</Label>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="lowerZirconia"
+                                checked={formData.lowerProsthesis.zirconia}
+                                onCheckedChange={(checked) => handleInputChange('lowerProsthesis', {...formData.lowerProsthesis, zirconia: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="lowerZirconia"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.lowerProsthesis.zirconia
+                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Fixed Zirconia Bridge
+                              </Label>
+                            </div>
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="lowerOverdenture"
+                                checked={formData.lowerProsthesis.overdenture}
+                                onCheckedChange={(checked) => handleInputChange('lowerProsthesis', {...formData.lowerProsthesis, overdenture: checked})}
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="lowerOverdenture"
+                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.lowerProsthesis.overdenture
+                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Removable Overdenture
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Same-day Load */}
+                        <div className="flex items-center gap-4">
+                          <Label className="text-sm font-medium text-gray-700 w-32">Same-day Load:</Label>
+                          <RadioGroup
+                            value={formData.lowerSameDayLoad}
+                            onValueChange={(value) => handleInputChange('lowerSameDayLoad', value)}
+                            className="flex gap-4"
+                          >
+                            <div className="flex items-center space-x-1">
+                              <RadioGroupItem value="yes" id="lowerSameDayYes" className="sr-only" />
+                              <Label
+                                htmlFor="lowerSameDayYes"
+                                className={`px-6 py-3 rounded-lg border cursor-pointer text-base font-medium transition-all ${
+                                  formData.lowerSameDayLoad === 'yes'
+                                    ? 'border-green-500 bg-green-50 text-green-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Yes
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <RadioGroupItem value="no" id="lowerSameDayNo" className="sr-only" />
+                              <Label
+                                htmlFor="lowerSameDayNo"
+                                className={`px-6 py-3 rounded-lg border cursor-pointer text-base font-medium transition-all ${
+                                  formData.lowerSameDayLoad === 'no'
+                                    ? 'border-red-500 bg-red-50 text-red-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                No
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Dual Arch Layout - Side by Side */}
+                  {formData.archType === 'dual' && (
+                    <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-3 text-lg">
+                          <div className="flex items-center gap-1">
+                            <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 font-semibold text-xs">U</span>
+                            </div>
+                            <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-blue-600 font-semibold text-xs">L</span>
+                            </div>
+                          </div>
+                          Dual Arch Treatment Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                          {/* Upper Arch Column */}
+                          <div className="space-y-6 p-4 border-2 border-blue-200 rounded-lg bg-blue-50/20">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-semibold text-xs">U</span>
+                              </div>
+                              <h4 className="font-semibold text-blue-800">Upper Arch</h4>
+                            </div>
+
+                            {/* Upper Teeth/Regions and Implants */}
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="upperTeethRegions" className="text-sm font-medium text-gray-700">
+                                  Teeth/Regions
+                                </Label>
+                                <Input
+                                  id="upperTeethRegions"
+                                  value={formData.upperTeethRegions}
+                                  onChange={(e) => handleInputChange('upperTeethRegions', e.target.value)}
+                                  placeholder="Enter teeth/regions"
+                                  className="h-10"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="upperImplants" className="text-sm font-medium text-gray-700">
+                                  # Implants
+                                </Label>
+                                <Input
+                                  id="upperImplants"
+                                  type="number"
+                                  value={formData.upperImplants}
+                                  onChange={(e) => handleInputChange('upperImplants', e.target.value)}
+                                  placeholder="Number of implants"
+                                  className="h-10"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Upper Graft Material */}
+                            <div className="space-y-3">
+                              <Label className="text-sm font-medium text-gray-700">Graft Material</Label>
+                              <div className="flex flex-wrap gap-2">
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="upperAllograft"
+                                    checked={formData.upperGraftMaterial.allograft}
+                                    onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, allograft: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="upperAllograft"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.upperGraftMaterial.allograft
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Allograft
+                                  </Label>
+                                </div>
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="upperXenograft"
+                                    checked={formData.upperGraftMaterial.xenograft}
+                                    onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, xenograft: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="upperXenograft"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.upperGraftMaterial.xenograft
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Xenograft
+                                  </Label>
+                                </div>
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="upperAutograft"
+                                    checked={formData.upperGraftMaterial.autograft}
+                                    onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, autograft: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="upperAutograft"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.upperGraftMaterial.autograft
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Autograft
+                                  </Label>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Upper Prosthesis */}
+                            <div className="space-y-3">
+                              <Label className="text-sm font-medium text-gray-700">Prosthesis</Label>
+                              <div className="flex flex-wrap gap-2">
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="upperZirconia"
+                                    checked={formData.upperProsthesis.zirconia}
+                                    onCheckedChange={(checked) => handleInputChange('upperProsthesis', {...formData.upperProsthesis, zirconia: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="upperZirconia"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.upperProsthesis.zirconia
+                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Fixed Zirconia Bridge
+                                  </Label>
+                                </div>
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="upperOverdenture"
+                                    checked={formData.upperProsthesis.overdenture}
+                                    onCheckedChange={(checked) => handleInputChange('upperProsthesis', {...formData.upperProsthesis, overdenture: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="upperOverdenture"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.upperProsthesis.overdenture
+                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Removable Overdenture
+                                  </Label>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Upper Same-day Load */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-700">Same-day Load:</Label>
+                              <RadioGroup
+                                value={formData.upperSameDayLoad}
+                                onValueChange={(value) => handleInputChange('upperSameDayLoad', value)}
+                                className="flex gap-3"
+                              >
+                                <div className="flex items-center space-x-1">
+                                  <RadioGroupItem value="yes" id="upperSameDayYes" className="sr-only" />
+                                  <Label
+                                    htmlFor="upperSameDayYes"
+                                    className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                      formData.upperSameDayLoad === 'yes'
+                                        ? 'border-green-500 bg-green-50 text-green-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Yes
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <RadioGroupItem value="no" id="upperSameDayNo" className="sr-only" />
+                                  <Label
+                                    htmlFor="upperSameDayNo"
+                                    className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                      formData.upperSameDayLoad === 'no'
+                                        ? 'border-red-500 bg-red-50 text-red-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    No
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+                          </div>
+
+                          {/* Lower Arch Column */}
+                          <div className="space-y-6 p-4 border-2 border-blue-200 rounded-lg bg-blue-50/20">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-semibold text-xs">L</span>
+                              </div>
+                              <h4 className="font-semibold text-blue-800">Lower Arch</h4>
+                            </div>
+
+                            {/* Lower Teeth/Regions and Implants */}
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="lowerTeethRegions" className="text-sm font-medium text-gray-700">
+                                  Teeth/Regions
+                                </Label>
+                                <Input
+                                  id="lowerTeethRegions"
+                                  value={formData.lowerTeethRegions}
+                                  onChange={(e) => handleInputChange('lowerTeethRegions', e.target.value)}
+                                  placeholder="Enter teeth/regions"
+                                  className="h-10"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="lowerImplants" className="text-sm font-medium text-gray-700">
+                                  # Implants
+                                </Label>
+                                <Input
+                                  id="lowerImplants"
+                                  type="number"
+                                  value={formData.lowerImplants}
+                                  onChange={(e) => handleInputChange('lowerImplants', e.target.value)}
+                                  placeholder="Number of implants"
+                                  className="h-10"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Lower Graft Material */}
+                            <div className="space-y-3">
+                              <Label className="text-sm font-medium text-gray-700">Graft Material</Label>
+                              <div className="flex flex-wrap gap-2">
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="lowerAllograft"
+                                    checked={formData.lowerGraftMaterial.allograft}
+                                    onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, allograft: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="lowerAllograft"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.lowerGraftMaterial.allograft
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Allograft
+                                  </Label>
+                                </div>
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="lowerXenograft"
+                                    checked={formData.lowerGraftMaterial.xenograft}
+                                    onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, xenograft: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="lowerXenograft"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.lowerGraftMaterial.xenograft
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Xenograft
+                                  </Label>
+                                </div>
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="lowerAutograft"
+                                    checked={formData.lowerGraftMaterial.autograft}
+                                    onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, autograft: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="lowerAutograft"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.lowerGraftMaterial.autograft
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Autograft
+                                  </Label>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Lower Prosthesis */}
+                            <div className="space-y-3">
+                              <Label className="text-sm font-medium text-gray-700">Prosthesis</Label>
+                              <div className="flex flex-wrap gap-2">
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="lowerZirconia"
+                                    checked={formData.lowerProsthesis.zirconia}
+                                    onCheckedChange={(checked) => handleInputChange('lowerProsthesis', {...formData.lowerProsthesis, zirconia: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="lowerZirconia"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.lowerProsthesis.zirconia
+                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Fixed Zirconia Bridge
+                                  </Label>
+                                </div>
+                                <div className="flex items-center">
+                                  <Checkbox
+                                    id="lowerOverdenture"
+                                    checked={formData.lowerProsthesis.overdenture}
+                                    onCheckedChange={(checked) => handleInputChange('lowerProsthesis', {...formData.lowerProsthesis, overdenture: checked})}
+                                    className="sr-only"
+                                  />
+                                  <Label
+                                    htmlFor="lowerOverdenture"
+                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
+                                      formData.lowerProsthesis.overdenture
+                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Removable Overdenture
+                                  </Label>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Lower Same-day Load */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-700">Same-day Load:</Label>
+                              <RadioGroup
+                                value={formData.lowerSameDayLoad}
+                                onValueChange={(value) => handleInputChange('lowerSameDayLoad', value)}
+                                className="flex gap-3"
+                              >
+                                <div className="flex items-center space-x-1">
+                                  <RadioGroupItem value="yes" id="lowerSameDayYes" className="sr-only" />
+                                  <Label
+                                    htmlFor="lowerSameDayYes"
+                                    className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                      formData.lowerSameDayLoad === 'yes'
+                                        ? 'border-green-500 bg-green-50 text-green-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    Yes
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <RadioGroupItem value="no" id="lowerSameDayNo" className="sr-only" />
+                                  <Label
+                                    htmlFor="lowerSameDayNo"
+                                    className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                      formData.lowerSameDayLoad === 'no'
+                                        ? 'border-red-500 bg-red-50 text-red-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                  >
+                                    No
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
 
-                <div>
-                  <Label htmlFor="witnessSignatureDate" className="text-sm font-semibold">
-                    <span className="text-red-500">*</span> Date Signed
-                  </Label>
-                  <Input
-                    id="witnessSignatureDate"
-                    type="date"
-                    value={formData.witnessSignatureDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, witnessSignatureDate: e.target.value }))}
-                    className="mt-1"
-                    required
-                  />
+                {/* Sedation Plan */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-semibold">Sedation Plan:</Label>
+                    <div className="flex flex-wrap gap-3 mt-2">
+                      <div className="flex items-center">
+                        <Checkbox
+                          id="localOnly"
+                          checked={formData.sedationPlan.localOnly}
+                          onCheckedChange={(checked) => handleInputChange('sedationPlan', {...formData.sedationPlan, localOnly: checked})}
+                          className="sr-only"
+                        />
+                        <Label
+                          htmlFor="localOnly"
+                          className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
+                            formData.sedationPlan.localOnly
+                              ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                          }`}
+                        >
+                          Local only
+                        </Label>
+                      </div>
+                      <div className="flex items-center">
+                        <Checkbox
+                          id="nitrous"
+                          checked={formData.sedationPlan.nitrous}
+                          onCheckedChange={(checked) => handleInputChange('sedationPlan', {...formData.sedationPlan, nitrous: checked})}
+                          className="sr-only"
+                        />
+                        <Label
+                          htmlFor="nitrous"
+                          className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
+                            formData.sedationPlan.nitrous
+                              ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                          }`}
+                        >
+                          Nitrous
+                        </Label>
+                      </div>
+                      <div className="flex items-center">
+                        <Checkbox
+                          id="ivConscious"
+                          checked={formData.sedationPlan.ivConscious}
+                          onCheckedChange={(checked) => handleInputChange('sedationPlan', {...formData.sedationPlan, ivConscious: checked})}
+                          className="sr-only"
+                        />
+                        <Label
+                          htmlFor="ivConscious"
+                          className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
+                            formData.sedationPlan.ivConscious
+                              ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                          }`}
+                        >
+                          IV conscious
+                        </Label>
+                      </div>
+                      <div className="flex items-center">
+                        <Checkbox
+                          id="generalHospital"
+                          checked={formData.sedationPlan.generalHospital}
+                          onCheckedChange={(checked) => handleInputChange('sedationPlan', {...formData.sedationPlan, generalHospital: checked})}
+                          className="sr-only"
+                        />
+                        <Label
+                          htmlFor="generalHospital"
+                          className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
+                            formData.sedationPlan.generalHospital
+                              ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                          }`}
+                        >
+                          General (hospital)
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold">ASA Physical Status:</Label>
+                    <RadioGroup
+                      value={formData.asaPhysicalStatus}
+                      onValueChange={(value) => handleInputChange('asaPhysicalStatus', value)}
+                      className="flex gap-3 mt-2"
+                    >
+                      {['I', 'II', 'III', 'IV'].map((status) => (
+                        <div key={status} className="flex items-center">
+                          <RadioGroupItem value={status} id={`asa${status}`} className="sr-only" />
+                          <Label
+                            htmlFor={`asa${status}`}
+                            className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
+                              formData.asaPhysicalStatus === status
+                                ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                                : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                            }`}
+                          >
+                            {status}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold mb-3 block">Planned Drugs & Max Doses:</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Midazolam */}
+                      <div className="space-y-2">
+                        <Label htmlFor="midazolam" className="text-sm font-medium text-gray-700">Midazolam</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="midazolam"
+                            type="number"
+                            placeholder="0"
+                            value={formData.plannedDrugs.midazolam.dose}
+                            onChange={(e) => handleDrugChange('midazolam', 'dose', e.target.value)}
+                            className="flex-1 h-10"
+                          />
+                          <Select
+                            value={formData.plannedDrugs.midazolam.unit}
+                            onValueChange={(value) => handleDrugChange('midazolam', 'unit', value)}
+                          >
+                            <SelectTrigger className="w-20 h-10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="mg">mg</SelectItem>
+                              <SelectItem value="ml">ml</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Fentanyl */}
+                      <div className="space-y-2">
+                        <Label htmlFor="fentanyl" className="text-sm font-medium text-gray-700">Fentanyl</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="fentanyl"
+                            type="number"
+                            placeholder="0"
+                            value={formData.plannedDrugs.fentanyl.dose}
+                            onChange={(e) => handleDrugChange('fentanyl', 'dose', e.target.value)}
+                            className="flex-1 h-10"
+                          />
+                          <Select
+                            value={formData.plannedDrugs.fentanyl.unit}
+                            onValueChange={(value) => handleDrugChange('fentanyl', 'unit', value)}
+                          >
+                            <SelectTrigger className="w-20 h-10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="µg">µg</SelectItem>
+                              <SelectItem value="ml">ml</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Ketamine */}
+                      <div className="space-y-2">
+                        <Label htmlFor="ketamine" className="text-sm font-medium text-gray-700">Ketamine</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="ketamine"
+                            type="number"
+                            placeholder="0"
+                            value={formData.plannedDrugs.ketamine.dose}
+                            onChange={(e) => handleDrugChange('ketamine', 'dose', e.target.value)}
+                            className="flex-1 h-10"
+                          />
+                          <Select
+                            value={formData.plannedDrugs.ketamine.unit}
+                            onValueChange={(value) => handleDrugChange('ketamine', 'unit', value)}
+                          >
+                            <SelectTrigger className="w-20 h-10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="mg">mg</SelectItem>
+                              <SelectItem value="ml">ml</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Dexamethasone */}
+                      <div className="space-y-2">
+                        <Label htmlFor="dexamethasone" className="text-sm font-medium text-gray-700">Dexamethasone</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="dexamethasone"
+                            type="number"
+                            placeholder="0"
+                            value={formData.plannedDrugs.dexamethasone.dose}
+                            onChange={(e) => handleDrugChange('dexamethasone', 'dose', e.target.value)}
+                            className="flex-1 h-10"
+                          />
+                          <Select
+                            value={formData.plannedDrugs.dexamethasone.unit}
+                            onValueChange={(value) => handleDrugChange('dexamethasone', 'unit', value)}
+                          >
+                            <SelectTrigger className="w-20 h-10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="mg">mg</SelectItem>
+                              <SelectItem value="ml">ml</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <Label className="text-sm font-semibold">
-                    <span className="text-red-500">*</span> Signature of Witness
-                  </Label>
-                  <div className="mt-1">
-                    {formData.witnessSignature ? (
+                {/* Reasonable Alternatives */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold">Reasonable Alternatives Discussed (patient to initial each):</h4>
+
+                  {[
+                    { key: 'noTreatment', text: 'No treatment, with progressive bone loss and prosthesis instability explained' },
+                    { key: 'conventionalDentures', text: 'Conventional complete dentures (lower stability limitations reviewed)' },
+                    { key: 'segmentedExtraction', text: 'Segmented extraction/implant staging to preserve select teeth' },
+                    { key: 'removableOverdentures', text: 'Removable implant-supported overdentures (locator/bar)' },
+                    { key: 'zygomaticImplants', text: 'Referral for graft-less zygomatic or pterygoid implants if indicated' }
+                  ].map((alternative) => (
+                    <div key={alternative.key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                      <p className="text-sm flex-1 mr-4">{alternative.text}</p>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">Initial:</Label>
+                        {formData.alternativesInitials[alternative.key as keyof typeof formData.alternativesInitials] ? (
+                          <SignaturePreview
+                            signature={formData.alternativesInitials[alternative.key as keyof typeof formData.alternativesInitials]}
+                            onEdit={() => handleSignatureDialogOpen(`alternatives${alternative.key.charAt(0).toUpperCase() + alternative.key.slice(1)}`)}
+                            onClear={() => handleSignatureClear(`alternatives${alternative.key.charAt(0).toUpperCase() + alternative.key.slice(1)}`)}
+                            label="Initial"
+                            className="w-16 h-6"
+                          />
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleSignatureDialogOpen(`alternatives${alternative.key.charAt(0).toUpperCase() + alternative.key.slice(1)}`)}
+                            className="w-16 h-6 border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center text-xs"
+                          >
+                            Sign
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator />
+
+                <div className="flex flex-col items-end space-y-3">
+                  <div className="flex items-center justify-center">
+                    {formData.treatmentDescriptionInitials ? (
                       <SignaturePreview
-                        signature={formData.witnessSignature}
-                        onEdit={() => setWitnessSignatureDialogOpen(true)}
-                        onClear={handleWitnessSignatureClear}
-                        label="Witness Signature"
+                        signature={formData.treatmentDescriptionInitials}
+                        onEdit={() => handleSignatureDialogOpen('treatmentDescriptionInitials')}
+                        onClear={() => handleSignatureClear('treatmentDescriptionInitials')}
+                        className="w-64 h-16 border border-gray-300 rounded-md"
                       />
                     ) : (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setWitnessSignatureDialogOpen(true)}
-                        className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2"
+                        onClick={() => handleSignatureDialogOpen('treatmentDescriptionInitials')}
+                        className="w-64 h-16 border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2"
                       >
                         <Edit className="h-4 w-4" />
                         Sign Here
                       </Button>
                     )}
                   </div>
+                  <div className="w-64 border-t border-gray-300 pt-2">
+                    <div className="flex items-center justify-center">
+                      <Label className="text-sm font-semibold">Patient Initials</Label>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
             </div>
-          </CardContent>
-        </Card>
+          )}
 
-        {/* Form Actions */}
-        <div className="flex justify-end gap-3 pt-6 border-t">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+          {/* Material Risks Tab */}
+          {activeTab === "risks" && (
+            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <AlertTriangle className="h-5 w-5 text-blue-600" />
+                  Material Risks (estimated incidence shown)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 w-full">
+                {/* Risk Cards Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Early Implant Loss */}
+                  <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-gray-900 text-sm">Early implant loss (&lt; 1 yr)</h4>
+                          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">2–5%</span>
+                        </div>
+                        <p className="text-sm text-gray-600">may require removal & re-placement</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Permanent Numbness */}
+                  <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-gray-900 text-sm">Permanent lower-lip/chin numbness</h4>
+                          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">≤ 2%</span>
+                        </div>
+                        <p className="text-sm text-gray-600">inferior alveolar nerve proximity</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Sinus Perforation */}
+                  <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-gray-900 text-sm">Sinus perforation → chronic sinusitis</h4>
+                          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">1–3% (upper arch)</span>
+                        </div>
+                        <p className="text-sm text-gray-600">may need ENT repair</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Jaw Fracture */}
+                  <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-gray-900 text-sm">Jaw fracture</h4>
+                          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">&lt; 0.5%</span>
+                        </div>
+                        <p className="text-sm text-gray-600">severely atrophic bone</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Infection */}
+                  <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-gray-900 text-sm">Infection requiring IV antibiotics</h4>
+                          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">1–4%</span>
+                        </div>
+                        <p className="text-sm text-gray-600">higher in smokers/uncontrolled DM</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* IV-sedation Airway Compromise */}
+                  <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-gray-900 text-sm">IV-sedation airway compromise</h4>
+                          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">0.1–0.3%</span>
+                        </div>
+                        <p className="text-sm text-gray-600">emergency airway equipment on site</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Hospital Admission / Death */}
+                  <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors lg:col-span-2">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-gray-900 text-sm">Hospital admission / death</h4>
+                          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">&lt; 0.05%</span>
+                        </div>
+                        <p className="text-sm text-gray-600">reported in national databases</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <div
+                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors mt-1 ${
+                        formData.risksUnderstood
+                          ? 'bg-blue-100'
+                          : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      }`}
+                      onClick={() => handleInputChange('risksUnderstood', !formData.risksUnderstood)}
+                    >
+                      {formData.risksUnderstood && (
+                        <Check className="h-3 w-3 text-blue-600" />
+                      )}
+                    </div>
+                    <p
+                      className="text-sm cursor-pointer"
+                      onClick={() => handleInputChange('risksUnderstood', !formData.risksUnderstood)}
+                    >
+                      I have had the opportunity to ask about each risk and understand that percentages are population estimates, not guarantees of my individual outcome.
+                    </p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="flex flex-col items-end space-y-3">
+                  <div className="flex items-center justify-center">
+                    {formData.materialRisksInitials ? (
+                      <SignaturePreview
+                        signature={formData.materialRisksInitials}
+                        onEdit={() => handleSignatureDialogOpen('materialRisksInitials')}
+                        onClear={() => handleSignatureClear('materialRisksInitials')}
+                        className="w-64 h-16 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSignatureDialogOpen('materialRisksInitials')}
+                        className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Sign Here
+                      </Button>
+                    )}
+                  </div>
+                  <div className="w-64 border-t border-gray-300 pt-2">
+                    <div className="flex items-center justify-center">
+                      <Label className="text-sm font-semibold">Patient Initials</Label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            </div>
+          )}
+
+          {/* Sedation & Anesthesia Consent Tab */}
+          {activeTab === "sedation" && (
+            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Stethoscope className="h-5 w-5 text-blue-600" />
+                  Sedation & Anesthesia Consent (if applicable)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 w-full">
+                {/* Pre-operative Instructions */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Stethoscope className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Pre-operative Instructions & Requirements
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* NPO Instructions */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-semibold text-xs">1</span>
+                              </div>
+                              <h4 className="font-semibold text-gray-900 text-sm">NPO Requirements</h4>
+                            </div>
+                            <p className="text-sm text-gray-600">NPO for 8 hours (liquids = clear only ≤ 2 hours)</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Escort Requirements */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-semibold text-xs">2</span>
+                              </div>
+                              <h4 className="font-semibold text-gray-900 text-sm">Escort Required</h4>
+                            </div>
+                            <p className="text-sm text-gray-600">Responsible adult will remain on premises and supervise me for 24 hours</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Medication Disclosure */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-semibold text-xs">3</span>
+                              </div>
+                              <h4 className="font-semibold text-gray-900 text-sm">Medication Disclosure</h4>
+                            </div>
+                            <p className="text-sm text-gray-600">All medications disclosed: complete & accurate</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Emergency Protocols */}
+                      <Card className="border-2 border-red-100 hover:border-red-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                                <span className="text-red-600 font-semibold text-xs">4</span>
+                              </div>
+                              <h4 className="font-semibold text-gray-900 text-sm">Emergency Protocols</h4>
+                            </div>
+                            <p className="text-sm text-gray-600">Office holds ACLS equipment, reversal agents, and written EMS transfer protocol</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Escort Information */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <User className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Escort Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="escortName" className="text-sm font-semibold text-gray-700">
+                          <span className="text-red-500">*</span> Escort Name
+                        </Label>
+                        <Input
+                          id="escortName"
+                          value={formData.escortName}
+                          onChange={(e) => handleInputChange('escortName', e.target.value)}
+                          placeholder="Responsible adult name"
+                          required
+                          className="h-10"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="escortPhone" className="text-sm font-semibold text-gray-700">
+                          <span className="text-red-500">*</span> Escort Mobile #
+                        </Label>
+                        <Input
+                          id="escortPhone"
+                          value={formData.escortPhone}
+                          onChange={(e) => handleInputChange('escortPhone', e.target.value)}
+                          placeholder="Mobile phone number"
+                          required
+                          className="h-10"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Patient Acknowledgments */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <CheckCircle className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Patient Acknowledgments
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Medications Disclosed */}
+                      <Card className="border border-blue-200 bg-white">
+                        <CardContent className="p-4">
+                          <div className="flex items-start space-x-3">
+                            <div
+                              className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors mt-1 ${
+                                formData.medicationsDisclosed
+                                  ? 'bg-green-100'
+                                  : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                              }`}
+                              onClick={() => handleInputChange('medicationsDisclosed', !formData.medicationsDisclosed)}
+                            >
+                              {formData.medicationsDisclosed && (
+                                <Check className="h-3 w-3 text-green-600" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p
+                                className="text-sm font-medium text-gray-900 cursor-pointer"
+                                onClick={() => handleInputChange('medicationsDisclosed', !formData.medicationsDisclosed)}
+                              >
+                                Medications disclosed: complete & accurate
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                I confirm that I have provided a complete and accurate list of all medications, supplements, and substances I am currently taking.
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Decline IV Sedation */}
+                      <Card className="border border-blue-200 bg-white">
+                        <CardContent className="p-4">
+                          <div className="flex items-start space-x-3">
+                            <div
+                              className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors mt-1 ${
+                                formData.declineIVSedation
+                                  ? 'bg-green-100'
+                                  : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                              }`}
+                              onClick={() => handleInputChange('declineIVSedation', !formData.declineIVSedation)}
+                            >
+                              {formData.declineIVSedation && (
+                                <Check className="h-3 w-3 text-green-600" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p
+                                className="text-sm font-medium text-gray-900 cursor-pointer"
+                                onClick={() => handleInputChange('declineIVSedation', !formData.declineIVSedation)}
+                              >
+                                I decline IV sedation and elect local anesthesia only
+                              </p>
+                              <p className="text-xs text-gray-600 mt-1">
+                                I understand the benefits of IV sedation but choose to proceed with local anesthesia only for my treatment.
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Separator />
+
+                <div className="flex flex-col space-y-6">
+                  {/* Signature Row */}
+                  <div className="flex items-center justify-between gap-8">
+                    {/* Anesthesia Provider Initials - Left Side */}
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className="flex items-center justify-center">
+                        {formData.anesthesiaProviderInitials ? (
+                          <SignaturePreview
+                            signature={formData.anesthesiaProviderInitials}
+                            onEdit={() => handleSignatureDialogOpen('anesthesiaProviderInitials')}
+                            onClear={() => handleSignatureClear('anesthesiaProviderInitials')}
+                            className="w-64 h-16 border border-gray-300 rounded-md"
+                          />
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleSignatureDialogOpen('anesthesiaProviderInitials')}
+                            className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Sign Here
+                          </Button>
+                        )}
+                      </div>
+                      <div className="w-64 border-t border-gray-300 pt-2">
+                        <div className="flex items-center justify-center">
+                          <Label className="text-sm font-semibold">Anesthesia Provider Signature</Label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Patient Initials - Right Side */}
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className="flex items-center justify-center">
+                        {formData.sedationInitials ? (
+                          <SignaturePreview
+                            signature={formData.sedationInitials}
+                            onEdit={() => handleSignatureDialogOpen('sedationInitials')}
+                            onClear={() => handleSignatureClear('sedationInitials')}
+                            className="w-64 h-16 border border-gray-300 rounded-md"
+                          />
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleSignatureDialogOpen('sedationInitials')}
+                            className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Sign Here
+                          </Button>
+                        )}
+                      </div>
+                      <div className="w-64 border-t border-gray-300 pt-2">
+                        <div className="flex items-center justify-center">
+                          <Label className="text-sm font-semibold">Patient Initials</Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            </div>
+          )}
+
+          {/* Financial Disclosure Tab */}
+          {activeTab === "financial" && (
+            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <DollarSign className="h-5 w-5 text-blue-600" />
+                  Financial Disclosure & Surprise-Bill Notice
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 w-full">
+                {/* Treatment Cost Breakdown */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <DollarSign className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Treatment Cost Breakdown
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Surgical Extractions */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                            <div className="md:col-span-1">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900 text-sm">Surgical Extractions</h4>
+                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">D7140</span>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-1">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Count</Label>
+                                <Input
+                                  value={formData.surgicalExtractions.count}
+                                  onChange={(e) => handleNestedInputChange('surgicalExtractions', 'count', e.target.value)}
+                                  className="w-full h-8"
+                                  placeholder="0"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-1">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Estimated Fee</Label>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm">$</span>
+                                  <Input
+                                    value={formData.surgicalExtractions.fee}
+                                    onChange={(e) => handleNestedInputChange('surgicalExtractions', 'fee', e.target.value)}
+                                    className="w-full h-8"
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Covered by insurance?</Label>
+                                <div className="flex gap-4">
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="surgicalExtractionsYes"
+                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                    />
+                                    <Label htmlFor="surgicalExtractionsYes" className="text-sm cursor-pointer">Yes</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="surgicalExtractionsNo"
+                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                    />
+                                    <Label htmlFor="surgicalExtractionsNo" className="text-sm cursor-pointer">No</Label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Implant Fixtures */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                            <div className="md:col-span-1">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900 text-sm">Implant Fixtures</h4>
+                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">D6010/21249</span>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-1">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Count</Label>
+                                <Input
+                                  value={formData.implantFixtures.count}
+                                  onChange={(e) => handleNestedInputChange('implantFixtures', 'count', e.target.value)}
+                                  className="w-full h-8"
+                                  placeholder="0"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-1">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Estimated Fee</Label>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm">$</span>
+                                  <Input
+                                    value={formData.implantFixtures.fee}
+                                    onChange={(e) => handleNestedInputChange('implantFixtures', 'fee', e.target.value)}
+                                    className="w-full h-8"
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Covered by insurance?</Label>
+                                <div className="flex gap-4">
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="implantFixturesYes"
+                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                    />
+                                    <Label htmlFor="implantFixturesYes" className="text-sm cursor-pointer">Yes</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="implantFixturesNo"
+                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                    />
+                                    <Label htmlFor="implantFixturesNo" className="text-sm cursor-pointer">No</Label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Fixed Zirconia Bridge */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                            <div className="md:col-span-1">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900 text-sm">Fixed Zirconia Bridge per Arch</h4>
+                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">D6078/21080</span>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-1">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Count</Label>
+                                <div className="h-8 flex items-center">
+                                  <span className="text-sm text-gray-500">per arch</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-1">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Estimated Fee</Label>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm">$</span>
+                                  <Input
+                                    value={formData.zirconiabridge.fee}
+                                    onChange={(e) => handleNestedInputChange('zirconiabridge', 'fee', e.target.value)}
+                                    className="w-full h-8"
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Covered by insurance?</Label>
+                                <div className="flex gap-4">
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="zirconiabridgeYes"
+                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                    />
+                                    <Label htmlFor="zirconiabridgeYes" className="text-sm cursor-pointer">Yes</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="zirconiabridgeNo"
+                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                    />
+                                    <Label htmlFor="zirconiabridgeNo" className="text-sm cursor-pointer">No</Label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* IV Sedation */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                            <div className="md:col-span-1">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900 text-sm">IV Sedation (first 60 min)</h4>
+                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">D9223/99152</span>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-1">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Count</Label>
+                                <div className="h-8 flex items-center">
+                                  <span className="text-sm text-gray-500">per session</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-1">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Estimated Fee</Label>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm">$</span>
+                                  <Input
+                                    value={formData.ivSedation.fee}
+                                    onChange={(e) => handleNestedInputChange('ivSedation', 'fee', e.target.value)}
+                                    className="w-full h-8"
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-gray-600">Covered by insurance?</Label>
+                                <div className="flex gap-4">
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="ivSedationYes"
+                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                    />
+                                    <Label htmlFor="ivSedationYes" className="text-sm cursor-pointer">Yes</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="ivSedationNo"
+                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                    />
+                                    <Label htmlFor="ivSedationNo" className="text-sm cursor-pointer">No</Label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Additional Procedures */}
+                <Card className="border-2 border-gray-100 bg-gray-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-gray-600" />
+                      </div>
+                      Additional Procedures (if applicable)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">Bone Graft - Mandible</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21215 x 2</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Graft, bone; mandible, right and left</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">Bone Graft - Maxillary</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21210 x 2</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Graft, bone; nasal, maxillary, or malar areas</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">Alveoloplasty</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">41874 x 2</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Each quadrant bone shaping</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">Bone Excision</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21025 x 2</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Facial bone excision</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">Surgical Splint</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21085 x 1</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Custom oral surgical splint</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">Interim Obturator</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21079 x 1</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Interim obturator prosthesis</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">Tumor/Cyst Excision</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21040 x 2</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Benign tumor or cyst removal</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">Mandible Reconstruction</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21249 x 4</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Endosteal implant (4+)</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">CT Scan</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">70486</span>
+                            </div>
+                            <p className="text-xs text-gray-600">26 modifier</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-gray-200 bg-white">
+                        <CardContent className="p-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900">Final Obturator</span>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21080 x 1</span>
+                            </div>
+                            <p className="text-xs text-gray-600">Final obturator prosthesis</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Insurance Notice */}
+                <Card className="border-2 border-yellow-200 bg-yellow-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-yellow-600 font-bold text-xs">!</span>
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-yellow-800">Important Insurance Notice</h4>
+                        <p className="text-sm text-yellow-800">
+                          <strong>*Coverage NOT confirmed with insurer.</strong> I may receive separate bills from outside labs or hospitals. I have received a Good-Faith Estimate under the No Surprises Act and understand my right to dispute charges that exceed the estimate by &gt; $400.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Separator />
+
+                <div className="flex flex-col items-end space-y-3">
+                  <div className="flex items-center justify-center">
+                    {formData.financialInitials ? (
+                      <SignaturePreview
+                        signature={formData.financialInitials}
+                        onEdit={() => handleSignatureDialogOpen('financialInitials')}
+                        onClear={() => handleSignatureClear('financialInitials')}
+                        className="w-64 h-16 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSignatureDialogOpen('financialInitials')}
+                        className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Sign Here
+                      </Button>
+                    )}
+                  </div>
+                  <div className="w-64 border-t border-gray-300 pt-2">
+                    <div className="flex items-center justify-center">
+                      <Label className="text-sm font-semibold">Patient Initials</Label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            </div>
+          )}
+
+          {/* Photo/Video Authorization Tab */}
+          {activeTab === "media" && (
+            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Camera className="h-5 w-5 text-blue-600" />
+                  Photo / Video / Electronic Communication Authorization
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 w-full">
+                {/* Media Authorization Cards */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Camera className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Media Usage Authorization
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Internal Record-keeping */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-6">
+                            <div className="flex-1">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900 text-sm">Internal Record-keeping</h4>
+                                <p className="text-xs text-gray-600">For medical documentation and patient care records</p>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-4 flex-shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleInputChange('internalRecordKeeping', 'yes')}
+                                className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.internalRecordKeeping === 'yes'
+                                    ? 'border-green-500 bg-green-50 text-green-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Yes, I Agree
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleInputChange('internalRecordKeeping', 'no')}
+                                className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.internalRecordKeeping === 'no'
+                                    ? 'border-red-500 bg-red-50 text-red-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                No, I Deny
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Professional Education */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-6">
+                            <div className="flex-1">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900 text-sm">Professional Education</h4>
+                                <p className="text-xs text-gray-600">De-identified use for educational purposes and training</p>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-4 flex-shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleInputChange('professionalEducation', 'yes')}
+                                className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.professionalEducation === 'yes'
+                                    ? 'border-green-500 bg-green-50 text-green-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Yes, I Agree
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleInputChange('professionalEducation', 'no')}
+                                className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.professionalEducation === 'no'
+                                    ? 'border-red-500 bg-red-50 text-red-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                No, I Deny
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Marketing / Social Media */}
+                      <Card className="border-2 border-pink-100 hover:border-pink-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-6">
+                            <div className="flex-1">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900 text-sm">Marketing / Social Media</h4>
+                                <p className="text-xs text-gray-600">Identifiable use for marketing and social media promotion</p>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-4 flex-shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleInputChange('marketingSocialMedia', 'yes')}
+                                className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.marketingSocialMedia === 'yes'
+                                    ? 'border-green-500 bg-green-50 text-green-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                Yes, I Agree
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleInputChange('marketingSocialMedia', 'no')}
+                                className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                  formData.marketingSocialMedia === 'no'
+                                    ? 'border-red-500 bg-red-50 text-red-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                }`}
+                              >
+                                No, I Deny
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* HIPAA Email/SMS Authorization */}
+                <Card className="border-2 border-teal-100 bg-teal-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-teal-600" />
+                      </div>
+                      HIPAA Electronic Communication Authorization
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Card className="border-2 border-teal-100 hover:border-teal-200 transition-colors">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-6">
+                          <div className="flex-1">
+                            <div className="space-y-3">
+                              <h4 className="font-semibold text-gray-900 text-sm">HIPAA Email / SMS Authorization</h4>
+                              <p className="text-xs text-gray-600">I authorize the office to send unencrypted clinical instructions to the contact information provided below.</p>
+
+                              {formData.hipaaEmailSms && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="hipaaEmail" className="text-sm font-medium text-gray-700">
+                                      Email Address
+                                    </Label>
+                                    <Input
+                                      id="hipaaEmail"
+                                      type="email"
+                                      value={formData.hipaaEmail}
+                                      onChange={(e) => handleInputChange('hipaaEmail', e.target.value)}
+                                      placeholder="Enter email address"
+                                      className="w-full h-10"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label htmlFor="hipaaPhone" className="text-sm font-medium text-gray-700">
+                                      Phone Number
+                                    </Label>
+                                    <Input
+                                      id="hipaaPhone"
+                                      type="tel"
+                                      value={formData.hipaaPhone}
+                                      onChange={(e) => handleInputChange('hipaaPhone', e.target.value)}
+                                      placeholder="Enter phone number"
+                                      className="w-full h-10"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              <p className="text-xs text-gray-600">
+                                <strong>Important:</strong> Risks have been explained. I may revoke this authorization in writing at any time.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-4 flex-shrink-0">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleInputChange('hipaaEmailSms', true)}
+                              className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                formData.hipaaEmailSms
+                                  ? 'border-green-500 bg-green-50 text-green-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Yes, I Agree
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleInputChange('hipaaEmailSms', false)}
+                              className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                                !formData.hipaaEmailSms
+                                  ? 'border-red-500 bg-red-50 text-red-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              No, I Deny
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CardContent>
+                </Card>
+
+                <Separator className="w-full" />
+
+                <div className="flex flex-col items-end space-y-3 w-full">
+                  <div className="flex items-center justify-center">
+                    {formData.photoVideoInitials ? (
+                      <SignaturePreview
+                        signature={formData.photoVideoInitials}
+                        onEdit={() => handleSignatureDialogOpen('photoVideoInitials')}
+                        onClear={() => handleSignatureClear('photoVideoInitials')}
+                        className="w-64 h-16 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSignatureDialogOpen('photoVideoInitials')}
+                        className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Sign Here
+                      </Button>
+                    )}
+                  </div>
+                  <div className="w-64 border-t border-gray-300 pt-2">
+                    <div className="flex items-center justify-center">
+                      <Label className="text-sm font-semibold">Patient Initials</Label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            </div>
+          )}
+
+          {/* Opioid Consent Tab */}
+          {activeTab === "opioid" && (
+            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Pill className="h-5 w-5 text-blue-600" />
+                  Opioid‑Specific Consent (if postoperative narcotics are prescribed)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 w-full">
+                {/* Opioid Information Cards */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Pill className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Postoperative Pain Management Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      {/* Medications */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <Pill className="h-3 w-3 text-blue-600" />
+                              </div>
+                              <h4 className="font-semibold text-gray-900 text-sm">Prescribed Medications</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="bg-blue-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-blue-800">Hydrocodone/Acetaminophen</p>
+                                <p className="text-xs text-blue-700">5/325 mg, max 24 tabs, 6‑day supply</p>
+                              </div>
+                              <div className="bg-blue-50 rounded-lg p-3">
+                                <p className="text-xs font-medium text-blue-800">Percocet</p>
+                                <p className="text-xs text-blue-700">5/325mg, max 24 tabs, 6-day supply</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Risks */}
+                      <Card className="border-2 border-red-100 hover:border-red-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                                <AlertTriangle className="h-3 w-3 text-red-600" />
+                              </div>
+                              <h4 className="font-semibold text-gray-900 text-sm">Known Risks</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="bg-red-50 rounded-lg p-2">
+                                <p className="text-xs text-red-700">• Addiction potential</p>
+                              </div>
+                              <div className="bg-red-50 rounded-lg p-2">
+                                <p className="text-xs text-red-700">• Constipation</p>
+                              </div>
+                              <div className="bg-red-50 rounded-lg p-2">
+                                <p className="text-xs text-red-700">• Respiratory depression</p>
+                              </div>
+                              <div className="bg-red-50 rounded-lg p-2">
+                                <p className="text-xs text-red-700">• Impaired driving ability</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Alternatives */}
+                      <Card className="border-2 border-green-100 hover:border-green-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                                <CheckCircle className="h-3 w-3 text-green-600" />
+                              </div>
+                              <h4 className="font-semibold text-gray-900 text-sm">Alternative Options</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="bg-green-50 rounded-lg p-2">
+                                <p className="text-xs text-green-700">• NSAIDs (anti-inflammatory)</p>
+                              </div>
+                              <div className="bg-green-50 rounded-lg p-2">
+                                <p className="text-xs text-green-700">• Acetaminophen</p>
+                              </div>
+                              <div className="bg-green-50 rounded-lg p-2">
+                                <p className="text-xs text-green-700">• Long‑acting local anesthesia</p>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Safety Information */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Shield className="h-3 w-3 text-blue-600" />
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-blue-800">Safety Information Reviewed</h4>
+                        <p className="text-sm text-blue-700">
+                          Safe‑use instructions and Naloxone availability have been reviewed. Drug take‑back sites have been listed and provided.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Patient Preference */}
+                <Card className="border-2 border-teal-100 bg-teal-50/30">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-6">
+                      <div className="flex-1">
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-gray-900 text-sm">Opioid Supply Preference</h4>
+                          <p className="text-xs text-gray-600">You may request the smallest effective opioid supply to minimize risks and unused medication.</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4 flex-shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleInputChange('smallestOpioidSupply', true)}
+                          className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                            formData.smallestOpioidSupply
+                              ? 'border-green-500 bg-green-50 text-green-700'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                          }`}
+                        >
+                          Yes, Smallest Supply
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleInputChange('smallestOpioidSupply', false)}
+                          className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                            !formData.smallestOpioidSupply
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                          }`}
+                        >
+                          Standard Supply
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Separator />
+
+                <div className="flex flex-col items-end space-y-3 w-full">
+                  <div className="flex items-center justify-center">
+                    {formData.opioidInitials ? (
+                      <SignaturePreview
+                        signature={formData.opioidInitials}
+                        onEdit={() => handleSignatureDialogOpen('opioidInitials')}
+                        onClear={() => handleSignatureClear('opioidInitials')}
+                        className="w-64 h-16 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSignatureDialogOpen('opioidInitials')}
+                        className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Sign Here
+                      </Button>
+                    )}
+                  </div>
+                  <div className="w-64 border-t border-gray-300 pt-2">
+                    <div className="flex items-center justify-center">
+                      <Label className="text-sm font-semibold">Patient Initials</Label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            </div>
+          )}
+
+          {/* Final Acknowledgment Tab */}
+          {activeTab === "final" && (
+            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Acknowledgment, Revocation, Witness & Notary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 w-full">
+                {/* Patient Acknowledgment */}
+                <Card className="border-2 border-green-100 bg-green-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </div>
+                      Patient Acknowledgment & Authorization
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <Card className="border border-green-200 bg-white">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                                formData.acknowledgmentRead
+                                  ? 'bg-green-100'
+                                  : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                              }`}
+                              onClick={() => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
+                            >
+                              {formData.acknowledgmentRead && (
+                                <Check className="h-3 w-3 text-green-600" />
+                              )}
+                            </div>
+                            <p
+                              className="text-sm text-gray-700 cursor-pointer"
+                              onClick={() => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
+                            >
+                              I certify that I read or had read to me every page, received a duplicate copy today, and may revoke this consent up to the moment anesthesia is administered without penalty.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-green-200 bg-white">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                                formData.acknowledgmentOutcome
+                                  ? 'bg-green-100'
+                                  : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                              }`}
+                              onClick={() => handleInputChange('acknowledgmentOutcome', !formData.acknowledgmentOutcome)}
+                            >
+                              {formData.acknowledgmentOutcome && (
+                                <Check className="h-3 w-3 text-green-600" />
+                              )}
+                            </div>
+                            <p
+                              className="text-sm text-gray-700 cursor-pointer"
+                              onClick={() => handleInputChange('acknowledgmentOutcome', !formData.acknowledgmentOutcome)}
+                            >
+                              I understand that outcome is not guaranteed and agree to follow all postoperative and hygiene instructions.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="border border-green-200 bg-white">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                                formData.acknowledgmentAuthorize
+                                  ? 'bg-green-100'
+                                  : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                              }`}
+                              onClick={() => handleInputChange('acknowledgmentAuthorize', !formData.acknowledgmentAuthorize)}
+                            >
+                              {formData.acknowledgmentAuthorize && (
+                                <Check className="h-3 w-3 text-green-600" />
+                              )}
+                            </div>
+                            <p
+                              className="text-sm text-gray-700 cursor-pointer"
+                              onClick={() => handleInputChange('acknowledgmentAuthorize', !formData.acknowledgmentAuthorize)}
+                            >
+                              I authorize Dr. Germain Jean-Charles, NY # [........], and named associates below to perform the procedures.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Provider Signatures */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <User className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Provider Signatures
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Surgeon Information */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex gap-2">
+                            {/* Left side - Provider Information */}
+                            <div className="flex-1 space-y-4">
+                              {/* Provider Name and Role on same row */}
+                              <div className="flex gap-4 items-end">
+                                <div className="flex-1 space-y-2">
+                                  <Label className="text-sm font-medium text-gray-700">Provider Name</Label>
+                                  <Input
+                                    value={formData.surgeonName}
+                                    onChange={(e) => handleInputChange('surgeonName', e.target.value)}
+                                    placeholder="Dr. _______________"
+                                    className="h-10"
+                                  />
+                                </div>
+
+                                <div className="space-y-2 flex-shrink-0">
+                                  <Label className="text-sm font-medium text-gray-700">Role</Label>
+                                  <div className="h-10 flex items-center">
+                                    <span className="text-sm font-medium text-blue-700 bg-blue-100 px-3 py-2 rounded-lg">Surgeon</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Date/Time on separate row */}
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-gray-700">Date/Time</Label>
+                                <Input
+                                  type="datetime-local"
+                                  value={formData.surgeonDate}
+                                  onChange={(e) => handleInputChange('surgeonDate', e.target.value)}
+                                  className="h-10"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => {
+                                    const now = new Date();
+                                    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                                    handleInputChange('surgeonDate', localDateTime);
+                                  }}
+                                  className="w-full h-8 text-xs"
+                                >
+                                  Current Time and Date
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Right side - Signature */}
+                            <div className="flex flex-col items-center justify-center space-y-3 flex-shrink-0">
+                              <div className="flex items-center justify-center">
+                                {formData.surgeonSignature ? (
+                                  <SignaturePreview
+                                    signature={formData.surgeonSignature}
+                                    onEdit={() => handleSignatureDialogOpen('surgeonSignature')}
+                                    onClear={() => handleSignatureClear('surgeonSignature')}
+                                    className="w-64 h-32 border border-gray-300 rounded-md"
+                                  />
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => handleSignatureDialogOpen('surgeonSignature')}
+                                    className="w-64 h-32 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                    Sign Here
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="w-64 border-t border-gray-300 pt-2">
+                                <div className="flex items-center justify-center">
+                                  <Label className="text-sm font-semibold">Surgeon Signature</Label>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Anesthesia Provider Information */}
+                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex gap-2">
+                            {/* Left side - Provider Information */}
+                            <div className="flex-1 space-y-4">
+                              {/* Provider Name and Role on same row */}
+                              <div className="flex gap-4 items-end">
+                                <div className="flex-1 space-y-2">
+                                  <Label className="text-sm font-medium text-gray-700">Provider Name</Label>
+                                  <Input
+                                    value={formData.anesthesiaProviderName}
+                                    onChange={(e) => handleInputChange('anesthesiaProviderName', e.target.value)}
+                                    placeholder="Dr. _______________"
+                                    className="h-10"
+                                  />
+                                </div>
+
+                                <div className="space-y-2 flex-shrink-0">
+                                  <Label className="text-sm font-medium text-gray-700">Role</Label>
+                                  <div className="h-10 flex items-center">
+                                    <span className="text-sm font-medium text-blue-700 bg-blue-100 px-3 py-2 rounded-lg">Anesthesia</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Date/Time on separate row */}
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium text-gray-700">Date/Time</Label>
+                                <Input
+                                  type="datetime-local"
+                                  value={formData.anesthesiaProviderDate}
+                                  onChange={(e) => handleInputChange('anesthesiaProviderDate', e.target.value)}
+                                  className="h-10"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => {
+                                    const now = new Date();
+                                    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                                    handleInputChange('anesthesiaProviderDate', localDateTime);
+                                  }}
+                                  className="w-full h-8 text-xs"
+                                >
+                                  Current Time and Date
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Right side - Signature */}
+                            <div className="flex flex-col items-center justify-center space-y-3 flex-shrink-0">
+                              <div className="flex items-center justify-center">
+                                {formData.anesthesiaProviderSignature ? (
+                                  <SignaturePreview
+                                    signature={formData.anesthesiaProviderSignature}
+                                    onEdit={() => handleSignatureDialogOpen('anesthesiaProviderSignature')}
+                                    onClear={() => handleSignatureClear('anesthesiaProviderSignature')}
+                                    className="w-64 h-32 border border-gray-300 rounded-md"
+                                  />
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => handleSignatureDialogOpen('anesthesiaProviderSignature')}
+                                    className="w-64 h-32 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                    Sign Here
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="w-64 border-t border-gray-300 pt-2">
+                                <div className="flex items-center justify-center">
+                                  <Label className="text-sm font-semibold">Anesthesia Provider Signature</Label>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Witness Section */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <User className="h-4 w-4 text-blue-600" />
+                      </div>
+                      Independent Witness
+                      <span className="text-sm font-normal text-gray-600">(non-employee preferred)</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                      <CardContent className="p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="witnessName" className="text-sm font-medium text-gray-700">
+                              <span className="text-red-500">*</span> Witness Name
+                            </Label>
+                            <Input
+                              id="witnessName"
+                              value={formData.witnessName}
+                              onChange={(e) => handleInputChange('witnessName', e.target.value)}
+                              placeholder="Full name of witness"
+                              className="h-10"
+                              required
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="witnessSignatureDate" className="text-sm font-medium text-gray-700">
+                              <span className="text-red-500">*</span> Date
+                            </Label>
+                            <Input
+                              id="witnessSignatureDate"
+                              type="date"
+                              value={formData.witnessSignatureDate}
+                              onChange={(e) => handleInputChange('witnessSignatureDate', e.target.value)}
+                              className="h-10"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <div className="flex flex-col items-end space-y-3">
+                            <div className="flex items-center justify-center">
+                              {formData.witnessSignature ? (
+                                <SignaturePreview
+                                  signature={formData.witnessSignature}
+                                  onEdit={() => handleSignatureDialogOpen('witnessSignature')}
+                                  onClear={() => handleSignatureClear('witnessSignature')}
+                                  className="w-64 h-16 border border-gray-300 rounded-md"
+                                />
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => handleSignatureDialogOpen('witnessSignature')}
+                                  className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  Sign Here
+                                </Button>
+                              )}
+                            </div>
+                            <div className="w-64 border-t border-gray-300 pt-2">
+                              <div className="flex items-center justify-center">
+                                <Label className="text-sm font-semibold">Witness Signature</Label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                      </CardContent>
+                    </Card>
+                  </CardContent>
+                </Card>
+
+                <Separator />
+
+                <div className="flex flex-col items-end space-y-3">
+                  <div className="flex items-center justify-center">
+                    {formData.finalInitials ? (
+                      <SignaturePreview
+                        signature={formData.finalInitials}
+                        onEdit={() => handleSignatureDialogOpen('finalInitials')}
+                        onClear={() => handleSignatureClear('finalInitials')}
+                        className="w-64 h-16 border border-gray-300 rounded-md"
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSignatureDialogOpen('finalInitials')}
+                        className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Sign Here
+                      </Button>
+                    )}
+                  </div>
+                  <div className="w-64 border-t border-gray-300 pt-2">
+                    <div className="flex items-center justify-center">
+                      <Label className="text-sm font-semibold">Patient Signature</Label>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            </div>
+          )}
+        </div>
+
+        {/* Fixed Footer with Navigation */}
+        <div className="flex-shrink-0 flex items-center justify-between border-t bg-white px-6 py-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={goToPreviousStep}
+            disabled={isFirstStep}
+            className="flex items-center gap-2 px-4 py-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
           </Button>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Save Consent Form
-          </Button>
+
+          <div className="flex items-center">
+            {isLastStep ? (
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2">
+                <CheckCircle className="h-4 w-4" />
+                Save Form
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={goToNextStep}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </form>
 
       {/* Signature Dialogs */}
-      <SignatureDialog
-        isOpen={patientSignatureDialogOpen}
-        onClose={() => setPatientSignatureDialogOpen(false)}
-        onSave={handlePatientSignatureSave}
-        title="Patient Signature"
-        currentSignature={formData.patientSignature}
-      />
-
-      <SignatureDialog
-        isOpen={witnessSignatureDialogOpen}
-        onClose={() => setWitnessSignatureDialogOpen(false)}
-        onSave={handleWitnessSignatureSave}
-        title="Witness Signature"
-        currentSignature={formData.witnessSignature}
-      />
+      {Object.entries(signatureDialogs).map(([key, isOpen]) => (
+        <SignatureDialog
+          key={key}
+          isOpen={isOpen}
+          onClose={() => handleSignatureDialogClose(key)}
+          onSave={(signature) => handleSignatureSave(key, signature)}
+          title={getSignatureTitle(key)}
+          currentSignature={getSignatureValue(key)}
+        />
+      ))}
+      </div> {/* Close content container */}
     </div>
   );
+
+  // Helper functions for signature dialogs
+  function getSignatureTitle(key: string): string {
+    const titles: { [key: string]: string } = {
+      patientInfoInitials: "Patient Initials - Patient Information",
+      treatmentDescriptionInitials: "Patient Initials - Treatment Description",
+      materialRisksInitials: "Patient Initials - Material Risks",
+      sedationInitials: "Patient Initials - Sedation Consent",
+      anesthesiaProviderInitials: "Anesthesia Provider Initials",
+      financialInitials: "Patient Initials - Financial Disclosure",
+      photoVideoInitials: "Patient Initials - Photo/Video Authorization",
+      opioidInitials: "Patient Initials - Opioid Consent",
+      finalInitials: "Patient Initials - Final Page",
+      surgeonSignature: "Surgeon Signature",
+      anesthesiaProviderSignature: "Anesthesia Provider Signature",
+      patientSignature: "Patient Signature",
+      witnessSignature: "Witness Signature",
+      alternativesNoTreatment: "Patient Initials - No Treatment Alternative",
+      alternativesConventionalDentures: "Patient Initials - Conventional Dentures Alternative",
+      alternativesSegmentedExtraction: "Patient Initials - Segmented Extraction Alternative",
+      alternativesRemovableOverdentures: "Patient Initials - Removable Overdentures Alternative",
+      alternativesZygomaticImplants: "Patient Initials - Zygomatic Implants Alternative"
+    };
+    return titles[key] || "Signature";
+  }
+
+  function getSignatureValue(key: string): string {
+    if (key.includes('alternatives')) {
+      const alternativeType = key.replace('alternatives', '').toLowerCase();
+      return formData.alternativesInitials[alternativeType as keyof typeof formData.alternativesInitials] || '';
+    }
+    return formData[key as keyof typeof formData] as string || '';
+  }
 }
