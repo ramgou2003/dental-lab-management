@@ -21,6 +21,7 @@ import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { TreatmentDialog, TreatmentData } from "@/components/TreatmentDialog";
 import { ConsentFullArchForm } from "@/components/ConsentFullArchForm";
 import { FinancialAgreementForm } from "@/components/FinancialAgreementForm";
+import { FinalDesignApprovalForm } from "@/components/FinalDesignApprovalForm";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
 import { usePatientAppointments } from "@/hooks/usePatientAppointments";
@@ -217,6 +218,7 @@ export function PatientProfilePage() {
   // State for Administrative Forms
   const [showConsentFullArchForm, setShowConsentFullArchForm] = useState(false);
   const [showFinancialAgreementForm, setShowFinancialAgreementForm] = useState(false);
+  const [showFinalDesignApprovalForm, setShowFinalDesignApprovalForm] = useState(false);
   const [selectedAdminFormType, setSelectedAdminFormType] = useState<string>("");
 
   // Surgical recall sheets hook
@@ -4188,6 +4190,7 @@ export function PatientProfilePage() {
                               <SelectItem value="financial-agreement">Financial Agreement</SelectItem>
                               <SelectItem value="consent-full-arch">Consent Packet for Full Arch</SelectItem>
                               <SelectItem value="consent-non-full-arch">Consent Packet for Non-Full Arch</SelectItem>
+                              <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
                             </SelectContent>
                           </Select>
 
@@ -4200,6 +4203,8 @@ export function PatientProfilePage() {
                                 setShowConsentFullArchForm(true);
                               } else if (selectedAdminFormType === 'financial-agreement') {
                                 setShowFinancialAgreementForm(true);
+                              } else if (selectedAdminFormType === 'final-design-approval') {
+                                setShowFinalDesignApprovalForm(true);
                               } else {
                                 // Handle other form types here
                                 alert(`Opening ${selectedAdminFormType} form - Not implemented yet`);
@@ -10857,6 +10862,33 @@ export function PatientProfilePage() {
               }}
               onCancel={() => {
                 setShowFinancialAgreementForm(false);
+                setSelectedAdminFormType("");
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Final Design Approval Form Dialog */}
+      <Dialog open={showFinalDesignApprovalForm} onOpenChange={setShowFinalDesignApprovalForm}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          {patient && (
+            <FinalDesignApprovalForm
+              patientName={patient.full_name}
+              patientDateOfBirth={patient.date_of_birth}
+              onSubmit={(formData) => {
+                console.log('Final design approval submitted:', formData);
+                // Here you would typically save the form data to your backend
+                setShowFinalDesignApprovalForm(false);
+                setSelectedAdminFormType("");
+                // Show success message
+                toast({
+                  title: "Success",
+                  description: "Final design approval saved successfully!",
+                });
+              }}
+              onCancel={() => {
+                setShowFinalDesignApprovalForm(false);
                 setSelectedAdminFormType("");
               }}
             />
