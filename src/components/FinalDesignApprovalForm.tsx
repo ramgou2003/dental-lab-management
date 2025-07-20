@@ -97,21 +97,29 @@ export function FinalDesignApprovalForm({ onSubmit, onCancel, patientName = "", 
     setFormData(prev => ({ ...prev, witnessSignature: "" }));
   };
 
+
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <DialogHeader className="mb-6">
-        <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-          <Building2 className="h-6 w-6" />
+    <div className="h-[80vh] flex flex-col">
+      {/* Fixed Header - Full Width */}
+      <DialogHeader className="flex-shrink-0 mb-3 w-full px-3 py-2">
+        <DialogTitle className="text-xl font-bold text-blue-600 flex items-center gap-2">
+          <Building2 className="h-5 w-5" />
           Final Design Approval Form
         </DialogTitle>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Content Container with full width */}
+      <div className="flex-1 flex flex-col min-h-0 w-full">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-hidden px-6">
+            <div className="space-y-6 h-full overflow-y-auto">
         {/* Patient Information */}
         <Card>
           <CardHeader>
@@ -545,16 +553,22 @@ export function FinalDesignApprovalForm({ onSubmit, onCancel, patientName = "", 
 
 
 
-        {/* Form Actions */}
-        <div className="flex justify-end gap-4 pt-6">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-            Save Final Design Approval
-          </Button>
-        </div>
-      </form>
+            </div>
+          </div>
+
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 border-t bg-white px-3 py-2">
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                Save Final Design Approval
+              </Button>
+            </div>
+          </div>
+        </form>
+      </div>
 
       {/* Signature Dialogs */}
       <SignatureDialog

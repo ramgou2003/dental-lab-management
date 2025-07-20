@@ -13,8 +13,7 @@ export function SignaturePreview({ signature, onEdit, onClear, label }: Signatur
   return (
     <div className="space-y-2">
       <div className="border border-gray-300 rounded-md p-3 bg-gray-50">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">{label}</span>
+        <div className="flex justify-end items-center mb-2">
           <div className="flex gap-1">
             <Button
               type="button"
@@ -41,15 +40,20 @@ export function SignaturePreview({ signature, onEdit, onClear, label }: Signatur
         
         <div className="bg-white border rounded p-2 min-h-[80px] flex items-center justify-center">
           {signature ? (
-            <img 
-              src={signature} 
-              alt="Signature" 
+            <img
+              src={signature}
+              alt="Signature"
               className="max-w-full max-h-[70px] object-contain"
               style={{ imageRendering: 'crisp-edges' }}
             />
           ) : (
             <span className="text-gray-400 text-sm">No signature</span>
           )}
+        </div>
+
+        {/* Signature Label at Bottom */}
+        <div className="text-center mt-2 pt-2 border-t border-gray-200">
+          <span className="text-sm font-medium text-gray-700">{label}</span>
         </div>
       </div>
     </div>

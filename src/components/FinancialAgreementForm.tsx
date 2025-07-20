@@ -4,86 +4,182 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
-import { FileText, User, Calendar, DollarSign, CreditCard, Shield, CheckCircle, Edit } from "lucide-react";
+import { CustomCheckbox } from "@/components/CustomCheckbox";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
+import { FileText, User, DollarSign, Shield, AlertTriangle, Scale, Edit, Clock } from "lucide-react";
 
 interface FinancialAgreementFormProps {
   onSubmit: (formData: any) => void;
   onCancel: () => void;
   patientName?: string;
+  patientDateOfBirth?: string;
 }
 
-export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "" }: FinancialAgreementFormProps) {
+export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "", patientDateOfBirth = "" }: FinancialAgreementFormProps) {
   const [formData, setFormData] = useState({
-    // Patient Information
+    // Patient & Treatment Identification
     patientName: patientName,
-    dateOfBirth: "",
-    
-    // Treatment and Financial Information
-    acceptedTreatment: [] as string[],
+    chartNumber: "",
+    dateOfBirth: patientDateOfBirth || "",
+    dateOfExecution: new Date().toISOString().split('T')[0],
+    timeOfExecution: new Date().toTimeString().slice(0, 5),
+
+    // Accepted Treatment
+    acceptedTreatments: [] as Array<{service: string, fee: string, cdtCode: string, cptCode: string, initials: string}>,
     totalCostOfTreatment: "",
-    patientPayment: "",
-    remainingBalanceDue: "",
+
+    // Payment & Balance Terms
+    patientPaymentToday: "",
     remainingBalance: "",
-    paymentMethod: "",
-    thirdPartyFinanceCompany: "",
-    fiveYearWarrantyEndDate: "",
-    chlorhexidineProgram: "",
-    additionalNotes: "",
-    
-    // Agreement Acknowledgment
-    termsAgreed: false,
+    balanceDueDate: "",
+    paymentTermsInitials: "",
+
+    // Non-Refundable & Lab Fees
+    labFeeInitials: "",
+
+    // Warranty & Care Package
+    carePackageFee: "",
+    carePackageElection: "" as "enroll" | "defer" | "",
+    warrantyInitials: "",
+
+    // Capacity, Language & HIPAA
+    capacityConfirmed: false,
+    hipaaAcknowledged: false,
+    capacityInitials: "",
+
+    // Dispute Resolution
+    disputeInitials: "",
 
     // Signatures
+    termsAgreed: false,
     patientSignature: "",
-    patientSignatureDate: new Date().toISOString().split('T')[0]
+    patientSignatureDate: new Date().toISOString().split('T')[0],
+    patientSignatureTime: new Date().toTimeString().slice(0, 5),
+    witnessName: "",
+    witnessRole: "",
+    witnessSignature: "",
+    witnessSignatureDate: new Date().toISOString().split('T')[0],
+    witnessSignatureTime: new Date().toTimeString().slice(0, 5),
+
+    // Office Use Only
+    scannedToChart: false,
+    countersignedByManager: false,
   });
 
-  // Treatment options from the reference document
+  // Treatment options with CDT and CPT codes
   const treatmentOptions = [
-    "Implant Supported Denture (Lower)",
-    "Implant Supported Denture (Upper)",
-    "Implant Supported Denture (Dual Arch)",
-    "Surgical Revision",
-    "Extraction(s)",
-    "Fixed Implant Nano-ceramic Bridge (Dual Arch)",
-    "Multiple Implants",
-    "Extractions and Implant Placement",
-    "Fixed Implant Nano-ceramic Bridge (Lower)",
-    "Wisdom Teeth Extraction",
-    "Fixed Implant Nano-ceramic Bridge (Upper)",
-    "Single Implant",
-    "Denture (Upper)",
-    "Denture (Lower)",
-    "Fixed Implant Zirconia Bridge (Upper)",
-    "Fixed Implant Zirconia Bridge (Lower)",
-    "Fixed Implant Zirconia Bridge (Dual Arch)"
+    { service: "Extraction(s)", cdtCode: "D7140", cptCode: "41899" },
+    { service: "Bone Graft (GBR)", cdtCode: "D7953", cptCode: "21210" },
+    { service: "Single Implant", cdtCode: "D6010", cptCode: "21248" },
+    { service: "Multiple Implants", cdtCode: "D6012", cptCode: "21248" },
+    { service: "Implant-Supported Denture (Lower)", cdtCode: "D6053", cptCode: "21299" },
+    { service: "Implant-Supported Denture (Upper)", cdtCode: "D6054", cptCode: "21299" },
+    { service: "Fixed Implant Bridge (Lower)", cdtCode: "D6055", cptCode: "21299" },
+    { service: "Fixed Implant Bridge (Upper)", cdtCode: "D6056", cptCode: "21299" },
   ];
 
-  // Auto-sync patient name when it changes
+  // Auto-sync patient data when it changes
   useEffect(() => {
+    const updates: any = {};
+
     if (patientName && patientName !== formData.patientName) {
-      setFormData(prev => ({ ...prev, patientName: patientName }));
+      updates.patientName = patientName;
     }
-  }, [patientName, formData.patientName]);
+
+    if (patientDateOfBirth && patientDateOfBirth !== formData.dateOfBirth) {
+      updates.dateOfBirth = patientDateOfBirth;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setFormData(prev => ({ ...prev, ...updates }));
+    }
+  }, [patientName, patientDateOfBirth, formData.patientName, formData.dateOfBirth]);
 
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
+  const [showWitnessSignatureDialog, setShowWitnessSignatureDialog] = useState(false);
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updatedData = { ...prev, [field]: value };
+
+      // Calculate remaining balance when patient payment or total cost changes
+      if (field === 'patientPaymentToday' || field === 'totalCostOfTreatment') {
+        const totalCost = parseFloat(updatedData.totalCostOfTreatment) || 0;
+        const patientPayment = parseFloat(updatedData.patientPaymentToday) || 0;
+        const remainingBalance = Math.max(0, totalCost - patientPayment);
+        updatedData.remainingBalance = remainingBalance.toFixed(2);
+      }
+
+      return updatedData;
+    });
   };
 
-  const handleTreatmentChange = (treatment: string, checked: boolean) => {
+  const handleTreatmentChange = (index: number, field: string, value: string) => {
+    setFormData(prev => {
+      const updatedTreatments = prev.acceptedTreatments.map((treatment, i) =>
+        i === index ? { ...treatment, [field]: value } : treatment
+      );
+
+      let updatedData = {
+        ...prev,
+        acceptedTreatments: updatedTreatments
+      };
+
+      // Calculate total cost when fee changes
+      if (field === 'fee') {
+        const totalCost = updatedTreatments
+          .reduce((sum, treatment) => {
+            const fee = parseFloat(treatment.fee) || 0;
+            return sum + fee;
+          }, 0)
+          .toFixed(2);
+
+        updatedData.totalCostOfTreatment = totalCost;
+
+        // Also recalculate remaining balance
+        const patientPayment = parseFloat(updatedData.patientPaymentToday) || 0;
+        const remainingBalance = Math.max(0, parseFloat(totalCost) - patientPayment);
+        updatedData.remainingBalance = remainingBalance.toFixed(2);
+      }
+
+      return updatedData;
+    });
+  };
+
+  const addTreatment = (service: string, cdtCode: string, cptCode: string) => {
     setFormData(prev => ({
       ...prev,
-      acceptedTreatment: checked
-        ? [...prev.acceptedTreatment, treatment]
-        : prev.acceptedTreatment.filter(t => t !== treatment)
+      acceptedTreatments: [...prev.acceptedTreatments, { service, fee: "", cdtCode, cptCode, initials: "" }]
     }));
+  };
+
+  const removeTreatment = (index: number) => {
+    setFormData(prev => {
+      const updatedTreatments = prev.acceptedTreatments.filter((_, i) => i !== index);
+
+      // Recalculate total cost after removal
+      const totalCost = updatedTreatments
+        .reduce((sum, treatment) => {
+          const fee = parseFloat(treatment.fee) || 0;
+          return sum + fee;
+        }, 0)
+        .toFixed(2);
+
+      // Recalculate remaining balance
+      const patientPayment = parseFloat(prev.patientPaymentToday) || 0;
+      const remainingBalance = Math.max(0, parseFloat(totalCost) - patientPayment);
+
+      return {
+        ...prev,
+        acceptedTreatments: updatedTreatments,
+        totalCostOfTreatment: totalCost,
+        remainingBalance: remainingBalance.toFixed(2)
+      };
+    });
   };
 
   const handlePatientSignatureSave = (signatureData: string) => {
@@ -91,8 +187,17 @@ export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "" }:
     setShowPatientSignatureDialog(false);
   };
 
+  const handleWitnessSignatureSave = (signatureData: string) => {
+    setFormData(prev => ({ ...prev, witnessSignature: signatureData }));
+    setShowWitnessSignatureDialog(false);
+  };
+
   const handlePatientSignatureClear = () => {
     setFormData(prev => ({ ...prev, patientSignature: "" }));
+  };
+
+  const handleWitnessSignatureClear = () => {
+    setFormData(prev => ({ ...prev, witnessSignature: "" }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -101,26 +206,27 @@ export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "" }:
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <DialogHeader className="mb-6">
         <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
           <FileText className="h-6 w-6" />
-          Financial Agreement
+          Financial Agreement & Payment Terms
         </DialogTitle>
+        <p className="text-sm text-gray-600 mt-2">Form Version 1.0 – Effective 07/2025 | Page 1 of 2</p>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Patient Information */}
+        {/* 1. Patient & Treatment Identification */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <User className="h-5 w-5 text-blue-600" />
-              Patient Information
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <User className="h-5 w-5" />
+              1. Patient & Treatment Identification
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
                 <Label htmlFor="patientName" className="text-sm font-semibold">
                   <span className="text-red-500">*</span> Patient Name
                 </Label>
@@ -133,6 +239,18 @@ export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "" }:
                 />
               </div>
               <div>
+                <Label htmlFor="chartNumber">Chart #</Label>
+                <Input
+                  id="chartNumber"
+                  value={formData.chartNumber}
+                  onChange={(e) => handleInputChange('chartNumber', e.target.value)}
+                  placeholder="Chart number"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
                 <Label htmlFor="dateOfBirth">Date of Birth</Label>
                 <Input
                   id="dateOfBirth"
@@ -140,365 +258,640 @@ export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "" }:
                   value={formData.dateOfBirth}
                   onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                   required
+                  readOnly={!!patientDateOfBirth}
+                  className={patientDateOfBirth ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
+              </div>
+              <div>
+                <Label htmlFor="dateOfExecution">Date of Execution</Label>
+                <Input
+                  id="dateOfExecution"
+                  type="date"
+                  value={formData.dateOfExecution}
+                  onChange={(e) => handleInputChange('dateOfExecution', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="timeOfExecution">Time</Label>
+                <div className="relative">
+                  <Input
+                    id="timeOfExecution"
+                    type="time"
+                    value={formData.timeOfExecution}
+                    onChange={(e) => handleInputChange('timeOfExecution', e.target.value)}
+                    required
+                    className="pr-32"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const now = new Date();
+                      const currentTime = now.toTimeString().slice(0, 5); // Format: HH:MM
+                      handleInputChange('timeOfExecution', currentTime);
+                    }}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 px-2 flex items-center gap-1 border border-blue-300 bg-white hover:bg-blue-50 text-blue-600 text-xs rounded-md"
+                    title="Set current time"
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    Current Time
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Accepted Treatment */}
+        {/* Accepted Treatment Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              Accepted Treatment
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {treatmentOptions.map((treatment) => (
-                <button
-                  key={treatment}
-                  type="button"
-                  onClick={() => handleTreatmentChange(treatment, !formData.acceptedTreatment.includes(treatment))}
-                  className={`
-                    relative p-3 rounded-lg border-2 text-left transition-all duration-200 hover:shadow-md
-                    ${formData.acceptedTreatment.includes(treatment)
-                      ? 'border-green-500 bg-green-50 text-green-800 shadow-sm'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                    }
-                  `}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium pr-2">{treatment}</span>
-                    <div className={`
-                      w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors
-                      ${formData.acceptedTreatment.includes(treatment)
-                        ? 'border-green-500 bg-green-500'
-                        : 'border-gray-300'
-                      }
-                    `}>
-                      {formData.acceptedTreatment.includes(treatment) && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Financial Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              Financial Information
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <DollarSign className="h-5 w-5" />
+              Accepted Treatment (patient to initial each selected)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="totalCostOfTreatment">Total Cost of Treatment</Label>
-                <Input
-                  id="totalCostOfTreatment"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.totalCostOfTreatment}
-                  onChange={(e) => handleInputChange('totalCostOfTreatment', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="patientPayment">Patient Payment</Label>
-                <Input
-                  id="patientPayment"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.patientPayment}
-                  onChange={(e) => handleInputChange('patientPayment', e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Remaining Balance Due */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Is there a remaining balance due?</Label>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => handleInputChange('remainingBalanceDue', 'yes')}
-                  className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                    formData.remainingBalanceDue === 'yes'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  Yes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleInputChange('remainingBalanceDue', 'no')}
-                  className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                    formData.remainingBalanceDue === 'no'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  No
-                </button>
-              </div>
-            </div>
-
-            {formData.remainingBalanceDue === 'yes' && (
-              <div>
-                <Label htmlFor="remainingBalance">Remaining Balance</Label>
-                <Input
-                  id="remainingBalance"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.remainingBalance}
-                  onChange={(e) => handleInputChange('remainingBalance', e.target.value)}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Payment Method */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CreditCard className="h-5 w-5 text-blue-600" />
-              Payment Method
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Select Payment Method</Label>
-              <div className="space-y-2">
-                {[
-                  { value: 'payment-in-full-cash', label: 'Payment in Full - Cash' },
-                  { value: 'third-party-financing', label: 'Third Party Financing' },
-                  { value: 'cash-and-third-party-financing', label: 'Cash and Third Party Financing' }
-                ].map((method) => (
-                  <button
-                    key={method.value}
+            {/* Treatment Selection */}
+            <div className="mb-4">
+              <Label className="text-sm font-medium mb-2 block">Add Treatment:</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                {treatmentOptions.map((option) => (
+                  <Button
+                    key={option.service}
                     type="button"
-                    onClick={() => handleInputChange('paymentMethod', method.value)}
-                    className={`w-full p-3 rounded-lg border-2 text-left transition-all duration-200 hover:shadow-md ${
-                      formData.paymentMethod === method.value
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addTreatment(option.service, option.cdtCode, option.cptCode)}
+                    className="text-xs h-auto py-2 px-3 text-left justify-start whitespace-normal flex flex-col items-start gap-1"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{method.label}</span>
-                      <div className={`w-4 h-4 rounded-full border-2 ${
-                        formData.paymentMethod === method.value
-                          ? 'border-blue-500 bg-blue-500'
-                          : 'border-gray-300'
-                      }`}>
-                        {formData.paymentMethod === method.value && (
-                          <div className="w-1.5 h-1.5 bg-white rounded-full mx-auto mt-0.5"></div>
-                        )}
-                      </div>
+                    <span className="font-medium">+ {option.service}</span>
+                    <div className="flex gap-2 text-xs">
+                      <span className="text-blue-600 font-mono opacity-75">CDT: {option.cdtCode}</span>
+                      <span className="text-green-600 font-mono opacity-75">CPT: {option.cptCode}</span>
                     </div>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
 
-            {(formData.paymentMethod === 'third-party-financing' || formData.paymentMethod === 'cash-and-third-party-financing') && (
-              <div className="mt-4">
-                <Label htmlFor="thirdPartyFinanceCompany">Third Party Finance Company</Label>
-                <Input
-                  id="thirdPartyFinanceCompany"
-                  value={formData.thirdPartyFinanceCompany}
-                  onChange={(e) => handleInputChange('thirdPartyFinanceCompany', e.target.value)}
-                  placeholder="Enter finance company name"
-                />
+            {/* Selected Treatments Table */}
+            {formData.acceptedTreatments.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b">
+                  <div className="grid grid-cols-12 gap-2 text-sm font-medium text-gray-700">
+                    <div className="col-span-3">Service</div>
+                    <div className="col-span-2">Fee (USD)</div>
+                    <div className="col-span-3">Codes</div>
+                    <div className="col-span-2">Initials</div>
+                    <div className="col-span-2">Action</div>
+                  </div>
+                </div>
+                <div className="divide-y">
+                  {formData.acceptedTreatments.map((treatment, index) => (
+                    <div key={index} className="px-4 py-3">
+                      <div className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-3 text-sm font-medium">{treatment.service}</div>
+                        <div className="col-span-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={treatment.fee}
+                            onChange={(e) => handleTreatmentChange(index, 'fee', e.target.value)}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="col-span-3 text-xs text-gray-600">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-blue-600 font-mono">CDT: {treatment.cdtCode}</span>
+                            <span className="text-green-600 font-mono">CPT: {treatment.cptCode}</span>
+                          </div>
+                        </div>
+                        <div className="col-span-2">
+                          <Input
+                            placeholder="___"
+                            value={treatment.initials}
+                            onChange={(e) => handleTreatmentChange(index, 'initials', e.target.value)}
+                            className="text-sm text-center"
+                            maxLength={3}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeTreatment(index)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Warranty and Program Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Shield className="h-5 w-5 text-purple-600" />
-              Warranty & Program Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="fiveYearWarrantyEndDate">5 Year Warranty End Date</Label>
+            <div className="mt-4">
+              <Label htmlFor="totalCostOfTreatment" className="text-base font-semibold flex items-center gap-2">
+                Total Cost of Treatment
+                <span className="text-xs text-gray-500 font-normal">(Auto-calculated)</span>
+              </Label>
               <Input
-                id="fiveYearWarrantyEndDate"
-                type="date"
-                value={formData.fiveYearWarrantyEndDate}
-                onChange={(e) => handleInputChange('fiveYearWarrantyEndDate', e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Does the patient agree to participating in the Chlorhexidine Program?</Label>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => handleInputChange('chlorhexidineProgram', 'yes')}
-                  className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                    formData.chlorhexidineProgram === 'yes'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  Yes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleInputChange('chlorhexidineProgram', 'no')}
-                  className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                    formData.chlorhexidineProgram === 'no'
-                      ? 'border-red-500 bg-red-50 text-red-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  No
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="additionalNotes">Additional Notes</Label>
-              <Textarea
-                id="additionalNotes"
-                value={formData.additionalNotes}
-                onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
-                placeholder="Enter any additional notes..."
-                rows={3}
+                id="totalCostOfTreatment"
+                type="text"
+                value={formData.totalCostOfTreatment ? `$${formData.totalCostOfTreatment}` : '$0.00'}
+                readOnly
+                className="mt-1 text-lg font-medium bg-green-50 border-green-200 text-green-800 cursor-not-allowed"
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Clauses and Terms */}
+        {/* 2. Payment & Balance Terms */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="h-5 w-5 text-orange-600" />
-              Terms and Conditions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <div className="space-y-4">
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="font-semibold mb-2 text-amber-800">Remaining Balance Clause:</p>
-                <p className="text-amber-700">
-                  Patients understand that this payment, <strong>"Patient Payment"</strong> does not cover the full length of the treatment.
-                  To complete the full treatment, the remaining balance must be paid upfront. I acknowledge and agree to these terms for my treatment.
-                </p>
-              </div>
-
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="font-semibold mb-2 text-blue-800">Financial Consideration Clause:</p>
-                <p className="text-blue-700 italic">
-                  Oral health treatment is an excellent investment in your medical and psychological well-being.
-                  It is understood that financial considerations are always part of deciding what works best for you.
-                  We advise that you have a financial plan in place to account for the fee involved with your treatment.
-                </p>
-              </div>
-
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="font-semibold mb-2 text-red-800">Lab Fee:</p>
-                <p className="text-red-700">
-                  A <strong>$10,000 non-refundable fee</strong> is charged once records are submitted to the lab.
-                  This fee was discussed with me and I agree to pursue treatment at this time.
-                </p>
-              </div>
-
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-700 italic">
-                  I have read and understood the office financial policy. I am responsible for payment of all fees for myself or my dependents.
-                  <strong> There is a 5-year Peace of Mind Guarantee contingent on coming for regular oral health appointments every 6 months.</strong>
-                </p>
-              </div>
-
-              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-gray-700 italic">
-                  I have read and agreed to all terms discussed in this agreement.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Agreement Acknowledgment */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <Checkbox
-                id="termsAgreed"
-                checked={formData.termsAgreed}
-                onCheckedChange={(checked) => handleInputChange('termsAgreed', checked as boolean)}
-                className="mt-1"
-                required
-              />
-              <div className="flex-1">
-                <Label htmlFor="termsAgreed" className="text-sm font-medium cursor-pointer text-blue-800">
-                  <span className="text-red-500">*</span> I have read and agreed to all terms discussed in this agreement.
-                </Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Patient Signature */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <User className="h-5 w-5 text-purple-600" />
-              Patient Signature
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <DollarSign className="h-5 w-5" />
+              2. Payment & Balance Terms
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label>Patient Signature</Label>
-                <div className="mt-1">
-                  {formData.patientSignature ? (
-                    <SignaturePreview
-                      signature={formData.patientSignature}
-                      onEdit={() => setShowPatientSignatureDialog(true)}
-                      onClear={handlePatientSignatureClear}
-                      label="Patient Signature"
-                    />
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowPatientSignatureDialog(true)}
-                      className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Sign Here
-                    </Button>
-                  )}
-                </div>
+                <Label htmlFor="patientPaymentToday" className="text-sm font-semibold">Patient Payment Today</Label>
+                <Input
+                  id="patientPaymentToday"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.patientPaymentToday}
+                  onChange={(e) => handleInputChange('patientPaymentToday', e.target.value)}
+                />
               </div>
               <div>
-                <Label htmlFor="patientSignatureDate">Date Signed</Label>
+                <Label htmlFor="remainingBalance" className="text-sm font-semibold flex items-center gap-2">
+                  Remaining Balance
+                  <span className="text-xs text-gray-500 font-normal">(Auto-calculated)</span>
+                </Label>
                 <Input
-                  id="patientSignatureDate"
-                  type="date"
-                  value={formData.patientSignatureDate}
-                  onChange={(e) => handleInputChange('patientSignatureDate', e.target.value)}
-                  required
+                  id="remainingBalance"
+                  type="text"
+                  value={formData.remainingBalance ? `$${formData.remainingBalance}` : '$0.00'}
+                  readOnly
+                  className="bg-blue-50 border-blue-200 text-blue-800 cursor-not-allowed font-medium"
                 />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-semibold mb-2 block">Balance Due Date</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Payment Terms Dropdown */}
+                <div>
+                  <Label className="text-xs text-gray-600 mb-1 block">Payment terms:</Label>
+                  <Select
+                    onValueChange={(value) => {
+                      if (value === 'custom') {
+                        // Don't change the date, just allow custom input
+                        return;
+                      }
+                      const days = parseInt(value);
+                      const dueDate = new Date();
+                      dueDate.setDate(dueDate.getDate() + days);
+                      handleInputChange('balanceDueDate', dueDate.toISOString().split('T')[0]);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose terms..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">Net 15 Days</SelectItem>
+                      <SelectItem value="30">1 Month (30 days)</SelectItem>
+                      <SelectItem value="90">3 Months (90 days)</SelectItem>
+                      <SelectItem value="180">6 Months (180 days)</SelectItem>
+                      <SelectItem value="custom">Custom Date</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Due Date Input */}
+                <div>
+                  <Label className="text-xs text-gray-600 mb-1 block">Due date:</Label>
+                  <Input
+                    id="balanceDueDate"
+                    type="date"
+                    value={formData.balanceDueDate}
+                    onChange={(e) => handleInputChange('balanceDueDate', e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="space-y-2 text-sm text-blue-800">
+                <p><strong>Late Payment Penalty:</strong> A $100 will be charged on any unpaid balance.</p>
+                <p><strong>Credit Reporting:</strong> I authorize referral of any unpaid balance to collections and credit bureaus if I default.</p>
+              </div>
+              <div className="flex justify-end mt-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="paymentTermsInitials" className="text-sm whitespace-nowrap">Patient initials:</Label>
+                  <Input
+                    id="paymentTermsInitials"
+                    placeholder="___"
+                    value={formData.paymentTermsInitials}
+                    onChange={(e) => handleInputChange('paymentTermsInitials', e.target.value)}
+                    className="w-16 text-center"
+                    maxLength={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 3. Non-Refundable & Lab Fees */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <AlertTriangle className="h-5 w-5" />
+              3. Non-Refundable & Lab Fees
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="space-y-3">
+                <p className="text-sm text-blue-800">
+                  <strong>All payments</strong> made under this Agreement for listed services are <strong>non-refundable</strong>, even if I discontinue treatment.
+                </p>
+                <p className="text-sm text-blue-800">
+                  <strong>Lab Fee:</strong> A <strong>$10,000 (ten thousand dollars)</strong> non-refundable lab advance is charged once records are submitted. I acknowledge this fee was discussed and consented to today.
+                </p>
+              </div>
+              <div className="flex justify-end mt-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="labFeeInitials" className="text-sm whitespace-nowrap">Patient initials:</Label>
+                  <Input
+                    id="labFeeInitials"
+                    placeholder="___"
+                    value={formData.labFeeInitials}
+                    onChange={(e) => handleInputChange('labFeeInitials', e.target.value)}
+                    className="w-16 text-center"
+                    maxLength={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. Warranty & Care Package Conditions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <Shield className="h-5 w-5" />
+              4. Warranty & Care Package Conditions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800 mb-3">
+                <strong>3-Year "Peace of Mind" Guarantee</strong> covers <strong>materials & workmanship</strong> only if BOTH conditions are met:
+              </p>
+              <ol className="text-sm text-blue-800 list-decimal list-inside space-y-1 mb-3">
+                <li>Attend scheduled follow-up visits every 6 months.</li>
+                <li>Enroll in the Post-Surgery Care Package at $ <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.carePackageFee}
+                  onChange={(e) => handleInputChange('carePackageFee', e.target.value)}
+                  className="inline-block w-24 h-6 text-xs mx-1"
+                /> dollars.</li>
+              </ol>
+
+              <div className="space-y-3">
+                <SimpleCheckbox
+                  id="enroll"
+                  checked={formData.carePackageElection === 'enroll'}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      handleInputChange('carePackageElection', 'enroll');
+                    }
+                  }}
+                >
+                  I elect <strong>to enroll</strong> in the Care Package and understand its terms.
+                </SimpleCheckbox>
+
+                <SimpleCheckbox
+                  id="defer"
+                  checked={formData.carePackageElection === 'defer'}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      handleInputChange('carePackageElection', 'defer');
+                    }
+                  }}
+                >
+                  I elect <strong>to defer</strong> enrollment, and agree to pay for any complications within 3 years and thereafter.
+                </SimpleCheckbox>
+              </div>
+
+              <div className="flex justify-end mt-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="warrantyInitials" className="text-sm whitespace-nowrap">Patient initials:</Label>
+                  <Input
+                    id="warrantyInitials"
+                    placeholder="___"
+                    value={formData.warrantyInitials}
+                    onChange={(e) => handleInputChange('warrantyInitials', e.target.value)}
+                    className="w-16 text-center"
+                    maxLength={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 5. Capacity, Language & HIPAA Acknowledgment */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <User className="h-5 w-5" />
+              5. Capacity, Language & HIPAA Acknowledgment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="space-y-3">
+                <CustomCheckbox
+                  id="capacityConfirmed"
+                  checked={formData.capacityConfirmed}
+                  onCheckedChange={(checked) => handleInputChange('capacityConfirmed', checked as boolean)}
+                >
+                  I confirm I am ≥ 18 years old, of sound mind, and fluent in English (or declined an interpreter).
+                </CustomCheckbox>
+
+                <CustomCheckbox
+                  id="hipaaAcknowledged"
+                  checked={formData.hipaaAcknowledged}
+                  onCheckedChange={(checked) => handleInputChange('hipaaAcknowledged', checked as boolean)}
+                >
+                  I acknowledge receipt of the Notice of Privacy Practices and consent to communication of billing information via unencrypted email/SMS.
+                </CustomCheckbox>
+              </div>
+
+              <div className="flex justify-end mt-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="capacityInitials" className="text-sm whitespace-nowrap">Patient initials:</Label>
+                  <Input
+                    id="capacityInitials"
+                    placeholder="___"
+                    value={formData.capacityInitials}
+                    onChange={(e) => handleInputChange('capacityInitials', e.target.value)}
+                    className="w-16 text-center"
+                    maxLength={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 6. Dispute Resolution & Legal Provisions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <Scale className="h-5 w-5" />
+              6. Dispute Resolution & Legal Provisions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="space-y-3 text-sm text-blue-800">
+                <div>
+                  <strong>1. Governing Law & Venue:</strong> This Agreement is governed by New York Law. Any dispute shall be resolved by <strong>binding arbitration</strong> in Monroe County, NY under AAA rules.
+                </div>
+                <div>
+                  <strong>2. Amendments:</strong> No modification is effective unless in writing and signed by both parties.
+                </div>
+                <div>
+                  <strong>3. Severability:</strong> If any provision is deemed invalid, the remainder shall remain in full force.
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="disputeInitials" className="text-sm whitespace-nowrap">Patient initials:</Label>
+                  <Input
+                    id="disputeInitials"
+                    placeholder="___"
+                    value={formData.disputeInitials}
+                    onChange={(e) => handleInputChange('disputeInitials', e.target.value)}
+                    className="w-16 text-center"
+                    maxLength={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 7. Signatures & Witness */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <Edit className="h-5 w-5" />
+              7. Signatures & Witness
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="mb-4">
+              <SimpleCheckbox
+                id="termsAgreed"
+                checked={formData.termsAgreed}
+                onCheckedChange={(checked) => handleInputChange('termsAgreed', checked)}
+              >
+                I have read, understood, and agreed to all terms above.
+              </SimpleCheckbox>
+            </div>
+
+            {/* Patient Signature Section */}
+            <div className="border rounded-lg p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Patient Full Name (print)</Label>
+                  <Input
+                    value={formData.patientName}
+                    readOnly
+                    className="mt-1 bg-gray-50 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Date/Time</Label>
+                  <div className="space-y-2 mt-1">
+                    <Input
+                      type="date"
+                      value={formData.patientSignatureDate}
+                      onChange={(e) => handleInputChange('patientSignatureDate', e.target.value)}
+                    />
+                    <div className="relative">
+                      <Input
+                        type="time"
+                        value={formData.patientSignatureTime}
+                        onChange={(e) => handleInputChange('patientSignatureTime', e.target.value)}
+                        className="pr-32"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const now = new Date();
+                          const currentDate = now.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                          const currentTime = now.toTimeString().slice(0, 5); // Format: HH:MM
+                          handleInputChange('patientSignatureDate', currentDate);
+                          handleInputChange('patientSignatureTime', currentTime);
+                        }}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 px-1 flex items-center gap-1 border border-blue-300 bg-white hover:bg-blue-50 text-blue-600 text-xs rounded-md"
+                        title="Set current date and time"
+                      >
+                        <Clock className="h-3 w-3" />
+                        Current Date & Time
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div>
+                    {formData.patientSignature ? (
+                      <SignaturePreview
+                        signature={formData.patientSignature}
+                        onEdit={() => setShowPatientSignatureDialog(true)}
+                        onClear={handlePatientSignatureClear}
+                        label="Patient Signature"
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowPatientSignatureDialog(true)}
+                        className="w-full h-16 border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Sign Here
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Witness Signature Section */}
+            <div className="border rounded-lg p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Staff Witness Name & Role</Label>
+                  <div className="space-y-2 mt-1">
+                    <Input
+                      placeholder="Witness name"
+                      value={formData.witnessName}
+                      onChange={(e) => handleInputChange('witnessName', e.target.value)}
+                    />
+                    <Input
+                      placeholder="Role/Title"
+                      value={formData.witnessRole}
+                      onChange={(e) => handleInputChange('witnessRole', e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Date/Time</Label>
+                  <div className="space-y-2 mt-1">
+                    <Input
+                      type="date"
+                      value={formData.witnessSignatureDate}
+                      onChange={(e) => handleInputChange('witnessSignatureDate', e.target.value)}
+                    />
+                    <div className="relative">
+                      <Input
+                        type="time"
+                        value={formData.witnessSignatureTime}
+                        onChange={(e) => handleInputChange('witnessSignatureTime', e.target.value)}
+                        className="pr-32"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const now = new Date();
+                          const currentDate = now.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                          const currentTime = now.toTimeString().slice(0, 5); // Format: HH:MM
+                          handleInputChange('witnessSignatureDate', currentDate);
+                          handleInputChange('witnessSignatureTime', currentTime);
+                        }}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 px-1 flex items-center gap-1 border border-blue-300 bg-white hover:bg-blue-50 text-blue-600 text-xs rounded-md"
+                        title="Set current date and time"
+                      >
+                        <Clock className="h-3 w-3" />
+                        Current Date & Time
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div>
+                    {formData.witnessSignature ? (
+                      <SignaturePreview
+                        signature={formData.witnessSignature}
+                        onEdit={() => setShowWitnessSignatureDialog(true)}
+                        onClear={handleWitnessSignatureClear}
+                        label="Witness Signature"
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowWitnessSignatureDialog(true)}
+                        className="w-full h-16 border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Sign Here
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Office Use Only */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-800 mb-2">Office Use Only:</h4>
+              <div className="space-y-2">
+                <SimpleCheckbox
+                  id="scannedToChart"
+                  checked={formData.scannedToChart || false}
+                  onCheckedChange={(checked) => handleInputChange('scannedToChart', checked)}
+                >
+                  Scanned to chart
+                </SimpleCheckbox>
+                <SimpleCheckbox
+                  id="countersignedByManager"
+                  checked={formData.countersignedByManager || false}
+                  onCheckedChange={(checked) => handleInputChange('countersignedByManager', checked)}
+                >
+                  Countersigned by Finance Manager
+                </SimpleCheckbox>
               </div>
             </div>
           </CardContent>
@@ -522,6 +915,14 @@ export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "" }:
         onSave={handlePatientSignatureSave}
         title="Patient Signature"
         currentSignature={formData.patientSignature}
+      />
+
+      <SignatureDialog
+        isOpen={showWitnessSignatureDialog}
+        onClose={() => setShowWitnessSignatureDialog(false)}
+        onSave={handleWitnessSignatureSave}
+        title="Witness Signature"
+        currentSignature={formData.witnessSignature}
       />
     </div>
   );

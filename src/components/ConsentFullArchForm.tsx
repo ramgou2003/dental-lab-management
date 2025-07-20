@@ -202,12 +202,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
     surgeonSignature: false,
     anesthesiaProviderSignature: false,
     patientSignature: false,
-    witnessSignature: false,
-    alternativesNoTreatment: false,
-    alternativesConventionalDentures: false,
-    alternativesSegmentedExtraction: false,
-    alternativesRemovableOverdentures: false,
-    alternativesZygomaticImplants: false
+    witnessSignature: false
   });
 
   const handleInputChange = (field: string, value: any) => {
@@ -255,40 +250,18 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
   };
 
   const handleSignatureSave = (type: string, signature: string) => {
-    if (type.includes('alternatives')) {
-      const alternativeType = type.replace('alternatives', '').toLowerCase();
-      setFormData(prev => ({
-        ...prev,
-        alternativesInitials: {
-          ...prev.alternativesInitials,
-          [alternativeType]: signature
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [type]: signature
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [type]: signature
+    }));
     handleSignatureDialogClose(type);
   };
 
   const handleSignatureClear = (type: string) => {
-    if (type.includes('alternatives')) {
-      const alternativeType = type.replace('alternatives', '').toLowerCase();
-      setFormData(prev => ({
-        ...prev,
-        alternativesInitials: {
-          ...prev.alternativesInitials,
-          [alternativeType]: ''
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [type]: ''
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [type]: ''
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -316,7 +289,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
     // Check alternatives initials
     const alternativesFields = Object.values(formData.alternativesInitials);
-    if (alternativesFields.some(field => !field)) {
+    if (alternativesFields.some(field => !field || field.trim() === '')) {
       missingSignatures.push('All alternatives must be initialed');
     }
 
@@ -1739,24 +1712,22 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
                       <p className="text-sm flex-1 mr-4">{alternative.text}</p>
                       <div className="flex items-center gap-2">
                         <Label className="text-sm">Initial:</Label>
-                        {formData.alternativesInitials[alternative.key as keyof typeof formData.alternativesInitials] ? (
-                          <SignaturePreview
-                            signature={formData.alternativesInitials[alternative.key as keyof typeof formData.alternativesInitials]}
-                            onEdit={() => handleSignatureDialogOpen(`alternatives${alternative.key.charAt(0).toUpperCase() + alternative.key.slice(1)}`)}
-                            onClear={() => handleSignatureClear(`alternatives${alternative.key.charAt(0).toUpperCase() + alternative.key.slice(1)}`)}
-                            label="Initial"
-                            className="w-16 h-6"
-                          />
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => handleSignatureDialogOpen(`alternatives${alternative.key.charAt(0).toUpperCase() + alternative.key.slice(1)}`)}
-                            className="w-16 h-6 border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center text-xs"
-                          >
-                            Sign
-                          </Button>
-                        )}
+                        <Input
+                          placeholder="___"
+                          value={formData.alternativesInitials[alternative.key as keyof typeof formData.alternativesInitials]}
+                          onChange={(e) => {
+                            const newValue = e.target.value;
+                            setFormData(prev => ({
+                              ...prev,
+                              alternativesInitials: {
+                                ...prev.alternativesInitials,
+                                [alternative.key]: newValue
+                              }
+                            }));
+                          }}
+                          className="w-16 h-8 text-center text-sm"
+                          maxLength={3}
+                        />
                       </div>
                     </div>
                   ))}
@@ -3614,21 +3585,12 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
       surgeonSignature: "Surgeon Signature",
       anesthesiaProviderSignature: "Anesthesia Provider Signature",
       patientSignature: "Patient Signature",
-      witnessSignature: "Witness Signature",
-      alternativesNoTreatment: "Patient Initials - No Treatment Alternative",
-      alternativesConventionalDentures: "Patient Initials - Conventional Dentures Alternative",
-      alternativesSegmentedExtraction: "Patient Initials - Segmented Extraction Alternative",
-      alternativesRemovableOverdentures: "Patient Initials - Removable Overdentures Alternative",
-      alternativesZygomaticImplants: "Patient Initials - Zygomatic Implants Alternative"
+      witnessSignature: "Witness Signature"
     };
     return titles[key] || "Signature";
   }
 
   function getSignatureValue(key: string): string {
-    if (key.includes('alternatives')) {
-      const alternativeType = key.replace('alternatives', '').toLowerCase();
-      return formData.alternativesInitials[alternativeType as keyof typeof formData.alternativesInitials] || '';
-    }
     return formData[key as keyof typeof formData] as string || '';
   }
 }
