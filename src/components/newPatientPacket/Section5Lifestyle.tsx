@@ -42,6 +42,7 @@ export function Section5Lifestyle({ formData, onInputChange, onNestedInputChange
     { value: 'half-pack', label: 'Half pack per day (10 cigarettes)' },
     { value: 'one-pack', label: 'One pack per day (20 cigarettes)' },
     { value: 'more-than-pack', label: 'More than one pack per day' },
+    { value: 'vaping', label: 'Vaping' },
     { value: 'recreational-marijuana', label: 'Recreational marijuana' },
     { value: 'medicinal-marijuana', label: 'Medicinal marijuana' }
   ];

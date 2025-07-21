@@ -320,18 +320,18 @@ export function DashboardPage() {
                       hour12: true
                     })}
                   </h2>
-                  <p className="text-xs text-slate-500 font-medium">EST</p>
+                  <p className="text-xs text-slate-500  font-medium">EST</p>
                 </div>
 
                 {/* Current Date */}
                 <div>
-                  <p className="text-xs sm:text-sm font-semibold text-slate-700">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-700 ">
                     {currentTime.toLocaleDateString('en-US', {
                       timeZone: 'America/New_York',
                       weekday: 'long'
                     })}
                   </p>
-                  <p className="text-xs sm:text-sm text-slate-600">
+                  <p className="text-xs sm:text-sm text-slate-600 ">
                     {currentTime.toLocaleDateString('en-US', {
                       timeZone: 'America/New_York',
                       month: 'long',
@@ -353,38 +353,38 @@ export function DashboardPage() {
             {/* Key Metrics Row */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
               {keyMetrics.map((metric, index) => (
-                <div key={index} className="relative bg-white/80 backdrop-blur-sm rounded-xl lg:rounded-2xl border border-blue-200/50 p-2 sm:p-3 lg:p-4">
+                <div key={index} className="relative bg-white/80  backdrop-blur-sm rounded-xl lg:rounded-2xl border border-blue-200/50  p-2 sm:p-3 lg:p-4">
                   {/* Gradient Background */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-xl lg:rounded-2xl opacity-100"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5   rounded-xl lg:rounded-2xl opacity-100"></div>
 
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2 sm:mb-3">
-                      <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg sm:rounded-xl border border-blue-300/50">
-                        <metric.icon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-lg sm:rounded-xl border border-blue-300/50 ">
+                        <metric.icon className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 " />
                       </div>
                       <div className="flex items-center space-x-1 sm:space-x-2">
                         {metric.trend === 'up' ? (
-                          <div className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-emerald-50 rounded-full border border-blue-200/30">
-                            <ArrowUpRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-600" />
-                            <span className="text-xs font-semibold text-emerald-600">{metric.change}</span>
+                          <div className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-emerald-50  rounded-full border border-blue-200/30 ">
+                            <ArrowUpRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-600 " />
+                            <span className="text-xs font-semibold text-emerald-600 ">{metric.change}</span>
                           </div>
                         ) : metric.trend === 'down' ? (
-                          <div className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-red-50 rounded-full border border-blue-200/30">
-                            <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-600" />
-                            <span className="text-xs font-semibold text-red-600">{metric.change}</span>
+                          <div className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-red-50  rounded-full border border-blue-200/30 ">
+                            <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-600 " />
+                            <span className="text-xs font-semibold text-red-600 ">{metric.change}</span>
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-slate-50 rounded-full border border-blue-200/30">
-                            <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-slate-500" />
-                            <span className="text-xs font-semibold text-slate-500">{metric.change}</span>
+                          <div className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-slate-50  rounded-full border border-blue-200/30 ">
+                            <Minus className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-slate-500 " />
+                            <span className="text-xs font-semibold text-slate-500 ">{metric.change}</span>
                           </div>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-1">{metric.title}</h3>
-                      <p className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      <h3 className="text-xs sm:text-sm font-medium text-slate-600  mb-1">{metric.title}</h3>
+                      <p className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                         {metric.value}
                       </p>
                     </div>
@@ -393,25 +393,25 @@ export function DashboardPage() {
               ))}
 
               {/* Search Container */}
-              <div className="col-span-2 relative bg-white/80 backdrop-blur-sm rounded-xl lg:rounded-2xl border border-blue-200/50 p-2 sm:p-3 lg:p-4 z-50">
+              <div className="col-span-2 relative bg-white/80  backdrop-blur-sm rounded-xl lg:rounded-2xl border border-blue-200/50  p-2 sm:p-3 lg:p-4 z-50">
                 {/* Gradient Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-500/5 to-gray-500/5 rounded-xl lg:rounded-2xl opacity-100"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-500/5 to-gray-500/5   rounded-xl lg:rounded-2xl opacity-100"></div>
 
                 <div className="relative h-full flex flex-col justify-center">
                   <div className="flex items-center justify-between mb-2 sm:mb-3">
-                    <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg sm:rounded-xl border border-blue-300/50">
-                      <Search className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-lg sm:rounded-xl border border-blue-300/50 ">
+                      <Search className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 " />
                     </div>
-                    <div className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-blue-50 rounded-full border border-blue-200/30">
-                      <Search className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-600" />
-                      <span className="text-xs font-semibold text-blue-600">Quick</span>
+                    <div className="flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-blue-50  rounded-full border border-blue-200/30 ">
+                      <Search className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-blue-600 " />
+                      <span className="text-xs font-semibold text-blue-600 ">Quick</span>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-2 sm:mb-3">Search Patient</h3>
+                    <h3 className="text-xs sm:text-sm font-medium text-slate-600  mb-2 sm:mb-3">Search Patient</h3>
                     <div className="relative">
-                      <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
+                      <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-slate-400 " />
                       <input
                         ref={searchInputRef}
                         type="text"
@@ -419,7 +419,7 @@ export function DashboardPage() {
                         onChange={handleSearchInputChange}
                         onFocus={handleSearchFocus}
                         placeholder="Enter patient name or ID..."
-                        className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 bg-white/80 border border-blue-200/50 rounded-lg sm:rounded-xl text-xs sm:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400/60 transition-all duration-200"
+                        className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 bg-white/80  border border-blue-200/50  rounded-lg sm:rounded-xl text-xs sm:text-sm text-gray-900  placeholder-slate-400  focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400/60 transition-all duration-200"
                         autoComplete="off"
                       />
 
@@ -427,12 +427,12 @@ export function DashboardPage() {
                       {isSearchOpen && (
                         <div
                           ref={searchDropdownRef}
-                          className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                          className="absolute z-[9999] w-full mt-1 bg-white  border border-gray-200  rounded-lg shadow-lg max-h-60 overflow-y-auto"
                         >
                           {searchLoading ? (
-                            <div className="p-3 text-center text-gray-500">
+                            <div className="p-3 text-center text-gray-500 ">
                               <div className="flex items-center justify-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 "></div>
                                 Searching...
                               </div>
                             </div>
@@ -442,20 +442,20 @@ export function DashboardPage() {
                                 <button
                                   key={patient.id}
                                   onClick={() => handlePatientSelect(patient)}
-                                  className="w-full px-3 py-2 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none transition-colors"
+                                  className="w-full px-3 py-2 text-left hover:bg-gray-50 :bg-gray-700 focus:bg-gray-50 :bg-gray-700 focus:outline-none transition-colors"
                                 >
                                   <div className="flex items-center gap-3">
                                     <Avatar className="h-8 w-8">
-                                      <AvatarFallback className="bg-indigo-600 text-white text-xs font-semibold">
+                                      <AvatarFallback className="bg-indigo-600  text-white text-xs font-semibold">
                                         {getInitials(patient.first_name, patient.last_name)}
                                       </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                      <p className="text-sm font-medium text-gray-900  truncate">
                                         {patient.full_name}
                                       </p>
                                       {patient.phone && (
-                                        <p className="text-xs text-gray-500 truncate">
+                                        <p className="text-xs text-gray-500  truncate">
                                           {patient.phone}
                                         </p>
                                       )}
@@ -465,7 +465,7 @@ export function DashboardPage() {
                               ))}
                             </div>
                           ) : searchTerm.length >= 1 ? (
-                            <div className="p-3 text-center text-gray-500">
+                            <div className="p-3 text-center text-gray-500 ">
                               <div className="flex items-center justify-center gap-2">
                                 <Search className="h-4 w-4" />
                                 No patients found
@@ -481,36 +481,36 @@ export function DashboardPage() {
             </div>
 
             {/* Lab Scripts Statistics Section */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl border border-blue-200/40 p-2">
+            <div className="bg-white/60  backdrop-blur-sm rounded-xl border border-blue-200/40  p-2">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h2 className="text-base font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                  <h2 className="text-base font-bold bg-gradient-to-r from-blue-700 to-indigo-700   bg-clip-text text-transparent">
                     Lab Scripts Overview
                   </h2>
-                  <p className="text-xs text-slate-600">Real-time status distribution</p>
+                  <p className="text-xs text-slate-600 ">Real-time status distribution</p>
                 </div>
-                <div className="p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg border border-blue-300/50">
-                  <FileText className="h-4 w-4 text-blue-600" />
+                <div className="p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-lg border border-blue-300/50 ">
+                  <FileText className="h-4 w-4 text-blue-600 " />
                 </div>
               </div>
 
               <div className="grid grid-cols-5 gap-2">
               {/* Pending Lab Scripts */}
-              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/70 :border-blue-600/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="relative">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl border border-blue-300/50">
-                      <FileText className="h-5 w-5 text-blue-600" />
+                    <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-xl border border-blue-300/50 ">
+                      <FileText className="h-5 w-5 text-blue-600 " />
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-blue-50 rounded-full border border-blue-200/30">
-                      <Clock className="h-3 w-3 text-blue-600" />
-                      <span className="text-xs font-semibold text-blue-600">Pending</span>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-blue-50  rounded-full border border-blue-200/30 ">
+                      <Clock className="h-3 w-3 text-blue-600 " />
+                      <span className="text-xs font-semibold text-blue-600 ">Pending</span>
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-slate-600 mb-1">Pending Scripts</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    <h3 className="text-sm font-medium text-slate-600  mb-1">Pending Scripts</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                       {labScriptsPending}
                     </p>
                   </div>
@@ -518,21 +518,21 @@ export function DashboardPage() {
               </div>
 
               {/* In Progress Lab Scripts */}
-              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-blue-300/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-blue-300/70 :border-emerald-600/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="relative">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-xl border border-blue-300/50">
-                      <PlayCircle className="h-5 w-5 text-emerald-600" />
+                    <div className="p-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/10   rounded-xl border border-blue-300/50 ">
+                      <PlayCircle className="h-5 w-5 text-emerald-600 " />
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-emerald-50 rounded-full border border-blue-200/30">
-                      <Activity className="h-3 w-3 text-emerald-600" />
-                      <span className="text-xs font-semibold text-emerald-600">Active</span>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-emerald-50  rounded-full border border-blue-200/30 ">
+                      <Activity className="h-3 w-3 text-emerald-600 " />
+                      <span className="text-xs font-semibold text-emerald-600 ">Active</span>
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-slate-600 mb-1">In Progress</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    <h3 className="text-sm font-medium text-slate-600  mb-1">In Progress</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                       {labScriptsInProgress}
                     </p>
                   </div>
@@ -540,21 +540,21 @@ export function DashboardPage() {
               </div>
 
               {/* On Hold Lab Scripts */}
-              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 hover:border-blue-300/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 hover:border-blue-300/70 :border-amber-600/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="relative">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-blue-300/50">
-                      <PauseCircle className="h-5 w-5 text-amber-600" />
+                    <div className="p-2 bg-gradient-to-br from-amber-500/10 to-orange-500/10   rounded-xl border border-blue-300/50 ">
+                      <PauseCircle className="h-5 w-5 text-amber-600 " />
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-amber-50 rounded-full border border-blue-200/30">
-                      <PauseCircle className="h-3 w-3 text-amber-600" />
-                      <span className="text-xs font-semibold text-amber-600">Hold</span>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-amber-50  rounded-full border border-blue-200/30 ">
+                      <PauseCircle className="h-3 w-3 text-amber-600 " />
+                      <span className="text-xs font-semibold text-amber-600 ">Hold</span>
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-slate-600 mb-1">On Hold</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    <h3 className="text-sm font-medium text-slate-600  mb-1">On Hold</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                       {labScriptsOnHold}
                     </p>
                   </div>
@@ -562,21 +562,21 @@ export function DashboardPage() {
               </div>
 
               {/* Delayed Lab Scripts */}
-              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-red-500/10 hover:border-blue-300/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-red-500/10 hover:border-blue-300/70 :border-red-600/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="relative">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-red-500/10 to-pink-500/10 rounded-xl border border-blue-300/50">
-                      <HourglassIcon className="h-5 w-5 text-red-600" />
+                    <div className="p-2 bg-gradient-to-br from-red-500/10 to-pink-500/10   rounded-xl border border-blue-300/50 ">
+                      <HourglassIcon className="h-5 w-5 text-red-600 " />
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-red-50 rounded-full border border-blue-200/30">
-                      <AlertTriangle className="h-3 w-3 text-red-600" />
-                      <span className="text-xs font-semibold text-red-600">Delayed</span>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-red-50  rounded-full border border-blue-200/30 ">
+                      <AlertTriangle className="h-3 w-3 text-red-600 " />
+                      <span className="text-xs font-semibold text-red-600 ">Delayed</span>
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-slate-600 mb-1">Delayed</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    <h3 className="text-sm font-medium text-slate-600  mb-1">Delayed</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                       {labScriptsDelayed}
                     </p>
                   </div>
@@ -584,21 +584,21 @@ export function DashboardPage() {
               </div>
 
               {/* Completed Lab Scripts */}
-              <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-green-500/10 hover:border-blue-300/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-green-500/10 hover:border-blue-300/70 :border-green-600/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <div className="relative">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl border border-blue-300/50">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div className="p-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10   rounded-xl border border-blue-300/50 ">
+                      <CheckCircle className="h-5 w-5 text-green-600 " />
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-green-50 rounded-full border border-blue-200/30">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
-                      <span className="text-xs font-semibold text-green-600">Done</span>
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-green-50  rounded-full border border-blue-200/30 ">
+                      <CheckCircle className="h-3 w-3 text-green-600 " />
+                      <span className="text-xs font-semibold text-green-600 ">Done</span>
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-slate-600 mb-1">Completed</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    <h3 className="text-sm font-medium text-slate-600  mb-1">Completed</h3>
+                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                       {labScriptsCompleted}
                     </p>
                   </div>
@@ -608,36 +608,36 @@ export function DashboardPage() {
             </div>
 
             {/* Manufacturing Overview Section */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-blue-200/40 p-3">
+            <div className="bg-white/60  backdrop-blur-sm rounded-2xl border border-blue-200/40  p-3">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h2 className="text-lg font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                  <h2 className="text-lg font-bold bg-gradient-to-r from-blue-700 to-indigo-700   bg-clip-text text-transparent">
                     Manufacturing Overview
                   </h2>
-                  <p className="text-sm text-slate-600">Production pipeline status</p>
+                  <p className="text-sm text-slate-600 ">Production pipeline status</p>
                 </div>
-                <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl border border-blue-300/50">
-                  <Factory className="h-5 w-5 text-blue-600" />
+                <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-xl border border-blue-300/50 ">
+                  <Factory className="h-5 w-5 text-blue-600 " />
                 </div>
               </div>
 
               <div className="grid grid-cols-7 gap-3">
                 {/* Pending Printing */}
-                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/70">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-3 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/70 :border-blue-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg border border-blue-300/50">
-                        <Printer className="h-4 w-4 text-blue-600" />
+                      <div className="p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-lg border border-blue-300/50 ">
+                        <Printer className="h-4 w-4 text-blue-600 " />
                       </div>
-                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-50 rounded-full border border-blue-200/30">
-                        <Clock className="h-2.5 w-2.5 text-blue-600" />
-                        <span className="text-xs font-semibold text-blue-600">Print</span>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-blue-50  rounded-full border border-blue-200/30 ">
+                        <Clock className="h-2.5 w-2.5 text-blue-600 " />
+                        <span className="text-xs font-semibold text-blue-600 ">Print</span>
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xs font-medium text-slate-600 mb-1">Pending Printing</h3>
-                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      <h3 className="text-xs font-medium text-slate-600  mb-1">Pending Printing</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                         {manufacturingPendingPrinting}
                       </p>
                     </div>
@@ -645,21 +645,21 @@ export function DashboardPage() {
                 </div>
 
                 {/* Pending Milling */}
-                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/10 hover:border-blue-300/70">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-3 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/10 hover:border-blue-300/70 :border-purple-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-indigo-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-1.5 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 rounded-lg border border-blue-300/50">
-                        <Settings className="h-4 w-4 text-purple-600" />
+                      <div className="p-1.5 bg-gradient-to-br from-purple-500/10 to-indigo-500/10   rounded-lg border border-blue-300/50 ">
+                        <Settings className="h-4 w-4 text-purple-600 " />
                       </div>
-                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-purple-50 rounded-full border border-blue-200/30">
-                        <Clock className="h-2.5 w-2.5 text-purple-600" />
-                        <span className="text-xs font-semibold text-purple-600">Mill</span>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-purple-50  rounded-full border border-blue-200/30 ">
+                        <Clock className="h-2.5 w-2.5 text-purple-600 " />
+                        <span className="text-xs font-semibold text-purple-600 ">Mill</span>
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xs font-medium text-slate-600 mb-1">Pending Milling</h3>
-                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      <h3 className="text-xs font-medium text-slate-600  mb-1">Pending Milling</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                         {manufacturingPendingMilling}
                       </p>
                     </div>
@@ -667,21 +667,21 @@ export function DashboardPage() {
                 </div>
 
                 {/* In Production */}
-                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-blue-300/70">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-3 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-blue-300/70 :border-emerald-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-1.5 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-lg border border-blue-300/50">
-                        <Cog className="h-4 w-4 text-emerald-600" />
+                      <div className="p-1.5 bg-gradient-to-br from-emerald-500/10 to-teal-500/10   rounded-lg border border-blue-300/50 ">
+                        <Cog className="h-4 w-4 text-emerald-600 " />
                       </div>
-                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-emerald-50 rounded-full border border-blue-200/30">
-                        <Activity className="h-2.5 w-2.5 text-emerald-600" />
-                        <span className="text-xs font-semibold text-emerald-600">Prod</span>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-emerald-50  rounded-full border border-blue-200/30 ">
+                        <Activity className="h-2.5 w-2.5 text-emerald-600 " />
+                        <span className="text-xs font-semibold text-emerald-600 ">Prod</span>
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xs font-medium text-slate-600 mb-1">In Production</h3>
-                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      <h3 className="text-xs font-medium text-slate-600  mb-1">In Production</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                         {manufacturingInProduction}
                       </p>
                     </div>
@@ -689,21 +689,21 @@ export function DashboardPage() {
                 </div>
 
                 {/* Milling */}
-                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-blue-300/70">
-                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-3 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-blue-300/70 :border-indigo-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-1.5 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-lg border border-blue-300/50">
-                        <Cog className="h-4 w-4 text-indigo-600" />
+                      <div className="p-1.5 bg-gradient-to-br from-indigo-500/10 to-purple-500/10   rounded-lg border border-blue-300/50 ">
+                        <Cog className="h-4 w-4 text-indigo-600 " />
                       </div>
-                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50 rounded-full border border-blue-200/30">
-                        <Settings className="h-2.5 w-2.5 text-indigo-600" />
-                        <span className="text-xs font-semibold text-indigo-600">Mill</span>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-indigo-50  rounded-full border border-blue-200/30 ">
+                        <Settings className="h-2.5 w-2.5 text-indigo-600 " />
+                        <span className="text-xs font-semibold text-indigo-600 ">Mill</span>
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xs font-medium text-slate-600 mb-1">Milling</h3>
-                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      <h3 className="text-xs font-medium text-slate-600  mb-1">Milling</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                         {manufacturingMilling}
                       </p>
                     </div>
@@ -711,21 +711,21 @@ export function DashboardPage() {
                 </div>
 
                 {/* In Transit */}
-                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/10 hover:border-blue-300/70">
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-3 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/10 hover:border-blue-300/70 :border-orange-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-1.5 bg-gradient-to-br from-orange-500/10 to-amber-500/10 rounded-lg border border-blue-300/50">
-                        <Truck className="h-4 w-4 text-orange-600" />
+                      <div className="p-1.5 bg-gradient-to-br from-orange-500/10 to-amber-500/10   rounded-lg border border-blue-300/50 ">
+                        <Truck className="h-4 w-4 text-orange-600 " />
                       </div>
-                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-orange-50 rounded-full border border-blue-200/30">
-                        <Truck className="h-2.5 w-2.5 text-orange-600" />
-                        <span className="text-xs font-semibold text-orange-600">Ship</span>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-orange-50  rounded-full border border-blue-200/30 ">
+                        <Truck className="h-2.5 w-2.5 text-orange-600 " />
+                        <span className="text-xs font-semibold text-orange-600 ">Ship</span>
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xs font-medium text-slate-600 mb-1">In Transit</h3>
-                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      <h3 className="text-xs font-medium text-slate-600  mb-1">In Transit</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                         {manufacturingInTransit}
                       </p>
                     </div>
@@ -733,21 +733,21 @@ export function DashboardPage() {
                 </div>
 
                 {/* Quality Check */}
-                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 hover:border-blue-300/70">
-                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-yellow-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-3 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 hover:border-blue-300/70 :border-amber-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-yellow-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-1.5 bg-gradient-to-br from-amber-500/10 to-yellow-500/10 rounded-lg border border-blue-300/50">
-                        <Search className="h-4 w-4 text-amber-600" />
+                      <div className="p-1.5 bg-gradient-to-br from-amber-500/10 to-yellow-500/10   rounded-lg border border-blue-300/50 ">
+                        <Search className="h-4 w-4 text-amber-600 " />
                       </div>
-                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-amber-50 rounded-full border border-blue-200/30">
-                        <Search className="h-2.5 w-2.5 text-amber-600" />
-                        <span className="text-xs font-semibold text-amber-600">QC</span>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-amber-50  rounded-full border border-blue-200/30 ">
+                        <Search className="h-2.5 w-2.5 text-amber-600 " />
+                        <span className="text-xs font-semibold text-amber-600 ">QC</span>
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xs font-medium text-slate-600 mb-1">Quality Check</h3>
-                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      <h3 className="text-xs font-medium text-slate-600  mb-1">Quality Check</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                         {manufacturingQualityCheck}
                       </p>
                     </div>
@@ -755,21 +755,21 @@ export function DashboardPage() {
                 </div>
 
                 {/* Completed */}
-                <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-3 hover:bg-white/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-green-500/10 hover:border-blue-300/70">
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-3 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-green-500/10 hover:border-blue-300/70 :border-green-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="relative">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="p-1.5 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg border border-blue-300/50">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      <div className="p-1.5 bg-gradient-to-br from-green-500/10 to-emerald-500/10   rounded-lg border border-blue-300/50 ">
+                        <CheckCircle className="h-4 w-4 text-green-600 " />
                       </div>
-                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-green-50 rounded-full border border-blue-200/30">
-                        <CheckCircle className="h-2.5 w-2.5 text-green-600" />
-                        <span className="text-xs font-semibold text-green-600">Done</span>
+                      <div className="flex items-center space-x-1 px-1.5 py-0.5 bg-green-50  rounded-full border border-blue-200/30 ">
+                        <CheckCircle className="h-2.5 w-2.5 text-green-600 " />
+                        <span className="text-xs font-semibold text-green-600 ">Done</span>
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-xs font-medium text-slate-600 mb-1">Completed</h3>
-                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                      <h3 className="text-xs font-medium text-slate-600  mb-1">Completed</h3>
+                      <p className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                         {manufacturingCompleted}
                       </p>
                     </div>
@@ -786,16 +786,16 @@ export function DashboardPage() {
 
 
             {/* Treatment Types Distribution */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl lg:rounded-2xl border border-blue-200/50 p-2 sm:p-3">
+            <div className="bg-white/80  backdrop-blur-sm rounded-xl lg:rounded-2xl border border-blue-200/50  p-2 sm:p-3">
               <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                 <div>
-                  <h3 className="text-sm sm:text-base font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                  <h3 className="text-sm sm:text-base font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                     Treatment Types
                   </h3>
-                  <p className="text-slate-600 text-xs">Procedure breakdown</p>
+                  <p className="text-slate-600  text-xs">Procedure breakdown</p>
                 </div>
-                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg sm:rounded-xl border border-blue-300/50">
-                  <Stethoscope className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-lg sm:rounded-xl border border-blue-300/50 ">
+                  <Stethoscope className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 " />
                 </div>
               </div>
 
@@ -806,19 +806,19 @@ export function DashboardPage() {
                   const percentage = total > 0 ? (item.value / total) * 100 : 0;
 
                   return (
-                    <div key={index} className="relative p-1 sm:p-1.5 bg-gradient-to-r from-blue-50/50 to-blue-100/30 rounded-md sm:rounded-lg border border-blue-200/50">
+                    <div key={index} className="relative p-1 sm:p-1.5 bg-gradient-to-r from-blue-50/50 to-blue-100/30   rounded-md sm:rounded-lg border border-blue-200/50 ">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-1.5 sm:space-x-2">
                           <div
-                            className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shadow-sm border border-blue-200/30"
+                            className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shadow-sm border border-blue-200/30 "
                             style={{ backgroundColor: item.color }}
                           ></div>
-                          <span className="text-xs font-semibold text-slate-800 truncate">{item.name}</span>
+                          <span className="text-xs font-semibold text-slate-800  truncate">{item.name}</span>
                         </div>
-                        <span className="text-xs font-bold text-slate-900 ml-2">{item.value}</span>
+                        <span className="text-xs font-bold text-slate-900  ml-2">{item.value}</span>
                       </div>
                       {/* Progress bar */}
-                      <div className="w-full bg-blue-100/50 rounded-full h-0.5 mt-0.5 sm:mt-1 border border-blue-200/30">
+                      <div className="w-full bg-blue-100/50  rounded-full h-0.5 mt-0.5 sm:mt-1 border border-blue-200/30 ">
                         <div
                           className="h-0.5 rounded-full transition-all duration-500"
                           style={{
@@ -828,7 +828,7 @@ export function DashboardPage() {
                           }}
                         ></div>
                       </div>
-                      <p className="text-xs text-slate-600 mt-0.5 font-medium">{percentage.toFixed(0)}%</p>
+                      <p className="text-xs text-slate-600  mt-0.5 font-medium">{percentage.toFixed(0)}%</p>
                     </div>
                   );
                 })}
@@ -836,47 +836,47 @@ export function DashboardPage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl lg:rounded-2xl border border-blue-200/50 p-2 sm:p-3 flex flex-col">
+            <div className="bg-white/80  backdrop-blur-sm rounded-xl lg:rounded-2xl border border-blue-200/50  p-2 sm:p-3 flex flex-col">
               <div className="flex items-center justify-between mb-1.5 sm:mb-2 flex-shrink-0">
                 <div>
-                  <h3 className="text-sm sm:text-base font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                  <h3 className="text-sm sm:text-base font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
                     Live Metrics
                   </h3>
-                  <p className="text-slate-600 text-xs">Real-time insights</p>
+                  <p className="text-slate-600  text-xs">Real-time insights</p>
                 </div>
-                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg sm:rounded-xl border border-blue-300/50">
-                  <Activity className="h-3 w-3 text-blue-600" />
+                <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-lg sm:rounded-xl border border-blue-300/50 ">
+                  <Activity className="h-3 w-3 text-blue-600 " />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5 sm:gap-2 flex-1 min-h-0">
-                <div className="relative p-1.5 sm:p-2.5 bg-gradient-to-r from-blue-50/80 to-blue-100/50 rounded-md sm:rounded-lg border border-blue-300/50">
+                <div className="relative p-1.5 sm:p-2.5 bg-gradient-to-r from-blue-50/80 to-blue-100/50   rounded-md sm:rounded-lg border border-blue-300/50 ">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0 flex-1">
-                      <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md sm:rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30">
+                      <div className="p-1 sm:p-1.5 bg-gradient-to-br from-blue-500 to-blue-600   rounded-md sm:rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30 ">
                         <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-bold text-slate-800 block truncate">Pending Lab Scripts</span>
-                        <p className="text-xs text-slate-600 truncate hidden sm:block">Awaiting processing</p>
+                        <span className="text-xs font-bold text-slate-800  block truncate">Pending Lab Scripts</span>
+                        <p className="text-xs text-slate-600  truncate hidden sm:block">Awaiting processing</p>
                       </div>
                     </div>
-                    <span className="text-sm sm:text-lg font-bold text-blue-600 flex-shrink-0 ml-1 sm:ml-2">{pendingLabScripts}</span>
+                    <span className="text-sm sm:text-lg font-bold text-blue-600  flex-shrink-0 ml-1 sm:ml-2">{pendingLabScripts}</span>
                   </div>
                 </div>
 
-                <div className="relative p-1.5 sm:p-2.5 bg-gradient-to-r from-emerald-50/80 to-emerald-100/50 rounded-md sm:rounded-lg border border-blue-300/50">
+                <div className="relative p-1.5 sm:p-2.5 bg-gradient-to-r from-emerald-50/80 to-emerald-100/50   rounded-md sm:rounded-lg border border-blue-300/50 ">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0 flex-1">
-                      <div className="p-1 sm:p-1.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-md sm:rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30">
+                      <div className="p-1 sm:p-1.5 bg-gradient-to-br from-emerald-500 to-emerald-600   rounded-md sm:rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30 ">
                         <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-bold text-slate-800 block truncate">Completed Today</span>
-                        <p className="text-xs text-slate-600 truncate hidden sm:block">Finished appointments</p>
+                        <span className="text-xs font-bold text-slate-800  block truncate">Completed Today</span>
+                        <p className="text-xs text-slate-600  truncate hidden sm:block">Finished appointments</p>
                       </div>
                     </div>
-                    <span className="text-sm sm:text-lg font-bold text-emerald-600 flex-shrink-0 ml-1 sm:ml-2">
+                    <span className="text-sm sm:text-lg font-bold text-emerald-600  flex-shrink-0 ml-1 sm:ml-2">
                       {appointments.filter(a =>
                         a.date === new Date().toISOString().split('T')[0] &&
                         a.status === 'completed'
@@ -885,18 +885,18 @@ export function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="relative p-1.5 sm:p-2.5 bg-gradient-to-r from-amber-50/80 to-amber-100/50 rounded-md sm:rounded-lg border border-blue-300/50">
+                <div className="relative p-1.5 sm:p-2.5 bg-gradient-to-r from-amber-50/80 to-amber-100/50   rounded-md sm:rounded-lg border border-blue-300/50 ">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0 flex-1">
-                      <div className="p-1 sm:p-1.5 bg-gradient-to-br from-amber-500 to-amber-600 rounded-md sm:rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30">
+                      <div className="p-1 sm:p-1.5 bg-gradient-to-br from-amber-500 to-amber-600   rounded-md sm:rounded-lg shadow-sm flex-shrink-0 border border-blue-400/30 ">
                         <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <span className="text-xs font-bold text-slate-800 block truncate">Overdue Items</span>
-                        <p className="text-xs text-slate-600 truncate hidden sm:block">Require attention</p>
+                        <span className="text-xs font-bold text-slate-800  block truncate">Overdue Items</span>
+                        <p className="text-xs text-slate-600  truncate hidden sm:block">Require attention</p>
                       </div>
                     </div>
-                    <span className="text-sm sm:text-lg font-bold text-amber-600 flex-shrink-0 ml-1 sm:ml-2">
+                    <span className="text-sm sm:text-lg font-bold text-amber-600  flex-shrink-0 ml-1 sm:ml-2">
                       {labScripts.filter(script => {
                         if (!script.due_date) return false;
                         return new Date(script.due_date) < new Date() && script.status !== 'completed';

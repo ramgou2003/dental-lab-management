@@ -24,6 +24,9 @@ import { FinancialAgreementForm } from "@/components/FinancialAgreementForm";
 import { FinalDesignApprovalForm } from "@/components/FinalDesignApprovalForm";
 import { NewPatientPacketForm } from "@/components/NewPatientPacketForm";
 import { MedicalRecordsReleaseForm } from "@/components/MedicalRecordsReleaseForm";
+import { InformedConsentSmokingForm } from "@/components/InformedConsentSmokingForm";
+import { ThankYouPreSurgeryForm } from "@/components/ThankYouPreSurgeryForm";
+import { ThreeYearCarePackageForm } from "@/components/ThreeYearCarePackageForm";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
 import { usePatientAppointments } from "@/hooks/usePatientAppointments";
@@ -227,6 +230,9 @@ export function PatientProfilePage() {
   const [showFinalDesignApprovalForm, setShowFinalDesignApprovalForm] = useState(false);
   const [showNewPatientPacketForm, setShowNewPatientPacketForm] = useState(false);
   const [showMedicalRecordsReleaseForm, setShowMedicalRecordsReleaseForm] = useState(false);
+  const [showInformedConsentSmokingForm, setShowInformedConsentSmokingForm] = useState(false);
+  const [showThankYouPreSurgeryForm, setShowThankYouPreSurgeryForm] = useState(false);
+  const [showThreeYearCarePackageForm, setShowThreeYearCarePackageForm] = useState(false);
   const [selectedAdminFormType, setSelectedAdminFormType] = useState<string>("");
 
   // Surgical recall sheets hook
@@ -4434,6 +4440,9 @@ export function PatientProfilePage() {
                               <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
                               <SelectItem value="medical-records-release">Medical Records Release Form</SelectItem>
                               <SelectItem value="new-patient-packet">New Patient Packet</SelectItem>
+                              <SelectItem value="informed-consent-smoking">Informed Consent Form For Smoking</SelectItem>
+                              <SelectItem value="thank-you-pre-surgery">Thank You and Pre-Surgery Form</SelectItem>
+                              <SelectItem value="three-year-care-package">3-Year Care Package Enrollment Form</SelectItem>
                             </SelectContent>
                           </Select>
 
@@ -4452,6 +4461,12 @@ export function PatientProfilePage() {
                                 setShowMedicalRecordsReleaseForm(true);
                               } else if (selectedAdminFormType === 'new-patient-packet') {
                                 setShowNewPatientPacketForm(true);
+                              } else if (selectedAdminFormType === 'informed-consent-smoking') {
+                                setShowInformedConsentSmokingForm(true);
+                              } else if (selectedAdminFormType === 'thank-you-pre-surgery') {
+                                setShowThankYouPreSurgeryForm(true);
+                              } else if (selectedAdminFormType === 'three-year-care-package') {
+                                setShowThreeYearCarePackageForm(true);
                               } else {
                                 // Handle other form types here
                                 alert(`Opening ${selectedAdminFormType} form - Not implemented yet`);
@@ -11193,6 +11208,87 @@ export function PatientProfilePage() {
               }}
               onCancel={() => {
                 setShowNewPatientPacketForm(false);
+                setSelectedAdminFormType("");
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Informed Consent Form For Smoking Dialog */}
+      <Dialog open={showInformedConsentSmokingForm} onOpenChange={setShowInformedConsentSmokingForm}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          {patient && (
+            <InformedConsentSmokingForm
+              patientName={patient.full_name}
+              patientDateOfBirth={patient.date_of_birth}
+              onSubmit={(formData) => {
+                console.log('Informed consent smoking form submitted:', formData);
+                // Here you would typically save the form data to your backend
+                setShowInformedConsentSmokingForm(false);
+                setSelectedAdminFormType("");
+                // Show success message
+                toast({
+                  title: "Success",
+                  description: "Informed consent form for smoking saved successfully!",
+                });
+              }}
+              onCancel={() => {
+                setShowInformedConsentSmokingForm(false);
+                setSelectedAdminFormType("");
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Thank You and Pre-Surgery Form Dialog */}
+      <Dialog open={showThankYouPreSurgeryForm} onOpenChange={setShowThankYouPreSurgeryForm}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          {patient && (
+            <ThankYouPreSurgeryForm
+              patientName={patient.full_name}
+              patientDateOfBirth={patient.date_of_birth}
+              onSubmit={(formData) => {
+                console.log('Thank you and pre-surgery form submitted:', formData);
+                // Here you would typically save the form data to your backend
+                setShowThankYouPreSurgeryForm(false);
+                setSelectedAdminFormType("");
+                // Show success message
+                toast({
+                  title: "Success",
+                  description: "Thank you and pre-surgery form saved successfully!",
+                });
+              }}
+              onCancel={() => {
+                setShowThankYouPreSurgeryForm(false);
+                setSelectedAdminFormType("");
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 3-Year Care Package Enrollment Form Dialog */}
+      <Dialog open={showThreeYearCarePackageForm} onOpenChange={setShowThreeYearCarePackageForm}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          {patient && (
+            <ThreeYearCarePackageForm
+              patientName={patient.full_name}
+              patientDateOfBirth={patient.date_of_birth}
+              onSubmit={(formData) => {
+                console.log('3-Year Care Package form submitted:', formData);
+                // Here you would typically save the form data to your backend
+                setShowThreeYearCarePackageForm(false);
+                setSelectedAdminFormType("");
+                // Show success message
+                toast({
+                  title: "Success",
+                  description: "3-Year Care Package enrollment form saved successfully!",
+                });
+              }}
+              onCancel={() => {
+                setShowThreeYearCarePackageForm(false);
                 setSelectedAdminFormType("");
               }}
             />

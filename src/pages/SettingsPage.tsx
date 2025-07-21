@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { Settings, User, Bell, Shield, Database, Palette, Clock, Stethoscope } from "lucide-react";
+import { Settings, User, Bell, Shield, Database, Clock, Stethoscope } from "lucide-react";
 import { TeethSelectorDemo } from "@/components/TeethSelectorDemo";
 
 export function SettingsPage() {
@@ -12,7 +12,6 @@ export function SettingsPage() {
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
     { id: "data", label: "Data & Backup", icon: Database },
-    { id: "appearance", label: "Appearance", icon: Palette },
     { id: "scheduling", label: "Scheduling", icon: Clock },
     { id: "teeth-demo", label: "Teeth Selector Demo", icon: Stethoscope },
   ];
@@ -27,7 +26,7 @@ export function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Clinic Name</label>
-                  <input type="text" defaultValue="Dental Clinic" className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input type="text" defaultValue="Dental Clinic" className="w-full p-3 border border-slate-300 bg-white text-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Doctor Name</label>
@@ -142,6 +141,8 @@ export function SettingsPage() {
             </div>
           </div>
         );
+
+
 
       case "teeth-demo":
         return <TeethSelectorDemo />;

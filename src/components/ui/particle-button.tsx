@@ -29,7 +29,7 @@ function SuccessParticles({
             {[...Array(6)].map((_, i) => (
                 <motion.div
                     key={i}
-                    className="fixed w-1 h-1 bg-black dark:bg-white rounded-full"
+                    className="fixed w-1 h-1 bg-black rounded-full"
                     style={{ left: centerX, top: centerY }}
                     initial={{
                         scale: 0,

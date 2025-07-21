@@ -110,7 +110,7 @@ export interface LifestyleFactors {
     weeks?: number;
   };
   tobaccoUse: {
-    type: 'none' | 'few-cigarettes' | 'half-pack' | 'one-pack' | 'more-than-pack' | 'recreational-marijuana' | 'medicinal-marijuana';
+    type: 'none' | 'few-cigarettes' | 'half-pack' | 'one-pack' | 'more-than-pack' | 'vaping' | 'recreational-marijuana' | 'medicinal-marijuana';
     duration?: 'less-than-1' | '1-year' | '2-years' | '3-years' | '4-years' | '5-years' | '5-plus-years';
   };
   alcoholConsumption: {

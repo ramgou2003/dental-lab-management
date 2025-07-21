@@ -745,7 +745,6 @@ export function ManufacturingPage() {
                   <SelectContent>
                     <SelectItem value="light">Light</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
                     <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
@@ -881,7 +880,7 @@ export function ManufacturingPage() {
                           manufacturing_item_id: selectedMillingItem.id,
                           patient_name: selectedMillingItem.patient_name,
                           milling_location: millingLocation as 'in-house' | 'micro-dental-lab' | 'haus-milling' | 'evolution-dental-lab',
-                          gingiva_color: gingivaColor as 'light' | 'medium' | 'dark' | 'custom' | undefined,
+                          gingiva_color: gingivaColor as 'light' | 'medium' | 'custom' | undefined,
                           stained_and_glazed: stainedAndGlazed as 'yes' | 'no' | undefined,
                           cementation: cementation as 'yes' | 'no' | undefined,
                           additional_notes: additionalNotes || undefined,

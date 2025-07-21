@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -34,13 +35,56 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <Sonner />
-        {/* <PWAInstallPrompt /> */}
-        <OrientationGuard>
+const App = () => {
+  // Force light mode by removing any dark class and clearing theme-related localStorage
+  useEffect(() => {
+    // Remove dark class from html and body elements
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+
+    // Clear any theme-related localStorage items
+    localStorage.removeItem('theme');
+    localStorage.removeItem('vite-ui-theme');
+    localStorage.removeItem('ui-theme');
+    localStorage.removeItem('darkMode');
+    localStorage.removeItem('color-theme');
+
+    // Set light mode attributes
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.style.colorScheme = 'light';
+
+    // Force light mode on all elements
+    document.documentElement.classList.add('light');
+    document.body.style.backgroundColor = 'white';
+    document.body.style.color = '#0f172a';
+
+    // Remove any dark mode classes that might be added dynamically
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const target = mutation.target as Element;
+          if (target.classList.contains('dark')) {
+            target.classList.remove('dark');
+          }
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <Sonner />
+          {/* <PWAInstallPrompt /> */}
+          <OrientationGuard>
           <BrowserRouter>
             <Routes>
               {/* Public routes */}
@@ -144,6 +188,7 @@ const App = () => (
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
