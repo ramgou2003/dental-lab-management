@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Read-only form styles */
+.read-only-form input,
+.read-only-form textarea,
+.read-only-form select,
+.read-only-form button[role="combobox"] {
+  pointer-events: none !important;
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+  color: #374151 !important;
+  cursor: default !important;
+}
+
+.read-only-form input[type="checkbox"],
+.read-only-form input[type="radio"] {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+.read-only-form button:not(.navigation-button) {
+  pointer-events: none !important;
+  opacity: 0.6 !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -344,6 +367,67 @@ input[type="date"]::-moz-calendar-picker-indicator {
   width: 0;
   height: 0;
   display: none; /* Chrome, Safari, Opera */
+}
+
+/* Modern beautiful scrollbar for lead details */
+.scrollbar-modern {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+}
+
+.scrollbar-modern::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-modern::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.scrollbar-modern::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.4) 100%);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: all 0.3s ease;
+}
+
+.scrollbar-modern::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.7) 0%, rgba(139, 92, 246, 0.7) 100%);
+  background-clip: content-box;
+}
+
+.scrollbar-modern::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%);
+  background-clip: content-box;
+}
+
+/* Sleek minimal scrollbar for containers */
+.scrollbar-sleek {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.scrollbar-sleek::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-sleek::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-sleek::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.scrollbar-sleek::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.8);
+}
+
+.scrollbar-sleek::-webkit-scrollbar-thumb:active {
+  background: rgba(107, 114, 128, 0.9);
 }
 
 /* Disable transitions during sidebar resize for smooth real-time animation */

@@ -10,7 +10,11 @@ import { AuthGuard, PermissionGuard } from "@/components/auth/AuthGuard";
 import { LoginForm } from "@/components/auth/LoginForm";
 import Layout from "./components/Layout";
 import { DashboardPage } from "./pages/DashboardPage";
+import LeadInPage from "./pages/LeadInPage";
+import LeadDetailsPage from "./pages/LeadDetailsPage";
+import NewPatientLeadPage from "./pages/NewPatientLeadPage";
 import { AppointmentsPage } from "./pages/AppointmentsPage";
+import ConsultationPage from "./pages/ConsultationPage";
 import { PatientsPage } from "./pages/PatientsPage";
 import { PatientProfilePage } from "./pages/PatientProfilePage";
 import { LabPage } from "./pages/LabPage";
@@ -21,6 +25,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { UserManagementPage } from "./pages/UserManagementPage";
 import { ContactAdminPage } from "./pages/ContactAdminPage";
+import PublicPatientPacketPage from "./pages/PublicPatientPacketPage";
 import { UserManagementAccessDenied } from "./components/ui/AccessDenied";
 import NotFound from "./pages/NotFound";
 
@@ -104,6 +109,22 @@ const App = () => {
                   </AuthGuard>
                 }
               />
+              <Route
+                path="/new-patient"
+                element={
+                  <AuthGuard requireAuth={false}>
+                    <NewPatientLeadPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/patient-packet/:token"
+                element={
+                  <AuthGuard requireAuth={false}>
+                    <PublicPatientPacketPage />
+                  </AuthGuard>
+                }
+              />
 
               {/* Protected routes */}
               <Route
@@ -130,11 +151,21 @@ const App = () => {
                     </PermissionGuard>
                   }
                 />
+                <Route path="lead-in" element={<LeadInPage />} />
+                <Route path="lead-in/:leadId" element={<LeadDetailsPage />} />
                 <Route
                   path="appointments"
                   element={
                     <PermissionGuard permission="appointments.read">
                       <AppointmentsPage />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
+                  path="consultation"
+                  element={
+                    <PermissionGuard permission="appointments.read">
+                      <ConsultationPage />
                     </PermissionGuard>
                   }
                 />

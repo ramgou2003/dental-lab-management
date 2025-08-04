@@ -1,19 +1,18 @@
 import { useState, useEffect } from "react";
-import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  User, 
-  Heart, 
-  Pill, 
-  Stethoscope, 
-  Home, 
-  Smile, 
-  FileText, 
-  Shield, 
+import {
+  User,
+  Heart,
+  Pill,
+  Stethoscope,
+  Coffee,
+  Smile,
+  FileText,
+  Shield,
   PenTool,
   Clock,
   CheckCircle,
@@ -41,14 +40,16 @@ interface NewPatientPacketFormProps {
   patientName?: string;
   patientDateOfBirth?: string;
   patientGender?: string;
+  showWelcomeHeader?: boolean; // New prop to control logo and greetings
 }
 
-export function NewPatientPacketForm({ 
-  onSubmit, 
-  onCancel, 
+export function NewPatientPacketForm({
+  onSubmit,
+  onCancel,
   patientName = "",
   patientDateOfBirth = "",
-  patientGender = ""
+  patientGender = "",
+  showWelcomeHeader = false
 }: NewPatientPacketFormProps) {
   const [activeSection, setActiveSection] = useState(1);
   const [formData, setFormData] = useState<NewPatientFormData>({
@@ -206,86 +207,77 @@ export function NewPatientPacketForm({
 
   // Section configuration
   const sections = [
-    { 
-      id: 1, 
-      title: "Patient Info", 
-      icon: User, 
-      time: 5, 
-      description: "Basic information and contacts",
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
+    {
+      id: 1,
+      title: "Patient Information",
+      shortName: "Patient Info",
+      icon: User,
+      time: 5,
+      description: "Personal details and contact information"
     },
-    { 
-      id: 2, 
-      title: "Medical History", 
-      icon: Heart, 
-      time: 10, 
-      description: "Complete medical background",
-      color: "text-red-600",
-      bgColor: "bg-red-50"
+    {
+      id: 2,
+      title: "Medical History",
+      shortName: "Medical",
+      icon: Heart,
+      time: 10,
+      description: "Health conditions and medical background"
     },
-    { 
-      id: 3, 
-      title: "Allergies & Meds", 
-      icon: Pill, 
-      time: 5, 
-      description: "Allergies and medications",
-      color: "text-orange-600",
-      bgColor: "bg-orange-50"
+    {
+      id: 3,
+      title: "Allergies & Medications",
+      shortName: "Allergies",
+      icon: Pill,
+      time: 5,
+      description: "Current medications and known allergies"
     },
-    { 
-      id: 4, 
-      title: "Oral Health", 
-      icon: Stethoscope, 
-      time: 4, 
-      description: "Current dental status",
-      color: "text-green-600",
-      bgColor: "bg-green-50"
+    {
+      id: 4,
+      title: "Oral Health Status",
+      shortName: "Oral Health",
+      icon: Smile,
+      time: 4,
+      description: "Current dental condition and history"
     },
-    { 
-      id: 5, 
-      title: "Lifestyle", 
-      icon: Home, 
-      time: 3, 
-      description: "Lifestyle factors",
-      color: "text-purple-600",
-      bgColor: "bg-purple-50"
+    {
+      id: 5,
+      title: "Lifestyle Factors",
+      shortName: "Lifestyle",
+      icon: Coffee,
+      time: 3,
+      description: "Habits that may affect treatment"
     },
-    { 
-      id: 6, 
-      title: "Comfort", 
-      icon: Smile, 
-      time: 5, 
-      description: "Patient preferences",
-      color: "text-pink-600",
-      bgColor: "bg-pink-50"
+    {
+      id: 6,
+      title: "Comfort Preferences",
+      shortName: "Comfort",
+      icon: Shield,
+      time: 5,
+      description: "Anxiety management and comfort options"
     },
-    { 
-      id: 7, 
-      title: "Policies", 
-      icon: FileText, 
-      time: 3, 
-      description: "Office policies",
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50"
+    {
+      id: 7,
+      title: "Office Policies",
+      shortName: "Policies",
+      icon: FileText,
+      time: 3,
+      description: "Financial and appointment policies"
     },
-    { 
-      id: 8, 
-      title: "Legal", 
-      icon: Shield, 
-      time: 3, 
-      description: "Legal documentation",
-      color: "text-gray-600",
-      bgColor: "bg-gray-50"
+    {
+      id: 8,
+      title: "Legal Documentation",
+      shortName: "Legal",
+      icon: PenTool,
+      time: 3,
+      description: "Consent forms and legal agreements"
     },
-    { 
-      id: 9, 
-      title: "Signatures", 
-      icon: PenTool, 
-      time: 2, 
-      description: "Final signatures",
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50"
+    {
+      id: 9,
+      title: "Signatures",
+      shortName: "Signatures",
+      icon: CheckCircle,
+      time: 2,
+      description: "Patient attestation and signatures"
     }
   ];
 
@@ -417,40 +409,32 @@ export function NewPatientPacketForm({
         relationship: "",
         phone: ""
       },
-      referredBy: "",
+      email: "",
 
-      // Section 2: Medical History
-      medicalHistory: {
-        heartConditions: [],
-        bloodPressure: [],
-        bloodDisorders: [],
-        respiratoryConditions: [],
-        liverKidneyConditions: [],
-        diabetesEndocrine: [],
-        neurologicalConditions: [],
-        psychiatricConditions: [],
-        cancerTumors: [],
-        infectiousDiseases: [],
-        immuneAutoimmune: [],
-        boneJointConditions: [],
-        skinConditions: [],
-        eyeEarNoseThroat: [],
-        additionalConditions: [],
-        none: false
-      },
-      hospitalizations: {
-        surgeries: "",
-        emergencyVisits: "",
-        none: false
-      },
-      familyHistory: {
+      // Section 2: Complete Medical History
+      criticalConditions: {
+        acidReflux: false,
+        cancer: { has: false, type: "" },
+        depressionAnxiety: false,
+        diabetes: { has: false, type: undefined },
         heartDisease: false,
-        cancer: false,
-        diabetes: false,
-        bleedingDisorders: false,
-        mentalHealth: false,
+        periodontalDisease: false,
+        substanceAbuse: false,
+        highBloodPressure: false,
         other: "",
         none: false
+      },
+      systemSpecific: {
+        respiratory: [],
+        cardiovascular: [],
+        gastrointestinal: [],
+        neurological: [],
+        endocrineRenal: []
+      },
+      additionalConditions: [],
+      recentHealthChanges: {
+        hasChanges: false,
+        description: ""
       },
 
       // Section 3: Allergies & Medications
@@ -553,13 +537,30 @@ export function NewPatientPacketForm({
   const currentSection = sections.find(s => s.id === activeSection);
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <DialogHeader className="mb-6">
-        <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-          <FileText className="h-6 w-6" />
-          New Patient Packet
-        </DialogTitle>
-      </DialogHeader>
+    <div className="w-full">
+      {/* Logo and Greeting Section - Only show on public links */}
+      {showWelcomeHeader && (
+        <div className="text-center mb-8">
+          <div className="mb-6">
+            <img
+              src="/logo-wide.png"
+              alt="Practice Logo"
+              className="h-16 mx-auto mb-4"
+            />
+          </div>
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome{patientName ? `, ${patientName}` : ''}!
+            </h1>
+            <p className="text-lg text-gray-600 mb-2">
+              Thank you for choosing our practice for your dental care.
+            </p>
+            <p className="text-sm text-gray-500">
+              Please complete this patient packet to help us provide you with the best possible care.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Progress Header */}
       <Card className="mb-6">
@@ -585,33 +586,31 @@ export function NewPatientPacketForm({
           <Progress value={progressPercentage} className="mb-4" />
           
           {/* Section Navigation */}
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-2">
             {sections.map((section) => {
               const Icon = section.icon;
               const isActive = section.id === activeSection;
               const isCompleted = section.id < activeSection;
-              
+
               return (
                 <button
                   key={section.id}
                   onClick={() => handleSectionClick(section.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                     isActive
-                      ? `${section.bgColor} ${section.color} border border-current`
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : isCompleted
-                      ? 'bg-blue-50 text-blue-600 border border-blue-200'
-                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      ? 'border-green-200 bg-green-50 text-green-700 hover:border-green-300'
+                      : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'
                   }`}
+                  title={section.title}
                 >
                   {isCompleted ? (
-                    <CheckCircle className="h-3 w-3" />
+                    <CheckCircle className="h-4 w-4 mx-auto mb-1" />
                   ) : (
-                    <Icon className="h-3 w-3" />
+                    <Icon className="h-4 w-4 mx-auto mb-1" />
                   )}
-                  <span>{section.title}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {section.time}m
-                  </Badge>
+                  <div className="text-xs font-medium text-center leading-tight">{section.shortName}</div>
                 </button>
               );
             })}

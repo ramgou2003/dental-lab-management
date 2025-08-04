@@ -80,8 +80,10 @@ export function useAppointments() {
     let subscription: any = null;
 
     if (typeof supabase.channel === 'function') {
+      // Create a unique channel name to avoid conflicts
+      const channelName = `appointments_changes_${Math.random().toString(36).substr(2, 9)}`;
       subscription = supabase
-        .channel('appointments_changes')
+        .channel(channelName)
         .on(
           'postgres_changes',
           {

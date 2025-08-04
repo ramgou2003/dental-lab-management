@@ -47,7 +47,8 @@ export function AuthGuard({
   }
 
   // If user is authenticated but trying to access auth pages (login, signup)
-  if (!requireAuth && user) {
+  // Allow access to new-patient page even for authenticated users
+  if (!requireAuth && user && location.pathname !== '/new-patient') {
     return <Navigate to="/dashboard" replace />;
   }
 

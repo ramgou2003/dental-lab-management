@@ -653,6 +653,138 @@ export type Database = {
         }
         Relationships: []
       }
+      new_patient_leads: {
+        Row: {
+          id: string
+          created_at: string | null
+          updated_at: string | null
+          reason_for_visit: string | null
+          dental_problems: string[] | null
+          immediate_needs: string[] | null
+          need_loved_one_help: string | null
+          use_financing: string | null
+          credit_score: string | null
+          barriers: string[] | null
+          personal_first_name: string | null
+          personal_last_name: string | null
+          personal_phone: string | null
+          personal_email: string | null
+          home_address: string | null
+          street_address: string | null
+          city: string | null
+          state: string | null
+          zip_code: string | null
+          medical_conditions: string[] | null
+          has_medical_insurance: string | null
+          best_contact_time: string | null
+          phone_call_preference: string | null
+          implant_type: string | null
+          urgency: string | null
+          preferred_contact: string | null
+          best_time_to_call: string | null
+          hear_about_us: string | null
+          additional_notes: string | null
+          agree_to_terms: boolean | null
+          first_name: string | null
+          last_name: string | null
+          email: string | null
+          phone: string | null
+          date_of_birth: string | null
+          address: string | null
+          city: string | null
+          state: string | null
+          zip_code: string | null
+          gender: string | null
+          status: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string | null
+          updated_at?: string | null
+          reason_for_visit?: string | null
+          dental_problems?: string[] | null
+          immediate_needs?: string[] | null
+          need_loved_one_help?: string | null
+          use_financing?: string | null
+          credit_score?: string | null
+          barriers?: string[] | null
+          personal_first_name?: string | null
+          personal_last_name?: string | null
+          personal_phone?: string | null
+          personal_email?: string | null
+          home_address?: string | null
+          street_address?: string | null
+          city?: string | null
+          state?: string | null
+          zip_code?: string | null
+          medical_conditions?: string[] | null
+          has_medical_insurance?: string | null
+          best_contact_time?: string | null
+          phone_call_preference?: string | null
+          implant_type?: string | null
+          urgency?: string | null
+          preferred_contact?: string | null
+          best_time_to_call?: string | null
+          hear_about_us?: string | null
+          additional_notes?: string | null
+          agree_to_terms?: boolean | null
+          first_name?: string | null
+          last_name?: string | null
+          email?: string | null
+          phone?: string | null
+          date_of_birth?: string | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          zip_code?: string | null
+          gender?: string | null
+          status?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string | null
+          updated_at?: string | null
+          reason_for_visit?: string | null
+          dental_problems?: string[] | null
+          immediate_needs?: string[] | null
+          need_loved_one_help?: string | null
+          use_financing?: string | null
+          credit_score?: string | null
+          barriers?: string[] | null
+          personal_first_name?: string | null
+          personal_last_name?: string | null
+          personal_phone?: string | null
+          personal_email?: string | null
+          home_address?: string | null
+          street_address?: string | null
+          city?: string | null
+          state?: string | null
+          zip_code?: string | null
+          medical_conditions?: string[] | null
+          has_medical_insurance?: string | null
+          best_contact_time?: string | null
+          phone_call_preference?: string | null
+          implant_type?: string | null
+          urgency?: string | null
+          preferred_contact?: string | null
+          best_time_to_call?: string | null
+          hear_about_us?: string | null
+          additional_notes?: string | null
+          agree_to_terms?: boolean | null
+          first_name?: string | null
+          last_name?: string | null
+          email?: string | null
+          phone?: string | null
+          date_of_birth?: string | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          zip_code?: string | null
+          gender?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

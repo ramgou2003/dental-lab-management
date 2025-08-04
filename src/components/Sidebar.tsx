@@ -1,4 +1,4 @@
-import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, GripVertical, Shield } from "lucide-react";
+import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, GripVertical, Shield, UserPlus, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -21,10 +21,20 @@ const navigation = [
     section: "dashboard",
     icon: House
   }, {
+    name: "Lead-in",
+    href: "/lead-in",
+    section: "lead-in",
+    icon: UserPlus
+  }, {
     name: "Appointments",
     href: "/appointments",
     section: "appointments",
     icon: Calendar
+  }, {
+    name: "Consultation",
+    href: "/consultation",
+    section: "consultation",
+    icon: Stethoscope
   }, {
     name: "Patients",
     href: "/patients",

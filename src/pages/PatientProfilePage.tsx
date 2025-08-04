@@ -77,6 +77,7 @@ import { DeleteSurgicalRecallSheetDialog } from "@/components/DeleteSurgicalReca
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSurgicalRecallSheets } from "@/hooks/useSurgicalRecallSheets";
+import { savePatientPacket } from "@/services/patientPacketService";
 
 export function PatientProfilePage() {
   const { patientId } = useParams<{ patientId: string }>();
@@ -11195,16 +11196,46 @@ export function PatientProfilePage() {
               patientName={patient.full_name}
               patientDateOfBirth={patient.date_of_birth}
               patientGender={patient.gender}
-              onSubmit={(formData) => {
+              showWelcomeHeader={false}
+              onSubmit={async (formData) => {
                 console.log('New patient packet submitted:', formData);
-                // Here you would typically save the form data to your backend
-                setShowNewPatientPacketForm(false);
-                setSelectedAdminFormType("");
-                // Show success message
-                toast({
-                  title: "Success",
-                  description: "New patient packet saved successfully!",
-                });
+
+                try {
+                  // Save the patient packet data using our service
+                  const { data, error } = await savePatientPacket(
+                    formData,
+                    patient.id, // patient_id for internal submissions
+                    undefined,  // no lead_id for internal submissions
+                    'internal'  // submission source
+                  );
+
+                  if (error) {
+                    console.error('Error saving patient packet:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to save patient packet. Please try again.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  console.log('Patient packet saved successfully:', data);
+                  setShowNewPatientPacketForm(false);
+                  setSelectedAdminFormType("");
+
+                  // Show success message
+                  toast({
+                    title: "Success",
+                    description: "New patient packet saved successfully!",
+                  });
+                } catch (error) {
+                  console.error('Unexpected error saving patient packet:', error);
+                  toast({
+                    title: "Error",
+                    description: "An unexpected error occurred. Please try again.",
+                    variant: "destructive",
+                  });
+                }
               }}
               onCancel={() => {
                 setShowNewPatientPacketForm(false);

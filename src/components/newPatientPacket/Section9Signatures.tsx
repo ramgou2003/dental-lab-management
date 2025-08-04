@@ -17,8 +17,17 @@ interface Section9SignaturesProps {
 }
 
 export function Section9Signatures({ formData, onInputChange, onNestedInputChange }: Section9SignaturesProps) {
-  
+
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
+
+  // Add error boundary and logging
+  if (!formData) {
+    console.error('Section9Signatures: formData is undefined');
+    return <div>Error: Form data not available</div>;
+  }
+
+  // Debug logging for date issues
+  console.log('Section9Signatures formData.date:', formData.date, typeof formData.date);
 
   // Patient attestation items
   const attestationItems = [
@@ -58,24 +67,34 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
   };
 
   // Check completion status with error handling
-  const allAttestationsChecked = formData.patientAttestation ? Object.values(formData.patientAttestation).every(Boolean) : false;
-  const hasPatientName = formData.patientNameSignature ? formData.patientNameSignature.trim().length > 0 : false;
-  const hasSignature = formData.signature ? formData.signature.length > 0 : false;
-  const hasDate = formData.date ? true : false;
+  const allAttestationsChecked = formData?.patientAttestation ? Object.values(formData.patientAttestation).every(Boolean) : false;
+  const hasPatientName = formData?.patientNameSignature ? formData.patientNameSignature.trim().length > 0 : false;
+  const hasSignature = formData?.signature ? formData.signature.length > 0 : false;
+  const hasDate = formData?.date ? true : false;
 
   const isSignatureSectionComplete = allAttestationsChecked && hasPatientName && hasSignature && hasDate;
 
   // Format date for display with error handling
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string | any) => {
     try {
-      if (!date || !(date instanceof Date)) {
-        return new Date().toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+      let dateObj: Date;
+
+      if (!date) {
+        dateObj = new Date();
+      } else if (date instanceof Date) {
+        dateObj = date;
+      } else if (typeof date === 'string') {
+        dateObj = new Date(date);
+      } else {
+        dateObj = new Date();
       }
-      return date.toLocaleDateString('en-US', {
+
+      // Check if the date is valid
+      if (isNaN(dateObj.getTime())) {
+        dateObj = new Date();
+      }
+
+      return dateObj.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
@@ -126,7 +145,7 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
                 <div className="flex items-start space-x-3">
                   <Checkbox
                     id={item.key}
-                    checked={formData.patientAttestation ? (formData.patientAttestation[item.key as keyof typeof formData.patientAttestation] || false) : false}
+                    checked={formData?.patientAttestation ? (formData.patientAttestation[item.key as keyof typeof formData.patientAttestation] || false) : false}
                     onCheckedChange={(checked) => handleAttestationChange(item.key, checked as boolean)}
                     className="mt-1"
                   />
@@ -164,7 +183,7 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
             </Label>
             <Input
               id="patientNameSignature"
-              value={formData.patientNameSignature || ''}
+              value={formData?.patientNameSignature || ''}
               onChange={(e) => onInputChange('patientNameSignature', e.target.value)}
               placeholder="Please print your full legal name"
               required
@@ -177,7 +196,7 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
               <span className="text-red-500">*</span> Patient Signature
             </Label>
             <div className="mt-2">
-              {formData.signature && formData.signature.length > 0 ? (
+              {formData?.signature && formData.signature.length > 0 ? (
                 <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-green-800">Signature Captured</span>
@@ -191,9 +210,9 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
                       Clear
                     </Button>
                   </div>
-                  <img 
-                    src={formData.signature} 
-                    alt="Patient Signature" 
+                  <img
+                    src={formData?.signature || ''}
+                    alt="Patient Signature"
                     className="max-w-full h-20 border border-gray-300 rounded bg-white"
                   />
                 </div>
@@ -219,7 +238,18 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
             <Input
               id="signatureDate"
               type="date"
-              value={formData.date ? formData.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+              value={(() => {
+                try {
+                  if (formData?.date) {
+                    const date = formData.date instanceof Date ? formData.date : new Date(formData.date);
+                    return date.toISOString().split('T')[0];
+                  }
+                  return new Date().toISOString().split('T')[0];
+                } catch (error) {
+                  console.error('Error formatting date:', error);
+                  return new Date().toISOString().split('T')[0];
+                }
+              })()}
               onChange={(e) => onInputChange('date', new Date(e.target.value))}
               required
             />
@@ -301,8 +331,8 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
           <CardContent className="text-sm text-emerald-800">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p><strong>Patient Name:</strong> {formData.patientNameSignature || 'Not provided'}</p>
-                <p><strong>Completion Date:</strong> {formatDate(formData.date || new Date())}</p>
+                <p><strong>Patient Name:</strong> {formData?.patientNameSignature || 'Not provided'}</p>
+                <p><strong>Completion Date:</strong> {formatDate(formData?.date || new Date())}</p>
               </div>
               <div>
                 <p><strong>Form Status:</strong> Complete</p>
