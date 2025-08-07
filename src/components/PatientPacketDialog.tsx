@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,10 +21,12 @@ import {
   FileText,
   Clock,
   User,
-  ExternalLink
+  ExternalLink,
+  Edit3
 } from "lucide-react";
 import { FilledPatientPacketViewer } from "@/components/FilledPatientPacketViewer";
-import { getPatientPacketsByLeadId, getPatientPacket } from "@/services/patientPacketService";
+import { NewPatientPacketForm, NewPatientPacketFormRef } from "@/components/NewPatientPacketForm";
+import { getPatientPacketsByLeadId, getPatientPacket, updatePatientPacket } from "@/services/patientPacketService";
 import { supabase } from "@/integrations/supabase/client";
 import { NewPatientFormData } from "@/types/newPatientPacket";
 
@@ -50,6 +52,10 @@ export function PatientPacketDialog({
   const [patientPackets, setPatientPackets] = useState<any[]>([]);
   const [selectedPacket, setSelectedPacket] = useState<any>(null);
   const [showPacketViewer, setShowPacketViewer] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingPacketId, setEditingPacketId] = useState<string | null>(null);
+  const [isFormReady, setIsFormReady] = useState(false);
+  const formRef = useRef<NewPatientPacketFormRef>(null);
 
   useEffect(() => {
     if (open) {
@@ -147,10 +153,55 @@ export function PatientPacketDialog({
       }
 
       setSelectedPacket(formData);
+      setEditingPacketId(packet.id);
+      setIsEditMode(false); // Start in view mode
       setShowPacketViewer(true);
     } catch (error) {
       console.error('Error opening packet viewer:', error);
       toast.error('Failed to open packet viewer');
+    }
+  };
+
+  const handleEditPacket = () => {
+    setIsFormReady(false);
+    setIsEditMode(true);
+    // Small delay to ensure state is updated before rendering form
+    setTimeout(() => {
+      setIsFormReady(true);
+    }, 100);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setIsFormReady(false);
+  };
+
+  const handleSavePacket = async (formData: NewPatientFormData) => {
+    if (!editingPacketId) {
+      toast.error('No packet selected for editing');
+      return;
+    }
+
+    try {
+      const { data, error } = await updatePatientPacket(editingPacketId, formData, 'internal');
+
+      if (error) {
+        console.error('Error updating patient packet:', error);
+        toast.error('Failed to update patient packet');
+        return;
+      }
+
+      // Update the selected packet with new data
+      setSelectedPacket(formData);
+      setIsEditMode(false);
+
+      // Refresh the packet list
+      await checkPacketStatus();
+
+      toast.success('Patient packet updated successfully!');
+    } catch (error) {
+      console.error('Unexpected error updating packet:', error);
+      toast.error('An unexpected error occurred');
     }
   };
 
@@ -208,14 +259,74 @@ export function PatientPacketDialog({
 
   if (showPacketViewer && selectedPacket) {
     return (
-      <Dialog open={showPacketViewer} onOpenChange={setShowPacketViewer}>
+      <Dialog open={showPacketViewer} onOpenChange={() => {
+        setShowPacketViewer(false);
+        setIsEditMode(false);
+        setEditingPacketId(null);
+        setIsFormReady(false);
+      }}>
         <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-0">
           <div className="p-6">
-            <FilledPatientPacketViewer
-              formData={selectedPacket}
-              submittedAt={selectedPacket.created_at || selectedPacket.submitted_at}
-              onClose={() => setShowPacketViewer(false)}
-            />
+            {isEditMode ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-4 pr-8">
+                  <h2 className="text-xl font-semibold">Edit Patient Packet</h2>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleCancelEdit}
+                      size="sm"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        formRef.current?.submitForm();
+                      }}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Update Form
+                    </Button>
+                  </div>
+                </div>
+                {isFormReady ? (
+                  <NewPatientPacketForm
+                    ref={formRef}
+                    key={`edit-${editingPacketId}-${Date.now()}`}
+                    initialData={selectedPacket}
+                    onSubmit={handleSavePacket}
+                    submitButtonText="Save Changes"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <p className="text-gray-600">Loading form...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-4 pr-8">
+                  <h2 className="text-xl font-semibold">Patient Packet Details</h2>
+                  <Button
+                    onClick={handleEditPacket}
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    Edit
+                  </Button>
+                </div>
+                <FilledPatientPacketViewer
+                  formData={selectedPacket}
+                  submittedAt={selectedPacket.created_at || selectedPacket.submitted_at}
+                  onClose={() => setShowPacketViewer(false)}
+                />
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

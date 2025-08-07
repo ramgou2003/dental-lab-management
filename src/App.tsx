@@ -8,6 +8,7 @@ import OrientationGuard from "@/components/OrientationGuard";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthGuard, PermissionGuard } from "@/components/auth/AuthGuard";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Layout from "./components/Layout";
 import { DashboardPage } from "./pages/DashboardPage";
 import LeadInPage from "./pages/LeadInPage";
@@ -15,6 +16,7 @@ import LeadDetailsPage from "./pages/LeadDetailsPage";
 import NewPatientLeadPage from "./pages/NewPatientLeadPage";
 import { AppointmentsPage } from "./pages/AppointmentsPage";
 import ConsultationPage from "./pages/ConsultationPage";
+import ConsultationSessionPage from "./pages/ConsultationSessionPage";
 import { PatientsPage } from "./pages/PatientsPage";
 import { PatientProfilePage } from "./pages/PatientProfilePage";
 import { LabPage } from "./pages/LabPage";
@@ -41,6 +43,33 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
+  // Handle chunk loading errors
+  useEffect(() => {
+    const handleChunkError = (event: ErrorEvent) => {
+      if (event.message?.includes('Loading chunk') || event.message?.includes('ChunkLoadError')) {
+        console.warn('Chunk loading error detected, reloading page...');
+        window.location.reload();
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason?.message?.includes('Loading chunk') ||
+          event.reason?.message?.includes('ChunkLoadError')) {
+        console.warn('Chunk loading promise rejection detected, reloading page...');
+        event.preventDefault();
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('error', handleChunkError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleChunkError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   // Force light mode by removing any dark class and clearing theme-related localStorage
   useEffect(() => {
     // Remove dark class from html and body elements
@@ -91,7 +120,8 @@ const App = () => {
           {/* <PWAInstallPrompt /> */}
           <OrientationGuard>
           <BrowserRouter>
-            <Routes>
+            <ErrorBoundary>
+              <Routes>
               {/* Public routes */}
               <Route
                 path="/login"
@@ -170,6 +200,14 @@ const App = () => {
                   }
                 />
                 <Route
+                  path="consultation/:appointmentId"
+                  element={
+                    <PermissionGuard permission="appointments.read">
+                      <ConsultationSessionPage />
+                    </PermissionGuard>
+                  }
+                />
+                <Route
                   path="patients"
                   element={
                     <PermissionGuard permission="patients.read">
@@ -213,7 +251,8 @@ const App = () => {
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
-            </Routes>
+              </Routes>
+            </ErrorBoundary>
           </BrowserRouter>
         </OrientationGuard>
       </AuthProvider>

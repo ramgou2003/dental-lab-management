@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { NewPatientFormData } from '@/types/newPatientPacket';
-import { NewPatientPacketDB, PatientPacketView, PatientPacketSummary } from '@/types/supabasePatientPacket';
+import { NewPatientPacketDB, PatientPacketSummary } from '@/types/supabasePatientPacket';
 import { convertFormDataToDatabase, convertDatabaseToFormData } from '@/utils/patientPacketConverter';
 
 /**
@@ -111,10 +111,10 @@ export async function getPatientPacket(packetId: string): Promise<{ data: NewPat
 /**
  * Get all patient packets for a specific patient
  */
-export async function getPatientPacketsByPatientId(patientId: string): Promise<{ data: PatientPacketView[] | null; error: any }> {
+export async function getPatientPacketsByPatientId(patientId: string): Promise<{ data: NewPatientPacketDB[] | null; error: any }> {
   try {
     const { data, error } = await supabase
-      .from('patient_packets_view')
+      .from('new_patient_packets')
       .select('*')
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false });
@@ -134,10 +134,10 @@ export async function getPatientPacketsByPatientId(patientId: string): Promise<{
 /**
  * Get all patient packets for a specific lead
  */
-export async function getPatientPacketsByLeadId(leadId: string): Promise<{ data: PatientPacketView[] | null; error: any }> {
+export async function getPatientPacketsByLeadId(leadId: string): Promise<{ data: NewPatientPacketDB[] | null; error: any }> {
   try {
     const { data, error } = await supabase
-      .from('patient_packets_view')
+      .from('new_patient_packets')
       .select('*')
       .eq('lead_id', leadId)
       .order('created_at', { ascending: false });
@@ -223,10 +223,10 @@ export async function getAllPatientPackets(
   page: number = 1,
   pageSize: number = 50,
   status?: 'draft' | 'completed' | 'submitted'
-): Promise<{ data: PatientPacketView[] | null; count: number | null; error: any }> {
+): Promise<{ data: NewPatientPacketDB[] | null; count: number | null; error: any }> {
   try {
     let query = supabase
-      .from('patient_packets_view')
+      .from('new_patient_packets')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range((page - 1) * pageSize, page * pageSize - 1);

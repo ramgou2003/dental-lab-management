@@ -8,15 +8,6 @@ interface ConsultationTabsProps {
 
 const tabs = [
   {
-    id: "patients",
-    label: "Patients",
-    icon: Users,
-    color: "text-slate-600",
-    activeColor: "text-indigo-600",
-    bgColor: "bg-indigo-50",
-    borderColor: "border-indigo-500"
-  },
-  {
     id: "consultations",
     label: "Consultations",
     icon: Calendar,
@@ -24,13 +15,21 @@ const tabs = [
     activeColor: "text-blue-600",
     bgColor: "bg-blue-50",
     borderColor: "border-blue-500"
+  },
+  {
+    id: "patients",
+    label: "Patients",
+    icon: Users,
+    color: "text-slate-600",
+    activeColor: "text-indigo-600",
+    bgColor: "bg-indigo-50",
+    borderColor: "border-indigo-500"
   }
 ];
 
 export function ConsultationTabs({ activeTab, onTabChange }: ConsultationTabsProps) {
   return (
-    <div className="px-4 py-3 bg-white border-b border-gray-200">
-      <div className="flex gap-2">
+    <div className="flex gap-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -51,7 +50,6 @@ export function ConsultationTabs({ activeTab, onTabChange }: ConsultationTabsPro
             </button>
           );
         })}
-      </div>
     </div>
   );
 }

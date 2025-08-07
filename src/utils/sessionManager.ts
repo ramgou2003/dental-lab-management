@@ -10,6 +10,9 @@ export class SessionManager {
   private lastActivity = Date.now();
   private currentUserId: string | null = null;
   private realtimeChannel: any = null;
+  private isInitialized = false;
+  private subscriptionRetryCount = 0;
+  private maxRetries = 3;
 
   private constructor() {
     this.setupActivityTracking();
@@ -26,7 +29,13 @@ export class SessionManager {
    * Initialize session management with automatic token refresh
    */
   public async initialize(): Promise<void> {
+    if (this.isInitialized) {
+      console.log('SessionManager: Already initialized, skipping...');
+      return;
+    }
+
     try {
+      this.isInitialized = true;
       // Get current session
       const { data: { session }, error } = await supabase.auth.getSession();
 
@@ -251,9 +260,18 @@ export class SessionManager {
     if (!this.currentUserId) return;
 
     try {
+      // Clean up existing channel first
+      if (this.realtimeChannel) {
+        supabase.removeChannel(this.realtimeChannel);
+        this.realtimeChannel = null;
+      }
+
+      // Create unique channel name to avoid conflicts
+      const channelName = `user-status-${this.currentUserId}-${Date.now()}`;
+
       // Listen for changes to the current user's profile
       this.realtimeChannel = supabase
-        .channel('user-status-changes')
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -270,25 +288,33 @@ export class SessionManager {
         .subscribe((status) => {
           console.log('SessionManager: Real-time subscription status:', status);
           if (status === 'SUBSCRIPTION_ERROR') {
-            console.warn('SessionManager: Real-time subscription failed, falling back to polling');
+            console.warn('SessionManager: Real-time subscription failed');
+            this.handleSubscriptionError();
+          } else if (status === 'SUBSCRIBED') {
+            this.subscriptionRetryCount = 0; // Reset retry count on successful subscription
           }
         });
 
-      // Also listen for force logout notifications
-      const forceLogoutChannel = supabase
-        .channel(`force-logout-${this.currentUserId}`)
-        .on('broadcast', { event: 'force_logout' }, (payload) => {
-          console.log('SessionManager: Force logout received:', payload);
-          this.handleForceLogout(payload.payload);
-        })
-        .subscribe((status) => {
-          if (status === 'SUBSCRIPTION_ERROR') {
-            console.warn('SessionManager: Force logout subscription failed');
-          }
-        });
     } catch (error) {
       console.error('SessionManager: Error setting up real-time listeners:', error);
       // Continue without real-time features if they fail
+    }
+  }
+
+  /**
+   * Handle subscription errors with retry logic
+   */
+  private handleSubscriptionError(): void {
+    if (this.subscriptionRetryCount < this.maxRetries) {
+      this.subscriptionRetryCount++;
+      console.log(`SessionManager: Retrying subscription (attempt ${this.subscriptionRetryCount}/${this.maxRetries})`);
+
+      // Retry after a delay
+      setTimeout(() => {
+        this.setupRealtimeStatusListener();
+      }, 2000 * this.subscriptionRetryCount); // Exponential backoff
+    } else {
+      console.warn('SessionManager: Max subscription retries reached, falling back to polling only');
     }
   }
 
@@ -343,8 +369,14 @@ export class SessionManager {
     }
 
     if (this.realtimeChannel) {
-      supabase.removeChannel(this.realtimeChannel);
-      this.realtimeChannel = null;
+      try {
+        this.realtimeChannel.unsubscribe();
+        supabase.removeChannel(this.realtimeChannel);
+      } catch (error) {
+        console.warn('SessionManager: Error cleaning up realtime channel:', error);
+      } finally {
+        this.realtimeChannel = null;
+      }
     }
 
     console.log('SessionManager: Stopped user status monitoring');
@@ -442,6 +474,8 @@ export class SessionManager {
     this.clearRefreshTimer();
     this.clearActivityTimer();
     this.stopUserStatusMonitoring();
+    this.isInitialized = false;
+    this.subscriptionRetryCount = 0;
   }
 }
 

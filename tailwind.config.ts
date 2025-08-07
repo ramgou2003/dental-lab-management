@@ -8,7 +8,7 @@ export default {
 		"./src/**/*.{ts,tsx}",
 	],
 	prefix: "",
-	darkMode: false, // Completely disable dark mode
+	darkMode: "media", // Use media query for dark mode
 	theme: {
 		container: {
 			center: true,

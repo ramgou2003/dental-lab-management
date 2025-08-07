@@ -25,8 +25,8 @@ export const enhanceLabInstructions = async (instructions: string): Promise<stri
   try {
     const genAI = getGeminiAI();
     
-    // Use Gemini 1.5 Flash (free model with generous limits)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Use Gemini 2.5 Flash Lite (latest model with improved performance)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     
     const prompt = `You are a professional dental laboratory communication specialist. Rewrite these dental design instructions to be professionally formatted with correct grammar and proper dental terminology:
 
@@ -92,7 +92,7 @@ Respond with only the professionally rewritten instructions, no additional comme
 export const testGeminiConnection = async (): Promise<boolean> => {
   try {
     const genAI = getGeminiAI();
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     
     // Simple test prompt
     const result = await model.generateContent("Say 'Hello' in one word.");

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,23 +36,33 @@ import { NewPatientFormData } from "@/types/newPatientPacket";
 
 interface NewPatientPacketFormProps {
   onSubmit: (formData: NewPatientFormData) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   patientName?: string;
   patientDateOfBirth?: string;
   patientGender?: string;
   showWelcomeHeader?: boolean; // New prop to control logo and greetings
+  initialData?: NewPatientFormData; // New prop for prefilling form data
+  submitButtonText?: string; // Custom submit button text
 }
 
-export function NewPatientPacketForm({
+export interface NewPatientPacketFormRef {
+  submitForm: () => void;
+}
+
+export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatientPacketFormProps>(({
   onSubmit,
   onCancel,
   patientName = "",
   patientDateOfBirth = "",
   patientGender = "",
-  showWelcomeHeader = false
-}: NewPatientPacketFormProps) {
+  showWelcomeHeader = false,
+  initialData,
+  submitButtonText = "Submit Patient Packet"
+}, ref) => {
   const [activeSection, setActiveSection] = useState(1);
-  const [formData, setFormData] = useState<NewPatientFormData>({
+
+  // Helper function to get default form data
+  const getDefaultFormData = (): NewPatientFormData => ({
     // Section 1: Patient Identification & Contacts
     firstName: patientName.split(' ')[0] || "",
     lastName: patientName.split(' ').slice(1).join(' ') || "",
@@ -205,6 +215,28 @@ export function NewPatientPacketForm({
     date: new Date()
   });
 
+  const [formData, setFormData] = useState<NewPatientFormData>(() => {
+    // Use a function to ensure proper initialization
+    if (initialData) {
+      return initialData;
+    }
+    return getDefaultFormData();
+  });
+
+  // Update form data when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    }
+  }, [initialData]);
+
+  // Expose submit function to parent component
+  useImperativeHandle(ref, () => ({
+    submitForm: handleSubmit
+  }));
+
+
+
   // Section configuration
   const sections = [
     {
@@ -288,8 +320,13 @@ export function NewPatientPacketForm({
   const totalTime = sections.reduce((sum, section) => sum + section.time, 0);
   const remainingTime = sections.slice(activeSection - 1).reduce((sum, section) => sum + section.time, 0);
 
-  // Auto-save functionality
+  // Auto-save functionality (only for new forms, not when editing existing data)
   useEffect(() => {
+    // Don't auto-save when editing existing data
+    if (initialData) {
+      return;
+    }
+
     const autoSave = setTimeout(() => {
       try {
         const dataToSave = {
@@ -306,10 +343,15 @@ export function NewPatientPacketForm({
     }, 30000); // Auto-save every 30 seconds
 
     return () => clearTimeout(autoSave);
-  }, [formData, activeSection]);
+  }, [formData, activeSection, initialData]);
 
-  // Load draft on mount
+  // Load draft on mount (only if no initialData is provided)
   useEffect(() => {
+    // Don't load draft if we have initialData (edit mode)
+    if (initialData) {
+      return;
+    }
+
     const draft = localStorage.getItem('dentalFormDraft');
     if (draft) {
       try {
@@ -340,7 +382,7 @@ export function NewPatientPacketForm({
         localStorage.removeItem('dentalFormDraft');
       }
     }
-  }, [patientName, patientDateOfBirth, patientGender]);
+  }, [patientName, patientDateOfBirth, patientGender, initialData]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -702,7 +744,7 @@ export function NewPatientPacketForm({
             <div className="flex gap-2">
               {activeSection === totalSections ? (
                 <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700">
-                  Complete Form
+                  {submitButtonText}
                 </Button>
               ) : (
                 <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
@@ -715,4 +757,6 @@ export function NewPatientPacketForm({
       </Card>
     </div>
   );
-}
+});
+
+NewPatientPacketForm.displayName = 'NewPatientPacketForm';

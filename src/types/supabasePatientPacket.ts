@@ -153,14 +153,8 @@ export interface NewPatientPacketDB {
   updated_at?: string; // ISO timestamp
 }
 
-// View type for easier querying
-export interface PatientPacketView extends NewPatientPacketDB {
-  patient_full_name?: string;
-  patient_phone?: string;
-  patient_status?: string;
-  lead_name?: string;
-  lead_status?: string;
-}
+// Note: PatientPacketView has been removed - we now use NewPatientPacketDB directly
+// If you need patient or lead information, fetch it separately and join in the application code
 
 // Summary type for dashboard/listing views
 export interface PatientPacketSummary {
