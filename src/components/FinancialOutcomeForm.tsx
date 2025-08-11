@@ -75,24 +75,15 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
           .single();
 
         if (data && !error) {
-          // Convert treatment_decision back to form format
-          let treatmentDecision = data.treatment_decision || '';
-          if (treatmentDecision === 'not_accepted') treatmentDecision = 'not-accepted';
-          if (treatmentDecision === 'follow_up_required') treatmentDecision = 'followup-required';
-
           setFormData({
-            treatmentDecision: treatmentDecision,
+            treatmentDecision: data.treatment_decision || '',
             treatmentCost: data.treatment_cost || 0,
             globalTreatmentValue: data.global_treatment_value || 0,
-            financingOptions: {
-              yesApproved: data.financing_approved || false,
-              noNotApproved: data.financing_not_approved || false,
-              didNotApply: data.financing_did_not_apply || false,
-            },
-            financingNotApprovedReason: '', // This field doesn't exist in new table
-            outcomeNotes: data.additional_notes || '',
-            followupDate: '', // These fields don't exist in new table
-            followupReason: ''
+            financingOptions: data.financing_options || formData.financingOptions,
+            financingNotApprovedReason: data.financing_not_approved_reason || '',
+            outcomeNotes: data.financial_notes || '',
+            followupDate: data.followup_date ? data.followup_date.split('T')[0] : '',
+            followupReason: data.followup_reason || ''
           });
           setLastSaved(new Date(data.updated_at));
         }
@@ -113,19 +104,18 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
       
       const outcomeData = {
         new_patient_packet_id: patientPacketId,
-        patient_name: patientName || 'Unknown Patient',
-        treatment_decision: formData.treatmentDecision === 'not-accepted' ? 'not_accepted' :
-                           formData.treatmentDecision === 'followup-required' ? 'follow_up_required' :
-                           formData.treatmentDecision,
+        treatment_decision: formData.treatmentDecision,
         treatment_cost: formData.treatmentCost,
         global_treatment_value: formData.globalTreatmentValue,
-        // Individual financing fields
-        financing_approved: formData.financingOptions.yesApproved,
-        financing_not_approved: formData.financingOptions.noNotApproved,
-        financing_did_not_apply: formData.financingOptions.didNotApply,
-        additional_notes: formData.outcomeNotes,
-        consultation_status: formData.treatmentDecision === 'accepted' || formData.treatmentDecision === 'not-accepted' ? 'completed' : 'in_progress',
-        progress_step: 2, // Financial step
+        financing_options: formData.financingOptions,
+        financing_not_approved_reason: formData.financingNotApprovedReason,
+        financial_notes: formData.outcomeNotes,
+        followup_date: formData.followupDate ? new Date(formData.followupDate).toISOString() : null,
+        followup_reason: formData.followupReason || null,
+        treatment_plan_approved: formData.treatmentDecision === 'accepted' ? true :
+                               formData.treatmentDecision === 'not-accepted' ? false : null,
+        follow_up_required: formData.treatmentDecision === 'followup-required',
+        consultation_status: formData.treatmentDecision === 'accepted' || formData.treatmentDecision === 'not-accepted' ? 'completed' : 'scheduled',
         updated_at: new Date().toISOString()
       };
 
@@ -133,7 +123,9 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
 
       const { error } = await supabase
         .from('consultations')
-        .upsert(outcomeData);
+        .upsert(outcomeData, {
+          onConflict: 'new_patient_packet_id'
+        });
 
       if (error) throw error;
 

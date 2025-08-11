@@ -48,15 +48,6 @@ const ConsultationSessionPage = () => {
       activeColor: "text-green-600",
       bgColor: "bg-green-50",
       borderColor: "border-green-500"
-    },
-    {
-      id: "consultation",
-      label: "Consultation",
-      icon: Calendar,
-      color: "text-purple-600",
-      activeColor: "text-purple-600",
-      bgColor: "bg-purple-50",
-      borderColor: "border-purple-500"
     }
   ];
 
@@ -277,47 +268,84 @@ const ConsultationSessionPage = () => {
         .eq('new_patient_packet_id', packetId)
         .single();
 
-      // Prepare consultation data matching the new table structure
+      // Prepare comprehensive consultation data with ALL available information
       const consultationData = {
-        // References
-        patient_id: appointmentData.patient_id || null,
-        lead_id: patientData?.lead_id || null,
-        appointment_id: null, // Don't reference appointment_id to avoid foreign key issues
+        // Core identifiers
+        new_patient_lead_id: patientData?.lead_id || null,
         new_patient_packet_id: packetId,
 
-        // Patient Information
-        patient_name: patientData?.first_name && patientData?.last_name
-          ? `${patientData.first_name} ${patientData.last_name}`
-          : appointmentData.patient_name || 'Unknown Patient',
-        consultation_date: new Date().toISOString().split('T')[0],
+        // Patient basic information - prioritize packet data, then lead data, then appointment data
+        first_name: patientData?.first_name || leadData?.personal_first_name || appointmentData.patient_name?.split(' ')[0] || '',
+        last_name: patientData?.last_name || leadData?.personal_last_name || appointmentData.patient_name?.split(' ').slice(1).join(' ') || '',
+        patient_phone: patientData?.phone_cell || leadData?.personal_phone || appointmentData.patient_phone || null,
+        patient_email: patientData?.email || leadData?.personal_email || appointmentData.patient_email || null,
+        patient_date_of_birth: patientData?.date_of_birth || leadData?.date_of_birth || null,
+        patient_gender: patientData?.gender || leadData?.gender || null,
+
+        // Patient address - construct from packet data or use lead data
+        patient_address: patientData?.address_street && patientData?.address_city && patientData?.address_state ?
+          `${patientData.address_street}, ${patientData.address_city}, ${patientData.address_state} ${patientData.address_zip || ''}`.trim() :
+          leadData?.address || null,
+
+        // Emergency contact information
+        emergency_contact_name: patientData?.emergency_contact_name || null,
+        emergency_contact_phone: patientData?.emergency_contact_phone || null,
+        emergency_contact_relationship: patientData?.emergency_contact_relationship || null,
+
+        // Medical history from patient packet
+        medical_conditions: {
+          critical_conditions: patientData?.critical_conditions || {},
+          system_specific: patientData?.system_specific || {},
+          additional_conditions: patientData?.additional_conditions || [],
+          recent_health_changes: patientData?.recent_health_changes || {}
+        },
+        allergies: patientData?.allergies || {},
+        current_medications: patientData?.current_medications || {},
+        dental_status: patientData?.dental_status || {},
+        current_symptoms: patientData?.current_symptoms || {},
+        healing_issues: patientData?.healing_issues || {},
+        tobacco_use: patientData?.tobacco_use || {},
+
+        // Patient preferences from packet
+        patient_preferences: {
+          anxiety_control: patientData?.anxiety_control || [],
+          pain_injection: patientData?.pain_injection || [],
+          communication: patientData?.communication || [],
+          sensory_sensitivities: patientData?.sensory_sensitivities || [],
+          physical_comfort: patientData?.physical_comfort || [],
+          service_preferences: patientData?.service_preferences || [],
+          other_concerns: patientData?.other_concerns || ''
+        },
+
+        // Lead information
+        reason_for_visit: leadData?.reason_for_visit || null,
+        dental_problems: leadData?.dental_problems || [],
+        urgency_level: leadData?.urgency || null,
+
+        // Insurance information
+        insurance_info: {
+          has_medical_insurance: patientData?.has_medical_insurance || null,
+          pcp_name: patientData?.pcp_name || null,
+          pcp_practice: patientData?.pcp_practice || null,
+          pcp_phone: patientData?.pcp_phone || null
+        },
 
         // Treatment section details (get from existing consultation or defaults)
         clinical_assessment: existingConsultation?.clinical_assessment || null,
-
-        // Treatment recommendations (individual boolean fields)
-        treatment_implant_placement: existingConsultation?.treatment_implant_placement || false,
-        treatment_implant_restoration: existingConsultation?.treatment_implant_restoration || false,
-        treatment_implant_supported: existingConsultation?.treatment_implant_supported || false,
-        treatment_extraction: existingConsultation?.treatment_extraction || false,
-        treatment_bon_graft: existingConsultation?.treatment_bon_graft || false,
-        treatment_sinus_lift: existingConsultation?.treatment_sinus_lift || false,
-        treatment_denture: existingConsultation?.treatment_denture || false,
-        treatment_bridge: existingConsultation?.treatment_bridge || false,
-        treatment_crown: existingConsultation?.treatment_crown || false,
-
-        consultation_notes: existingConsultation?.consultation_notes || null,
+        treatment_recommendations: existingConsultation?.treatment_recommendations || {},
+        additional_information: existingConsultation?.additional_information || null,
 
         // Financial & outcome section details
         treatment_decision: existingConsultation?.treatment_decision || null,
         treatment_cost: existingConsultation?.treatment_cost || null,
         global_treatment_value: existingConsultation?.global_treatment_value || null,
-
-        // Financing options (individual boolean fields)
-        financing_approved: existingConsultation?.financing_approved || false,
-        financing_not_approved: existingConsultation?.financing_not_approved || false,
-        financing_did_not_apply: existingConsultation?.financing_did_not_apply || false,
-
-        additional_notes: existingConsultation?.additional_notes || null,
+        financing_options: existingConsultation?.financing_options || {},
+        financing_not_approved_reason: existingConsultation?.financing_not_approved_reason || null,
+        financial_notes: existingConsultation?.financial_notes || null,
+        followup_date: existingConsultation?.followup_date || null,
+        followup_reason: existingConsultation?.followup_reason || null,
+        treatment_plan_approved: existingConsultation?.treatment_plan_approved || false,
+        follow_up_required: existingConsultation?.follow_up_required || false,
 
         // Status and completion
         consultation_status: 'completed',
@@ -326,27 +354,34 @@ const ConsultationSessionPage = () => {
       };
 
       // Log the data being saved for debugging
-      console.log('💾 Saving consultation data:', {
+      console.log('💾 Saving comprehensive consultation data:', {
         patientInfo: {
-          name: consultationData.patient_name,
-          patientId: consultationData.patient_id,
-          leadId: consultationData.lead_id,
-          appointmentId: consultationData.appointment_id,
-          packetId: consultationData.new_patient_packet_id
+          name: `${consultationData.first_name} ${consultationData.last_name}`,
+          phone: consultationData.patient_phone,
+          email: consultationData.patient_email,
+          dob: consultationData.patient_date_of_birth,
+          gender: consultationData.patient_gender,
+          address: consultationData.patient_address
+        },
+        medicalData: {
+          conditions: Object.keys(consultationData.medical_conditions).length,
+          allergies: Object.keys(consultationData.allergies).length,
+          medications: Object.keys(consultationData.current_medications).length,
+          dentalStatus: Object.keys(consultationData.dental_status).length
         },
         consultationData: {
           treatmentDecision: consultationData.treatment_decision,
           treatmentCost: consultationData.treatment_cost,
-          globalTreatmentValue: consultationData.global_treatment_value,
-          clinicalAssessment: consultationData.clinical_assessment ? 'Present' : 'Empty',
-          consultationStatus: consultationData.consultation_status
+          clinicalAssessment: consultationData.clinical_assessment ? 'Present' : 'Empty'
         }
       });
 
       // Insert or update consultation record
       const { error: upsertError } = await supabase
         .from('consultations')
-        .upsert(consultationData);
+        .upsert(consultationData, {
+          onConflict: 'new_patient_packet_id'
+        });
 
       if (upsertError) {
         throw upsertError;
@@ -1134,130 +1169,7 @@ const ConsultationSessionPage = () => {
                     </div>
                   )}
 
-                  {/* Consultation Tab - Section-based Layout */}
-                  {activeTab === "consultation" && (
-                    <div className="space-y-4">
-                      {/* Header */}
-                      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Calendar className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">Consultation</h3>
-                            <p className="text-sm text-gray-500">Complete consultation workflow</p>
-                          </div>
-                        </div>
-                      </div>
 
-                      {/* Progress Indicator */}
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="text-sm text-gray-600">Section {consultationSection} of 2</div>
-                        <div className="text-sm text-blue-600 font-medium">{consultationSection * 50}% Complete</div>
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
-                        <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${consultationSection * 50}%` }}></div>
-                      </div>
-
-                      {/* Section Navigation */}
-                      <div className="grid grid-cols-2 gap-4 mb-8">
-                        <button
-                          onClick={() => setConsultationSection(1)}
-                          className={`p-4 border-2 rounded-lg text-center hover:bg-blue-100 transition-colors ${
-                            consultationSection === 1
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
-                          }`}
-                        >
-                          <div className="flex flex-col items-center gap-2">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
-                              consultationSection === 1 ? 'bg-blue-500' : 'bg-gray-400'
-                            }`}>
-                              1
-                            </div>
-                            <div className={`text-sm font-medium ${
-                              consultationSection === 1 ? 'text-blue-700' : 'text-gray-700'
-                            }`}>Treatment</div>
-                            <div className={`text-xs ${
-                              consultationSection === 1 ? 'text-blue-600' : 'text-gray-600'
-                            }`}>Clinical Assessment</div>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => setConsultationSection(2)}
-                          className={`p-4 border-2 rounded-lg text-center hover:bg-blue-100 transition-colors ${
-                            consultationSection === 2
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
-                          }`}
-                        >
-                          <div className="flex flex-col items-center gap-2">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
-                              consultationSection === 2 ? 'bg-blue-500' : 'bg-gray-400'
-                            }`}>
-                              2
-                            </div>
-                            <div className={`text-sm font-medium ${
-                              consultationSection === 2 ? 'text-blue-700' : 'text-gray-700'
-                            }`}>Financial</div>
-                            <div className={`text-xs ${
-                              consultationSection === 2 ? 'text-blue-600' : 'text-gray-600'
-                            }`}>Outcome & Payment</div>
-                          </div>
-                        </button>
-                      </div>
-
-                      {/* Current Section Content */}
-                      <div className="bg-white border border-gray-200 rounded-lg p-6">
-                        {consultationSection === 1 && (
-                          <TreatmentForm
-                            patientPacketId={packetId || ''}
-                            patientName={appointmentData?.patient_name || 'Unknown Patient'}
-                          />
-                        )}
-
-                        {consultationSection === 2 && (
-                          <FinancialOutcomeForm
-                            patientPacketId={packetId || ''}
-                            patientName={appointmentData?.patient_name || 'Unknown Patient'}
-                          />
-                        )}
-                      </div>
-
-                      {/* Navigation Buttons */}
-                      <div className="flex justify-between pt-6 border-t border-gray-200">
-                        <Button
-                          variant="outline"
-                          disabled={consultationSection === 1}
-                          onClick={() => setConsultationSection(consultationSection - 1)}
-                        >
-                          <ArrowLeft className="h-4 w-4 mr-2" />
-                          Previous
-                        </Button>
-                        {consultationSection === 2 ? (
-                          <Button
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={handleCompleteConsultation}
-                            disabled={isCompletingConsultation}
-                          >
-                            <CheckCircle className={`h-4 w-4 mr-2 ${isCompletingConsultation ? 'animate-spin' : ''}`} />
-                            {isCompletingConsultation ? 'Completing...' : 'Complete Consultation'}
-                          </Button>
-                        ) : (
-                          <Button
-                            className="bg-blue-600 hover:bg-blue-700"
-                            onClick={() => setConsultationSection(consultationSection + 1)}
-                          >
-                            Next
-                            <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
           </div>

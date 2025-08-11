@@ -17,6 +17,7 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
+  AlertCircle,
   Info
 } from "lucide-react";
 
@@ -43,6 +44,11 @@ interface NewPatientPacketFormProps {
   showWelcomeHeader?: boolean; // New prop to control logo and greetings
   initialData?: NewPatientFormData; // New prop for prefilling form data
   submitButtonText?: string; // Custom submit button text
+  // Auto-save props
+  onAutoSave?: (formData: NewPatientFormData) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  lastSavedTime?: string;
 }
 
 export interface NewPatientPacketFormRef {
@@ -57,7 +63,11 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
   patientGender = "",
   showWelcomeHeader = false,
   initialData,
-  submitButtonText = "Submit Patient Packet"
+  submitButtonText = "Submit Patient Packet",
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  lastSavedTime = ''
 }, ref) => {
   const [activeSection, setActiveSection] = useState(1);
 
@@ -229,6 +239,20 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
       setFormData(initialData);
     }
   }, [initialData]);
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    if (!onAutoSave) return;
+
+    const timeoutId = setTimeout(() => {
+      // Only auto-save if there's meaningful data
+      if (formData.firstName || formData.lastName || formData.email) {
+        onAutoSave(formData);
+      }
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, onAutoSave]);
 
   // Expose submit function to parent component
   useImperativeHandle(ref, () => ({
@@ -626,7 +650,36 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
           </div>
           
           <Progress value={progressPercentage} className="mb-4" />
-          
+
+          {/* Auto-save Status Indicator */}
+          {onAutoSave && (
+            <div className="flex items-center justify-center mb-4">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                autoSaveStatus === 'saving'
+                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                  : autoSaveStatus === 'saved'
+                  ? 'bg-green-100 text-green-700 border border-green-200'
+                  : autoSaveStatus === 'error'
+                  ? 'bg-red-100 text-red-700 border border-red-200'
+                  : 'bg-gray-100 text-gray-600 border border-gray-200'
+              }`}>
+                {autoSaveStatus === 'saving' && (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                )}
+                {autoSaveStatus === 'saved' && (
+                  <CheckCircle className="h-3 w-3" />
+                )}
+                {autoSaveStatus === 'error' && (
+                  <AlertCircle className="h-3 w-3" />
+                )}
+                <span>{autoSaveMessage}</span>
+                {lastSavedTime && autoSaveStatus === 'saved' && (
+                  <span className="text-gray-500">at {lastSavedTime}</span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Section Navigation */}
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-2">
             {sections.map((section) => {

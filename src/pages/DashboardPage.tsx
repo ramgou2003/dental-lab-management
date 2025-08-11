@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { A4PrintTest } from "@/components/A4PrintTest";
 import {
   BarChart,
   Bar,
@@ -920,6 +921,21 @@ export function DashboardPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* A4 Print Test Section */}
+        <div className="mt-8">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">🖨️ A4 Print System Test</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Test the new A4 print functionality with sample form data
+              </p>
+            </div>
+            <div className="p-6">
+              <A4PrintTest />
             </div>
           </div>
         </div>

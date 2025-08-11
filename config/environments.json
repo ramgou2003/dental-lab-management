@@ -1,0 +1,129 @@
+{
+  "environments": {
+    "development": {
+      "name": "Development",
+      "description": "Local development environment",
+      "database": "development",
+      "features": {
+        "VITE_FEATURE_DASHBOARD": "true",
+        "VITE_FEATURE_PATIENTS": "true",
+        "VITE_FEATURE_SETTINGS": "true",
+        "VITE_FEATURE_PROFILE": "true",
+        "VITE_FEATURE_LEAD_IN": "true",
+        "VITE_FEATURE_APPOINTMENTS": "true",
+        "VITE_FEATURE_CONSULTATION": "true",
+        "VITE_FEATURE_LAB": "true",
+        "VITE_FEATURE_REPORT_CARDS": "true",
+        "VITE_FEATURE_MANUFACTURING": "true",
+        "VITE_FEATURE_APPLIANCE_DELIVERY": "true",
+        "VITE_FEATURE_USER_MANAGEMENT": "true",
+        "VITE_FEATURE_PUBLIC_PATIENT_FORM": "true",
+        "VITE_FEATURE_PUBLIC_PATIENT_PACKET": "true"
+      }
+    },
+    "testing": {
+      "name": "Testing/Staging",
+      "description": "Testing environment with separate database",
+      "database": "testing",
+      "features": {
+        "VITE_FEATURE_DASHBOARD": "true",
+        "VITE_FEATURE_PATIENTS": "true",
+        "VITE_FEATURE_SETTINGS": "true",
+        "VITE_FEATURE_PROFILE": "true",
+        "VITE_FEATURE_LEAD_IN": "true",
+        "VITE_FEATURE_APPOINTMENTS": "true",
+        "VITE_FEATURE_CONSULTATION": "true",
+        "VITE_FEATURE_LAB": "false",
+        "VITE_FEATURE_REPORT_CARDS": "false",
+        "VITE_FEATURE_MANUFACTURING": "false",
+        "VITE_FEATURE_APPLIANCE_DELIVERY": "false",
+        "VITE_FEATURE_USER_MANAGEMENT": "true",
+        "VITE_FEATURE_PUBLIC_PATIENT_FORM": "true",
+        "VITE_FEATURE_PUBLIC_PATIENT_PACKET": "true"
+      }
+    },
+    "production-minimal": {
+      "name": "Production Minimal",
+      "description": "Production with core features only",
+      "database": "production",
+      "features": {
+        "VITE_FEATURE_DASHBOARD": "true",
+        "VITE_FEATURE_PATIENTS": "true",
+        "VITE_FEATURE_SETTINGS": "true",
+        "VITE_FEATURE_PROFILE": "true",
+        "VITE_FEATURE_LEAD_IN": "false",
+        "VITE_FEATURE_APPOINTMENTS": "false",
+        "VITE_FEATURE_CONSULTATION": "false",
+        "VITE_FEATURE_LAB": "false",
+        "VITE_FEATURE_REPORT_CARDS": "false",
+        "VITE_FEATURE_MANUFACTURING": "false",
+        "VITE_FEATURE_APPLIANCE_DELIVERY": "false",
+        "VITE_FEATURE_USER_MANAGEMENT": "false",
+        "VITE_FEATURE_PUBLIC_PATIENT_FORM": "true",
+        "VITE_FEATURE_PUBLIC_PATIENT_PACKET": "true"
+      }
+    },
+    "production-lead": {
+      "name": "Production Lead Management",
+      "description": "Production with lead management features",
+      "database": "production",
+      "features": {
+        "VITE_FEATURE_DASHBOARD": "true",
+        "VITE_FEATURE_PATIENTS": "true",
+        "VITE_FEATURE_SETTINGS": "true",
+        "VITE_FEATURE_PROFILE": "true",
+        "VITE_FEATURE_LEAD_IN": "true",
+        "VITE_FEATURE_APPOINTMENTS": "true",
+        "VITE_FEATURE_CONSULTATION": "true",
+        "VITE_FEATURE_LAB": "false",
+        "VITE_FEATURE_REPORT_CARDS": "false",
+        "VITE_FEATURE_MANUFACTURING": "false",
+        "VITE_FEATURE_APPLIANCE_DELIVERY": "false",
+        "VITE_FEATURE_USER_MANAGEMENT": "true",
+        "VITE_FEATURE_PUBLIC_PATIENT_FORM": "true",
+        "VITE_FEATURE_PUBLIC_PATIENT_PACKET": "true"
+      }
+    },
+    "production-full": {
+      "name": "Production Full",
+      "description": "Production with all features enabled",
+      "database": "production",
+      "features": {
+        "VITE_FEATURE_DASHBOARD": "true",
+        "VITE_FEATURE_PATIENTS": "true",
+        "VITE_FEATURE_SETTINGS": "true",
+        "VITE_FEATURE_PROFILE": "true",
+        "VITE_FEATURE_LEAD_IN": "true",
+        "VITE_FEATURE_APPOINTMENTS": "true",
+        "VITE_FEATURE_CONSULTATION": "true",
+        "VITE_FEATURE_LAB": "true",
+        "VITE_FEATURE_REPORT_CARDS": "true",
+        "VITE_FEATURE_MANUFACTURING": "true",
+        "VITE_FEATURE_APPLIANCE_DELIVERY": "true",
+        "VITE_FEATURE_USER_MANAGEMENT": "true",
+        "VITE_FEATURE_PUBLIC_PATIENT_FORM": "true",
+        "VITE_FEATURE_PUBLIC_PATIENT_PACKET": "true"
+      }
+    }
+  },
+  "databases": {
+    "development": {
+      "name": "Development Database",
+      "description": "Local development database",
+      "url_env": "VITE_SUPABASE_URL_DEV",
+      "key_env": "VITE_SUPABASE_ANON_KEY_DEV"
+    },
+    "testing": {
+      "name": "Testing Database",
+      "description": "Separate testing/staging database",
+      "url_env": "VITE_SUPABASE_URL_TEST",
+      "key_env": "VITE_SUPABASE_ANON_KEY_TEST"
+    },
+    "production": {
+      "name": "Production Database",
+      "description": "Production database",
+      "url_env": "VITE_SUPABASE_URL_PROD",
+      "key_env": "VITE_SUPABASE_ANON_KEY_PROD"
+    }
+  }
+}

@@ -14,65 +14,76 @@ interface MedicalRecordsReleaseFormProps {
   onCancel: () => void;
   patientName?: string;
   patientDateOfBirth?: string;
+  initialData?: any;
+  isEditing?: boolean;
+  readOnly?: boolean;
 }
 
-export function MedicalRecordsReleaseForm({ onSubmit, onCancel, patientName = "", patientDateOfBirth = "" }: MedicalRecordsReleaseFormProps) {
+export function MedicalRecordsReleaseForm({
+  onSubmit,
+  onCancel,
+  patientName = "",
+  patientDateOfBirth = "",
+  initialData = null,
+  isEditing = false,
+  readOnly = false
+}: MedicalRecordsReleaseFormProps) {
   const [formData, setFormData] = useState({
     // Patient Information
-    patientName: patientName,
-    dateOfBirth: patientDateOfBirth || "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    phone: "",
-    email: "",
-    
+    patientName: initialData?.patient_name || patientName,
+    dateOfBirth: initialData?.date_of_birth || patientDateOfBirth || "",
+    address: initialData?.address || "",
+    city: initialData?.city || "",
+    state: initialData?.state || "",
+    zipCode: initialData?.zip_code || "",
+    phone: initialData?.phone || "",
+    email: initialData?.email || "",
+
     // Release Information
-    dateOfRequest: new Date().toISOString().split('T')[0],
-    recordsFromDate: "",
-    recordsToDate: "",
-    
+    dateOfRequest: initialData?.date_of_request || new Date().toISOString().split('T')[0],
+    recordsFromDate: initialData?.records_from_date || "",
+    recordsToDate: initialData?.records_to_date || "",
+
     // Records to Release (checkboxes)
     recordTypes: {
-      completeRecord: false,
-      xrays: false,
-      labResults: false,
-      consultationNotes: false,
-      treatmentPlans: false,
-      surgicalReports: false,
-      prescriptions: false,
-      photographs: false,
-      models: false,
-      other: false
+      completeRecord: initialData?.complete_record || false,
+      xrays: initialData?.xrays || false,
+      labResults: initialData?.lab_results || false,
+      consultationNotes: initialData?.consultation_notes || false,
+      treatmentPlans: initialData?.treatment_plans || false,
+      surgicalReports: initialData?.surgical_reports || false,
+      prescriptions: initialData?.prescriptions || false,
+      photographs: initialData?.photographs || false,
+      models: initialData?.models || false,
+      other: initialData?.other_records || false
     },
-    otherRecordsDescription: "",
-    
+    otherRecordsDescription: initialData?.other_records_description || "",
+
     // Release To Information
-    releaseToName: "",
-    releaseToTitle: "",
-    releaseToOrganization: "",
-    releaseToAddress: "",
-    releaseToCity: "",
-    releaseToState: "",
-    releaseToZipCode: "",
-    releaseToPhone: "",
-    releaseToFax: "",
-    
+    releaseToName: initialData?.release_to_name || "",
+    releaseToTitle: initialData?.release_to_title || "",
+    releaseToOrganization: initialData?.release_to_organization || "",
+    releaseToAddress: initialData?.release_to_address || "",
+    releaseToCity: initialData?.release_to_city || "",
+    releaseToState: initialData?.release_to_state || "",
+    releaseToZipCode: initialData?.release_to_zip_code || "",
+    releaseToPhone: initialData?.release_to_phone || "",
+    releaseToFax: initialData?.release_to_fax || "",
+
     // Purpose of Release
-    purposeOfRelease: "",
-    
+    purposeOfRelease: initialData?.purpose_of_release || "",
+
     // Authorization Details
-    authorizationExpiration: "",
-    rightToRevoke: true,
-    copyToPatient: false,
-    
+    authorizationExpiration: initialData?.authorization_expiration || "",
+    rightToRevoke: initialData?.right_to_revoke !== undefined ? initialData.right_to_revoke : true,
+    copyToPatient: initialData?.copy_to_patient || false,
+
     // Signatures
-    patientSignature: "",
-    patientSignatureDate: new Date().toISOString().split('T')[0],
-    witnessSignature: "",
-    witnessSignatureDate: new Date().toISOString().split('T')[0],
-    witnessName: ""
+    patientSignature: initialData?.patient_signature || "",
+    patientSignatureDate: initialData?.patient_signature_date || new Date().toISOString().split('T')[0],
+    witnessSignature: initialData?.witness_signature || "",
+    witnessSignatureDate: initialData?.witness_signature_date || new Date().toISOString().split('T')[0],
+    witnessName: initialData?.witness_name || ""
   });
 
   // Signature dialog states
@@ -579,13 +590,19 @@ export function MedicalRecordsReleaseForm({ onSubmit, onCancel, patientName = ""
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-700"
-            disabled={!hasSelectedRecords || !formData.patientSignature}
-          >
-            Save Medical Records Release
-          </Button>
+          {!readOnly ? (
+            <Button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={!hasSelectedRecords || !formData.patientSignature}
+            >
+              {isEditing ? 'Update Medical Records Release' : 'Save Medical Records Release'}
+            </Button>
+          ) : (
+            <Button type="button" disabled className="bg-gray-400 text-white">
+              View Only
+            </Button>
+          )}
         </div>
       </form>
 

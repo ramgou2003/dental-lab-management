@@ -12,13 +12,28 @@ const Label = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> &
     VariantProps<typeof labelVariants>
->(({ className, ...props }, ref) => (
-  <LabelPrimitive.Root
-    ref={ref}
-    className={cn(labelVariants(), className)}
-    {...props}
-  />
-))
+>(({ className, onMouseDown, ...props }, ref) => {
+  const handleMouseDown: React.MouseEventHandler<HTMLLabelElement> = (e) => {
+    // Prevent scroll-jump when label is linked to a hidden/button control (e.g., Radix Radio Item)
+    const forId = (e.currentTarget as HTMLLabelElement).htmlFor
+    if (forId) {
+      const targetEl = document.getElementById(forId)
+      if (targetEl && targetEl.tagName === 'BUTTON') {
+        e.preventDefault()
+      }
+    }
+    onMouseDown?.(e)
+  }
+
+  return (
+    <LabelPrimitive.Root
+      ref={ref}
+      className={cn(labelVariants(), className)}
+      onMouseDown={handleMouseDown}
+      {...props}
+    />
+  )
+})
 Label.displayName = LabelPrimitive.Root.displayName
 
 export { Label }

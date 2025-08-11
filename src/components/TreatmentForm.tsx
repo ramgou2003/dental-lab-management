@@ -57,38 +57,15 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
       try {
         const { data, error } = await supabase
           .from('consultations')
-          .select(`
-            clinical_assessment,
-            consultation_notes,
-            treatment_implant_placement,
-            treatment_implant_restoration,
-            treatment_implant_supported,
-            treatment_extraction,
-            treatment_bon_graft,
-            treatment_sinus_lift,
-            treatment_denture,
-            treatment_bridge,
-            treatment_crown,
-            updated_at
-          `)
+          .select('clinical_assessment, treatment_recommendations, additional_information, updated_at')
           .eq('new_patient_packet_id', patientPacketId)
           .single();
 
         if (data && !error) {
           setFormData({
             clinicalAssessment: data.clinical_assessment || '',
-            treatmentRecommendations: {
-              implantPlacement: data.treatment_implant_placement || false,
-              implantRestoration: data.treatment_implant_restoration || false,
-              implantSupported: data.treatment_implant_supported || false,
-              extraction: data.treatment_extraction || false,
-              bonGraft: data.treatment_bon_graft || false,
-              sinusLift: data.treatment_sinus_lift || false,
-              denture: data.treatment_denture || false,
-              bridge: data.treatment_bridge || false,
-              crown: data.treatment_crown || false,
-            },
-            additionalInformation: data.consultation_notes || ''
+            treatmentRecommendations: data.treatment_recommendations || formData.treatmentRecommendations,
+            additionalInformation: data.additional_information || ''
           });
           setLastSaved(new Date(data.updated_at));
         }
@@ -107,19 +84,9 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
     try {
       const treatmentData = {
         new_patient_packet_id: patientPacketId,
-        patient_name: patientName || 'Unknown Patient',
         clinical_assessment: formData.clinicalAssessment,
-        consultation_notes: formData.additionalInformation,
-        // Individual treatment recommendation fields
-        treatment_implant_placement: formData.treatmentRecommendations.implantPlacement,
-        treatment_implant_restoration: formData.treatmentRecommendations.implantRestoration,
-        treatment_implant_supported: formData.treatmentRecommendations.implantSupported,
-        treatment_extraction: formData.treatmentRecommendations.extraction,
-        treatment_bon_graft: formData.treatmentRecommendations.bonGraft,
-        treatment_sinus_lift: formData.treatmentRecommendations.sinusLift,
-        treatment_denture: formData.treatmentRecommendations.denture,
-        treatment_bridge: formData.treatmentRecommendations.bridge,
-        treatment_crown: formData.treatmentRecommendations.crown,
+        treatment_recommendations: formData.treatmentRecommendations,
+        additional_information: formData.additionalInformation,
         updated_at: new Date().toISOString()
       };
 
@@ -127,7 +94,9 @@ export const TreatmentForm: React.FC<TreatmentFormProps> = ({
 
       const { error } = await supabase
         .from('consultations')
-        .upsert(treatmentData);
+        .upsert(treatmentData, {
+          onConflict: 'new_patient_packet_id'
+        });
 
       if (error) throw error;
 

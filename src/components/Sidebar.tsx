@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { isFeatureEnabled } from "@/config/featureFlags";
+import { isPageVisible } from "@/config/pageVisibility";
 
 interface SidebarProps {
   activeSection: string;
@@ -19,58 +21,80 @@ const navigation = [
     name: "Dashboard",
     href: "/dashboard",
     section: "dashboard",
-    icon: House
+    icon: House,
+    featureFlag: "dashboard",
+    pageKey: "dashboard"
   }, {
     name: "Lead-in",
     href: "/lead-in",
     section: "lead-in",
-    icon: UserPlus
+    icon: UserPlus,
+    featureFlag: "leadIn",
+    pageKey: "leadIn"
   }, {
     name: "Appointments",
     href: "/appointments",
     section: "appointments",
-    icon: Calendar
+    icon: Calendar,
+    featureFlag: "appointments",
+    pageKey: "appointments"
   }, {
     name: "Consultation",
     href: "/consultation",
     section: "consultation",
-    icon: Stethoscope
+    icon: Stethoscope,
+    featureFlag: "consultation",
+    pageKey: "consultation"
   }, {
     name: "Patients",
     href: "/patients",
     section: "patients",
-    icon: Users
+    icon: Users,
+    featureFlag: "patients",
+    pageKey: "patients"
   }, {
     name: "Lab",
     href: "/lab",
     section: "lab",
-    icon: FlaskConical
+    icon: FlaskConical,
+    featureFlag: "lab",
+    pageKey: "lab"
   }, {
     name: "Report Cards",
     href: "/report-cards",
     section: "report-cards",
-    icon: FileText
+    icon: FileText,
+    featureFlag: "reportCards",
+    pageKey: "reportCards"
   }, {
     name: "Manufacturing",
     href: "/manufacturing",
     section: "manufacturing",
-    icon: Factory
+    icon: Factory,
+    featureFlag: "manufacturing",
+    pageKey: "manufacturing"
   }, {
     name: "Appliance Delivery",
     href: "/appliance-delivery",
     section: "appliance-delivery",
-    icon: Package
+    icon: Package,
+    featureFlag: "applianceDelivery",
+    pageKey: "applianceDelivery"
   }, {
     name: "User Management",
     href: "/user-management",
     section: "user-management",
     icon: Shield,
-    adminOnly: true
+    adminOnly: true,
+    featureFlag: "userManagement",
+    pageKey: "userManagement"
   }, {
     name: "Settings",
     href: "/settings",
     section: "settings",
-    icon: Settings
+    icon: Settings,
+    featureFlag: "settings",
+    pageKey: "settings"
   }
 ];
 export function Sidebar({
@@ -262,6 +286,16 @@ export function Sidebar({
         {navigation.map(item => {
         // Hide admin-only items for non-admin users
         if (item.adminOnly && !canAccessUserManagement) {
+          return null;
+        }
+
+        // Hide items based on feature flags
+        if (item.featureFlag && !isFeatureEnabled(item.featureFlag as any)) {
+          return null;
+        }
+
+        // Hide items based on page visibility configuration
+        if (item.pageKey && !isPageVisible(item.pageKey as any)) {
           return null;
         }
 

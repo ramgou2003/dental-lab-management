@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,12 +22,14 @@ import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { TreatmentDialog, TreatmentData } from "@/components/TreatmentDialog";
 import { ConsentFullArchForm } from "@/components/ConsentFullArchForm";
 import { FinancialAgreementForm } from "@/components/FinancialAgreementForm";
+import { supabase } from "@/integrations/supabase/client";
 import { FinalDesignApprovalForm } from "@/components/FinalDesignApprovalForm";
 import { NewPatientPacketForm } from "@/components/NewPatientPacketForm";
 import { MedicalRecordsReleaseForm } from "@/components/MedicalRecordsReleaseForm";
 import { InformedConsentSmokingForm } from "@/components/InformedConsentSmokingForm";
 import { ThankYouPreSurgeryForm } from "@/components/ThankYouPreSurgeryForm";
 import { ThreeYearCarePackageForm } from "@/components/ThreeYearCarePackageForm";
+import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
 import { usePatientAppointments } from "@/hooks/usePatientAppointments";
@@ -63,7 +66,9 @@ import {
   MoreVertical,
   Edit2,
   Trash2,
-  X
+  X,
+  AlertTriangle,
+  Printer
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -73,11 +78,18 @@ import { AppointmentScheduler } from "@/components/AppointmentScheduler";
 import { SurgicalRecallSheetForm } from "@/components/SurgicalRecallSheetForm";
 import { ViewSurgicalRecallSheet } from "@/components/ViewSurgicalRecallSheet";
 import { DeleteSurgicalRecallSheetDialog } from "@/components/DeleteSurgicalRecallSheetDialog";
-
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSurgicalRecallSheets } from "@/hooks/useSurgicalRecallSheets";
-import { savePatientPacket } from "@/services/patientPacketService";
+import { savePatientPacket, getPatientPacketsByPatientId, updatePatientPacket, deletePatientPacket } from "@/services/patientPacketService";
+import { convertDatabaseToFormData, convertFormDataToDatabase } from "@/utils/patientPacketConverter";
+import { getFinancialAgreementsByPatientId, deleteFinancialAgreement, updateFinancialAgreement } from "@/services/financialAgreementService";
+import { getConsentFormsByPatientId, deleteConsentForm, formatConsentFormForDisplay, ConsentFullArchFormData } from "@/services/consentFullArchService";
+import { getMedicalRecordsReleaseFormsByPatientId, deleteMedicalRecordsReleaseForm, formatMedicalRecordsReleaseFormForDisplay, MedicalRecordsReleaseFormData } from "@/services/medicalRecordsReleaseService";
+import { getInformedConsentSmokingFormsByPatientId, deleteInformedConsentSmokingForm, formatInformedConsentSmokingFormForDisplay, InformedConsentSmokingFormData } from "@/services/informedConsentSmokingService";
+import { getFinalDesignApprovalFormsByPatientId, deleteFinalDesignApprovalForm, formatFinalDesignApprovalFormForDisplay, FinalDesignApprovalFormData } from "@/services/finalDesignApprovalService";
+import { getThankYouPreSurgeryFormsByPatientId, deleteThankYouPreSurgeryForm, formatThankYouPreSurgeryFormForDisplay, ThankYouPreSurgeryFormData } from "@/services/thankYouPreSurgeryService";
+import { getThreeYearCarePackageFormsByPatientId, deleteThreeYearCarePackageForm, formatThreeYearCarePackageFormForDisplay, ThreeYearCarePackageFormData, createThreeYearCarePackageForm, updateThreeYearCarePackageForm } from "@/services/threeYearCarePackageService";
+
 
 export function PatientProfilePage() {
   const { patientId } = useParams<{ patientId: string }>();
@@ -88,7 +100,7 @@ export function PatientProfilePage() {
   const getInitialTab = () => {
     const urlParams = new URLSearchParams(location.search);
     const tabFromUrl = urlParams.get('tab');
-    const validTabs = ['basic', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery', 'clinical'];
+    const validTabs = ['basic', 'clinical', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery'];
     return validTabs.includes(tabFromUrl || '') ? tabFromUrl : 'basic';
   };
 
@@ -105,7 +117,7 @@ export function PatientProfilePage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const tabFromUrl = urlParams.get('tab');
-    const validTabs = ['basic', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery', 'clinical'];
+    const validTabs = ['basic', 'clinical', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery'];
     const newTab = validTabs.includes(tabFromUrl || '') ? tabFromUrl : 'basic';
     if (newTab !== activeTab) {
       setActiveTab(newTab);
@@ -235,6 +247,93 @@ export function PatientProfilePage() {
   const [showThankYouPreSurgeryForm, setShowThankYouPreSurgeryForm] = useState(false);
   const [showThreeYearCarePackageForm, setShowThreeYearCarePackageForm] = useState(false);
   const [selectedAdminFormType, setSelectedAdminFormType] = useState<string>("");
+
+  // State for 3-Year Care Package Forms
+  const [threeYearCarePackageForms, setThreeYearCarePackageForms] = useState<ThreeYearCarePackageFormData[]>([]);
+  const [loadingThreeYearCarePackageForms, setLoadingThreeYearCarePackageForms] = useState(false);
+  const [selectedThreeYearCarePackageForm, setSelectedThreeYearCarePackageForm] = useState<ThreeYearCarePackageFormData | null>(null);
+  const [isEditingThreeYearCarePackageForm, setIsEditingThreeYearCarePackageForm] = useState(false);
+  const [isViewingThreeYearCarePackageForm, setIsViewingThreeYearCarePackageForm] = useState(false);
+  const [threeYearCarePackageActiveDropdown, setThreeYearCarePackageActiveDropdown] = useState<string | null>(null);
+  const [showDeleteThreeYearCarePackageFormConfirm, setShowDeleteThreeYearCarePackageFormConfirm] = useState(false);
+  const [threeYearCarePackageFormToDelete, setThreeYearCarePackageFormToDelete] = useState<ThreeYearCarePackageFormData | null>(null);
+
+  // Print Preview States
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [printFormData, setPrintFormData] = useState<any>(null);
+  const [printFormType, setPrintFormType] = useState<string>('');
+  const [printPatientName, setPrintPatientName] = useState<string>('');
+  const [printPatientDOB, setPrintPatientDOB] = useState<string>('');
+
+  // State for Patient Packets
+  const [patientPackets, setPatientPackets] = useState<any[]>([]);
+  const [loadingPatientPackets, setLoadingPatientPackets] = useState(false);
+  const [editingPatientPacket, setEditingPatientPacket] = useState<any | null>(null);
+  const [isEditingPatientPacket, setIsEditingPatientPacket] = useState(false);
+  const [showDeletePacketConfirm, setShowDeletePacketConfirm] = useState(false);
+  const [packetToDelete, setPacketToDelete] = useState<any | null>(null);
+
+  // State for Financial Agreement Forms
+  const [financialAgreements, setFinancialAgreements] = useState<any[]>([]);
+  const [loadingFinancialAgreements, setLoadingFinancialAgreements] = useState(false);
+
+  // Consent Forms state
+  const [consentForms, setConsentForms] = useState<ConsentFullArchFormData[]>([]);
+  const [loadingConsentForms, setLoadingConsentForms] = useState(false);
+  const [editingConsentForm, setEditingConsentForm] = useState<any | null>(null);
+  const [isEditingConsentForm, setIsEditingConsentForm] = useState(false);
+  const [isViewingConsentForm, setIsViewingConsentForm] = useState(false);
+  const [showDeleteConsentFormConfirm, setShowDeleteConsentFormConfirm] = useState(false);
+  const [consentFormToDelete, setConsentFormToDelete] = useState<any | null>(null);
+
+  // Medical Records Release Forms state
+  const [medicalRecordsReleaseForms, setMedicalRecordsReleaseForms] = useState<MedicalRecordsReleaseFormData[]>([]);
+  const [loadingMedicalRecordsReleaseForms, setLoadingMedicalRecordsReleaseForms] = useState(false);
+  const [editingMedicalRecordsReleaseForm, setEditingMedicalRecordsReleaseForm] = useState<any | null>(null);
+  const [isEditingMedicalRecordsReleaseForm, setIsEditingMedicalRecordsReleaseForm] = useState(false);
+  const [isViewingMedicalRecordsReleaseForm, setIsViewingMedicalRecordsReleaseForm] = useState(false);
+  const [showDeleteMedicalRecordsReleaseFormConfirm, setShowDeleteMedicalRecordsReleaseFormConfirm] = useState(false);
+  const [medicalRecordsReleaseFormToDelete, setMedicalRecordsReleaseFormToDelete] = useState<any | null>(null);
+
+  // Informed Consent Smoking Forms state
+  const [informedConsentSmokingForms, setInformedConsentSmokingForms] = useState<InformedConsentSmokingFormData[]>([]);
+  const [loadingInformedConsentSmokingForms, setLoadingInformedConsentSmokingForms] = useState(false);
+  const [editingInformedConsentSmokingForm, setEditingInformedConsentSmokingForm] = useState<any | null>(null);
+  const [isEditingInformedConsentSmokingForm, setIsEditingInformedConsentSmokingForm] = useState(false);
+  const [isViewingInformedConsentSmokingForm, setIsViewingInformedConsentSmokingForm] = useState(false);
+  const [showDeleteInformedConsentSmokingFormConfirm, setShowDeleteInformedConsentSmokingFormConfirm] = useState(false);
+  const [informedConsentSmokingFormToDelete, setInformedConsentSmokingFormToDelete] = useState<any | null>(null);
+
+  // Final Design Approval Forms state
+  const [finalDesignApprovalForms, setFinalDesignApprovalForms] = useState<FinalDesignApprovalFormData[]>([]);
+  const [loadingFinalDesignApprovalForms, setLoadingFinalDesignApprovalForms] = useState(false);
+  const [editingFinalDesignApprovalForm, setEditingFinalDesignApprovalForm] = useState<any | null>(null);
+  const [isEditingFinalDesignApprovalForm, setIsEditingFinalDesignApprovalForm] = useState(false);
+  const [isViewingFinalDesignApprovalForm, setIsViewingFinalDesignApprovalForm] = useState(false);
+  const [showDeleteFinalDesignApprovalFormConfirm, setShowDeleteFinalDesignApprovalFormConfirm] = useState(false);
+  const [finalDesignApprovalFormToDelete, setFinalDesignApprovalFormToDelete] = useState<any | null>(null);
+
+  // Thank You Pre-Surgery Forms state
+  const [thankYouPreSurgeryForms, setThankYouPreSurgeryForms] = useState<ThankYouPreSurgeryFormData[]>([]);
+  const [loadingThankYouPreSurgeryForms, setLoadingThankYouPreSurgeryForms] = useState(false);
+  const [editingThankYouPreSurgeryForm, setEditingThankYouPreSurgeryForm] = useState<any | null>(null);
+  const [isEditingThankYouPreSurgeryForm, setIsEditingThankYouPreSurgeryForm] = useState(false);
+  const [isViewingThankYouPreSurgeryForm, setIsViewingThankYouPreSurgeryForm] = useState(false);
+  const [showDeleteThankYouPreSurgeryFormConfirm, setShowDeleteThankYouPreSurgeryFormConfirm] = useState(false);
+  const [thankYouPreSurgeryFormToDelete, setThankYouPreSurgeryFormToDelete] = useState<any | null>(null);
+  const [editingFinancialAgreement, setEditingFinancialAgreement] = useState<any | null>(null);
+  const [isEditingFinancialAgreement, setIsEditingFinancialAgreement] = useState(false);
+  const [isViewingFinancialAgreement, setIsViewingFinancialAgreement] = useState(false);
+  const [showDeleteFinancialAgreementConfirm, setShowDeleteFinancialAgreementConfirm] = useState(false);
+  const [financialAgreementToDelete, setFinancialAgreementToDelete] = useState<any | null>(null);
+
+
+
+  // Auto-save state for Patient Packets
+  const [patientPacketAutoSaveStatus, setPatientPacketAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [currentPatientPacketId, setCurrentPatientPacketId] = useState<string | null>(null);
+  const [patientPacketAutoSaveMessage, setPatientPacketAutoSaveMessage] = useState<string>('');
+  const [patientPacketLastSavedTime, setPatientPacketLastSavedTime] = useState<string>('');
 
   // Surgical recall sheets hook
   const {
@@ -536,6 +635,14 @@ export function PatientProfilePage() {
       fetchPatientData();
       fetchDataCollectionSheets();
       fetchIVSedationSheets();
+      fetchPatientPackets();
+      fetchFinancialAgreements();
+      fetchConsentForms();
+      fetchMedicalRecordsReleaseForms();
+      fetchInformedConsentSmokingForms();
+      fetchFinalDesignApprovalForms();
+      fetchThankYouPreSurgeryForms();
+      fetchThreeYearCarePackageForms();
     } else {
       // Use mock data if no patientId provided
       setPatient({
@@ -629,6 +736,540 @@ export function PatientProfilePage() {
       console.error('Error fetching IV sedation forms:', error);
     }
   };
+
+  const fetchPatientPackets = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingPatientPackets(true);
+      const { data, error } = await getPatientPacketsByPatientId(patientId);
+
+      if (error) {
+        console.error('Error fetching patient packets:', error);
+        return;
+      }
+
+      setPatientPackets(data || []);
+    } catch (error) {
+      console.error('Error fetching patient packets:', error);
+    } finally {
+      setLoadingPatientPackets(false);
+    }
+  };
+
+  const fetchFinancialAgreements = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingFinancialAgreements(true);
+      const { data, error } = await getFinancialAgreementsByPatientId(patientId);
+
+      if (error) {
+        console.error('Error fetching financial agreements:', error);
+        return;
+      }
+
+      setFinancialAgreements(data || []);
+      console.log('🔍 Financial Agreements fetched:', data?.length || 0, 'agreements');
+      if (data && data.length > 0) {
+        console.log('📋 Financial Agreements data:', data);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching financial agreements:', error);
+    } finally {
+      setLoadingFinancialAgreements(false);
+    }
+  };
+
+  const fetchConsentForms = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingConsentForms(true);
+      const { data, error } = await getConsentFormsByPatientId(patientId);
+
+      if (error) {
+        console.error('Error fetching consent forms:', error);
+        return;
+      }
+
+      setConsentForms(data || []);
+      console.log('🔍 Consent Forms fetched:', data?.length || 0, 'forms');
+      if (data && data.length > 0) {
+        console.log('📋 Consent Forms data:', data);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching consent forms:', error);
+    } finally {
+      setLoadingConsentForms(false);
+    }
+  };
+
+  const fetchMedicalRecordsReleaseForms = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingMedicalRecordsReleaseForms(true);
+      const { data, error } = await getMedicalRecordsReleaseFormsByPatientId(patientId);
+
+      if (error) {
+        console.error('Error fetching medical records release forms:', error);
+        return;
+      }
+
+      setMedicalRecordsReleaseForms(data || []);
+      console.log('🔍 Medical Records Release Forms fetched:', data?.length || 0, 'forms');
+      if (data && data.length > 0) {
+        console.log('📋 Medical Records Release Forms data:', data);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching medical records release forms:', error);
+    } finally {
+      setLoadingMedicalRecordsReleaseForms(false);
+    }
+  };
+
+  const fetchInformedConsentSmokingForms = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingInformedConsentSmokingForms(true);
+      const { data, error } = await getInformedConsentSmokingFormsByPatientId(patientId);
+
+      if (error) {
+        console.error('Error fetching informed consent smoking forms:', error);
+        return;
+      }
+
+      setInformedConsentSmokingForms(data || []);
+      console.log('🔍 Informed Consent Smoking Forms fetched:', data?.length || 0, 'forms');
+      if (data && data.length > 0) {
+        console.log('📋 Informed Consent Smoking Forms data:', data);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching informed consent smoking forms:', error);
+    } finally {
+      setLoadingInformedConsentSmokingForms(false);
+    }
+  };
+
+  const fetchFinalDesignApprovalForms = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingFinalDesignApprovalForms(true);
+      const { data, error } = await getFinalDesignApprovalFormsByPatientId(patientId);
+
+      if (error) {
+        console.error('Error fetching final design approval forms:', error);
+        return;
+      }
+
+      setFinalDesignApprovalForms(data || []);
+      console.log('🔍 Final Design Approval Forms fetched:', data?.length || 0, 'forms');
+      if (data && data.length > 0) {
+        console.log('📋 Final Design Approval Forms data:', data);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching final design approval forms:', error);
+    } finally {
+      setLoadingFinalDesignApprovalForms(false);
+    }
+  };
+
+  const fetchThankYouPreSurgeryForms = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingThankYouPreSurgeryForms(true);
+      const { data, error } = await getThankYouPreSurgeryFormsByPatientId(patientId);
+
+      if (error) {
+        console.error('Error fetching thank you pre-surgery forms:', error);
+        return;
+      }
+
+      setThankYouPreSurgeryForms(data || []);
+      console.log('🔍 Thank You Pre-Surgery Forms fetched:', data?.length || 0, 'forms');
+      if (data && data.length > 0) {
+        console.log('📋 Thank You Pre-Surgery Forms data:', data);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching thank you pre-surgery forms:', error);
+    } finally {
+      setLoadingThankYouPreSurgeryForms(false);
+    }
+  };
+
+  const fetchThreeYearCarePackageForms = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingThreeYearCarePackageForms(true);
+      const { data, error } = await getThreeYearCarePackageFormsByPatientId(patientId);
+
+      if (error) {
+        console.error('Error fetching 3-Year Care Package forms:', error);
+        return;
+      }
+
+      setThreeYearCarePackageForms(data || []);
+      console.log('🔍 3-Year Care Package Forms fetched:', data?.length || 0, 'forms');
+      if (data && data.length > 0) {
+        console.log('📋 3-Year Care Package Forms data:', data);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching 3-Year Care Package forms:', error);
+    } finally {
+      setLoadingThreeYearCarePackageForms(false);
+    }
+  };
+
+  const handleDeleteConsentForm = async () => {
+    if (!consentFormToDelete) return;
+
+    try {
+      const { error } = await deleteConsentForm(consentFormToDelete.id);
+
+      if (error) {
+        console.error('Error deleting consent form:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete consent form. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove from local state
+      setConsentForms(prev => prev.filter(form => form.id !== consentFormToDelete.id));
+
+      // Close confirmation dialog
+      setShowDeleteConsentFormConfirm(false);
+      setConsentFormToDelete(null);
+
+      toast({
+        title: "Success",
+        description: "Consent form deleted successfully!",
+      });
+    } catch (error) {
+      console.error('Unexpected error deleting consent form:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteMedicalRecordsReleaseForm = async () => {
+    if (!medicalRecordsReleaseFormToDelete) return;
+
+    try {
+      const { error } = await deleteMedicalRecordsReleaseForm(medicalRecordsReleaseFormToDelete.id);
+
+      if (error) {
+        console.error('Error deleting medical records release form:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete medical records release form. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove from local state
+      setMedicalRecordsReleaseForms(prev => prev.filter(form => form.id !== medicalRecordsReleaseFormToDelete.id));
+
+      // Close confirmation dialog
+      setShowDeleteMedicalRecordsReleaseFormConfirm(false);
+      setMedicalRecordsReleaseFormToDelete(null);
+
+      toast({
+        title: "Success",
+        description: "Medical records release form deleted successfully!",
+      });
+    } catch (error) {
+      console.error('Unexpected error deleting medical records release form:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteInformedConsentSmokingForm = async () => {
+    if (!informedConsentSmokingFormToDelete) return;
+
+    try {
+      const { error } = await deleteInformedConsentSmokingForm(informedConsentSmokingFormToDelete.id);
+
+      if (error) {
+        console.error('Error deleting informed consent smoking form:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete informed consent smoking form. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove from local state
+      setInformedConsentSmokingForms(prev => prev.filter(form => form.id !== informedConsentSmokingFormToDelete.id));
+
+      // Close confirmation dialog
+      setShowDeleteInformedConsentSmokingFormConfirm(false);
+      setInformedConsentSmokingFormToDelete(null);
+
+      toast({
+        title: "Success",
+        description: "Informed consent smoking form deleted successfully!",
+      });
+    } catch (error) {
+      console.error('Unexpected error deleting informed consent smoking form:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteFinalDesignApprovalForm = async () => {
+    if (!finalDesignApprovalFormToDelete) return;
+
+    try {
+      const { error } = await deleteFinalDesignApprovalForm(finalDesignApprovalFormToDelete.id);
+
+      if (error) {
+        console.error('Error deleting final design approval form:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete final design approval form. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove from local state
+      setFinalDesignApprovalForms(prev => prev.filter(form => form.id !== finalDesignApprovalFormToDelete.id));
+
+      // Close confirmation dialog
+      setShowDeleteFinalDesignApprovalFormConfirm(false);
+      setFinalDesignApprovalFormToDelete(null);
+
+      toast({
+        title: "Success",
+        description: "Final design approval form deleted successfully!",
+      });
+    } catch (error) {
+      console.error('Unexpected error deleting final design approval form:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteThankYouPreSurgeryForm = async () => {
+    if (!thankYouPreSurgeryFormToDelete) return;
+
+    try {
+      const { error } = await deleteThankYouPreSurgeryForm(thankYouPreSurgeryFormToDelete.id);
+
+      if (error) {
+        console.error('Error deleting thank you pre-surgery form:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete thank you pre-surgery form. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove from local state
+      setThankYouPreSurgeryForms(prev => prev.filter(form => form.id !== thankYouPreSurgeryFormToDelete.id));
+
+      // Close confirmation dialog
+      setShowDeleteThankYouPreSurgeryFormConfirm(false);
+      setThankYouPreSurgeryFormToDelete(null);
+
+      toast({
+        title: "Success",
+        description: "Thank you pre-surgery form deleted successfully!",
+      });
+    } catch (error) {
+      console.error('Unexpected error deleting thank you pre-surgery form:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while deleting the form.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteThreeYearCarePackageForm = async () => {
+    if (!threeYearCarePackageFormToDelete) return;
+
+    try {
+      const { error } = await deleteThreeYearCarePackageForm(threeYearCarePackageFormToDelete.id!);
+
+      if (error) {
+        console.error('Error deleting 3-Year Care Package form:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete 3-Year Care Package form. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove from local state
+      setThreeYearCarePackageForms(prev => prev.filter(form => form.id !== threeYearCarePackageFormToDelete.id));
+
+      // Close confirmation dialog
+      setShowDeleteThreeYearCarePackageFormConfirm(false);
+      setThreeYearCarePackageFormToDelete(null);
+
+      toast({
+        title: "Success",
+        description: "3-Year Care Package form deleted successfully!",
+      });
+
+      console.log('✅ Deleted 3-Year Care Package form:', threeYearCarePackageFormToDelete.id);
+    } catch (error) {
+      console.error('Unexpected error deleting 3-Year Care Package form:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteFinancialAgreement = async () => {
+    if (!financialAgreementToDelete) return;
+
+    try {
+      const { error } = await deleteFinancialAgreement(financialAgreementToDelete.id);
+
+      if (error) {
+        console.error('Error deleting financial agreement:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete financial agreement. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove from local state
+      setFinancialAgreements(prev => prev.filter(agreement => agreement.id !== financialAgreementToDelete.id));
+
+      // Close confirmation dialog
+      setShowDeleteFinancialAgreementConfirm(false);
+      setFinancialAgreementToDelete(null);
+
+      toast({
+        title: "Success",
+        description: "Financial agreement deleted successfully!",
+      });
+    } catch (error) {
+      console.error('Unexpected error deleting financial agreement:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Print handler functions
+  const handlePrintNewPatientPacket = (packet: any) => {
+    console.log('Print New Patient Packet:', packet);
+    if (!packet) {
+      console.error('No packet data provided');
+      return;
+    }
+    setPrintFormData(packet);
+    setPrintFormType('New Patient Packet');
+    setPrintPatientName(`${packet.first_name || ''} ${packet.last_name || ''}`.trim() || 'Unknown Patient');
+    setPrintPatientDOB(packet.date_of_birth || '');
+    setShowPrintPreview(true);
+  };
+
+  const handlePrintFinancialAgreement = (agreement: any) => {
+    console.log('Print Financial Agreement:', agreement);
+    if (!agreement) {
+      console.error('No agreement data provided');
+      return;
+    }
+    setPrintFormData(agreement);
+    setPrintFormType('Financial Agreement');
+    setPrintPatientName(agreement.patient_name || 'Unknown Patient');
+    setPrintPatientDOB(agreement.date_of_birth || '');
+    setShowPrintPreview(true);
+  };
+
+  const handlePrintConsentForm = (form: any) => {
+    console.log('Print Consent Form:', form);
+    setPrintFormData(form);
+    setPrintFormType('Consent Full Arch Form');
+    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
+    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
+    setShowPrintPreview(true);
+  };
+
+  const handlePrintMedicalRecordsReleaseForm = (form: any) => {
+    console.log('Print Medical Records Release Form:', form);
+    setPrintFormData(form);
+    setPrintFormType('Medical Records Release Form');
+    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
+    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
+    setShowPrintPreview(true);
+  };
+
+  const handlePrintInformedConsentSmokingForm = (form: any) => {
+    console.log('Print Informed Consent Smoking Form:', form);
+    setPrintFormData(form);
+    setPrintFormType('Informed Consent - Nicotine Use Form');
+    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
+    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
+    setShowPrintPreview(true);
+  };
+
+  const handlePrintFinalDesignApprovalForm = (form: any) => {
+    console.log('Print Final Design Approval Form:', form);
+    setPrintFormData(form);
+    setPrintFormType('Final Design Approval Form');
+    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
+    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
+    setShowPrintPreview(true);
+  };
+
+  const handlePrintThankYouPreSurgeryForm = (form: any) => {
+    console.log('Print Thank You Pre-Surgery Form:', form);
+    setPrintFormData(form);
+    setPrintFormType('Thank You & Pre-Surgery Form');
+    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
+    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
+    setShowPrintPreview(true);
+  };
+
+  const handlePrintThreeYearCarePackageForm = (form: any) => {
+    console.log('Print 3-Year Care Package Form:', form);
+    setPrintFormData(form);
+    setPrintFormType('3-Year Care Package Enrollment Agreement');
+    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
+    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
+    setShowPrintPreview(true);
+  };
+
+
+
+
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`;
@@ -891,6 +1532,72 @@ export function PatientProfilePage() {
   const handleAppointmentSchedulerClose = () => {
     setShowAppointmentScheduler(false);
     setSelectedDeliveryItem(null);
+  };
+
+  // Patient Packet Handlers
+  const handleEditPatientPacket = async (packet: any) => {
+    try {
+      // Convert database format to form format
+      const formData = convertDatabaseToFormData(packet);
+      setEditingPatientPacket(formData);
+      setIsEditingPatientPacket(true);
+      setCurrentPatientPacketId(packet.id); // Set the current packet ID for auto-save
+      setShowNewPatientPacketForm(true);
+    } catch (error) {
+      console.error('Error preparing packet for editing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load patient packet for editing",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewPatientPacket = (packet: any) => {
+    // For now, just edit - we can add a view-only mode later
+    handleEditPatientPacket(packet);
+  };
+
+  const handleDeletePatientPacket = (packet: any) => {
+    setPacketToDelete(packet);
+    setShowDeletePacketConfirm(true);
+  };
+
+  const confirmDeletePatientPacket = async () => {
+    if (!packetToDelete) return;
+
+    try {
+      const { success, error } = await deletePatientPacket(packetToDelete.id);
+
+      if (!success) {
+        console.error('Error deleting patient packet:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete patient packet",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Remove from local state
+      setPatientPackets(prev => prev.filter(p => p.id !== packetToDelete.id));
+
+      toast({
+        title: "Success",
+        description: "Patient packet deleted successfully!",
+      });
+
+      // Close dialog and reset state
+      setShowDeletePacketConfirm(false);
+      setPacketToDelete(null);
+    } catch (error) {
+      console.error('Unexpected error deleting patient packet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete patient packet",
+        variant: "destructive",
+      });
+    }
   };
 
   // Helper function to format time from 24-hour to 12-hour format
@@ -1609,6 +2316,120 @@ export function PatientProfilePage() {
 
     // Trigger auto-save
     autoSaveIVSedationForm(updates);
+  };
+
+  // Auto-save function for Patient Packet form
+  const autoSavePatientPacket = async (formData: any) => {
+    if (!patientId) return;
+
+    setPatientPacketAutoSaveStatus('saving');
+    setPatientPacketAutoSaveMessage('Saving...');
+    setPatientPacketLastSavedTime(''); // Clear previous timestamp when starting new save
+
+    try {
+      // Convert form data to database format
+      const dbData = convertFormDataToDatabase(
+        formData,
+        patientId,
+        undefined,
+        'internal'
+      );
+
+      // Always save as draft during auto-save
+      dbData.form_status = 'draft';
+
+      console.log('Auto-save data:', {
+        first_name: dbData.first_name,
+        last_name: dbData.last_name,
+        email: dbData.email,
+        patient_id: dbData.patient_id,
+        form_status: dbData.form_status,
+        currentPacketId: currentPatientPacketId
+      });
+
+      let data, error;
+
+      if (currentPatientPacketId) {
+        // Update existing record
+        const result = await supabase
+          .from('new_patient_packets')
+          .update(dbData)
+          .eq('id', currentPatientPacketId)
+          .select()
+          .single();
+
+        data = result.data;
+        error = result.error;
+      } else {
+        // Create new record
+        const result = await supabase
+          .from('new_patient_packets')
+          .insert([dbData])
+          .select()
+          .single();
+
+        data = result.data;
+        error = result.error;
+
+        if (data && !error) {
+          setCurrentPatientPacketId(data.id);
+          setIsEditingPatientPacket(true);
+          // Add to local state if it's a new record
+          setPatientPackets(prev => {
+            const exists = prev.some(packet => packet.id === data.id);
+            return exists ? prev.map(packet => packet.id === data.id ? data : packet) : [data, ...prev];
+          });
+        }
+      }
+
+      if (error) {
+        console.error('Patient packet auto-save error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        setPatientPacketAutoSaveStatus('error');
+        setPatientPacketAutoSaveMessage('Failed to save');
+        setTimeout(() => {
+          setPatientPacketAutoSaveStatus('idle');
+          setPatientPacketAutoSaveMessage('');
+        }, 3000);
+        return;
+      }
+
+      // Update local state
+      if (currentPatientPacketId) {
+        setPatientPackets(prev =>
+          prev.map(packet =>
+            packet.id === currentPatientPacketId ? data : packet
+          )
+        );
+      }
+
+      setPatientPacketAutoSaveStatus('saved');
+      setPatientPacketAutoSaveMessage('Saved');
+
+      // Set the saved timestamp
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      setPatientPacketLastSavedTime(timeString);
+
+    } catch (error) {
+      console.error('Patient packet auto-save error:', error);
+      setPatientPacketAutoSaveStatus('error');
+      setPatientPacketAutoSaveMessage('Failed to save');
+      setTimeout(() => {
+        setPatientPacketAutoSaveStatus('idle');
+        setPatientPacketAutoSaveMessage('');
+      }, 3000);
+    }
   };
 
 
@@ -2928,6 +3749,10 @@ export function PatientProfilePage() {
                 <User className="h-3.5 w-3.5" />
                 Basic Details
               </TabsTrigger>
+              <TabsTrigger value="clinical" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
+                <FileText className="h-3.5 w-3.5" />
+                Forms
+              </TabsTrigger>
               <TabsTrigger value="appointments" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
                 <Calendar className="h-3.5 w-3.5" />
                 Appointments ({patientAppointments.length})
@@ -2947,10 +3772,6 @@ export function PatientProfilePage() {
               <TabsTrigger value="delivery" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
                 <Package className="h-3.5 w-3.5" />
                 Appliance Delivery ({patientDeliveryItems.length})
-              </TabsTrigger>
-              <TabsTrigger value="clinical" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
-                <FileText className="h-3.5 w-3.5" />
-                Forms
               </TabsTrigger>
             </TabsList>
 
@@ -3948,6 +4769,891 @@ export function PatientProfilePage() {
                 {/* Clinical Forms Grid with Horizontal Scroll */}
                 <div className="overflow-x-auto pl-0 pr-0 pt-2 pb-2" style={{ height: 'calc(100vh - 280px)' }}>
                   <div className="flex gap-3 h-full" style={{ minWidth: 'max-content' }}>
+                  {/* Administrative Forms */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                      <div className="p-1.5 bg-blue-100 rounded-lg">
+                        <Settings className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">Administrative Forms ({patientPackets.length + financialAgreements.length + consentForms.length + medicalRecordsReleaseForms.length + informedConsentSmokingForms.length + finalDesignApprovalForms.length + thankYouPreSurgeryForms.length + threeYearCarePackageForms.length})</h3>
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                      <div className="space-y-3 pb-2">
+                        {/* Dropdown and Add Button Row */}
+                        <div className="flex items-center gap-2">
+                          {/* Form Type Dropdown */}
+                          <Select value={selectedAdminFormType} onValueChange={setSelectedAdminFormType}>
+                            <SelectTrigger className="flex-1 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30">
+                              <SelectValue placeholder="Choose administrative form..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="new-patient-packet">New Patient Packet</SelectItem>
+                              <SelectItem value="financial-agreement">Financial Agreement</SelectItem>
+                              <SelectItem value="consent-full-arch">Consent Packet for Full Arch</SelectItem>
+                              <SelectItem value="medical-records-release">Medical Records Release Form</SelectItem>
+                              <SelectItem value="informed-consent-smoking">Informed Consent Form For Smoking</SelectItem>
+                              <SelectItem value="three-year-care-package">3-Year Care Package Enrollment Form</SelectItem>
+                              <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
+                              <SelectItem value="thank-you-pre-surgery">Thank You and Pre-Surgery Form</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {/* Square Add Button */}
+                          <button
+                            className="flex-shrink-0 w-10 h-10 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center text-gray-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!selectedAdminFormType}
+                            onClick={() => {
+                              if (selectedAdminFormType === 'consent-full-arch') {
+                                setShowConsentFullArchForm(true);
+                              } else if (selectedAdminFormType === 'financial-agreement') {
+                                setShowFinancialAgreementForm(true);
+                              } else if (selectedAdminFormType === 'final-design-approval') {
+                                setShowFinalDesignApprovalForm(true);
+                              } else if (selectedAdminFormType === 'medical-records-release') {
+                                setShowMedicalRecordsReleaseForm(true);
+                              } else if (selectedAdminFormType === 'new-patient-packet') {
+                                setShowNewPatientPacketForm(true);
+                              } else if (selectedAdminFormType === 'informed-consent-smoking') {
+                                setShowInformedConsentSmokingForm(true);
+                              } else if (selectedAdminFormType === 'thank-you-pre-surgery') {
+                                setShowThankYouPreSurgeryForm(true);
+                              } else if (selectedAdminFormType === 'three-year-care-package') {
+                                setShowThreeYearCarePackageForm(true);
+                              } else {
+                                // Handle other form types here
+                                alert(`Opening ${selectedAdminFormType} form - Not implemented yet`);
+                              }
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Administrative Forms List */}
+                        {(loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms || loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms || loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms) ? (
+                          <div className="text-center py-6">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                            <p className="text-sm text-gray-500">Loading administrative forms...</p>
+                          </div>
+                        ) : (patientPackets.length > 0 || financialAgreements.length > 0 || consentForms.length > 0 || medicalRecordsReleaseForms.length > 0 || informedConsentSmokingForms.length > 0 || finalDesignApprovalForms.length > 0 || thankYouPreSurgeryForms.length > 0 || threeYearCarePackageForms.length > 0) ? (
+                          <div className="space-y-2">
+                            {patientPackets.map((packet) => (
+                              <div
+                                key={packet.id}
+                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                onClick={() => handleViewPatientPacket(packet)}
+                              >
+                                {/* Header with date and status */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${
+                                      packet.form_status === 'completed' ? 'bg-green-500' :
+                                      packet.form_status === 'reviewed' ? 'bg-blue-500' : 'bg-orange-500'
+                                    }`}></div>
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      New Patient Packet
+                                    </span>
+                                  </div>
+
+                                  {/* Status Badge */}
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    packet.form_status === 'completed'
+                                      ? 'bg-green-100 text-green-800 border border-green-200'
+                                      : packet.form_status === 'reviewed'
+                                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                      : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                  }`}>
+                                    {packet.form_status === 'completed' ? 'Completed' :
+                                     packet.form_status === 'reviewed' ? 'Reviewed' : 'Draft'}
+                                  </span>
+                                </div>
+
+                                {/* Submitted Date */}
+                                <div className="mb-3">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-500">Submitted on:</span>
+                                    <span className="font-medium text-gray-700">
+                                      {packet.submitted_at ?
+                                        new Date(packet.submitted_at).toLocaleDateString('en-US', {
+                                          year: 'numeric',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        }) :
+                                        new Date(packet.created_at).toLocaleDateString('en-US', {
+                                          year: 'numeric',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })
+                                      }
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{packet.created_at ? new Date(packet.created_at).toLocaleDateString() : 'Unknown date'}</span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1">
+                                    {/* Print button */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handlePrintNewPatientPacket(packet);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      title="Print patient packet"
+                                    >
+                                      <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                    </button>
+
+                                    {/* Edit button */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditPatientPacket(packet);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      title="Edit patient packet"
+                                    >
+                                      <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                    </button>
+
+                                    {/* Delete button */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeletePatientPacket(packet);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      title="Delete patient packet"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+
+                            {financialAgreements.map((agreement) => (
+                              <div
+                                key={agreement.id}
+                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                onClick={() => {
+                                  setEditingFinancialAgreement(agreement);
+                                  setIsEditingFinancialAgreement(false);
+                                  setIsViewingFinancialAgreement(true);
+                                  setShowFinancialAgreementForm(true);
+                                }}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      Financial Agreement
+                                    </span>
+                                  </div>
+                                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-700">
+                                    Completed
+                                  </span>
+                                </div>
+
+                                {/* Submitted Date */}
+                                <div className="mb-3">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-500">Submitted on:</span>
+                                    <span className="font-medium text-gray-700">
+                                      {new Date(agreement.created_at).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{new Date(agreement.created_at).toLocaleDateString()}</span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handlePrintFinancialAgreement(agreement);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      title="Print financial agreement"
+                                    >
+                                      <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                    </button>
+
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingFinancialAgreement(agreement);
+                                        setIsEditingFinancialAgreement(true);
+                                        setShowFinancialAgreementForm(true);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      title="Edit financial agreement"
+                                    >
+                                      <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                    </button>
+
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setFinancialAgreementToDelete(agreement);
+                                        setShowDeleteFinancialAgreementConfirm(true);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      title="Delete financial agreement"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Consent Forms Section */}
+                            {consentForms.length > 0 && (
+                              <>
+                                {consentForms.map((form) => {
+                                  const displayData = formatConsentFormForDisplay(form);
+                                  return (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={() => {
+                                        setEditingConsentForm(form);
+                                        setIsEditingConsentForm(false);
+                                        setIsViewingConsentForm(true);
+                                        setShowConsentFullArchForm(true);
+                                      }}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            form.status === 'signed' ? 'bg-green-500' :
+                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                          }`}></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            Consent Full Arch Form
+                                          </span>
+                                        </div>
+                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
+                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                        }`}>
+                                          {form.status === 'signed' ? 'Signed' :
+                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                        </span>
+                                      </div>
+
+                                      {/* Submitted Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {new Date(form.created_at).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handlePrintConsentForm(form);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Print consent form"
+                                          >
+                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingConsentForm(form);
+                                              setIsEditingConsentForm(true);
+                                              setIsViewingConsentForm(false);
+                                              setShowConsentFullArchForm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Edit consent form"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setConsentFormToDelete(form);
+                                              setShowDeleteConsentFormConfirm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Delete consent form"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {/* Medical Records Release Forms Section */}
+                            {medicalRecordsReleaseForms.length > 0 && (
+                              <>
+                                {medicalRecordsReleaseForms.map((form) => {
+                                  const displayData = formatMedicalRecordsReleaseFormForDisplay(form);
+                                  return (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={() => {
+                                        setEditingMedicalRecordsReleaseForm(form);
+                                        setIsEditingMedicalRecordsReleaseForm(false);
+                                        setIsViewingMedicalRecordsReleaseForm(true);
+                                        setShowMedicalRecordsReleaseForm(true);
+                                      }}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            form.status === 'signed' ? 'bg-green-500' :
+                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                          }`}></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            Medical Records Release Form
+                                          </span>
+                                        </div>
+                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
+                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                        }`}>
+                                          {form.status === 'signed' ? 'Signed' :
+                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                        </span>
+                                      </div>
+
+                                      {/* Submitted Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {new Date(form.created_at).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handlePrintMedicalRecordsReleaseForm(form);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Print medical records release form"
+                                          >
+                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingMedicalRecordsReleaseForm(form);
+                                              setIsEditingMedicalRecordsReleaseForm(true);
+                                              setIsViewingMedicalRecordsReleaseForm(false);
+                                              setShowMedicalRecordsReleaseForm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Edit medical records release form"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setMedicalRecordsReleaseFormToDelete(form);
+                                              setShowDeleteMedicalRecordsReleaseFormConfirm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Delete medical records release form"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {/* Informed Consent Smoking Forms Section */}
+                            {informedConsentSmokingForms.length > 0 && (
+                              <>
+                                {informedConsentSmokingForms.map((form) => {
+                                  const displayData = formatInformedConsentSmokingFormForDisplay(form);
+                                  return (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={() => {
+                                        setEditingInformedConsentSmokingForm(form);
+                                        setIsEditingInformedConsentSmokingForm(false);
+                                        setIsViewingInformedConsentSmokingForm(true);
+                                        setShowInformedConsentSmokingForm(true);
+                                      }}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            form.status === 'signed' ? 'bg-green-500' :
+                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                          }`}></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            Informed Consent - Nicotine Use Form
+                                          </span>
+                                        </div>
+                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
+                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                        }`}>
+                                          {form.status === 'signed' ? 'Signed' :
+                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                        </span>
+                                      </div>
+
+                                      {/* Submitted Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {new Date(form.created_at).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handlePrintInformedConsentSmokingForm(form);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Print informed consent smoking form"
+                                          >
+                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingInformedConsentSmokingForm(form);
+                                              setIsEditingInformedConsentSmokingForm(true);
+                                              setIsViewingInformedConsentSmokingForm(false);
+                                              setShowInformedConsentSmokingForm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Edit informed consent smoking form"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setInformedConsentSmokingFormToDelete(form);
+                                              setShowDeleteInformedConsentSmokingFormConfirm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Delete informed consent smoking form"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {/* Final Design Approval Forms Section */}
+                            {finalDesignApprovalForms.length > 0 && (
+                              <>
+                                {finalDesignApprovalForms.map((form) => {
+                                  const displayData = formatFinalDesignApprovalFormForDisplay(form);
+                                  return (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={() => {
+                                        setEditingFinalDesignApprovalForm(form);
+                                        setIsEditingFinalDesignApprovalForm(false);
+                                        setIsViewingFinalDesignApprovalForm(true);
+                                        setShowFinalDesignApprovalForm(true);
+                                      }}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            form.status === 'signed' ? 'bg-green-500' :
+                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                          }`}></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            Final Design Approval Form
+                                          </span>
+                                        </div>
+                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
+                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                        }`}>
+                                          {form.status === 'signed' ? 'Signed' :
+                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                        </span>
+                                      </div>
+
+                                      {/* Submitted Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {new Date(form.created_at).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handlePrintFinalDesignApprovalForm(form);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Print final design approval form"
+                                          >
+                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingFinalDesignApprovalForm(form);
+                                              setIsEditingFinalDesignApprovalForm(true);
+                                              setIsViewingFinalDesignApprovalForm(false);
+                                              setShowFinalDesignApprovalForm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Edit final design approval form"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setFinalDesignApprovalFormToDelete(form);
+                                              setShowDeleteFinalDesignApprovalFormConfirm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Delete final design approval form"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {/* Thank You Pre-Surgery Forms Section */}
+                            {thankYouPreSurgeryForms.length > 0 && (
+                              <>
+                                {thankYouPreSurgeryForms.map((form) => {
+                                  const displayData = formatThankYouPreSurgeryFormForDisplay(form);
+                                  return (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={() => {
+                                        setEditingThankYouPreSurgeryForm(form);
+                                        setIsEditingThankYouPreSurgeryForm(false);
+                                        setIsViewingThankYouPreSurgeryForm(true);
+                                        setShowThankYouPreSurgeryForm(true);
+                                      }}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            form.status === 'signed' ? 'bg-green-500' :
+                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                          }`}></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            Thank You & Pre-Surgery Form
+                                          </span>
+                                        </div>
+                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
+                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                        }`}>
+                                          {form.status === 'signed' ? 'Signed' :
+                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                        </span>
+                                      </div>
+
+                                      {/* Submitted Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {new Date(form.created_at).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handlePrintThankYouPreSurgeryForm(form);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Print thank you pre-surgery form"
+                                          >
+                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingThankYouPreSurgeryForm(form);
+                                              setIsEditingThankYouPreSurgeryForm(true);
+                                              setIsViewingThankYouPreSurgeryForm(false);
+                                              setShowThankYouPreSurgeryForm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Edit thank you pre-surgery form"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setThankYouPreSurgeryFormToDelete(form);
+                                              setShowDeleteThankYouPreSurgeryFormConfirm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Delete thank you pre-surgery form"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {/* 3-Year Care Package Forms Section */}
+                            {threeYearCarePackageForms.length > 0 && (
+                              <>
+                                {threeYearCarePackageForms.map((form) => {
+                                  const displayData = formatThreeYearCarePackageFormForDisplay(form);
+                                  return (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={() => {
+                                        setSelectedThreeYearCarePackageForm(form);
+                                        setIsViewingThreeYearCarePackageForm(true);
+                                        setShowThreeYearCarePackageForm(true);
+                                      }}
+                                    >
+                                      {/* Header with form name and status */}
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            3-Year Care Package Enrollment Agreement
+                                          </span>
+                                        </div>
+
+                                        {/* Status Badge */}
+                                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                          Completed
+                                        </span>
+                                      </div>
+
+                                      {/* Submitted Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {form.created_at ? new Date(form.created_at).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            }) : 'Unknown date'}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{form.created_at ? new Date(form.created_at).toLocaleDateString() : 'Unknown date'}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handlePrintThreeYearCarePackageForm(form);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Print 3-Year Care Package form"
+                                          >
+                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedThreeYearCarePackageForm(form);
+                                              setIsEditingThreeYearCarePackageForm(true);
+                                              setIsViewingThreeYearCarePackageForm(false);
+                                              setShowThreeYearCarePackageForm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Edit 3-Year Care Package form"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                          </button>
+
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setThreeYearCarePackageFormToDelete(form);
+                                              setShowDeleteThreeYearCarePackageFormConfirm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Delete 3-Year Care Package form"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6">
+                            <Settings className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm font-medium text-gray-500 mb-1">No administrative forms</p>
+                            <p className="text-xs text-gray-400">Select a form type and click add to create</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Data Collection Sheet */}
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
                     {/* Header */}
@@ -4414,79 +6120,7 @@ export function PatientProfilePage() {
                     </div>
                   </div>
 
-                  {/* Administrative Forms */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <Settings className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">Administrative Forms (0)</h3>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                      <div className="space-y-3 pb-2">
-                        {/* Dropdown and Add Button Row */}
-                        <div className="flex items-center gap-2">
-                          {/* Form Type Dropdown */}
-                          <Select value={selectedAdminFormType} onValueChange={setSelectedAdminFormType}>
-                            <SelectTrigger className="flex-1 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30">
-                              <SelectValue placeholder="Choose administrative form..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="accepted-tx">Accepted TX</SelectItem>
-                              <SelectItem value="financial-agreement">Financial Agreement</SelectItem>
-                              <SelectItem value="consent-full-arch">Consent Packet for Full Arch</SelectItem>
-                              <SelectItem value="consent-non-full-arch">Consent Packet for Non-Full Arch</SelectItem>
-                              <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
-                              <SelectItem value="medical-records-release">Medical Records Release Form</SelectItem>
-                              <SelectItem value="new-patient-packet">New Patient Packet</SelectItem>
-                              <SelectItem value="informed-consent-smoking">Informed Consent Form For Smoking</SelectItem>
-                              <SelectItem value="thank-you-pre-surgery">Thank You and Pre-Surgery Form</SelectItem>
-                              <SelectItem value="three-year-care-package">3-Year Care Package Enrollment Form</SelectItem>
-                            </SelectContent>
-                          </Select>
 
-                          {/* Square Add Button */}
-                          <button
-                            className="flex-shrink-0 w-10 h-10 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center text-gray-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={!selectedAdminFormType}
-                            onClick={() => {
-                              if (selectedAdminFormType === 'consent-full-arch') {
-                                setShowConsentFullArchForm(true);
-                              } else if (selectedAdminFormType === 'financial-agreement') {
-                                setShowFinancialAgreementForm(true);
-                              } else if (selectedAdminFormType === 'final-design-approval') {
-                                setShowFinalDesignApprovalForm(true);
-                              } else if (selectedAdminFormType === 'medical-records-release') {
-                                setShowMedicalRecordsReleaseForm(true);
-                              } else if (selectedAdminFormType === 'new-patient-packet') {
-                                setShowNewPatientPacketForm(true);
-                              } else if (selectedAdminFormType === 'informed-consent-smoking') {
-                                setShowInformedConsentSmokingForm(true);
-                              } else if (selectedAdminFormType === 'thank-you-pre-surgery') {
-                                setShowThankYouPreSurgeryForm(true);
-                              } else if (selectedAdminFormType === 'three-year-care-package') {
-                                setShowThreeYearCarePackageForm(true);
-                              } else {
-                                // Handle other form types here
-                                alert(`Opening ${selectedAdminFormType} form - Not implemented yet`);
-                              }
-                            }}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
-
-                        {/* Empty State */}
-                        <div className="text-center py-6">
-                          <Settings className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                          <p className="text-sm font-medium text-gray-500 mb-1">No administrative forms</p>
-                          <p className="text-xs text-gray-400">Select a form type and click add to create</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                   </div>
                 </div>
               </div>
@@ -11082,25 +12716,198 @@ export function PatientProfilePage() {
       />
 
       {/* Consent Packet for Full Arch Form Dialog */}
-      <Dialog open={showConsentFullArchForm} onOpenChange={setShowConsentFullArchForm}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={showConsentFullArchForm} onOpenChange={(open) => {
+        setShowConsentFullArchForm(open);
+        if (!open) {
+          setIsViewingConsentForm(false);
+          setIsEditingConsentForm(false);
+          setEditingConsentForm(null);
+        }
+      }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
           {patient && (
             <ConsentFullArchForm
               patientName={patient.full_name}
-              onSubmit={(formData) => {
-                console.log('Consent form submitted:', formData);
-                // Here you would typically save the form data to your backend
-                setShowConsentFullArchForm(false);
-                setSelectedAdminFormType("");
-                // Show success message
-                toast({
-                  title: "Success",
-                  description: "Consent form saved successfully!",
-                });
+              initialData={editingConsentForm}
+              isEditing={isEditingConsentForm}
+              readOnly={isViewingConsentForm}
+              onSubmit={async (formData) => {
+                try {
+                  // Map form data to separate database columns
+                  const payload: any = {
+                    patient_id: patient.id,
+                    patient_name: patient.full_name,
+
+                    // Patient & Interpreter Information
+                    chart_number: formData.chartNumber,
+                    consent_date: formData.date,
+                    consent_time: formData.time,
+                    primary_language: formData.primaryLanguage,
+                    other_language_text: formData.otherLanguageText,
+                    interpreter_required: formData.interpreterRequired,
+                    interpreter_name: formData.interpreterName,
+                    interpreter_credential: formData.interpreterCredential,
+                    patient_info_initials: formData.patientInfoInitials,
+
+                    // Treatment Description & Alternatives
+                    arch_type: formData.archType,
+                    upper_jaw: formData.upperJaw,
+                    upper_teeth_regions: formData.upperTeethRegions,
+                    upper_implants: formData.upperImplants,
+                    upper_graft_allograft: formData.upperGraftMaterial?.allograft || false,
+                    upper_graft_xenograft: formData.upperGraftMaterial?.xenograft || false,
+                    upper_graft_autograft: formData.upperGraftMaterial?.autograft || false,
+                    upper_prosthesis_zirconia: formData.upperProsthesis?.zirconia || false,
+                    upper_prosthesis_overdenture: formData.upperProsthesis?.overdenture || false,
+                    upper_same_day_load: formData.upperSameDayLoad,
+                    lower_jaw: formData.lowerJaw,
+                    lower_teeth_regions: formData.lowerTeethRegions,
+                    lower_implants: formData.lowerImplants,
+                    lower_graft_allograft: formData.lowerGraftMaterial?.allograft || false,
+                    lower_graft_xenograft: formData.lowerGraftMaterial?.xenograft || false,
+                    lower_graft_autograft: formData.lowerGraftMaterial?.autograft || false,
+                    lower_prosthesis_zirconia: formData.lowerProsthesis?.zirconia || false,
+                    lower_prosthesis_overdenture: formData.lowerProsthesis?.overdenture || false,
+                    lower_same_day_load: formData.lowerSameDayLoad,
+
+                    // Sedation Plan
+                    sedation_local_only: formData.sedationPlan?.localOnly || false,
+                    sedation_nitrous: formData.sedationPlan?.nitrous || false,
+                    sedation_iv_conscious: formData.sedationPlan?.ivConscious || false,
+                    sedation_general_hospital: formData.sedationPlan?.generalHospital || false,
+                    asa_physical_status: formData.asaPhysicalStatus,
+
+                    // Planned Drugs
+                    midazolam_dose: formData.plannedDrugs?.midazolam?.dose,
+                    midazolam_unit: formData.plannedDrugs?.midazolam?.unit || 'mg',
+                    fentanyl_dose: formData.plannedDrugs?.fentanyl?.dose,
+                    fentanyl_unit: formData.plannedDrugs?.fentanyl?.unit || 'µg',
+                    ketamine_dose: formData.plannedDrugs?.ketamine?.dose,
+                    ketamine_unit: formData.plannedDrugs?.ketamine?.unit || 'mg',
+                    dexamethasone_dose: formData.plannedDrugs?.dexamethasone?.dose,
+                    dexamethasone_unit: formData.plannedDrugs?.dexamethasone?.unit || 'mg',
+
+                    // Alternatives Initials
+                    alternatives_no_treatment_initials: formData.alternativesInitials?.noTreatment,
+                    alternatives_conventional_dentures_initials: formData.alternativesInitials?.conventionalDentures,
+                    alternatives_segmented_extraction_initials: formData.alternativesInitials?.segmentedExtraction,
+                    alternatives_removable_overdentures_initials: formData.alternativesInitials?.removableOverdentures,
+                    alternatives_zygomatic_implants_initials: formData.alternativesInitials?.zygomaticImplants,
+                    treatment_description_initials: formData.treatmentDescriptionInitials,
+
+                    // Material Risks
+                    risks_understood: formData.risksUnderstood || false,
+                    material_risks_initials: formData.materialRisksInitials,
+
+                    // Sedation & Anesthesia Consent
+                    escort_name: formData.escortName,
+                    escort_phone: formData.escortPhone,
+                    medications_disclosed: formData.medicationsDisclosed || false,
+                    decline_iv_sedation: formData.declineIVSedation || false,
+                    sedation_initials: formData.sedationInitials,
+                    anesthesia_provider_initials: formData.anesthesiaProviderInitials,
+
+                    // Financial Disclosure
+                    surgical_extractions_count: formData.surgicalExtractions?.count,
+                    surgical_extractions_fee: formData.surgicalExtractions?.fee,
+                    surgical_extractions_covered: formData.surgicalExtractions?.covered,
+                    implant_fixtures_count: formData.implantFixtures?.count,
+                    implant_fixtures_fee: formData.implantFixtures?.fee,
+                    implant_fixtures_covered: formData.implantFixtures?.covered,
+                    zirconia_bridge_fee: formData.zirconiabridge?.fee,
+                    zirconia_bridge_covered: formData.zirconiabridge?.covered,
+                    iv_sedation_fee: formData.ivSedation?.fee,
+                    iv_sedation_covered: formData.ivSedation?.covered,
+                    financial_initials: formData.financialInitials,
+
+                    // Photo/Video Authorization
+                    internal_record_keeping: formData.internalRecordKeeping,
+                    professional_education: formData.professionalEducation,
+                    marketing_social_media: formData.marketingSocialMedia,
+                    hipaa_email_sms: formData.hipaaEmailSms || false,
+                    hipaa_email: formData.hipaaEmail,
+                    hipaa_phone: formData.hipaaPhone,
+                    photo_video_initials: formData.photoVideoInitials,
+
+                    // Opioid Consent
+                    opioid_initials: formData.opioidInitials,
+                    smallest_opioid_supply: formData.smallestOpioidSupply || false,
+
+                    // Final Acknowledgment & Signatures
+                    surgeon_name: formData.surgeonName,
+                    surgeon_signature: formData.surgeonSignature,
+                    surgeon_date: formData.surgeonDate,
+                    anesthesia_provider_name: formData.anesthesiaProviderName,
+                    anesthesia_provider_signature: formData.anesthesiaProviderSignature,
+                    anesthesia_provider_date: formData.anesthesiaProviderDate,
+                    patient_signature: formData.patientSignature,
+                    patient_signature_date: formData.patientSignatureDate,
+                    witness_name: formData.witnessName,
+                    witness_signature: formData.witnessSignature,
+                    witness_signature_date: formData.witnessSignatureDate,
+                    final_initials: formData.finalInitials,
+
+                    // Patient Acknowledgment Checkboxes
+                    acknowledgment_read: formData.acknowledgmentRead || false,
+                    acknowledgment_outcome: formData.acknowledgmentOutcome || false,
+                    acknowledgment_authorize: formData.acknowledgmentAuthorize || false,
+
+                    // Keep form_data for backward compatibility (required field)
+                    form_data: formData,
+                    status: 'signed'
+                  };
+
+                  let data, error;
+
+                  if (isEditingConsentForm && editingConsentForm) {
+                    // Update existing consent form
+                    const result = await supabase
+                      .from('consent_full_arch_forms')
+                      .update(payload)
+                      .eq('id', editingConsentForm.id)
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  } else {
+                    // Create new consent form
+                    const result = await supabase
+                      .from('consent_full_arch_forms')
+                      .insert([payload])
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  }
+
+                  if (error) throw error;
+
+                  console.log('✅ Consent form saved:', data?.id);
+                  toast({
+                    title: 'Success',
+                    description: `Consent form ${isEditingConsentForm ? 'updated' : 'saved'} successfully!`
+                  });
+
+                  setShowConsentFullArchForm(false);
+                  setSelectedAdminFormType("");
+                  setEditingConsentForm(null);
+                  setIsEditingConsentForm(false);
+                  setIsViewingConsentForm(false);
+
+                  // Refresh the consent forms list
+                  await fetchConsentForms();
+                } catch (error: any) {
+                  console.error('❌ Error saving consent to Supabase:', error);
+                  console.error('❌ Details:', { message: error?.message, details: error?.details, hint: error?.hint, code: error?.code });
+                  toast({ title: 'Save failed', description: 'Could not save consent form. See console for details.' });
+                }
               }}
               onCancel={() => {
                 setShowConsentFullArchForm(false);
                 setSelectedAdminFormType("");
+                setEditingConsentForm(null);
+                setIsEditingConsentForm(false);
+                setIsViewingConsentForm(false);
               }}
             />
           )}
@@ -11108,26 +12915,123 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* Financial Agreement Form Dialog */}
-      <Dialog open={showFinancialAgreementForm} onOpenChange={setShowFinancialAgreementForm}>
+      <Dialog open={showFinancialAgreementForm} onOpenChange={(open) => {
+        setShowFinancialAgreementForm(open);
+        if (!open) {
+          setIsViewingFinancialAgreement(false);
+          setIsEditingFinancialAgreement(false);
+          setEditingFinancialAgreement(null);
+        }
+      }}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           {patient && (
             <FinancialAgreementForm
               patientName={patient.full_name}
               patientDateOfBirth={patient.date_of_birth}
-              onSubmit={(formData) => {
-                console.log('Financial agreement submitted:', formData);
-                // Here you would typically save the form data to your backend
-                setShowFinancialAgreementForm(false);
-                setSelectedAdminFormType("");
-                // Show success message
-                toast({
-                  title: "Success",
-                  description: "Financial agreement saved successfully!",
-                });
+              initialData={editingFinancialAgreement}
+              isEditing={isEditingFinancialAgreement}
+              readOnly={isViewingFinancialAgreement}
+              onSubmit={async (formData) => {
+                console.log('💾 Financial agreement submitted:', formData);
+                console.log('🔍 Patient ID:', patient.id);
+                console.log('🔄 Is editing:', isEditingFinancialAgreement);
+
+                try {
+                  // Prepare data for database insertion (following the pattern of other forms)
+                  const financialAgreementData = {
+                    patient_id: patient.id,
+                    patient_name: formData.patientName || patient.full_name,
+                    chart_number: formData.chartNumber || null,
+                    date_of_birth: formData.dateOfBirth || patient.date_of_birth,
+                    date_of_execution: formData.dateOfExecution || new Date().toISOString().split('T')[0],
+                    time_of_execution: formData.timeOfExecution || new Date().toTimeString().slice(0, 5),
+                    accepted_treatments: formData.acceptedTreatments || [],
+                    total_cost_of_treatment: formData.totalCostOfTreatment ? parseFloat(formData.totalCostOfTreatment) : null,
+                    patient_payment_today: formData.patientPaymentToday ? parseFloat(formData.patientPaymentToday) : null,
+                    remaining_balance: formData.remainingBalance ? parseFloat(formData.remainingBalance) : null,
+                    balance_due_date: formData.balanceDueDate || null,
+                    payment_terms_initials: formData.paymentTermsInitials || null,
+                    lab_fee_initials: formData.labFeeInitials || null,
+                    care_package_fee: formData.carePackageFee ? parseFloat(formData.carePackageFee) : null,
+                    care_package_election: formData.carePackageElection || null,
+                    warranty_initials: formData.warrantyInitials || null,
+                    capacity_confirmed: formData.capacityConfirmed || false,
+                    hipaa_acknowledged: formData.hipaaAcknowledged || false,
+                    capacity_initials: formData.capacityInitials || null,
+                    dispute_initials: formData.disputeInitials || null,
+                    terms_agreed: formData.termsAgreed || false,
+                    patient_signature: formData.patientSignature || null,
+                    patient_signature_date: formData.patientSignatureDate || null,
+                    patient_signature_time: formData.patientSignatureTime || null,
+                    witness_name: formData.witnessName || null,
+                    witness_role: formData.witnessRole || null,
+                    witness_signature: formData.witnessSignature || null,
+                    witness_signature_date: formData.witnessSignatureDate || null,
+                    witness_signature_time: formData.witnessSignatureTime || null,
+                    scanned_to_chart: formData.scannedToChart || false,
+                    countersigned_by_manager: formData.countersignedByManager || false,
+                    status: 'completed',
+                    form_version: '1.0'
+                  };
+
+                  console.log('💾 Saving financial agreement data:', financialAgreementData);
+
+                  let data, error;
+
+                  if (isEditingFinancialAgreement && editingFinancialAgreement) {
+                    // Update existing financial agreement
+                    const result = await updateFinancialAgreement(editingFinancialAgreement.id, formData, patient.id);
+                    data = result.data;
+                    error = result.error;
+                  } else {
+                    // Create new financial agreement
+                    const result = await supabase
+                      .from('financial_agreements')
+                      .insert([financialAgreementData])
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  }
+
+                  if (error) {
+                    console.error('❌ Error saving financial agreement:', error);
+                    toast({
+                      title: "Error",
+                      description: `Failed to ${isEditingFinancialAgreement ? 'update' : 'save'} financial agreement: ${error.message}`,
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  console.log('✅ Financial agreement saved successfully:', data);
+                  setShowFinancialAgreementForm(false);
+                  setSelectedAdminFormType("");
+                  setEditingFinancialAgreement(null);
+                  setIsEditingFinancialAgreement(false);
+
+                  // Refresh the financial agreements list
+                  await fetchFinancialAgreements();
+
+                  // Show success message
+                  toast({
+                    title: "Success",
+                    description: `Financial agreement ${isEditingFinancialAgreement ? 'updated' : 'saved'} successfully!`,
+                  });
+                } catch (error) {
+                  console.error('💥 Unexpected error saving financial agreement:', error);
+                  toast({
+                    title: "Error",
+                    description: `An unexpected error occurred: ${error.message}`,
+                    variant: "destructive",
+                  });
+                }
               }}
               onCancel={() => {
                 setShowFinancialAgreementForm(false);
                 setSelectedAdminFormType("");
+                setEditingFinancialAgreement(null);
+                setIsEditingFinancialAgreement(false);
               }}
             />
           )}
@@ -11135,26 +13039,116 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* Final Design Approval Form Dialog */}
-      <Dialog open={showFinalDesignApprovalForm} onOpenChange={setShowFinalDesignApprovalForm}>
+      <Dialog open={showFinalDesignApprovalForm} onOpenChange={(open) => {
+        setShowFinalDesignApprovalForm(open);
+        if (!open) {
+          setIsViewingFinalDesignApprovalForm(false);
+          setIsEditingFinalDesignApprovalForm(false);
+          setEditingFinalDesignApprovalForm(null);
+        }
+      }}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           {patient && (
             <FinalDesignApprovalForm
               patientName={patient.full_name}
               patientDateOfBirth={patient.date_of_birth}
-              onSubmit={(formData) => {
-                console.log('Final design approval submitted:', formData);
-                // Here you would typically save the form data to your backend
-                setShowFinalDesignApprovalForm(false);
-                setSelectedAdminFormType("");
-                // Show success message
-                toast({
-                  title: "Success",
-                  description: "Final design approval saved successfully!",
-                });
+              initialData={editingFinalDesignApprovalForm}
+              isEditing={isEditingFinalDesignApprovalForm}
+              readOnly={isViewingFinalDesignApprovalForm}
+              onSubmit={async (formData) => {
+                try {
+                  // Map form data to database columns
+                  const payload: any = {
+                    patient_id: patient.id,
+                    status: 'signed',
+
+                    // Patient Information
+                    first_name: formData.firstName,
+                    last_name: formData.lastName,
+                    date_of_birth: formData.dateOfBirth,
+                    date_of_service: formData.dateOfService,
+
+                    // Treatment Details
+                    treatment: formData.treatment,
+                    material: formData.material,
+                    shade_selected: formData.shadeSelected,
+
+                    // Design Approval & Fee Agreement Acknowledgments
+                    design_review_acknowledged: formData.designReviewAcknowledged,
+                    final_fabrication_approved: formData.finalFabricationApproved,
+                    post_approval_changes_understood: formData.postApprovalChangesUnderstood,
+                    warranty_reminder_understood: formData.warrantyReminderUnderstood,
+
+                    // Signatures
+                    patient_full_name: formData.patientFullName,
+                    patient_signature: formData.patientSignature,
+                    patient_signature_date: formData.patientSignatureDate,
+                    witness_name: formData.witnessName,
+                    witness_signature: formData.witnessSignature,
+                    witness_signature_date: formData.witnessSignatureDate,
+
+                    // Office Use Only
+                    design_added_to_chart: formData.designAddedToChart,
+                    fee_agreement_scanned: formData.feeAgreementScanned,
+
+                    // Keep form_data as backup
+                    form_data: formData
+                  };
+
+                  let data, error;
+
+                  if (isEditingFinalDesignApprovalForm && editingFinalDesignApprovalForm) {
+                    // Update existing form
+                    const result = await supabase
+                      .from('final_design_approval_forms')
+                      .update(payload)
+                      .eq('id', editingFinalDesignApprovalForm.id)
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  } else {
+                    // Create new form
+                    const result = await supabase
+                      .from('final_design_approval_forms')
+                      .insert([payload])
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  }
+
+                  if (error) throw error;
+
+                  console.log('✅ Final design approval form saved:', data?.id);
+                  toast({
+                    title: 'Success',
+                    description: `Final design approval form ${isEditingFinalDesignApprovalForm ? 'updated' : 'saved'} successfully!`
+                  });
+
+                  setShowFinalDesignApprovalForm(false);
+                  setSelectedAdminFormType("");
+                  setEditingFinalDesignApprovalForm(null);
+                  setIsEditingFinalDesignApprovalForm(false);
+                  setIsViewingFinalDesignApprovalForm(false);
+
+                  // Refresh the forms list
+                  await fetchFinalDesignApprovalForms();
+                } catch (error: any) {
+                  console.error('❌ Error saving final design approval form:', error);
+                  toast({
+                    title: 'Save failed',
+                    description: 'Could not save final design approval form. See console for details.',
+                    variant: 'destructive'
+                  });
+                }
               }}
               onCancel={() => {
                 setShowFinalDesignApprovalForm(false);
                 setSelectedAdminFormType("");
+                setEditingFinalDesignApprovalForm(null);
+                setIsEditingFinalDesignApprovalForm(false);
+                setIsViewingFinalDesignApprovalForm(false);
               }}
             />
           )}
@@ -11162,26 +13156,139 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* Medical Records Release Form Dialog */}
-      <Dialog open={showMedicalRecordsReleaseForm} onOpenChange={setShowMedicalRecordsReleaseForm}>
+      <Dialog open={showMedicalRecordsReleaseForm} onOpenChange={(open) => {
+        setShowMedicalRecordsReleaseForm(open);
+        if (!open) {
+          setIsViewingMedicalRecordsReleaseForm(false);
+          setIsEditingMedicalRecordsReleaseForm(false);
+          setEditingMedicalRecordsReleaseForm(null);
+        }
+      }}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           {patient && (
             <MedicalRecordsReleaseForm
               patientName={patient.full_name}
               patientDateOfBirth={patient.date_of_birth}
-              onSubmit={(formData) => {
-                console.log('Medical records release submitted:', formData);
-                // Here you would typically save the form data to your backend
-                setShowMedicalRecordsReleaseForm(false);
-                setSelectedAdminFormType("");
-                // Show success message
-                toast({
-                  title: "Success",
-                  description: "Medical records release form saved successfully!",
-                });
+              initialData={editingMedicalRecordsReleaseForm}
+              isEditing={isEditingMedicalRecordsReleaseForm}
+              readOnly={isViewingMedicalRecordsReleaseForm}
+              onSubmit={async (formData) => {
+                try {
+                  // Map form data to database columns
+                  const payload: any = {
+                    patient_id: patient.id,
+                    status: 'signed',
+
+                    // Patient Information
+                    patient_name: formData.patientName,
+                    date_of_birth: formData.dateOfBirth,
+                    address: formData.address,
+                    city: formData.city,
+                    state: formData.state,
+                    zip_code: formData.zipCode,
+                    phone: formData.phone,
+                    email: formData.email,
+
+                    // Release Information
+                    date_of_request: formData.dateOfRequest,
+                    records_from_date: formData.recordsFromDate,
+                    records_to_date: formData.recordsToDate,
+
+                    // Records to Release
+                    complete_record: formData.recordTypes?.completeRecord || false,
+                    xrays: formData.recordTypes?.xrays || false,
+                    lab_results: formData.recordTypes?.labResults || false,
+                    consultation_notes: formData.recordTypes?.consultationNotes || false,
+                    treatment_plans: formData.recordTypes?.treatmentPlans || false,
+                    surgical_reports: formData.recordTypes?.surgicalReports || false,
+                    prescriptions: formData.recordTypes?.prescriptions || false,
+                    photographs: formData.recordTypes?.photographs || false,
+                    models: formData.recordTypes?.models || false,
+                    other_records: formData.recordTypes?.other || false,
+                    other_records_description: formData.otherRecordsDescription,
+
+                    // Release To Information
+                    release_to_name: formData.releaseToName,
+                    release_to_title: formData.releaseToTitle,
+                    release_to_organization: formData.releaseToOrganization,
+                    release_to_address: formData.releaseToAddress,
+                    release_to_city: formData.releaseToCity,
+                    release_to_state: formData.releaseToState,
+                    release_to_zip_code: formData.releaseToZipCode,
+                    release_to_phone: formData.releaseToPhone,
+                    release_to_fax: formData.releaseToFax,
+
+                    // Purpose and Authorization
+                    purpose_of_release: formData.purposeOfRelease,
+                    authorization_expiration: formData.authorizationExpiration,
+                    right_to_revoke: formData.rightToRevoke,
+                    copy_to_patient: formData.copyToPatient,
+
+                    // Signatures
+                    patient_signature: formData.patientSignature,
+                    patient_signature_date: formData.patientSignatureDate,
+                    witness_signature: formData.witnessSignature,
+                    witness_signature_date: formData.witnessSignatureDate,
+                    witness_name: formData.witnessName,
+
+                    // Keep form_data as backup
+                    form_data: formData
+                  };
+
+                  let data, error;
+
+                  if (isEditingMedicalRecordsReleaseForm && editingMedicalRecordsReleaseForm) {
+                    // Update existing form
+                    const result = await supabase
+                      .from('medical_records_release_forms')
+                      .update(payload)
+                      .eq('id', editingMedicalRecordsReleaseForm.id)
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  } else {
+                    // Create new form
+                    const result = await supabase
+                      .from('medical_records_release_forms')
+                      .insert([payload])
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  }
+
+                  if (error) throw error;
+
+                  console.log('✅ Medical records release form saved:', data?.id);
+                  toast({
+                    title: 'Success',
+                    description: `Medical records release form ${isEditingMedicalRecordsReleaseForm ? 'updated' : 'saved'} successfully!`
+                  });
+
+                  setShowMedicalRecordsReleaseForm(false);
+                  setSelectedAdminFormType("");
+                  setEditingMedicalRecordsReleaseForm(null);
+                  setIsEditingMedicalRecordsReleaseForm(false);
+                  setIsViewingMedicalRecordsReleaseForm(false);
+
+                  // Refresh the forms list
+                  await fetchMedicalRecordsReleaseForms();
+                } catch (error: any) {
+                  console.error('❌ Error saving medical records release form:', error);
+                  toast({
+                    title: 'Save failed',
+                    description: 'Could not save medical records release form. See console for details.',
+                    variant: 'destructive'
+                  });
+                }
               }}
               onCancel={() => {
                 setShowMedicalRecordsReleaseForm(false);
                 setSelectedAdminFormType("");
+                setEditingMedicalRecordsReleaseForm(null);
+                setIsEditingMedicalRecordsReleaseForm(false);
+                setIsViewingMedicalRecordsReleaseForm(false);
               }}
             />
           )}
@@ -11189,7 +13296,18 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* New Patient Packet Form Dialog */}
-      <Dialog open={showNewPatientPacketForm} onOpenChange={setShowNewPatientPacketForm}>
+      <Dialog open={showNewPatientPacketForm} onOpenChange={(open) => {
+        setShowNewPatientPacketForm(open);
+        if (!open) {
+          setEditingPatientPacket(null);
+          setIsEditingPatientPacket(false);
+          setSelectedAdminFormType("");
+          setCurrentPatientPacketId(null);
+          setPatientPacketAutoSaveStatus('idle');
+          setPatientPacketAutoSaveMessage('');
+          setPatientPacketLastSavedTime('');
+        }
+      }}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           {patient && (
             <NewPatientPacketForm
@@ -11197,36 +13315,63 @@ export function PatientProfilePage() {
               patientDateOfBirth={patient.date_of_birth}
               patientGender={patient.gender}
               showWelcomeHeader={false}
+              initialData={editingPatientPacket}
+              submitButtonText={isEditingPatientPacket ? "Update Patient Packet" : "Save Patient Packet"}
+              onAutoSave={autoSavePatientPacket}
+              autoSaveStatus={patientPacketAutoSaveStatus}
+              autoSaveMessage={patientPacketAutoSaveMessage}
+              lastSavedTime={patientPacketLastSavedTime}
               onSubmit={async (formData) => {
-                console.log('New patient packet submitted:', formData);
+                console.log('Patient packet submitted:', formData);
 
                 try {
-                  // Save the patient packet data using our service
-                  const { data, error } = await savePatientPacket(
-                    formData,
-                    patient.id, // patient_id for internal submissions
-                    undefined,  // no lead_id for internal submissions
-                    'internal'  // submission source
-                  );
+                  let result;
 
-                  if (error) {
-                    console.error('Error saving patient packet:', error);
+                  if (isEditingPatientPacket && editingPatientPacket) {
+                    // Update existing packet
+                    const packetId = patientPackets.find(p =>
+                      p.first_name === editingPatientPacket.firstName &&
+                      p.last_name === editingPatientPacket.lastName
+                    )?.id;
+
+                    if (!packetId) {
+                      throw new Error('Could not find packet ID for update');
+                    }
+
+                    result = await updatePatientPacket(packetId, formData, 'internal');
+                  } else {
+                    // Create new packet
+                    result = await savePatientPacket(
+                      formData,
+                      patient.id, // patient_id for internal submissions
+                      undefined,  // no lead_id for internal submissions
+                      'internal'  // submission source
+                    );
+                  }
+
+                  if (result.error) {
+                    console.error('Error saving patient packet:', result.error);
                     toast({
                       title: "Error",
-                      description: "Failed to save patient packet. Please try again.",
+                      description: `Failed to ${isEditingPatientPacket ? 'update' : 'save'} patient packet. Please try again.`,
                       variant: "destructive",
                     });
                     return;
                   }
 
-                  console.log('Patient packet saved successfully:', data);
+                  console.log('Patient packet saved successfully:', result.data);
                   setShowNewPatientPacketForm(false);
                   setSelectedAdminFormType("");
+                  setEditingPatientPacket(null);
+                  setIsEditingPatientPacket(false);
+
+                  // Refresh the patient packets list
+                  await fetchPatientPackets();
 
                   // Show success message
                   toast({
                     title: "Success",
-                    description: "New patient packet saved successfully!",
+                    description: `Patient packet ${isEditingPatientPacket ? 'updated' : 'saved'} successfully!`,
                   });
                 } catch (error) {
                   console.error('Unexpected error saving patient packet:', error);
@@ -11240,6 +13385,12 @@ export function PatientProfilePage() {
               onCancel={() => {
                 setShowNewPatientPacketForm(false);
                 setSelectedAdminFormType("");
+                setEditingPatientPacket(null);
+                setIsEditingPatientPacket(false);
+                setCurrentPatientPacketId(null);
+                setPatientPacketAutoSaveStatus('idle');
+                setPatientPacketAutoSaveMessage('');
+                setPatientPacketLastSavedTime('');
               }}
             />
           )}
@@ -11247,26 +13398,109 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* Informed Consent Form For Smoking Dialog */}
-      <Dialog open={showInformedConsentSmokingForm} onOpenChange={setShowInformedConsentSmokingForm}>
+      <Dialog open={showInformedConsentSmokingForm} onOpenChange={(open) => {
+        setShowInformedConsentSmokingForm(open);
+        if (!open) {
+          setIsViewingInformedConsentSmokingForm(false);
+          setIsEditingInformedConsentSmokingForm(false);
+          setEditingInformedConsentSmokingForm(null);
+        }
+      }}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           {patient && (
             <InformedConsentSmokingForm
               patientName={patient.full_name}
               patientDateOfBirth={patient.date_of_birth}
-              onSubmit={(formData) => {
-                console.log('Informed consent smoking form submitted:', formData);
-                // Here you would typically save the form data to your backend
-                setShowInformedConsentSmokingForm(false);
-                setSelectedAdminFormType("");
-                // Show success message
-                toast({
-                  title: "Success",
-                  description: "Informed consent form for smoking saved successfully!",
-                });
+              initialData={editingInformedConsentSmokingForm}
+              isEditing={isEditingInformedConsentSmokingForm}
+              readOnly={isViewingInformedConsentSmokingForm}
+              onSubmit={async (formData) => {
+                try {
+                  // Map form data to database columns
+                  const payload: any = {
+                    patient_id: patient.id,
+                    status: 'signed',
+
+                    // Patient Information
+                    first_name: formData.firstName,
+                    last_name: formData.lastName,
+                    date_of_birth: formData.dateOfBirth,
+                    nicotine_use: formData.nicotineUse,
+
+                    // Patient Understanding and Agreement
+                    understands_nicotine_effects: formData.understandsNicotineEffects,
+                    understands_risks: formData.understandsRisks,
+                    understands_timeline: formData.understandsTimeline,
+                    understands_insurance: formData.understandsInsurance,
+                    offered_resources: formData.offeredResources,
+                    takes_responsibility: formData.takesResponsibility,
+
+                    // Signatures
+                    patient_signature: formData.patientSignature,
+                    signature_date: formData.signatureDate,
+
+                    // Staff Use
+                    signed_consent: formData.signedConsent,
+                    refusal_reason: formData.refusalReason,
+
+                    // Keep form_data as backup
+                    form_data: formData
+                  };
+
+                  let data, error;
+
+                  if (isEditingInformedConsentSmokingForm && editingInformedConsentSmokingForm) {
+                    // Update existing form
+                    const result = await supabase
+                      .from('informed_consent_smoking_forms')
+                      .update(payload)
+                      .eq('id', editingInformedConsentSmokingForm.id)
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  } else {
+                    // Create new form
+                    const result = await supabase
+                      .from('informed_consent_smoking_forms')
+                      .insert([payload])
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  }
+
+                  if (error) throw error;
+
+                  console.log('✅ Informed consent smoking form saved:', data?.id);
+                  toast({
+                    title: 'Success',
+                    description: `Informed consent smoking form ${isEditingInformedConsentSmokingForm ? 'updated' : 'saved'} successfully!`
+                  });
+
+                  setShowInformedConsentSmokingForm(false);
+                  setSelectedAdminFormType("");
+                  setEditingInformedConsentSmokingForm(null);
+                  setIsEditingInformedConsentSmokingForm(false);
+                  setIsViewingInformedConsentSmokingForm(false);
+
+                  // Refresh the forms list
+                  await fetchInformedConsentSmokingForms();
+                } catch (error: any) {
+                  console.error('❌ Error saving informed consent smoking form:', error);
+                  toast({
+                    title: 'Save failed',
+                    description: 'Could not save informed consent smoking form. See console for details.',
+                    variant: 'destructive'
+                  });
+                }
               }}
               onCancel={() => {
                 setShowInformedConsentSmokingForm(false);
                 setSelectedAdminFormType("");
+                setEditingInformedConsentSmokingForm(null);
+                setIsEditingInformedConsentSmokingForm(false);
+                setIsViewingInformedConsentSmokingForm(false);
               }}
             />
           )}
@@ -11274,26 +13508,143 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* Thank You and Pre-Surgery Form Dialog */}
-      <Dialog open={showThankYouPreSurgeryForm} onOpenChange={setShowThankYouPreSurgeryForm}>
+      <Dialog open={showThankYouPreSurgeryForm} onOpenChange={(open) => {
+        setShowThankYouPreSurgeryForm(open);
+        if (!open) {
+          setIsViewingThankYouPreSurgeryForm(false);
+          setIsEditingThankYouPreSurgeryForm(false);
+          setEditingThankYouPreSurgeryForm(null);
+        }
+      }}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           {patient && (
             <ThankYouPreSurgeryForm
               patientName={patient.full_name}
               patientDateOfBirth={patient.date_of_birth}
-              onSubmit={(formData) => {
-                console.log('Thank you and pre-surgery form submitted:', formData);
-                // Here you would typically save the form data to your backend
-                setShowThankYouPreSurgeryForm(false);
-                setSelectedAdminFormType("");
-                // Show success message
-                toast({
-                  title: "Success",
-                  description: "Thank you and pre-surgery form saved successfully!",
-                });
+              initialData={editingThankYouPreSurgeryForm}
+              isEditing={isEditingThankYouPreSurgeryForm}
+              readOnly={isViewingThankYouPreSurgeryForm}
+              onSubmit={async (formData) => {
+                try {
+                  // Map form data to database columns
+                  const payload: any = {
+                    patient_id: patient.id,
+                    status: 'signed',
+
+                    // Patient Information
+                    patient_name: formData.patientName,
+                    phone: formData.phone,
+                    date_of_birth: formData.dateOfBirth,
+                    email: formData.email,
+                    treatment_type: formData.treatmentType,
+                    form_date: formData.formDate,
+
+                    // Medical Screening
+                    heart_conditions: formData.medicalConditions?.heartConditions || false,
+                    blood_thinners: formData.medicalConditions?.bloodThinners || false,
+                    diabetes: formData.medicalConditions?.diabetes || false,
+                    high_blood_pressure: formData.medicalConditions?.highBloodPressure || false,
+                    allergies: formData.medicalConditions?.allergies || false,
+                    pregnancy_nursing: formData.medicalConditions?.pregnancyNursing || false,
+                    recent_illness: formData.medicalConditions?.recentIllness || false,
+                    medication_changes: formData.medicalConditions?.medicationChanges || false,
+
+                    // Timeline Acknowledgments - 3 Days Before
+                    start_medrol: formData.threeDaysBefore?.startMedrol || false,
+                    start_amoxicillin: formData.threeDaysBefore?.startAmoxicillin || false,
+                    no_alcohol_3days: formData.threeDaysBefore?.noAlcohol || false,
+                    arrange_ride: formData.threeDaysBefore?.arrangeRide || false,
+
+                    // Timeline Acknowledgments - Night Before
+                    take_diazepam: formData.nightBefore?.takeDiazepam || false,
+                    no_food_after_midnight: formData.nightBefore?.noFoodAfterMidnight || false,
+                    no_water_after_6am: formData.nightBefore?.noWaterAfter6AM || false,
+                    confirm_ride: formData.nightBefore?.confirmRide || false,
+
+                    // Timeline Acknowledgments - Morning Of
+                    no_breakfast: formData.morningOf?.noBreakfast || false,
+                    no_pills: formData.morningOf?.noPills || false,
+                    wear_comfortable: formData.morningOf?.wearComfortable || false,
+                    arrive_on_time: formData.morningOf?.arriveOnTime || false,
+
+                    // Timeline Acknowledgments - After Surgery
+                    no_alcohol_24hrs: formData.afterSurgery?.noAlcohol24hrs || false,
+                    no_driving_24hrs: formData.afterSurgery?.noDriving24hrs || false,
+                    follow_instructions: formData.afterSurgery?.followInstructions || false,
+                    call_if_concerns: formData.afterSurgery?.callIfConcerns || false,
+
+                    // Patient Acknowledgments
+                    read_instructions: formData.acknowledgments?.readInstructions || false,
+                    understand_medications: formData.acknowledgments?.understandMedications || false,
+                    understand_sedation: formData.acknowledgments?.understandSedation || false,
+                    arranged_transport: formData.acknowledgments?.arrangedTransport || false,
+                    understand_restrictions: formData.acknowledgments?.understandRestrictions || false,
+                    will_follow_instructions: formData.acknowledgments?.willFollowInstructions || false,
+                    understand_emergency: formData.acknowledgments?.understandEmergency || false,
+
+                    // Signatures
+                    patient_signature: formData.patientSignature,
+                    signature_date: formData.signatureDate,
+                    patient_print_name: formData.patientPrintName,
+
+                    // Keep form_data as backup
+                    form_data: formData
+                  };
+
+                  let data, error;
+
+                  if (isEditingThankYouPreSurgeryForm && editingThankYouPreSurgeryForm) {
+                    // Update existing form
+                    const result = await supabase
+                      .from('thank_you_pre_surgery_forms')
+                      .update(payload)
+                      .eq('id', editingThankYouPreSurgeryForm.id)
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  } else {
+                    // Create new form
+                    const result = await supabase
+                      .from('thank_you_pre_surgery_forms')
+                      .insert([payload])
+                      .select()
+                      .single();
+                    data = result.data;
+                    error = result.error;
+                  }
+
+                  if (error) throw error;
+
+                  console.log('✅ Thank you pre-surgery form saved:', data?.id);
+                  toast({
+                    title: 'Success',
+                    description: `Thank you pre-surgery form ${isEditingThankYouPreSurgeryForm ? 'updated' : 'saved'} successfully!`
+                  });
+
+                  setShowThankYouPreSurgeryForm(false);
+                  setSelectedAdminFormType("");
+                  setEditingThankYouPreSurgeryForm(null);
+                  setIsEditingThankYouPreSurgeryForm(false);
+                  setIsViewingThankYouPreSurgeryForm(false);
+
+                  // Refresh the forms list
+                  await fetchThankYouPreSurgeryForms();
+                } catch (error: any) {
+                  console.error('❌ Error saving thank you pre-surgery form:', error);
+                  toast({
+                    title: 'Save failed',
+                    description: 'Could not save thank you pre-surgery form. See console for details.',
+                    variant: 'destructive'
+                  });
+                }
               }}
               onCancel={() => {
                 setShowThankYouPreSurgeryForm(false);
                 setSelectedAdminFormType("");
+                setEditingThankYouPreSurgeryForm(null);
+                setIsEditingThankYouPreSurgeryForm(false);
+                setIsViewingThankYouPreSurgeryForm(false);
               }}
             />
           )}
@@ -11307,20 +13658,79 @@ export function PatientProfilePage() {
             <ThreeYearCarePackageForm
               patientName={patient.full_name}
               patientDateOfBirth={patient.date_of_birth}
-              onSubmit={(formData) => {
-                console.log('3-Year Care Package form submitted:', formData);
-                // Here you would typically save the form data to your backend
-                setShowThreeYearCarePackageForm(false);
-                setSelectedAdminFormType("");
-                // Show success message
-                toast({
-                  title: "Success",
-                  description: "3-Year Care Package enrollment form saved successfully!",
-                });
+              initialData={selectedThreeYearCarePackageForm ? formatThreeYearCarePackageFormForDisplay(selectedThreeYearCarePackageForm) : undefined}
+              isEditing={isEditingThreeYearCarePackageForm}
+              isViewing={isViewingThreeYearCarePackageForm}
+              onSubmit={async (formData) => {
+                try {
+                  if (isEditingThreeYearCarePackageForm && selectedThreeYearCarePackageForm) {
+                    // Update existing form
+                    const { data, error } = await updateThreeYearCarePackageForm(
+                      selectedThreeYearCarePackageForm.id!,
+                      formData,
+                      patientId
+                    );
+
+                    if (error) {
+                      console.error('Error updating 3-Year Care Package form:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to update 3-Year Care Package form. Please try again.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+
+                    console.log('✅ Updated 3-Year Care Package form:', data?.id);
+                    toast({
+                      title: "Success",
+                      description: "3-Year Care Package form updated successfully!",
+                    });
+                  } else {
+                    // Create new form
+                    const { data, error } = await createThreeYearCarePackageForm(formData, patientId);
+
+                    if (error) {
+                      console.error('Error creating 3-Year Care Package form:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to save 3-Year Care Package form. Please try again.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+
+                    console.log('✅ Created 3-Year Care Package form:', data?.id);
+                    toast({
+                      title: "Success",
+                      description: "3-Year Care Package form saved successfully!",
+                    });
+                  }
+
+                  // Reset states and refresh forms
+                  setShowThreeYearCarePackageForm(false);
+                  setSelectedAdminFormType("");
+                  setSelectedThreeYearCarePackageForm(null);
+                  setIsEditingThreeYearCarePackageForm(false);
+                  setIsViewingThreeYearCarePackageForm(false);
+
+                  // Refresh the forms list
+                  fetchThreeYearCarePackageForms();
+                } catch (error) {
+                  console.error('Unexpected error saving 3-Year Care Package form:', error);
+                  toast({
+                    title: "Error",
+                    description: "An unexpected error occurred. Please try again.",
+                    variant: "destructive"
+                  });
+                }
               }}
               onCancel={() => {
                 setShowThreeYearCarePackageForm(false);
                 setSelectedAdminFormType("");
+                setSelectedThreeYearCarePackageForm(null);
+                setIsEditingThreeYearCarePackageForm(false);
+                setIsViewingThreeYearCarePackageForm(false);
               }}
             />
           )}
@@ -11365,6 +13775,252 @@ export function PatientProfilePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Patient Packet Confirmation Dialog */}
+      <AlertDialog open={showDeletePacketConfirm} onOpenChange={setShowDeletePacketConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Patient Packet
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the patient packet for{" "}
+              <strong>
+                {packetToDelete ? `${packetToDelete.first_name} ${packetToDelete.last_name}` : "this patient"}
+              </strong>
+              ?
+              <br />
+              <br />
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeletePatientPacket}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Financial Agreement Confirmation Dialog */}
+      <AlertDialog open={showDeleteFinancialAgreementConfirm} onOpenChange={setShowDeleteFinancialAgreementConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Financial Agreement
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this financial agreement? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteFinancialAgreementConfirm(false);
+              setFinancialAgreementToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFinancialAgreement}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Consent Form Confirmation Dialog */}
+      <AlertDialog open={showDeleteConsentFormConfirm} onOpenChange={setShowDeleteConsentFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Consent Form
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this consent form? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteConsentFormConfirm(false);
+              setConsentFormToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConsentForm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Medical Records Release Form Confirmation Dialog */}
+      <AlertDialog open={showDeleteMedicalRecordsReleaseFormConfirm} onOpenChange={setShowDeleteMedicalRecordsReleaseFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Medical Records Release Form
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this medical records release form? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteMedicalRecordsReleaseFormConfirm(false);
+              setMedicalRecordsReleaseFormToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMedicalRecordsReleaseForm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Informed Consent Smoking Form Confirmation Dialog */}
+      <AlertDialog open={showDeleteInformedConsentSmokingFormConfirm} onOpenChange={setShowDeleteInformedConsentSmokingFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Informed Consent Smoking Form
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this informed consent smoking form? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteInformedConsentSmokingFormConfirm(false);
+              setInformedConsentSmokingFormToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteInformedConsentSmokingForm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Final Design Approval Form Confirmation Dialog */}
+      <AlertDialog open={showDeleteFinalDesignApprovalFormConfirm} onOpenChange={setShowDeleteFinalDesignApprovalFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Final Design Approval Form
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this final design approval form? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteFinalDesignApprovalFormConfirm(false);
+              setFinalDesignApprovalFormToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFinalDesignApprovalForm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Thank You Pre-Surgery Form Confirmation Dialog */}
+      <AlertDialog open={showDeleteThankYouPreSurgeryFormConfirm} onOpenChange={setShowDeleteThankYouPreSurgeryFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Thank You Pre-Surgery Form
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this thank you pre-surgery form? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteThankYouPreSurgeryFormConfirm(false);
+              setThankYouPreSurgeryFormToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteThankYouPreSurgeryForm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete 3-Year Care Package Form Confirmation Dialog */}
+      <AlertDialog open={showDeleteThreeYearCarePackageFormConfirm} onOpenChange={setShowDeleteThreeYearCarePackageFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete 3-Year Care Package Form
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this 3-Year Care Package form? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteThreeYearCarePackageFormConfirm(false);
+              setThreeYearCarePackageFormToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteThreeYearCarePackageForm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Print Preview Dialog */}
+      <PrintPreviewDialog
+        isOpen={showPrintPreview}
+        onClose={() => setShowPrintPreview(false)}
+        formTitle={printFormType}
+        patientName={printPatientName}
+        patientDateOfBirth={printPatientDOB}
+        formId={printFormData?.id ? `${printFormType.replace(/\s+/g, '').substring(0, 3).toUpperCase()}-${String(printFormData.id).padStart(6, '0')}` : ''}
+        formData={printFormData}
+        formType={printFormType}
+      />
     </div>
   );
 }

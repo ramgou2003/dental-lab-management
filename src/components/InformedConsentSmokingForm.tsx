@@ -16,31 +16,42 @@ interface InformedConsentSmokingFormProps {
   onCancel: () => void;
   patientName?: string;
   patientDateOfBirth?: string;
+  initialData?: any;
+  isEditing?: boolean;
+  readOnly?: boolean;
 }
 
-export function InformedConsentSmokingForm({ onSubmit, onCancel, patientName = "", patientDateOfBirth = "" }: InformedConsentSmokingFormProps) {
+export function InformedConsentSmokingForm({
+  onSubmit,
+  onCancel,
+  patientName = "",
+  patientDateOfBirth = "",
+  initialData = null,
+  isEditing = false,
+  readOnly = false
+}: InformedConsentSmokingFormProps) {
   const [formData, setFormData] = useState({
     // Patient Information
-    firstName: patientName.split(' ')[0] || "",
-    lastName: patientName.split(' ').slice(1).join(' ') || "",
-    dateOfBirth: patientDateOfBirth || "",
-    nicotineUse: "",
-    
+    firstName: initialData?.first_name || patientName.split(' ')[0] || "",
+    lastName: initialData?.last_name || patientName.split(' ').slice(1).join(' ') || "",
+    dateOfBirth: initialData?.date_of_birth || patientDateOfBirth || "",
+    nicotineUse: initialData?.nicotine_use || "",
+
     // Patient Understanding and Agreement
-    understandsNicotineEffects: false,
-    understandsRisks: false,
-    understandsTimeline: false,
-    understandsInsurance: false,
-    offeredResources: false,
-    takesResponsibility: false,
-    
+    understandsNicotineEffects: initialData?.understands_nicotine_effects || false,
+    understandsRisks: initialData?.understands_risks || false,
+    understandsTimeline: initialData?.understands_timeline || false,
+    understandsInsurance: initialData?.understands_insurance || false,
+    offeredResources: initialData?.offered_resources || false,
+    takesResponsibility: initialData?.takes_responsibility || false,
+
     // Signatures
-    patientSignature: "",
-    signatureDate: new Date().toISOString().split('T')[0],
-    
+    patientSignature: initialData?.patient_signature || "",
+    signatureDate: initialData?.signature_date || new Date().toISOString().split('T')[0],
+
     // Staff Use
-    signedConsent: "",
-    refusalReason: ""
+    signedConsent: initialData?.signed_consent || "",
+    refusalReason: initialData?.refusal_reason || ""
   });
 
   // Signature dialog states
@@ -501,9 +512,15 @@ export function InformedConsentSmokingForm({ onSubmit, onCancel, patientName = "
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-            Save Informed Consent Form
-          </Button>
+          {!readOnly ? (
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              {isEditing ? 'Update Informed Consent Form' : 'Save Informed Consent Form'}
+            </Button>
+          ) : (
+            <Button type="button" disabled className="bg-gray-400 text-white">
+              View Only
+            </Button>
+          )}
         </div>
       </form>
 

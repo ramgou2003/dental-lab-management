@@ -17,9 +17,20 @@ interface FinalDesignApprovalFormProps {
   onCancel: () => void;
   patientName?: string;
   patientDateOfBirth?: string;
+  initialData?: any;
+  isEditing?: boolean;
+  readOnly?: boolean;
 }
 
-export function FinalDesignApprovalForm({ onSubmit, onCancel, patientName = "", patientDateOfBirth = "" }: FinalDesignApprovalFormProps) {
+export function FinalDesignApprovalForm({
+  onSubmit,
+  onCancel,
+  patientName = "",
+  patientDateOfBirth = "",
+  initialData = null,
+  isEditing = false,
+  readOnly = false
+}: FinalDesignApprovalFormProps) {
   // Material and Shade options from lab scripts form
   const materialOptions = [
     "Flexera Smile Ultra Plus", "Sprint Ray ONX", "Sprint Ray Nightguard Flex",
@@ -34,33 +45,33 @@ export function FinalDesignApprovalForm({ onSubmit, onCancel, patientName = "", 
 
   const [formData, setFormData] = useState({
     // Patient Information
-    firstName: patientName.split(' ')[0] || "",
-    lastName: patientName.split(' ').slice(1).join(' ') || "",
-    dateOfBirth: patientDateOfBirth,
-    dateOfService: new Date().toISOString().split('T')[0],
+    firstName: initialData?.first_name || patientName.split(' ')[0] || "",
+    lastName: initialData?.last_name || patientName.split(' ').slice(1).join(' ') || "",
+    dateOfBirth: initialData?.date_of_birth || patientDateOfBirth,
+    dateOfService: initialData?.date_of_service || new Date().toISOString().split('T')[0],
 
     // Treatment Details
-    treatment: "", // "UPPER", "LOWER", "DUAL"
-    material: "",
-    shadeSelected: "",
+    treatment: initialData?.treatment || "", // "UPPER", "LOWER", "DUAL"
+    material: initialData?.material || "",
+    shadeSelected: initialData?.shade_selected || "",
 
     // Design Approval & Fee Agreement Acknowledgments
-    designReviewAcknowledged: false,
-    finalFabricationApproved: false,
-    postApprovalChangesUnderstood: false,
-    warrantyReminderUnderstood: false,
+    designReviewAcknowledged: initialData?.design_review_acknowledged || false,
+    finalFabricationApproved: initialData?.final_fabrication_approved || false,
+    postApprovalChangesUnderstood: initialData?.post_approval_changes_understood || false,
+    warrantyReminderUnderstood: initialData?.warranty_reminder_understood || false,
 
     // Signatures
-    patientFullName: patientName,
-    patientSignature: "",
-    patientSignatureDate: new Date().toISOString().split('T')[0],
-    witnessName: "",
-    witnessSignature: "",
-    witnessSignatureDate: new Date().toISOString().split('T')[0],
+    patientFullName: initialData?.patient_full_name || patientName,
+    patientSignature: initialData?.patient_signature || "",
+    patientSignatureDate: initialData?.patient_signature_date || new Date().toISOString().split('T')[0],
+    witnessName: initialData?.witness_name || "",
+    witnessSignature: initialData?.witness_signature || "",
+    witnessSignatureDate: initialData?.witness_signature_date || new Date().toISOString().split('T')[0],
 
     // Office Use Only
-    designAddedToChart: false,
-    feeAgreementScanned: false
+    designAddedToChart: initialData?.design_added_to_chart || false,
+    feeAgreementScanned: initialData?.fee_agreement_scanned || false
   });
 
   // Signature dialog states
@@ -562,9 +573,15 @@ export function FinalDesignApprovalForm({ onSubmit, onCancel, patientName = "", 
               <Button type="button" variant="outline" onClick={onCancel}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                Save Final Design Approval
-              </Button>
+              {!readOnly ? (
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                  {isEditing ? 'Update Final Design Approval' : 'Save Final Design Approval'}
+                </Button>
+              ) : (
+                <Button type="button" disabled className="bg-gray-400 text-white">
+                  View Only
+                </Button>
+              )}
             </div>
           </div>
         </form>

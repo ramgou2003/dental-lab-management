@@ -17,9 +17,20 @@ interface FinancialAgreementFormProps {
   onCancel: () => void;
   patientName?: string;
   patientDateOfBirth?: string;
+  initialData?: any; // database record for editing/preview
+  isEditing?: boolean;
+  readOnly?: boolean; // preview mode
 }
 
-export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "", patientDateOfBirth = "" }: FinancialAgreementFormProps) {
+export function FinancialAgreementForm({
+  onSubmit,
+  onCancel,
+  patientName = "",
+  patientDateOfBirth = "",
+  initialData,
+  isEditing = false,
+  readOnly = false,
+}: FinancialAgreementFormProps) {
   const [formData, setFormData] = useState({
     // Patient & Treatment Identification
     patientName: patientName,
@@ -98,6 +109,60 @@ export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "", p
       setFormData(prev => ({ ...prev, ...updates }));
     }
   }, [patientName, patientDateOfBirth, formData.patientName, formData.dateOfBirth]);
+
+  // Prefill when initial data is provided (edit or preview)
+  useEffect(() => {
+    if (!initialData) return;
+
+    // Map database fields to form fields
+    setFormData(prev => ({
+      ...prev,
+      patientName: initialData.patient_name || prev.patientName,
+      chartNumber: initialData.chart_number || "",
+      dateOfBirth: initialData.date_of_birth || "",
+      dateOfExecution: initialData.date_of_execution || prev.dateOfExecution,
+      timeOfExecution: initialData.time_of_execution || prev.timeOfExecution,
+
+      acceptedTreatments: Array.isArray(initialData.accepted_treatments) ? initialData.accepted_treatments.map((t: any) => ({
+        service: t.service || "",
+        fee: t.fee?.toString?.() || (typeof t.fee === 'number' ? String(t.fee.toFixed?.(2) ?? t.fee) : (t.fee || "")),
+        cdtCode: t.cdtCode || "",
+        cptCode: t.cptCode || "",
+        initials: t.initials || "",
+      })) : [],
+      totalCostOfTreatment: initialData.total_cost_of_treatment != null ? String(initialData.total_cost_of_treatment) : "",
+
+      patientPaymentToday: initialData.patient_payment_today != null ? String(initialData.patient_payment_today) : "",
+      remainingBalance: initialData.remaining_balance != null ? String(initialData.remaining_balance) : "",
+      balanceDueDate: initialData.balance_due_date || "",
+      paymentTermsInitials: initialData.payment_terms_initials || "",
+
+      labFeeInitials: initialData.lab_fee_initials || "",
+
+      carePackageFee: initialData.care_package_fee != null ? String(initialData.care_package_fee) : "",
+      carePackageElection: (initialData.care_package_election || "") as any,
+      warrantyInitials: initialData.warranty_initials || "",
+
+      capacityConfirmed: !!initialData.capacity_confirmed,
+      hipaaAcknowledged: !!initialData.hipaa_acknowledged,
+      capacityInitials: initialData.capacity_initials || "",
+
+      disputeInitials: initialData.dispute_initials || "",
+
+      termsAgreed: !!initialData.terms_agreed,
+      patientSignature: initialData.patient_signature || "",
+      patientSignatureDate: initialData.patient_signature_date || prev.patientSignatureDate,
+      patientSignatureTime: initialData.patient_signature_time || prev.patientSignatureTime,
+      witnessName: initialData.witness_name || "",
+      witnessRole: initialData.witness_role || "",
+      witnessSignature: initialData.witness_signature || "",
+      witnessSignatureDate: initialData.witness_signature_date || prev.witnessSignatureDate,
+      witnessSignatureTime: initialData.witness_signature_time || prev.witnessSignatureTime,
+
+      scannedToChart: !!initialData.scanned_to_chart,
+      countersignedByManager: !!initialData.countersigned_by_manager,
+    }));
+  }, [isEditing, initialData]);
 
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
   const [showWitnessSignatureDialog, setShowWitnessSignatureDialog] = useState(false);
@@ -202,6 +267,10 @@ export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "", p
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (readOnly) {
+      onCancel();
+      return;
+    }
     onSubmit(formData);
   };
 
@@ -431,6 +500,7 @@ export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "", p
                   placeholder="0.00"
                   value={formData.patientPaymentToday}
                   onChange={(e) => handleInputChange('patientPaymentToday', e.target.value)}
+                  readOnly={readOnly}
                 />
               </div>
               <div>
@@ -900,11 +970,13 @@ export function FinancialAgreementForm({ onSubmit, onCancel, patientName = "", p
         {/* Form Actions */}
         <div className="flex justify-end gap-4 pt-6">
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {readOnly ? 'Close' : 'Cancel'}
           </Button>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-            Save Financial Agreement
-          </Button>
+          {!readOnly && (
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              {isEditing ? 'Update Financial Agreement' : 'Save Financial Agreement'}
+            </Button>
+          )}
         </div>
       </form>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,19 @@ interface ConsentFullArchFormProps {
   onSubmit: (formData: any) => void;
   onCancel: () => void;
   patientName?: string;
+  initialData?: any;
+  isEditing?: boolean;
+  readOnly?: boolean;
 }
 
-export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: ConsentFullArchFormProps) {
+export function ConsentFullArchForm({
+  onSubmit,
+  onCancel,
+  patientName = "",
+  initialData = null,
+  isEditing = false,
+  readOnly = false
+}: ConsentFullArchFormProps) {
   const [activeTab, setActiveTab] = useState("overview");
 
   // Step configuration for progress indicator
@@ -68,117 +78,143 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
   const isLastStep = getCurrentArrayIndex() === steps.length - 1;
   const [formData, setFormData] = useState({
     // Patient & Interpreter Information
-    patientName: patientName,
-    chartNumber: "",
-    date: new Date().toISOString().split('T')[0],
-    time: "",
-    primaryLanguage: "english",
-    otherLanguageText: "",
-    interpreterRequired: "no",
-    interpreterName: "",
-    interpreterCredential: "",
-    patientInfoInitials: "",
+    patientName: initialData?.patient_name || patientName,
+    chartNumber: initialData?.chart_number || "",
+    date: initialData?.consent_date || new Date().toISOString().split('T')[0],
+    time: initialData?.consent_time || "",
+    primaryLanguage: initialData?.primary_language || "english",
+    otherLanguageText: initialData?.other_language_text || "",
+    interpreterRequired: initialData?.interpreter_required || "no",
+    interpreterName: initialData?.interpreter_name || "",
+    interpreterCredential: initialData?.interpreter_credential || "",
+    patientInfoInitials: initialData?.patient_info_initials || "",
 
     // Treatment Description & Alternatives
-    archType: "", // "upper", "lower", "dual"
-    upperJaw: "",
-    upperTeethRegions: "",
-    upperImplants: "",
+    archType: initialData?.arch_type || "", // "upper", "lower", "dual"
+    upperJaw: initialData?.upper_jaw || "",
+    upperTeethRegions: initialData?.upper_teeth_regions || "",
+    upperImplants: initialData?.upper_implants || "",
     upperGraftMaterial: {
-      allograft: false,
-      xenograft: false,
-      autograft: false
+      allograft: initialData?.upper_graft_allograft || false,
+      xenograft: initialData?.upper_graft_xenograft || false,
+      autograft: initialData?.upper_graft_autograft || false
     },
     upperProsthesis: {
-      zirconia: false,
-      overdenture: false
+      zirconia: initialData?.upper_prosthesis_zirconia || false,
+      overdenture: initialData?.upper_prosthesis_overdenture || false
     },
-    upperSameDayLoad: "",
-    lowerJaw: "",
-    lowerTeethRegions: "",
-    lowerImplants: "",
+    upperSameDayLoad: initialData?.upper_same_day_load || "",
+    lowerJaw: initialData?.lower_jaw || "",
+    lowerTeethRegions: initialData?.lower_teeth_regions || "",
+    lowerImplants: initialData?.lower_implants || "",
     lowerGraftMaterial: {
-      allograft: false,
-      xenograft: false,
-      autograft: false
+      allograft: initialData?.lower_graft_allograft || false,
+      xenograft: initialData?.lower_graft_xenograft || false,
+      autograft: initialData?.lower_graft_autograft || false
     },
     lowerProsthesis: {
-      zirconia: false,
-      overdenture: false
+      zirconia: initialData?.lower_prosthesis_zirconia || false,
+      overdenture: initialData?.lower_prosthesis_overdenture || false
     },
-    lowerSameDayLoad: "",
+    lowerSameDayLoad: initialData?.lower_same_day_load || "",
     sedationPlan: {
-      localOnly: false,
-      nitrous: false,
-      ivConscious: false,
-      generalHospital: false
+      localOnly: initialData?.sedation_local_only || false,
+      nitrous: initialData?.sedation_nitrous || false,
+      ivConscious: initialData?.sedation_iv_conscious || false,
+      generalHospital: initialData?.sedation_general_hospital || false
     },
-    asaPhysicalStatus: "",
+    asaPhysicalStatus: initialData?.asa_physical_status || "",
     plannedDrugs: {
-      midazolam: { dose: "", unit: "mg" },
-      fentanyl: { dose: "", unit: "µg" },
-      ketamine: { dose: "", unit: "mg" },
-      dexamethasone: { dose: "", unit: "mg" }
+      midazolam: {
+        dose: initialData?.midazolam_dose || "",
+        unit: initialData?.midazolam_unit || "mg"
+      },
+      fentanyl: {
+        dose: initialData?.fentanyl_dose || "",
+        unit: initialData?.fentanyl_unit || "µg"
+      },
+      ketamine: {
+        dose: initialData?.ketamine_dose || "",
+        unit: initialData?.ketamine_unit || "mg"
+      },
+      dexamethasone: {
+        dose: initialData?.dexamethasone_dose || "",
+        unit: initialData?.dexamethasone_unit || "mg"
+      }
     },
     alternativesInitials: {
-      noTreatment: "",
-      conventionalDentures: "",
-      segmentedExtraction: "",
-      removableOverdentures: "",
-      zygomaticImplants: ""
+      noTreatment: initialData?.alternatives_no_treatment_initials || "",
+      conventionalDentures: initialData?.alternatives_conventional_dentures_initials || "",
+      segmentedExtraction: initialData?.alternatives_segmented_extraction_initials || "",
+      removableOverdentures: initialData?.alternatives_removable_overdentures_initials || "",
+      zygomaticImplants: initialData?.alternatives_zygomatic_implants_initials || ""
     },
-    treatmentDescriptionInitials: "",
+    treatmentDescriptionInitials: initialData?.treatment_description_initials || "",
 
     // Material Risks
-    risksUnderstood: false,
-    materialRisksInitials: "",
+    risksUnderstood: initialData?.risks_understood || false,
+    materialRisksInitials: initialData?.material_risks_initials || "",
 
     // Sedation & Anesthesia Consent
-    escortName: "",
-    escortPhone: "",
-    medicationsDisclosed: false,
-    declineIVSedation: false,
-    sedationInitials: "",
-    anesthesiaProviderInitials: "",
+    escortName: initialData?.escort_name || "",
+    escortPhone: initialData?.escort_phone || "",
+    medicationsDisclosed: initialData?.medications_disclosed || false,
+    declineIVSedation: initialData?.decline_iv_sedation || false,
+    sedationInitials: initialData?.sedation_initials || "",
+    anesthesiaProviderInitials: initialData?.anesthesia_provider_initials || "",
 
     // Financial Disclosure
-    surgicalExtractions: { count: "", fee: "", covered: "" },
-    implantFixtures: { count: "", fee: "", covered: "" },
-    zirconiabridge: { fee: "", covered: "" },
-    ivSedation: { fee: "", covered: "" },
-    financialInitials: "",
+    surgicalExtractions: {
+      count: initialData?.surgical_extractions_count || "",
+      fee: initialData?.surgical_extractions_fee || "",
+      covered: initialData?.surgical_extractions_covered || ""
+    },
+    implantFixtures: {
+      count: initialData?.implant_fixtures_count || "",
+      fee: initialData?.implant_fixtures_fee || "",
+      covered: initialData?.implant_fixtures_covered || ""
+    },
+    zirconiabridge: {
+      fee: initialData?.zirconia_bridge_fee || "",
+      covered: initialData?.zirconia_bridge_covered || ""
+    },
+    ivSedation: {
+      fee: initialData?.iv_sedation_fee || "",
+      covered: initialData?.iv_sedation_covered || ""
+    },
+    financialInitials: initialData?.financial_initials || "",
 
     // Photo/Video Authorization
-    internalRecordKeeping: "",
-    professionalEducation: "",
-    marketingSocialMedia: "",
-    hipaaEmailSms: false,
-    hipaaEmail: "",
-    hipaaPhone: "",
-    photoVideoInitials: "",
+    internalRecordKeeping: initialData?.internal_record_keeping || "",
+    professionalEducation: initialData?.professional_education || "",
+    marketingSocialMedia: initialData?.marketing_social_media || "",
+    hipaaEmailSms: initialData?.hipaa_email_sms || false,
+    hipaaEmail: initialData?.hipaa_email || "",
+    hipaaPhone: initialData?.hipaa_phone || "",
+    photoVideoInitials: initialData?.photo_video_initials || "",
 
     // Opioid Consent
-    opioidInitials: "",
-    smallestOpioidSupply: false,
+    opioidInitials: initialData?.opioid_initials || "",
+    smallestOpioidSupply: initialData?.smallest_opioid_supply || false,
 
     // Final Acknowledgment & Signatures
-    surgeonName: "",
-    surgeonSignature: "",
-    surgeonDate: "",
-    anesthesiaProviderName: "",
-    anesthesiaProviderSignature: "",
-    anesthesiaProviderDate: "",
-    patientSignature: "",
-    patientSignatureDate: new Date().toISOString().split('T')[0],
-    witnessName: "",
-    witnessSignature: "",
-    witnessSignatureDate: new Date().toISOString().split('T')[0],
-    finalInitials: "",
+    surgeonName: initialData?.surgeon_name || "",
+    surgeonSignature: initialData?.surgeon_signature || "",
+    surgeonDate: initialData?.surgeon_date || "",
+    anesthesiaProviderName: initialData?.anesthesia_provider_name || "",
+    anesthesiaProviderSignature: initialData?.anesthesia_provider_signature || "",
+    anesthesiaProviderDate: initialData?.anesthesia_provider_date || "",
+    patientSignature: initialData?.patient_signature || "",
+    patientSignatureDate: initialData?.patient_signature_date || new Date().toISOString().split('T')[0],
+    witnessName: initialData?.witness_name || "",
+    witnessSignature: initialData?.witness_signature || "",
+    witnessSignatureDate: initialData?.witness_signature_date || new Date().toISOString().split('T')[0],
+    finalInitials: initialData?.final_initials || "",
 
     // Patient Acknowledgment Checkboxes
-    acknowledgmentRead: false,
-    acknowledgmentOutcome: false,
-    acknowledgmentAuthorize: false
+    acknowledgmentRead: initialData?.acknowledgment_read || false,
+    acknowledgmentOutcome: initialData?.acknowledgment_outcome || false,
+    acknowledgmentAuthorize: initialData?.acknowledgment_authorize || false
   });
 
   // Auto-sync patient name when it changes
@@ -205,14 +241,41 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
     witnessSignature: false
   });
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const preserveScroll = () => {
+    const el = scrollRef.current;
+    return el ? el.scrollTop : 0;
+  };
+  const restoreScroll = (top: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Use layout effect timing to avoid visual jump
+    requestAnimationFrame(() => {
+      el.scrollTop = top;
+    });
+  };
+
+  // Keep footer pinned by ensuring the scroll container consumes leftover height
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // No-op but ensures layout calculated before paints after tab switches
+    const id = requestAnimationFrame(() => {});
+    return () => cancelAnimationFrame(id);
+  }, [activeTab]);
+
   const handleInputChange = (field: string, value: any) => {
+    const top = preserveScroll();
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+    restoreScroll(top);
   };
 
   const handleNestedInputChange = (parentField: string, childField: string, value: any) => {
+    const top = preserveScroll();
     setFormData(prev => ({
       ...prev,
       [parentField]: {
@@ -220,6 +283,16 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
         [childField]: value
       }
     }));
+    restoreScroll(top);
+  };
+
+  const toggleSedation = (key: 'localOnly' | 'nitrous' | 'ivConscious' | 'generalHospital') => {
+    const top = preserveScroll();
+    setFormData(prev => ({
+      ...prev,
+      sedationPlan: { ...(prev.sedationPlan as any), [key]: !(prev.sedationPlan as any)[key] }
+    }));
+    restoreScroll(top);
   };
 
   const handleDrugChange = (drugName: string, field: 'dose' | 'unit', value: string) => {
@@ -268,8 +341,8 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
     e.preventDefault();
 
     // Validate required fields
-    const requiredFields = ['patientName', 'chartNumber', 'date', 'time'];
-    const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+    const requiredFields = ['patientName', 'chartNumber', 'date', 'time'] as const;
+    const missingFields = requiredFields.filter(field => !formData[field]);
 
     // Check if all required signatures/initials are completed
     const requiredSignatures = [
@@ -280,22 +353,74 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
       'financialInitials',
       'photoVideoInitials',
       'opioidInitials',
-      'finalInitials',
       'patientSignature',
       'witnessSignature'
-    ];
+    ] as const;
 
-    const missingSignatures = requiredSignatures.filter(sig => !formData[sig as keyof typeof formData]);
+    const missingSignatures = requiredSignatures.filter(sig => !formData[sig]);
 
     // Check alternatives initials
     const alternativesFields = Object.values(formData.alternativesInitials);
-    if (alternativesFields.some(field => !field || field.trim() === '')) {
+    if (alternativesFields.some(field => !field || (typeof field === 'string' && field.trim() === ''))) {
       missingSignatures.push('All alternatives must be initialed');
     }
 
     if (missingFields.length > 0 || missingSignatures.length > 0) {
-      const allMissing = [...missingFields, ...missingSignatures];
-      alert(`Please complete all required fields: ${allMissing.join(', ')}`);
+      // Map missing items to their tabs and labels for a guided message
+      const fieldToTab: Record<string, string> = {
+        patientName: 'patient-info',
+        chartNumber: 'patient-info',
+        date: 'patient-info',
+        time: 'patient-info',
+      };
+      const signatureToTab: Record<string, string> = {
+        patientInfoInitials: 'patient-info',
+        treatmentDescriptionInitials: 'treatment',
+        materialRisksInitials: 'risks',
+        sedationInitials: 'sedation',
+        financialInitials: 'financial',
+        photoVideoInitials: 'media',
+        opioidInitials: 'opioid',
+        patientSignature: 'final',
+        witnessSignature: 'final',
+      };
+      const signatureLabels: Record<string, string> = {
+        patientInfoInitials: 'Patient Info Initials',
+        treatmentDescriptionInitials: 'Treatment Description Initials',
+        materialRisksInitials: 'Material Risks Initials',
+        sedationInitials: 'Sedation Initials',
+        financialInitials: 'Financial Initials',
+        photoVideoInitials: 'Photo/Video Initials',
+        opioidInitials: 'Opioid Initials',
+        patientSignature: 'Patient Signature',
+        witnessSignature: 'Witness Signature',
+      };
+
+      const issues: Array<{tab: string; label: string; key: string}> = [];
+      for (const f of missingFields) {
+        issues.push({ tab: fieldToTab[f], label: f.replace(/([A-Z])/g, ' $1'), key: f });
+      }
+      for (const s of missingSignatures) {
+        if (s === 'All alternatives must be initialed') {
+          issues.push({ tab: 'treatment', label: 'All alternatives must be initialed', key: 'alternativesInitials' });
+        } else {
+          issues.push({ tab: signatureToTab[s], label: signatureLabels[s] || s, key: s });
+        }
+      }
+
+      // Build readable, grouped message
+      const grouped: Record<string, string[]> = {};
+      for (const item of issues) {
+        grouped[item.tab] = grouped[item.tab] || [];
+        grouped[item.tab].push(item.label);
+      }
+      const lines = Object.entries(grouped).map(([tab, labels]) => `- ${steps.find(s => s.id === tab)?.label || tab}: ${labels.join(', ')}`);
+
+      alert(`Please complete the following:\n${lines.join('\n')}`);
+
+      // Auto-navigate to the first tab with issues
+      const firstTab = issues[0]?.tab;
+      if (firstTab && firstTab !== activeTab) setActiveTab(firstTab);
       return;
     }
 
@@ -305,7 +430,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
   return (
     <div className="h-[80vh] flex flex-col">
       {/* Fixed Header - Full Width */}
-      <DialogHeader className="flex-shrink-0 mb-6 w-full">
+      <DialogHeader className="flex-shrink-0 w-full px-6 pt-6 pb-4 border-b">
         <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
           <FileText className="h-6 w-6" />
           Consent Packet for Full Arch Surgery
@@ -348,10 +473,10 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-hidden px-6">
+        <div ref={scrollRef} className="flex-1 overflow-auto px-6 scrollbar-sleek">
           {/* Overview Tab */}
           {activeTab === "overview" && (
-            <div className="space-y-6 h-full overflow-y-auto">
+            <div className="space-y-6 w-full">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -389,7 +514,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
           {/* Patient & Interpreter Information Tab */}
           {activeTab === "patient-info" && (
-            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <div className="space-y-6 w-full">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -609,7 +734,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
                   </div>
                   <div className="w-64 border-t border-gray-300 pt-2">
                     <div className="flex items-center justify-center">
-                      <Label className="text-sm font-semibold">Patient Signature</Label>
+                      <Label className="text-sm font-semibold">Patient Initials</Label>
                     </div>
                   </div>
                 </div>
@@ -620,7 +745,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
           {/* Treatment Description & Alternatives Tab */}
           {activeTab === "treatment" && (
-            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <div className="space-y-6 w-full">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -1483,104 +1608,84 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
                   <div>
                     <Label className="text-sm font-semibold">Sedation Plan:</Label>
                     <div className="flex flex-wrap gap-3 mt-2">
-                      <div className="flex items-center">
-                        <Checkbox
-                          id="localOnly"
-                          checked={formData.sedationPlan.localOnly}
-                          onCheckedChange={(checked) => handleInputChange('sedationPlan', {...formData.sedationPlan, localOnly: checked})}
-                          className="sr-only"
-                        />
-                        <Label
-                          htmlFor="localOnly"
-                          className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
+                      <div>
+                        <button
+                          type="button"
+                          aria-pressed={formData.sedationPlan.localOnly}
+                          onClick={() => toggleSedation('localOnly')}
+                          className={`px-3 py-2 rounded border text-sm transition-all ${
                             formData.sedationPlan.localOnly
                               ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                           }`}
                         >
                           Local only
-                        </Label>
+                        </button>
                       </div>
-                      <div className="flex items-center">
-                        <Checkbox
-                          id="nitrous"
-                          checked={formData.sedationPlan.nitrous}
-                          onCheckedChange={(checked) => handleInputChange('sedationPlan', {...formData.sedationPlan, nitrous: checked})}
-                          className="sr-only"
-                        />
-                        <Label
-                          htmlFor="nitrous"
-                          className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
+                      <div>
+                        <button
+                          type="button"
+                          aria-pressed={formData.sedationPlan.nitrous}
+                          onClick={() => toggleSedation('nitrous')}
+                          className={`px-3 py-2 rounded border text-sm transition-all ${
                             formData.sedationPlan.nitrous
                               ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                           }`}
                         >
                           Nitrous
-                        </Label>
+                        </button>
                       </div>
-                      <div className="flex items-center">
-                        <Checkbox
-                          id="ivConscious"
-                          checked={formData.sedationPlan.ivConscious}
-                          onCheckedChange={(checked) => handleInputChange('sedationPlan', {...formData.sedationPlan, ivConscious: checked})}
-                          className="sr-only"
-                        />
-                        <Label
-                          htmlFor="ivConscious"
-                          className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
+                      <div>
+                        <button
+                          type="button"
+                          aria-pressed={formData.sedationPlan.ivConscious}
+                          onClick={() => toggleSedation('ivConscious')}
+                          className={`px-3 py-2 rounded border text-sm transition-all ${
                             formData.sedationPlan.ivConscious
                               ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                           }`}
                         >
                           IV conscious
-                        </Label>
+                        </button>
                       </div>
-                      <div className="flex items-center">
-                        <Checkbox
-                          id="generalHospital"
-                          checked={formData.sedationPlan.generalHospital}
-                          onCheckedChange={(checked) => handleInputChange('sedationPlan', {...formData.sedationPlan, generalHospital: checked})}
-                          className="sr-only"
-                        />
-                        <Label
-                          htmlFor="generalHospital"
-                          className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
+                      <div>
+                        <button
+                          type="button"
+                          aria-pressed={formData.sedationPlan.generalHospital}
+                          onClick={() => toggleSedation('generalHospital')}
+                          className={`px-3 py-2 rounded border text-sm transition-all ${
                             formData.sedationPlan.generalHospital
                               ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                           }`}
                         >
                           General (hospital)
-                        </Label>
+                        </button>
                       </div>
                     </div>
                   </div>
 
                   <div>
                     <Label className="text-sm font-semibold">ASA Physical Status:</Label>
-                    <RadioGroup
-                      value={formData.asaPhysicalStatus}
-                      onValueChange={(value) => handleInputChange('asaPhysicalStatus', value)}
-                      className="flex gap-3 mt-2"
-                    >
+                    <div className="flex gap-3 mt-2">
                       {['I', 'II', 'III', 'IV'].map((status) => (
-                        <div key={status} className="flex items-center">
-                          <RadioGroupItem value={status} id={`asa${status}`} className="sr-only" />
-                          <Label
-                            htmlFor={`asa${status}`}
-                            className={`px-3 py-2 rounded border cursor-pointer text-sm transition-all ${
-                              formData.asaPhysicalStatus === status
-                                ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                                : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                            }`}
-                          >
-                            {status}
-                          </Label>
-                        </div>
+                        <button
+                          key={status}
+                          type="button"
+                          aria-pressed={formData.asaPhysicalStatus === status}
+                          onClick={() => handleInputChange('asaPhysicalStatus', status)}
+                          className={`px-3 py-2 rounded border text-sm transition-all ${
+                            formData.asaPhysicalStatus === status
+                              ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                          }`}
+                        >
+                          {status}
+                        </button>
                       ))}
-                    </RadioGroup>
+                    </div>
                   </div>
 
                   <div>
@@ -1769,7 +1874,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
           {/* Material Risks Tab */}
           {activeTab === "risks" && (
-            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <div className="space-y-6 w-full">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -1931,7 +2036,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
           {/* Sedation & Anesthesia Consent Tab */}
           {activeTab === "sedation" && (
-            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <div className="space-y-6 w-full">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -2205,7 +2310,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
           {/* Financial Disclosure Tab */}
           {activeTab === "financial" && (
-            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <div className="space-y-6 w-full">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -2233,7 +2338,10 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
                             <div className="md:col-span-1">
                               <div className="space-y-2">
                                 <h4 className="font-semibold text-gray-900 text-sm">Surgical Extractions</h4>
-                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">D7140</span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">CDT: D7140</span>
+                                  <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full">CPT: 41899</span>
+                                </div>
                               </div>
                             </div>
 
@@ -2296,7 +2404,10 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
                             <div className="md:col-span-1">
                               <div className="space-y-2">
                                 <h4 className="font-semibold text-gray-900 text-sm">Implant Fixtures</h4>
-                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">D6010/21249</span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">CDT: D6010</span>
+                                  <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full">CPT: 21249</span>
+                                </div>
                               </div>
                             </div>
 
@@ -2359,7 +2470,10 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
                             <div className="md:col-span-1">
                               <div className="space-y-2">
                                 <h4 className="font-semibold text-gray-900 text-sm">Fixed Zirconia Bridge per Arch</h4>
-                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">D6078/21080</span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">CDT: D6078</span>
+                                  <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full">CPT: 21080</span>
+                                </div>
                               </div>
                             </div>
 
@@ -2419,7 +2533,10 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
                             <div className="md:col-span-1">
                               <div className="space-y-2">
                                 <h4 className="font-semibold text-gray-900 text-sm">IV Sedation (first 60 min)</h4>
-                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">D9223/99152</span>
+                                <div className="flex flex-col gap-1">
+                                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">CDT: D9223</span>
+                                  <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full">CPT: 99152</span>
+                                </div>
                               </div>
                             </div>
 
@@ -2486,123 +2603,153 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">Bone Graft - Mandible</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21215 x 2</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D7950</span>
                             </div>
-                            <p className="text-xs text-gray-600">Graft, bone; mandible, right and left</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">Graft, bone; mandible, right and left</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 21215 × 2</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">Bone Graft - Maxillary</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21210 x 2</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D7951</span>
                             </div>
-                            <p className="text-xs text-gray-600">Graft, bone; nasal, maxillary, or malar areas</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">Graft, bone; nasal, maxillary, or malar areas</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 21210 × 2</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">Alveoloplasty</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">41874 x 2</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D7311</span>
                             </div>
-                            <p className="text-xs text-gray-600">Each quadrant bone shaping</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">Each quadrant bone shaping</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 41874 × 2</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">Bone Excision</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21025 x 2</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D7251</span>
                             </div>
-                            <p className="text-xs text-gray-600">Facial bone excision</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">Facial bone excision</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 21025 × 2</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">Surgical Splint</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21085 x 1</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D7880</span>
                             </div>
-                            <p className="text-xs text-gray-600">Custom oral surgical splint</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">Custom oral surgical splint</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 21085 × 1</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">Interim Obturator</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21079 x 1</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D5987</span>
                             </div>
-                            <p className="text-xs text-gray-600">Interim obturator prosthesis</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">Interim obturator prosthesis</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 21079 × 1</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">Tumor/Cyst Excision</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21040 x 2</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D7471</span>
                             </div>
-                            <p className="text-xs text-gray-600">Benign tumor or cyst removal</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">Benign tumor or cyst removal</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 21040 × 2</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">Mandible Reconstruction</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21249 x 4</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D6010</span>
                             </div>
-                            <p className="text-xs text-gray-600">Endosteal implant (4+)</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">Endosteal implant (4+)</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 21249 × 4</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">CT Scan</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">70486</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D0367</span>
                             </div>
-                            <p className="text-xs text-gray-600">26 modifier</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">26 modifier</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 70486</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-3">
-                          <div className="space-y-2">
+                        <CardContent className="p-2.5">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-900">Final Obturator</span>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">21080 x 1</span>
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D5929</span>
                             </div>
-                            <p className="text-xs text-gray-600">Final obturator prosthesis</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-600">Final obturator prosthesis</p>
+                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 21080 × 1</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -2663,7 +2810,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
           {/* Photo/Video Authorization Tab */}
           {activeTab === "media" && (
-            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <div className="space-y-6 w-full">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -2935,7 +3082,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
           {/* Opioid Consent Tab */}
           {activeTab === "opioid" && (
-            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <div className="space-y-6 w-full">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -3130,7 +3277,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
           {/* Final Acknowledgment Tab */}
           {activeTab === "final" && (
-            <div className="space-y-6 w-full h-full overflow-y-auto">
+            <div className="space-y-6 w-full">
             <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -3491,18 +3638,18 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
                 <div className="flex flex-col items-end space-y-3">
                   <div className="flex items-center justify-center">
-                    {formData.finalInitials ? (
+                    {formData.patientSignature ? (
                       <SignaturePreview
-                        signature={formData.finalInitials}
-                        onEdit={() => handleSignatureDialogOpen('finalInitials')}
-                        onClear={() => handleSignatureClear('finalInitials')}
+                        signature={formData.patientSignature}
+                        onEdit={() => handleSignatureDialogOpen('patientSignature')}
+                        onClear={() => handleSignatureClear('patientSignature')}
                         className="w-64 h-16 border border-gray-300 rounded-md"
                       />
                     ) : (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => handleSignatureDialogOpen('finalInitials')}
+                        onClick={() => handleSignatureDialogOpen('patientSignature')}
                         className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
                       >
                         <Edit className="h-4 w-4" />
@@ -3523,7 +3670,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
         </div>
 
         {/* Fixed Footer with Navigation */}
-        <div className="flex-shrink-0 flex items-center justify-between border-t bg-white px-6 py-2">
+        <div className="mt-auto sticky bottom-0 left-0 right-0 flex items-center justify-between border-t bg-white px-6 py-2">
           <Button
             type="button"
             variant="outline"
@@ -3537,10 +3684,17 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
 
           <div className="flex items-center">
             {isLastStep ? (
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2">
-                <CheckCircle className="h-4 w-4" />
-                Save Form
-              </Button>
+              !readOnly ? (
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2">
+                  <CheckCircle className="h-4 w-4" />
+                  {isEditing ? 'Update Form' : 'Save Form'}
+                </Button>
+              ) : (
+                <Button type="button" disabled className="bg-gray-400 text-white flex items-center gap-2 px-4 py-2">
+                  <CheckCircle className="h-4 w-4" />
+                  View Only
+                </Button>
+              )
             ) : (
               <Button
                 type="button"
@@ -3581,7 +3735,7 @@ export function ConsentFullArchForm({ onSubmit, onCancel, patientName = "" }: Co
       financialInitials: "Patient Initials - Financial Disclosure",
       photoVideoInitials: "Patient Initials - Photo/Video Authorization",
       opioidInitials: "Patient Initials - Opioid Consent",
-      finalInitials: "Patient Initials - Final Page",
+      // finalInitials removed; using Patient Signature instead on Final tab
       surgeonSignature: "Surgeon Signature",
       anesthesiaProviderSignature: "Anesthesia Provider Signature",
       patientSignature: "Patient Signature",

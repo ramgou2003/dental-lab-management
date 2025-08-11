@@ -1,14 +1,16 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { Settings, User, Bell, Shield, Database, Clock, Stethoscope } from "lucide-react";
+import { Settings, User, Bell, Shield, Database, Clock, Stethoscope, Eye } from "lucide-react";
 import { TeethSelectorDemo } from "@/components/TeethSelectorDemo";
+import { PageVisibilityManager } from "@/components/PageVisibilityManager";
 
 export function SettingsPage() {
   const [activeSection, setActiveSection] = useState("clinic");
 
   const settingSections = [
     { id: "clinic", label: "Clinic Profile", icon: User },
+    { id: "page-visibility", label: "Page Visibility", icon: Eye },
     { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
     { id: "data", label: "Data & Backup", icon: Database },
@@ -143,6 +145,19 @@ export function SettingsPage() {
         );
 
 
+
+      case "page-visibility":
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Page Visibility Control</h3>
+              <p className="text-sm text-slate-600 mb-6">
+                Control which pages are visible in the sidebar navigation. This allows you to show only the features you need.
+              </p>
+              <PageVisibilityManager />
+            </div>
+          </div>
+        );
 
       case "teeth-demo":
         return <TeethSelectorDemo />;

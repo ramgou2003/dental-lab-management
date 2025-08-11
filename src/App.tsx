@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthGuard, PermissionGuard } from "@/components/auth/AuthGuard";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { isFeatureEnabled } from "@/config/featureFlags";
 import Layout from "./components/Layout";
 import { DashboardPage } from "./pages/DashboardPage";
 import LeadInPage from "./pages/LeadInPage";
@@ -139,22 +140,26 @@ const App = () => {
                   </AuthGuard>
                 }
               />
-              <Route
-                path="/new-patient"
-                element={
-                  <AuthGuard requireAuth={false}>
-                    <NewPatientLeadPage />
-                  </AuthGuard>
-                }
-              />
-              <Route
-                path="/patient-packet/:token"
-                element={
-                  <AuthGuard requireAuth={false}>
-                    <PublicPatientPacketPage />
-                  </AuthGuard>
-                }
-              />
+              {isFeatureEnabled('publicPatientForm') && (
+                <Route
+                  path="/new-patient"
+                  element={
+                    <AuthGuard requireAuth={false}>
+                      <NewPatientLeadPage />
+                    </AuthGuard>
+                  }
+                />
+              )}
+              {isFeatureEnabled('publicPatientPacket') && (
+                <Route
+                  path="/patient-packet/:token"
+                  element={
+                    <AuthGuard requireAuth={false}>
+                      <PublicPatientPacketPage />
+                    </AuthGuard>
+                  }
+                />
+              )}
 
               {/* Protected routes */}
               <Route
@@ -165,88 +170,120 @@ const App = () => {
                   </AuthGuard>
                 }
               >
-                <Route
-                  index
-                  element={
-                    <PermissionGuard permission="dashboard.access">
-                      <DashboardPage />
-                    </PermissionGuard>
-                  }
-                />
-                <Route
-                  path="dashboard"
-                  element={
-                    <PermissionGuard permission="dashboard.access">
-                      <DashboardPage />
-                    </PermissionGuard>
-                  }
-                />
-                <Route path="lead-in" element={<LeadInPage />} />
-                <Route path="lead-in/:leadId" element={<LeadDetailsPage />} />
-                <Route
-                  path="appointments"
-                  element={
-                    <PermissionGuard permission="appointments.read">
-                      <AppointmentsPage />
-                    </PermissionGuard>
-                  }
-                />
-                <Route
-                  path="consultation"
-                  element={
-                    <PermissionGuard permission="appointments.read">
-                      <ConsultationPage />
-                    </PermissionGuard>
-                  }
-                />
-                <Route
-                  path="consultation/:appointmentId"
-                  element={
-                    <PermissionGuard permission="appointments.read">
-                      <ConsultationSessionPage />
-                    </PermissionGuard>
-                  }
-                />
-                <Route
-                  path="patients"
-                  element={
-                    <PermissionGuard permission="patients.read">
-                      <PatientsPage />
-                    </PermissionGuard>
-                  }
-                />
-                <Route
-                  path="patients/:patientId"
-                  element={
-                    <PermissionGuard permission="patients.read">
-                      <PatientProfilePage />
-                    </PermissionGuard>
-                  }
-                />
-                <Route
-                  path="lab"
-                  element={
-                    <PermissionGuard permission="lab_scripts.read">
-                      <LabPage />
-                    </PermissionGuard>
-                  }
-                />
-                <Route path="report-cards" element={<ReportCardsPage />} />
-                <Route path="appliance-delivery" element={<ApplianceDeliveryPage />} />
-                <Route path="manufacturing" element={<ManufacturingPage />} />
-                <Route
-                  path="user-management"
-                  element={
-                    <PermissionGuard
-                      permission="users.read"
-                      fallback={<UserManagementAccessDenied />}
-                    >
-                      <UserManagementPage />
-                    </PermissionGuard>
-                  }
-                />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="profile" element={<ProfilePage />} />
+                {isFeatureEnabled('dashboard') && (
+                  <Route
+                    index
+                    element={
+                      <PermissionGuard permission="dashboard.access">
+                        <DashboardPage />
+                      </PermissionGuard>
+                    }
+                  />
+                )}
+                {isFeatureEnabled('dashboard') && (
+                  <Route
+                    path="dashboard"
+                    element={
+                      <PermissionGuard permission="dashboard.access">
+                        <DashboardPage />
+                      </PermissionGuard>
+                    }
+                  />
+                )}
+                {isFeatureEnabled('leadIn') && (
+                  <>
+                    <Route path="lead-in" element={<LeadInPage />} />
+                    <Route path="lead-in/:leadId" element={<LeadDetailsPage />} />
+                  </>
+                )}
+                {isFeatureEnabled('appointments') && (
+                  <Route
+                    path="appointments"
+                    element={
+                      <PermissionGuard permission="appointments.read">
+                        <AppointmentsPage />
+                      </PermissionGuard>
+                    }
+                  />
+                )}
+                {isFeatureEnabled('consultation') && (
+                  <>
+                    <Route
+                      path="consultation"
+                      element={
+                        <PermissionGuard permission="appointments.read">
+                          <ConsultationPage />
+                        </PermissionGuard>
+                      }
+                    />
+                    <Route
+                      path="consultation/:appointmentId"
+                      element={
+                        <PermissionGuard permission="appointments.read">
+                          <ConsultationSessionPage />
+                        </PermissionGuard>
+                      }
+                    />
+                  </>
+                )}
+                {isFeatureEnabled('patients') && (
+                  <>
+                    <Route
+                      path="patients"
+                      element={
+                        <PermissionGuard permission="patients.read">
+                          <PatientsPage />
+                        </PermissionGuard>
+                      }
+                    />
+                    <Route
+                      path="patients/:patientId"
+                      element={
+                        <PermissionGuard permission="patients.read">
+                          <PatientProfilePage />
+                        </PermissionGuard>
+                      }
+                    />
+                  </>
+                )}
+                {isFeatureEnabled('lab') && (
+                  <Route
+                    path="lab"
+                    element={
+                      <PermissionGuard permission="lab_scripts.read">
+                        <LabPage />
+                      </PermissionGuard>
+                    }
+                  />
+                )}
+                {isFeatureEnabled('reportCards') && (
+                  <Route path="report-cards" element={<ReportCardsPage />} />
+                )}
+                {isFeatureEnabled('applianceDelivery') && (
+                  <Route path="appliance-delivery" element={<ApplianceDeliveryPage />} />
+                )}
+                {isFeatureEnabled('manufacturing') && (
+                  <Route path="manufacturing" element={<ManufacturingPage />} />
+                )}
+                {isFeatureEnabled('userManagement') && (
+                  <Route
+                    path="user-management"
+                    element={
+                      <PermissionGuard
+                        permission="users.read"
+                        fallback={<UserManagementAccessDenied />}
+                      >
+                        <UserManagementPage />
+                      </PermissionGuard>
+                    }
+                  />
+                )}
+                {isFeatureEnabled('settings') && (
+                  <Route path="settings" element={<SettingsPage />} />
+                )}
+                {isFeatureEnabled('profile') && (
+                  <Route path="profile" element={<ProfilePage />} />
+                )}
               </Route>
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

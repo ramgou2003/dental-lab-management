@@ -1,10 +1,11 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Consultation, ConsultationInsert, ConsultationUpdate } from '@/types/consultation';
 
-// Legacy interface for backward compatibility
-export interface ConsultationData extends Consultation {
-  // Legacy fields for backward compatibility
-  patient_packet_id?: string;
+export interface ConsultationData {
+  id?: string;
+  
+  // Patient Basic Details
+  patient_id?: string;
+  patient_packet_id: string;
   patient_first_name?: string;
   patient_last_name?: string;
   patient_email?: string;
@@ -12,7 +13,7 @@ export interface ConsultationData extends Consultation {
   patient_date_of_birth?: string;
   patient_gender?: string;
   patient_address?: string;
-
+  
   // New Patient Packet Summary
   medical_conditions?: any;
   allergies?: any;
@@ -22,7 +23,7 @@ export interface ConsultationData extends Consultation {
   healing_issues?: any;
   tobacco_use?: any;
   patient_preferences?: any;
-
+  
   // AI Summary Results
   ai_medical_summary?: string;
   ai_allergies_summary?: string;
@@ -30,17 +31,28 @@ export interface ConsultationData extends Consultation {
   ai_attention_items?: string[];
   ai_potential_complications?: string[];
   ai_overall_assessment?: string;
-
-  // Legacy fields
+  
+  // Treatment Details
+  clinical_assessment?: string;
+  treatment_recommendations?: any;
   treatment_notes?: string;
+  
+  // Financial & Outcome Details
+  treatment_cost?: number;
   insurance_coverage?: number;
   patient_payment?: number;
   payment_plan?: any;
   financial_notes?: string;
+  
+  // Consultation Outcome
+  consultation_status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
   treatment_plan_approved?: boolean;
   next_appointment_date?: string;
   follow_up_required?: boolean;
   follow_up_notes?: string;
+  
+  // Consultation Metadata
+  consultation_date?: string;
   consultation_duration_minutes?: number;
   consultation_type?: 'initial' | 'follow-up' | 'emergency' | 'consultation';
   provider_id?: string;
@@ -192,46 +204,12 @@ export async function populateConsultationFromPacket(patientPacketId: string): P
       .eq('patient_packet_id', patientPacketId)
       .single();
 
-    // Construct consultation data matching new table structure
+    // Construct consultation data
     const consultationData: Partial<ConsultationData> = {
-      // References
-      patient_id: packetData.patients?.id,
-      new_patient_packet_id: patientPacketId,
-
-      // Patient Information
-      patient_name: packetData.patients?.first_name && packetData.patients?.last_name
-        ? `${packetData.patients.first_name} ${packetData.patients.last_name}`
-        : `${packetData.first_name || ''} ${packetData.last_name || ''}`.trim() || 'Unknown Patient',
-      consultation_date: new Date().toISOString().split('T')[0],
-
-      // Treatment section (defaults)
-      clinical_assessment: treatmentData?.clinical_assessment || null,
-      treatment_implant_placement: false,
-      treatment_implant_restoration: false,
-      treatment_implant_supported: false,
-      treatment_extraction: false,
-      treatment_bon_graft: false,
-      treatment_sinus_lift: false,
-      treatment_denture: false,
-      treatment_bridge: false,
-      treatment_crown: false,
-      consultation_notes: treatmentData?.additional_information || null,
-
-      // Financial section (defaults)
-      treatment_decision: null,
-      treatment_cost: null,
-      global_treatment_value: null,
-      financing_approved: false,
-      financing_not_approved: false,
-      financing_did_not_apply: false,
-      additional_notes: null,
-
-      // Status
-      consultation_status: 'draft',
-      progress_step: 1,
-
-      // Legacy fields for backward compatibility
       patient_packet_id: patientPacketId,
+      patient_id: packetData.patients?.id,
+      
+      // Patient basic details
       patient_first_name: packetData.patients?.first_name || packetData.first_name,
       patient_last_name: packetData.patients?.last_name || packetData.last_name,
       patient_email: packetData.patients?.email || packetData.email,
@@ -239,6 +217,8 @@ export async function populateConsultationFromPacket(patientPacketId: string): P
       patient_date_of_birth: packetData.patients?.date_of_birth || packetData.date_of_birth,
       patient_gender: packetData.patients?.gender || packetData.gender,
       patient_address: packetData.patients?.address,
+      
+      // Patient packet data
       medical_conditions: packetData.critical_conditions,
       allergies: packetData.allergies,
       current_medications: packetData.current_medications,
@@ -252,14 +232,24 @@ export async function populateConsultationFromPacket(patientPacketId: string): P
         communication: packetData.communication,
         physical_comfort: packetData.physical_comfort
       },
+      
+      // AI summary data
       ai_medical_summary: summaryData?.medical_history_summary,
       ai_allergies_summary: summaryData?.allergies_summary,
       ai_dental_summary: summaryData?.dental_history_summary,
       ai_attention_items: summaryData?.attention_items,
       ai_potential_complications: summaryData?.potential_complications,
       ai_overall_assessment: summaryData?.overall_assessment,
+      
+      // Treatment data
+      clinical_assessment: treatmentData?.clinical_assessment,
+      treatment_recommendations: treatmentData?.treatment_recommendations,
       treatment_notes: treatmentData?.additional_information,
-      consultation_type: 'initial'
+      
+      // Default consultation metadata
+      consultation_type: 'initial',
+      consultation_status: 'scheduled',
+      consultation_date: new Date().toISOString()
     };
 
     return consultationData;

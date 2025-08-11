@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { SignatureDialog } from "@/components/SignatureDialog";
 import {
   Clock,
   CreditCard,
@@ -18,7 +19,8 @@ import {
   DollarSign,
   Phone,
   Mail,
-  Check
+  Check,
+  Edit
 } from "lucide-react";
 
 interface ThreeYearCarePackageFormProps {
@@ -26,49 +28,65 @@ interface ThreeYearCarePackageFormProps {
   onCancel: () => void;
   patientName?: string;
   patientDateOfBirth?: string;
+  initialData?: any;
+  isEditing?: boolean;
+  isViewing?: boolean;
 }
 
-export function ThreeYearCarePackageForm({ 
-  onSubmit, 
-  onCancel, 
-  patientName = "", 
-  patientDateOfBirth = "" 
+export function ThreeYearCarePackageForm({
+  onSubmit,
+  onCancel,
+  patientName = "",
+  patientDateOfBirth = "",
+  initialData,
+  isEditing = false,
+  isViewing = false
 }: ThreeYearCarePackageFormProps) {
+  const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
+  const [showWitnessSignatureDialog, setShowWitnessSignatureDialog] = useState(false);
+
   const [formData, setFormData] = useState({
     // Patient Information
-    patientName: patientName,
-    dateOfBirth: patientDateOfBirth || "",
-    enrollmentDate: new Date().toISOString().split('T')[0],
-    enrollmentTime: new Date().toTimeString().slice(0, 5),
+    patientName: initialData?.patientName || patientName,
+    dateOfBirth: initialData?.dateOfBirth || patientDateOfBirth || "",
+    enrollmentDate: initialData?.enrollmentDate || new Date().toISOString().split('T')[0],
+    enrollmentTime: initialData?.enrollmentTime || new Date().toTimeString().slice(0, 5),
 
     // Daily Care Requirements Acknowledgment
-    chlorhexidineRinse: false,
-    waterFlosser: false,
-    electricToothbrush: false,
-    attendCheckups: false,
+    chlorhexidineRinse: initialData?.chlorhexidineRinse || false,
+    waterFlosser: initialData?.waterFlosser || false,
+    electricToothbrush: initialData?.electricToothbrush || false,
+    attendCheckups: initialData?.attendCheckups || false,
 
     // Enrollment Choice
-    enrollmentChoice: "", // "enroll" or "defer"
+    enrollmentChoice: initialData?.enrollmentChoice || "", // "enroll" or "defer"
 
     // Payment Method
-    paymentMethod: "",
-    
+    paymentMethod: initialData?.paymentMethod || "",
+
     // Legal Acknowledgments
-    cancellationPolicy: false,
-    governingLaw: false,
-    arbitrationClause: false,
-    hipaaConsent: false,
+    cancellationPolicy: initialData?.cancellationPolicy || false,
+    governingLaw: initialData?.governingLaw || false,
+    arbitrationClause: initialData?.arbitrationClause || false,
+    hipaaConsent: initialData?.hipaaConsent || false,
 
     // Signatures
-    patientSignature: "",
-    patientSignatureDate: new Date().toISOString().split('T')[0],
-    witnessName: "",
-    witnessSignature: "",
-    witnessSignatureDate: new Date().toISOString().split('T')[0],
+    patientSignature: initialData?.patientSignature || "",
+    patientSignatureDate: initialData?.patientSignatureDate || new Date().toISOString().split('T')[0],
+    witnessName: initialData?.witnessName || "",
+    witnessSignature: initialData?.witnessSignature || "",
+    witnessSignatureDate: initialData?.witnessSignatureDate || new Date().toISOString().split('T')[0],
 
     // Age/Language Confirmation
-    ageConfirmation: false,
-    languageConfirmation: false
+    ageConfirmation: initialData?.ageConfirmation || false,
+    languageConfirmation: initialData?.languageConfirmation || false,
+
+    // Acknowledgment
+    acknowledgmentRead: initialData?.acknowledgmentRead || false,
+
+    // Staff Use
+    staffProcessedBy: initialData?.staffProcessedBy || "",
+    staffProcessedDate: initialData?.staffProcessedDate || ""
   });
 
   const handleInputChange = (field: string, value: any) => {
@@ -76,6 +94,24 @@ export function ThreeYearCarePackageForm({
       ...prev,
       [field]: value
     }));
+  };
+
+  const handlePatientSignatureSave = (signatureData: string) => {
+    handleInputChange('patientSignature', signatureData);
+    setShowPatientSignatureDialog(false);
+  };
+
+  const handlePatientSignatureClear = () => {
+    handleInputChange('patientSignature', '');
+  };
+
+  const handleWitnessSignatureSave = (signatureData: string) => {
+    handleInputChange('witnessSignature', signatureData);
+    setShowWitnessSignatureDialog(false);
+  };
+
+  const handleWitnessSignatureClear = () => {
+    handleInputChange('witnessSignature', '');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -751,26 +787,130 @@ export function ThreeYearCarePackageForm({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-blue-50 p-4 rounded-lg mb-6">
-              <p className="text-sm text-blue-800 font-medium">
-                I acknowledge that I have read and understand this 3-Year Care Package Enrollment Agreement.
-                I understand the benefits, requirements, and consequences outlined above.
-              </p>
+            <div className="mb-6">
+              <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                    formData.acknowledgmentRead
+                      ? 'bg-blue-100'
+                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                  }`}
+                  onClick={() => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
+                >
+                  {formData.acknowledgmentRead && (
+                    <Check className="h-3 w-3 text-blue-600" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <Label
+                    className="text-sm font-medium cursor-pointer text-gray-800"
+                    onClick={() => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
+                  >
+                    <span className="text-red-500">*</span> I acknowledge that I have read and understand this 3-Year Care Package Enrollment Agreement.
+                    I understand the benefits, requirements, and consequences outlined above.
+                  </Label>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <Label htmlFor="patientSignature">Patient Signature</Label>
-                <Input
-                  id="patientSignature"
-                  value={formData.patientSignature}
-                  onChange={(e) => handleInputChange('patientSignature', e.target.value)}
-                  placeholder="Sign here"
-                  className="mt-1"
-                  required
-                />
-                <div className="mt-2">
-                  <Label htmlFor="patientSignatureDate" className="text-xs">Date</Label>
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* First Column - Witness Section */}
+              <div className="flex-1 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Witness Information</h3>
+
+                {/* Witness Name */}
+                <div>
+                  <Label htmlFor="witnessName" className="text-sm font-semibold">Witness Name (Print)</Label>
+                  <Input
+                    id="witnessName"
+                    value={formData.witnessName}
+                    onChange={(e) => handleInputChange('witnessName', e.target.value)}
+                    placeholder="Print witness name"
+                    className="mt-1"
+                  />
+                </div>
+
+                {/* Witness Date */}
+                <div>
+                  <Label htmlFor="witnessSignatureDate" className="text-sm font-semibold">Witness Date</Label>
+                  <Input
+                    id="witnessSignatureDate"
+                    type="date"
+                    value={formData.witnessSignatureDate}
+                    onChange={(e) => handleInputChange('witnessSignatureDate', e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+
+                {/* Witness Signature */}
+                <div>
+                  <Label className="text-sm font-semibold">Witness Signature</Label>
+                  <div className="mt-2">
+                    {formData.witnessSignature && formData.witnessSignature.length > 0 ? (
+                      <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-green-800">Witness Signature Captured</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleWitnessSignatureClear}
+                            className="text-red-600 border-red-300 hover:bg-red-50"
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <img
+                          src={formData.witnessSignature}
+                          alt="Witness Signature"
+                          className="max-w-full h-20 border border-gray-300 rounded bg-white"
+                        />
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowWitnessSignatureDialog(true)}
+                        className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Click to Sign (Witness)
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Separator */}
+              <div className="flex justify-center">
+                <Separator orientation="vertical" className="hidden lg:block h-auto min-h-[300px]" />
+                <Separator className="lg:hidden w-full" />
+              </div>
+
+              {/* Second Column - Patient Section */}
+              <div className="flex-1 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Patient Information</h3>
+
+                {/* Patient Name */}
+                <div>
+                  <Label htmlFor="patientName" className="text-sm font-semibold">
+                    <span className="text-red-500">*</span> Patient Name (Print)
+                  </Label>
+                  <Input
+                    id="patientName"
+                    value={formData.patientName}
+                    onChange={(e) => handleInputChange('patientName', e.target.value)}
+                    placeholder="Print patient name"
+                    className="mt-1"
+                    required
+                  />
+                </div>
+
+                {/* Patient Date */}
+                <div>
+                  <Label htmlFor="patientSignatureDate" className="text-sm font-semibold">
+                    <span className="text-red-500">*</span> Date
+                  </Label>
                   <Input
                     id="patientSignatureDate"
                     type="date"
@@ -780,45 +920,83 @@ export function ThreeYearCarePackageForm({
                     required
                   />
                 </div>
-              </div>
 
-              <div>
-                <Label htmlFor="witnessName">Witness Name (Print)</Label>
-                <Input
-                  id="witnessName"
-                  value={formData.witnessName}
-                  onChange={(e) => handleInputChange('witnessName', e.target.value)}
-                  placeholder="Print name"
-                  className="mt-1"
-                />
-                <div className="mt-2">
-                  <Label htmlFor="witnessSignature">Witness Signature</Label>
-                  <Input
-                    id="witnessSignature"
-                    value={formData.witnessSignature}
-                    onChange={(e) => handleInputChange('witnessSignature', e.target.value)}
-                    placeholder="Sign here"
-                    className="mt-1"
-                  />
+                {/* Patient Signature */}
+                <div>
+                  <Label className="text-sm font-semibold">
+                    <span className="text-red-500">*</span> Patient Signature
+                  </Label>
+                  <div className="mt-2">
+                    {formData.patientSignature && formData.patientSignature.length > 0 ? (
+                      <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-green-800">Signature Captured</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handlePatientSignatureClear}
+                            className="text-red-600 border-red-300 hover:bg-red-50"
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                        <img
+                          src={formData.patientSignature}
+                          alt="Patient Signature"
+                          className="max-w-full h-20 border border-gray-300 rounded bg-white"
+                        />
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowPatientSignatureDialog(true)}
+                        className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30 flex items-center justify-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Click to Sign
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
 
+        {/* Staff Use Section */}
+        <Card className="border-gray-300 bg-gray-50">
+          <CardHeader>
+            <CardTitle className="text-lg text-gray-800">
+              Staff Use Only
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="witnessSignatureDate">Witness Date</Label>
+                <Label htmlFor="staffProcessedBy" className="text-sm font-semibold text-gray-700">
+                  Form Processed By
+                </Label>
                 <Input
-                  id="witnessSignatureDate"
+                  id="staffProcessedBy"
+                  value={formData.staffProcessedBy || ''}
+                  onChange={(e) => handleInputChange('staffProcessedBy', e.target.value)}
+                  placeholder="Staff member name"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="staffProcessedDate" className="text-sm font-semibold text-gray-700">
+                  Processing Date
+                </Label>
+                <Input
+                  id="staffProcessedDate"
                   type="date"
-                  value={formData.witnessSignatureDate}
-                  onChange={(e) => handleInputChange('witnessSignatureDate', e.target.value)}
+                  value={formData.staffProcessedDate || ''}
+                  onChange={(e) => handleInputChange('staffProcessedDate', e.target.value)}
                   className="mt-1"
                 />
-                <div className="mt-4 p-3 bg-gray-100 rounded-lg">
-                  <p className="text-xs text-gray-600">
-                    <strong>Staff Use:</strong><br />
-                    Form processed by: ___________<br />
-                    Date: ___________
-                  </p>
-                </div>
               </div>
             </div>
           </CardContent>
@@ -833,6 +1011,21 @@ export function ThreeYearCarePackageForm({
           </Button>
         </div>
       </form>
+
+      {/* Signature Dialogs */}
+      <SignatureDialog
+        isOpen={showPatientSignatureDialog}
+        onClose={() => setShowPatientSignatureDialog(false)}
+        onSave={handlePatientSignatureSave}
+        title="Patient Signature"
+      />
+
+      <SignatureDialog
+        isOpen={showWitnessSignatureDialog}
+        onClose={() => setShowWitnessSignatureDialog(false)}
+        onSave={handleWitnessSignatureSave}
+        title="Witness Signature"
+      />
     </div>
   );
 }

@@ -117,7 +117,7 @@ export const ConsultationManager: React.FC<ConsultationManagerProps> = ({
         <div>
           <h2 className="text-xl font-semibold text-gray-900">Consultation Overview</h2>
           <p className="text-sm text-gray-500">
-            Comprehensive consultation record for {consultationData.patient_name || `${consultationData.patient_first_name || ''} ${consultationData.patient_last_name || ''}`.trim() || 'Unknown Patient'}
+            Comprehensive consultation record for {consultationData.patient_first_name} {consultationData.patient_last_name}
           </p>
         </div>
         <div className="flex items-center gap-3">

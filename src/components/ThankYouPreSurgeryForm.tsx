@@ -28,71 +28,82 @@ interface ThankYouPreSurgeryFormProps {
   onCancel: () => void;
   patientName?: string;
   patientDateOfBirth?: string;
+  initialData?: any;
+  isEditing?: boolean;
+  readOnly?: boolean;
 }
 
-export function ThankYouPreSurgeryForm({ onSubmit, onCancel, patientName = "", patientDateOfBirth = "" }: ThankYouPreSurgeryFormProps) {
+export function ThankYouPreSurgeryForm({
+  onSubmit,
+  onCancel,
+  patientName = "",
+  patientDateOfBirth = "",
+  initialData = null,
+  isEditing = false,
+  readOnly = false
+}: ThankYouPreSurgeryFormProps) {
   const [formData, setFormData] = useState({
     // Patient Information
-    patientName: patientName,
-    phone: "",
-    dateOfBirth: patientDateOfBirth || "",
-    email: "",
-    treatmentType: "",
-    formDate: new Date().toISOString().split('T')[0],
-    
+    patientName: initialData?.patient_name || patientName,
+    phone: initialData?.phone || "",
+    dateOfBirth: initialData?.date_of_birth || patientDateOfBirth || "",
+    email: initialData?.email || "",
+    treatmentType: initialData?.treatment_type || "",
+    formDate: initialData?.form_date || new Date().toISOString().split('T')[0],
+
     // Medical Screening
     medicalConditions: {
-      heartConditions: false,
-      bloodThinners: false,
-      diabetes: false,
-      highBloodPressure: false,
-      allergies: false,
-      pregnancyNursing: false,
-      recentIllness: false,
-      medicationChanges: false
+      heartConditions: initialData?.heart_conditions || false,
+      bloodThinners: initialData?.blood_thinners || false,
+      diabetes: initialData?.diabetes || false,
+      highBloodPressure: initialData?.high_blood_pressure || false,
+      allergies: initialData?.allergies || false,
+      pregnancyNursing: initialData?.pregnancy_nursing || false,
+      recentIllness: initialData?.recent_illness || false,
+      medicationChanges: initialData?.medication_changes || false
     },
-    
+
     // Timeline Acknowledgments
     threeDaysBefore: {
-      startMedrol: false,
-      startAmoxicillin: false,
-      noAlcohol: false,
-      arrangeRide: false
+      startMedrol: initialData?.start_medrol || false,
+      startAmoxicillin: initialData?.start_amoxicillin || false,
+      noAlcohol: initialData?.no_alcohol_3days || false,
+      arrangeRide: initialData?.arrange_ride || false
     },
     nightBefore: {
-      takeDiazepam: false,
-      noFoodAfterMidnight: false,
-      noWaterAfter6AM: false,
-      confirmRide: false
+      takeDiazepam: initialData?.take_diazepam || false,
+      noFoodAfterMidnight: initialData?.no_food_after_midnight || false,
+      noWaterAfter6AM: initialData?.no_water_after_6am || false,
+      confirmRide: initialData?.confirm_ride || false
     },
     morningOf: {
-      noBreakfast: false,
-      noPills: false,
-      wearComfortable: false,
-      arriveOnTime: false
+      noBreakfast: initialData?.no_breakfast || false,
+      noPills: initialData?.no_pills || false,
+      wearComfortable: initialData?.wear_comfortable || false,
+      arriveOnTime: initialData?.arrive_on_time || false
     },
     afterSurgery: {
-      noAlcohol24hrs: false,
-      noDriving24hrs: false,
-      followInstructions: false,
-      callIfConcerns: false
+      noAlcohol24hrs: initialData?.no_alcohol_24hrs || false,
+      noDriving24hrs: initialData?.no_driving_24hrs || false,
+      followInstructions: initialData?.follow_instructions || false,
+      callIfConcerns: initialData?.call_if_concerns || false
     },
-    
+
     // Patient Acknowledgments
     acknowledgments: {
-      readInstructions: false,
-      understandMedications: false,
-      understandSedation: false,
-      arrangedTransport: false,
-      understandRestrictions: false,
-      willFollowInstructions: false,
-      understandEmergency: false
+      readInstructions: initialData?.read_instructions || false,
+      understandMedications: initialData?.understand_medications || false,
+      understandSedation: initialData?.understand_sedation || false,
+      arrangedTransport: initialData?.arranged_transport || false,
+      understandRestrictions: initialData?.understand_restrictions || false,
+      willFollowInstructions: initialData?.will_follow_instructions || false,
+      understandEmergency: initialData?.understand_emergency || false
     },
-    
+
     // Signatures
-    patientSignature: "",
-    signatureDate: new Date().toISOString().split('T')[0],
-    patientPrintName: ""
+    patientSignature: initialData?.patient_signature || "",
+    signatureDate: initialData?.signature_date || new Date().toISOString().split('T')[0],
+    patientPrintName: initialData?.patient_print_name || ""
   });
 
   // Signature dialog states
@@ -737,9 +748,15 @@ export function ThankYouPreSurgeryForm({ onSubmit, onCancel, patientName = "", p
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-            Save Pre-Surgery Form
-          </Button>
+          {!readOnly ? (
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              {isEditing ? 'Update Pre-Surgery Form' : 'Save Pre-Surgery Form'}
+            </Button>
+          ) : (
+            <Button type="button" disabled className="bg-gray-400 text-white">
+              View Only
+            </Button>
+          )}
         </div>
       </form>
 
