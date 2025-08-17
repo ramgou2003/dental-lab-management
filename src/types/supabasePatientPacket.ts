@@ -3,6 +3,7 @@ export interface NewPatientPacketDB {
   id?: string;
   patient_id?: string;
   lead_id?: string;
+  consultation_patient_id?: string;
   
   // Section 1: Patient Identification & Contacts
   first_name: string;

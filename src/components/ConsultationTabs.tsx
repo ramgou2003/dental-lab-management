@@ -9,7 +9,7 @@ interface ConsultationTabsProps {
 const tabs = [
   {
     id: "consultations",
-    label: "Consultations",
+    label: "New Consultations",
     icon: Calendar,
     color: "text-blue-600",
     activeColor: "text-blue-600",
@@ -18,7 +18,7 @@ const tabs = [
   },
   {
     id: "patients",
-    label: "Patients",
+    label: "All Consultations",
     icon: Users,
     color: "text-slate-600",
     activeColor: "text-indigo-600",

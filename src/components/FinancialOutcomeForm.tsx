@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Save, DollarSign, CheckCircle, XCircle, Clock, AlertCircle, UserCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { movePatientToMainTable } from '@/services/consultationService';
+import { toast } from 'sonner';
 
 interface FinancialOutcomeData {
   // Treatment Decision
@@ -38,12 +39,23 @@ interface FinancialOutcomeData {
 interface FinancialOutcomeFormProps {
   patientPacketId: string;
   patientName: string;
+  consultationPatientId?: string;
+  appointmentId?: string;
+  onDataChange?: (data: FinancialOutcomeData) => void;
 }
 
-export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
+export interface FinancialOutcomeFormRef {
+  saveData: () => Promise<void>;
+  getFormData: () => FinancialOutcomeData;
+}
+
+export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, FinancialOutcomeFormProps>(({
   patientPacketId,
-  patientName
-}) => {
+  patientName,
+  consultationPatientId,
+  appointmentId,
+  onDataChange
+}, ref) => {
   const [formData, setFormData] = useState<FinancialOutcomeData>({
     treatmentDecision: '',
     treatmentCost: 0,
@@ -68,10 +80,16 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
   useEffect(() => {
     const loadOutcomeData = async () => {
       try {
+        // Use appointment_id as primary lookup (required for multiple consultations)
+        if (!appointmentId) {
+          console.warn('No appointment ID provided, cannot load financial data');
+          return;
+        }
+
         const { data, error } = await supabase
           .from('consultations')
           .select('*')
-          .eq('new_patient_packet_id', patientPacketId)
+          .eq('appointment_id', appointmentId)
           .single();
 
         if (data && !error) {
@@ -95,15 +113,31 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
     if (patientPacketId) {
       loadOutcomeData();
     }
-  }, [patientPacketId]);
+  }, [patientPacketId, appointmentId]);
 
   const handleSave = async () => {
+    console.log('🔥 FinancialOutcomeForm handleSave called');
     setIsSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
+      // First, get existing data to avoid overwriting treatment data
+      // Use appointment_id as primary lookup (required for multiple consultations)
+      if (!appointmentId) {
+        throw new Error('Appointment ID is required for loading existing consultation data');
+      }
+
+      const { data: existingData } = await supabase
+        .from('consultations')
+        .select('*')
+        .eq('appointment_id', appointmentId)
+        .single();
+
       const outcomeData = {
         new_patient_packet_id: patientPacketId,
+        consultation_patient_id: consultationPatientId || null,
+        appointment_id: appointmentId || null,
+        patient_name: patientName || 'Unknown Patient',
         treatment_decision: formData.treatmentDecision,
         treatment_cost: formData.treatmentCost,
         global_treatment_value: formData.globalTreatmentValue,
@@ -116,21 +150,50 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
                                formData.treatmentDecision === 'not-accepted' ? false : null,
         follow_up_required: formData.treatmentDecision === 'followup-required',
         consultation_status: formData.treatmentDecision === 'accepted' || formData.treatmentDecision === 'not-accepted' ? 'completed' : 'scheduled',
-        updated_at: new Date().toISOString()
+        progress_step: Math.max(existingData?.progress_step || 0, 2),
+        updated_at: new Date().toISOString(),
+        // Preserve existing treatment data if it exists
+        ...(existingData && {
+          clinical_assessment: existingData.clinical_assessment,
+          treatment_recommendations: existingData.treatment_recommendations,
+          additional_information: existingData.additional_information
+        })
       };
 
       console.log('💾 Saving financial outcome data:', outcomeData);
+      console.log('🔍 IDs being saved:', {
+        patientPacketId,
+        consultationPatientId,
+        patientName
+      });
+      console.log('📋 Existing data found:', existingData ? 'Yes' : 'No');
+      if (existingData) {
+        console.log('🔄 Preserving treatment data:', {
+          clinical_assessment: existingData.clinical_assessment,
+          treatment_recommendations: existingData.treatment_recommendations,
+          additional_information: existingData.additional_information
+        });
+      }
 
-      const { error } = await supabase
+      // Use appointment_id for conflict resolution (now has unique constraint)
+      if (!appointmentId) {
+        throw new Error('Appointment ID is required for saving consultation data');
+      }
+
+      const { data, error } = await supabase
         .from('consultations')
         .upsert(outcomeData, {
-          onConflict: 'new_patient_packet_id'
-        });
+          onConflict: 'appointment_id'
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        throw error;
+      }
 
+      console.log('✅ Financial outcome saved successfully:', data);
       setLastSaved(new Date());
-      console.log('✅ Financial outcome saved successfully');
 
       // If treatment is accepted, move patient to main patients table
       if (formData.treatmentDecision === 'accepted') {
@@ -144,25 +207,33 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
             setPatientMoved(true);
             console.log('✅ Patient moved to main patients table:', patientId);
 
-            // Show success alert
-            alert(`✅ Success! Patient has been moved to the main Patients table. Patient ID: ${patientId}`);
+            // Show success toast
+            toast.success(`Success! Patient has been moved to the main Patients table. Patient ID: ${patientId}`);
           } else {
             console.error('❌ Failed to move patient - no patient ID returned');
-            alert('❌ Failed to move patient to main table. Please check console for details.');
+            toast.error('Failed to move patient to main table. Please check console for details.');
           }
         } catch (moveError) {
           console.error('❌ Error moving patient to main table:', moveError);
-          alert(`❌ Error moving patient: ${moveError}`);
+          toast.error(`Error moving patient: ${moveError}`);
         } finally {
           setIsMovingPatient(false);
         }
       }
     } catch (error) {
       console.error('❌ Error saving financial outcome:', error);
+      // Show user-friendly error message
+      toast.error('Failed to save financial data. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Expose save function to parent component
+  React.useImperativeHandle(ref, () => ({
+    saveData: handleSave,
+    getFormData: () => formData
+  }));
 
   const handleFinancingOptionChange = (option: keyof FinancialOutcomeData['financingOptions']) => {
     setFormData(prev => ({
@@ -196,6 +267,8 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
 
   return (
     <div className="space-y-6">
+
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -321,37 +394,43 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
                 <Label className="text-sm font-medium text-gray-700 mb-3 block">
                   Was the patient approved for financing?
                 </Label>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="yesApproved"
-                      checked={formData.financingOptions.yesApproved}
-                      onCheckedChange={() => handleFinancingOptionChange('yesApproved')}
-                    />
-                    <Label htmlFor="yesApproved" className="text-sm text-green-700">
-                      Yes, Approved
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="noNotApproved"
-                      checked={formData.financingOptions.noNotApproved}
-                      onCheckedChange={() => handleFinancingOptionChange('noNotApproved')}
-                    />
-                    <Label htmlFor="noNotApproved" className="text-sm text-red-700">
-                      No, Not Approved
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="didNotApply"
-                      checked={formData.financingOptions.didNotApply}
-                      onCheckedChange={() => handleFinancingOptionChange('didNotApply')}
-                    />
-                    <Label htmlFor="didNotApply" className="text-sm text-gray-700">
-                      Did Not Apply
-                    </Label>
-                  </div>
+                <div className="grid grid-cols-1 gap-3">
+                  <Button
+                    type="button"
+                    variant={formData.financingOptions.yesApproved ? "default" : "outline"}
+                    onClick={() => handleFinancingOptionChange('yesApproved')}
+                    className={`px-4 py-3 h-auto text-left justify-start ${
+                      formData.financingOptions.yesApproved
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'border-green-300 text-green-600 hover:bg-green-50'
+                    }`}
+                  >
+                    Yes, Approved
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.financingOptions.noNotApproved ? "default" : "outline"}
+                    onClick={() => handleFinancingOptionChange('noNotApproved')}
+                    className={`px-4 py-3 h-auto text-left justify-start ${
+                      formData.financingOptions.noNotApproved
+                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                        : 'border-red-300 text-red-600 hover:bg-red-50'
+                    }`}
+                  >
+                    No, Not Approved
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.financingOptions.didNotApply ? "default" : "outline"}
+                    onClick={() => handleFinancingOptionChange('didNotApply')}
+                    className={`px-4 py-3 h-auto text-left justify-start ${
+                      formData.financingOptions.didNotApply
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'border-blue-300 text-blue-600 hover:bg-blue-50'
+                    }`}
+                  >
+                    Did Not Apply
+                  </Button>
                 </div>
               </div>
 
@@ -431,4 +510,4 @@ export const FinancialOutcomeForm: React.FC<FinancialOutcomeFormProps> = ({
       </Card>
     </div>
   );
-};
+});

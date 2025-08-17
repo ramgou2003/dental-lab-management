@@ -115,7 +115,11 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
               <Input
                 id="dateOfBirth"
                 type="date"
-                value={formData.dateOfBirth.toISOString().split('T')[0]}
+                value={formData.dateOfBirth ?
+                  (formData.dateOfBirth instanceof Date ?
+                    formData.dateOfBirth.toISOString().split('T')[0] :
+                    formData.dateOfBirth) :
+                  ''}
                 onChange={(e) => onInputChange('dateOfBirth', new Date(e.target.value))}
                 required
               />

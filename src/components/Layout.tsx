@@ -54,7 +54,7 @@ const Layout = () => {
     if (path === "/" || path === "/dashboard") return "dashboard";
     if (path.startsWith("/lead-in")) return "lead-in";
     if (path === "/appointments") return "appointments";
-    if (path === "/consultation") return "consultation";
+    if (path.startsWith("/consultation")) return "consultation";
     if (path.startsWith("/patients")) return "patients";
     if (path === "/lab") return "lab";
     if (path === "/report-cards") return "report-cards";

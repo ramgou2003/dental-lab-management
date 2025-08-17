@@ -1,19 +1,26 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, MapPin, Heart, DollarSign, FileText, AlertCircle, CheckCircle, XCircle, Info, BarChart3 } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, User, Phone, Mail, MapPin, Heart, DollarSign, FileText, AlertCircle, CheckCircle, XCircle, Info, BarChart3, Plus, RefreshCw, Mic, FileAudio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { NewPatientPacketForm, NewPatientPacketFormRef } from "@/components/NewPatientPacketForm";
 import { FilledPatientPacketViewer } from "@/components/FilledPatientPacketViewer";
 import { PatientSummaryAI } from "@/components/PatientSummaryAI";
 import { TreatmentForm } from "@/components/TreatmentForm";
 import { FinancialOutcomeForm } from "@/components/FinancialOutcomeForm";
+import { ConsultationFormDialog } from "@/components/ConsultationFormDialog";
+import { RecordingConsentDialog } from "@/components/RecordingConsentDialog";
+import { RecordingControlDialog } from "@/components/RecordingControlDialog";
+import { RecordingsList } from "@/components/RecordingsList";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { NewPatientFormData } from "@/types/newPatientPacket";
-import { getPatientPacketsByLeadId, getPatientPacketsByPatientId, getPatientPacket, updatePatientPacket } from "@/services/patientPacketService";
+import { getPatientPacketsByLeadId, getPatientPacketsByPatientId, getPatientPacketsByConsultationPatientId, getPatientPacket, updatePatientPacket } from "@/services/patientPacketService";
+import { uploadAudioRecording, saveRecordingMetadata } from "@/lib/audioRecordingService";
+import { convertFormDataToDatabase } from "@/utils/patientPacketConverter";
 import { toast } from "sonner";
 
 const ConsultationSessionPage = () => {
@@ -28,6 +35,28 @@ const ConsultationSessionPage = () => {
   const [activeTab, setActiveTab] = useState("new-patient-packet");
   const [consultationSection, setConsultationSection] = useState(1);
   const [isCompletingConsultation, setIsCompletingConsultation] = useState(false);
+  const [showRecordingConsentDialog, setShowRecordingConsentDialog] = useState(false);
+  const [showRecordingControlDialog, setShowRecordingControlDialog] = useState(false);
+  const [showRecordingsPreviewDialog, setShowRecordingsPreviewDialog] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);
+  const [recordingChunks, setRecordingChunks] = useState<Blob[]>([]);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const [audioLevel, setAudioLevel] = useState<number>(-60);
+  const [audioAnalyzer, setAudioAnalyzer] = useState<AnalyserNode | null>(null);
+  const [audioCleanup, setAudioCleanup] = useState<(() => void) | null>(null);
+  const [isDirectConsultation, setIsDirectConsultation] = useState(false);
+  const [consultationPatientData, setConsultationPatientData] = useState<any>(null);
+  const [consultationStatus, setConsultationStatus] = useState<string | null>(null);
+  const [hasConsultationData, setHasConsultationData] = useState<boolean>(false);
+  const [consultationCompleted, setConsultationCompleted] = useState<boolean>(false);
+  const [checkingConsultation, setCheckingConsultation] = useState<boolean>(false);
+  const [consultationDataLoaded, setConsultationDataLoaded] = useState<boolean>(false);
+  const [showNewPatientPacketDialog, setShowNewPatientPacketDialog] = useState(false);
+  const [showConsultationFormDialog, setShowConsultationFormDialog] = useState(false);
   const formRef = useRef<NewPatientPacketFormRef>(null);
 
   const tabs = [
@@ -44,10 +73,10 @@ const ConsultationSessionPage = () => {
       id: "summary",
       label: "Summary",
       icon: BarChart3,
-      color: "text-green-600",
-      activeColor: "text-green-600",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-500"
+      color: "text-blue-600",
+      activeColor: "text-blue-600",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-500"
     }
   ];
 
@@ -110,8 +139,11 @@ const ConsultationSessionPage = () => {
 
           setAppointmentData(enrichedData);
 
+          // Check if this is a direct consultation (created via Add Consultation button)
+          const consultationPatient = await checkIfDirectConsultation(appointmentData.id);
+
           // Check for patient packet data
-          await fetchPatientPacketData(enrichedData);
+          await fetchPatientPacketData(enrichedData, consultationPatient);
         } else {
           // If not found in appointments, try leads table
           const { data: leadData, error: leadError } = await supabase
@@ -149,39 +181,566 @@ const ConsultationSessionPage = () => {
     fetchAppointmentData();
   }, [appointmentId]);
 
-  const fetchPatientPacketData = async (appointmentData: any) => {
+  // Check consultation data whenever packetId changes
+  useEffect(() => {
+    console.log('🔄 useEffect triggered - packetId:', packetId);
+    if (packetId) {
+      console.log('🔄 PacketId exists, checking consultation data:', packetId);
+      // Add a small delay to prevent race conditions
+      const timeoutId = setTimeout(() => {
+        console.log('🔄 Timeout executed, calling checkConsultationData with:', packetId);
+        if (packetId && packetId !== 'undefined' && packetId !== 'null') {
+          checkConsultationData(packetId);
+        } else {
+          console.log('❌ Invalid packetId in timeout, skipping consultation check');
+        }
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      console.log('🔄 PacketId is null, setting consultation states to false');
+      setHasConsultationData(false);
+      setConsultationCompleted(false);
+      setConsultationDataLoaded(true);
+    }
+  }, [packetId]);
+
+  // Recording functions
+  const startRecording = (recorder: MediaRecorder) => {
+    console.log('Starting recording with MIME type:', recorder.mimeType);
+
+    setMediaRecorder(recorder);
+    setMediaStream(recorder.stream);
+    setIsRecording(true);
+    setIsPaused(false);
+    setRecordingDuration(0);
+    setRecordingChunks([]);
+    setShowRecordingControlDialog(true);
+
+    // Set up audio analysis for visualization
+    const cleanup = setupAudioAnalysis(recorder.stream);
+    setAudioCleanup(() => cleanup);
+
+    // Handle recording data - set this BEFORE starting
+    recorder.ondataavailable = (event) => {
+      console.log('Recording data available:', event.data.size, 'bytes');
+      if (event.data.size > 0) {
+        setRecordingChunks(prev => {
+          const newChunks = [...prev, event.data];
+          console.log('Total chunks collected:', newChunks.length);
+          return newChunks;
+        });
+      }
+    };
+
+    // Handle recording stop
+    recorder.onstop = () => {
+      console.log('Recording segment stopped');
+    };
+
+    // Start the recording with timeslice to ensure data collection
+    recorder.start(1000); // Collect data every 1 second
+
+    // Start the timer
+    const timer = setInterval(() => {
+      setRecordingDuration(prev => prev + 1);
+    }, 1000);
+    setRecordingTimer(timer);
+
+    console.log('Recording started for consultation:', appointmentId);
+  };
+
+  // Audio analysis setup
+  const setupAudioAnalysis = (stream: MediaStream) => {
+    try {
+      console.log('Setting up audio analysis...');
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const microphone = audioContext.createMediaStreamSource(stream);
+
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.3;
+      microphone.connect(analyser);
+
+      setAudioAnalyzer(analyser);
+      console.log('Audio analyzer set up successfully');
+
+      // Start monitoring audio levels
+      let animationId: number;
+      const monitorAudio = () => {
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteTimeDomainData(dataArray);
+
+        // Calculate RMS (Root Mean Square) for volume level
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          const sample = (dataArray[i] - 128) / 128; // Convert to -1 to 1 range
+          sum += sample * sample;
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+
+        // Convert to dB
+        const db = rms > 0 ? 20 * Math.log10(rms) : -60;
+        const normalizedDb = Math.max(-60, Math.min(0, db));
+
+        setAudioLevel(normalizedDb);
+        console.log('Audio level:', normalizedDb, 'dB, RMS:', rms);
+
+        // Continue monitoring
+        animationId = requestAnimationFrame(monitorAudio);
+      };
+
+      // Start monitoring immediately
+      monitorAudio();
+
+      // Store animation ID for cleanup
+      return () => {
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+        }
+        audioContext.close();
+      };
+    } catch (error) {
+      console.error('Error setting up audio analysis:', error);
+      return null;
+    }
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorder && isRecording && !isPaused) {
+      try {
+        // Set up the stop handler before stopping
+        const originalOnStop = mediaRecorder.onstop;
+        mediaRecorder.onstop = () => {
+          // Call original handler if it exists
+          if (originalOnStop) {
+            originalOnStop.call(mediaRecorder, new Event('stop'));
+          }
+
+          setIsPaused(true);
+          toast.info("Recording paused");
+          console.log('Recording paused successfully');
+        };
+
+        // Check if MediaRecorder is in recording state
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        } else {
+          // If not recording, just set paused state
+          setIsPaused(true);
+          toast.info("Recording paused");
+        }
+
+        // Pause the timer
+        if (recordingTimer) {
+          clearInterval(recordingTimer);
+          setRecordingTimer(null);
+        }
+
+        // Pause audio monitoring
+        if (audioCleanup) {
+          audioCleanup();
+          setAudioCleanup(null);
+        }
+        setAudioLevel(-60);
+
+      } catch (error) {
+        console.error('Error pausing recording:', error);
+        toast.error("Unable to pause recording");
+      }
+    }
+  };
+
+  const resumeRecording = async () => {
+    if (isRecording && isPaused) {
+      try {
+        console.log('Attempting to resume recording...');
+
+        // Check if the current stream is still active
+        if (!mediaStream || !mediaStream.active) {
+          console.log('Stream is not active, requesting new stream...');
+
+          // Request a new media stream
+          const newStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              sampleRate: 44100
+            }
+          });
+
+          setMediaStream(newStream);
+
+          // Create recorder with new stream
+          await createAndStartRecorder(newStream);
+        } else {
+          // Use existing stream
+          console.log('Using existing stream...');
+          await createAndStartRecorder(mediaStream);
+        }
+
+      } catch (error) {
+        console.error('Error resuming recording:', error);
+        toast.error("Unable to resume recording. Please try starting a new recording.");
+      }
+    }
+  };
+
+  const createAndStartRecorder = async (stream: MediaStream) => {
+    return new Promise<void>((resolve, reject) => {
+      try {
+        // Determine the best supported MIME type
+        let mimeType = 'audio/webm';
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          mimeType = 'audio/ogg';
+        }
+
+        console.log('Using MIME type:', mimeType);
+
+        // Create a new MediaRecorder
+        const newRecorder = new MediaRecorder(stream, { mimeType });
+
+        // Handle new recording data
+        newRecorder.ondataavailable = (event) => {
+          console.log('Resume recording data available:', event.data.size, 'bytes');
+          if (event.data.size > 0) {
+            setRecordingChunks(prev => {
+              const newChunks = [...prev, event.data];
+              console.log('Total chunks after resume:', newChunks.length);
+              return newChunks;
+            });
+          }
+        };
+
+        newRecorder.onstop = () => {
+          console.log('Recording segment stopped');
+        };
+
+        newRecorder.onstart = () => {
+          console.log('Recording resumed successfully');
+          setIsPaused(false);
+
+          // Set up audio analysis for the new stream
+          const cleanup = setupAudioAnalysis(stream);
+          setAudioCleanup(() => cleanup);
+
+          // Resume the timer
+          const timer = setInterval(() => {
+            setRecordingDuration(prev => prev + 1);
+          }, 1000);
+          setRecordingTimer(timer);
+
+          toast.info("Recording resumed");
+          resolve();
+        };
+
+        newRecorder.onerror = (event) => {
+          console.error('MediaRecorder error:', event);
+          reject(new Error('MediaRecorder error'));
+        };
+
+        // Start the new recording with timeslice
+        newRecorder.start(1000);
+        setMediaRecorder(newRecorder);
+
+      } catch (error) {
+        console.error('Error creating recorder:', error);
+        reject(error);
+      }
+    });
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      console.log('Stopping recording...');
+      console.log('Current chunks before stop:', recordingChunks.length);
+      console.log('MediaRecorder state:', mediaRecorder.state);
+
+      // Set up the stop handler before stopping
+      mediaRecorder.onstop = async () => {
+        console.log('Recording stopped, processing chunks...');
+        console.log('Final chunks count:', recordingChunks.length);
+
+        // Give a small delay to ensure all data is collected
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Combine all recording chunks into a single blob
+        const finalBlob = new Blob(recordingChunks, { type: 'audio/webm' });
+        console.log('Final recording blob size:', finalBlob.size);
+        console.log('Recording chunks details:', recordingChunks.map(chunk => chunk.size));
+
+        // Upload the recording to Supabase Storage
+        if (finalBlob.size > 0 && appointmentId) {
+          try {
+            toast.info("Saving recording...");
+
+            const audioUrl = await uploadAudioRecording(
+              finalBlob,
+              appointmentId,
+              appointmentData?.patient_name
+            );
+
+            if (audioUrl) {
+              // Save recording metadata to database
+              await saveRecordingMetadata(
+                appointmentId,
+                audioUrl,
+                recordingDuration,
+                appointmentData?.patient_name
+              );
+
+              console.log('Recording saved successfully:', audioUrl);
+            }
+          } catch (error) {
+            console.error('Error saving recording:', error);
+            toast.error("Failed to save recording");
+          }
+        } else {
+          console.warn('No recording data to save or missing appointment ID');
+          console.warn('Blob size:', finalBlob.size, 'Appointment ID:', appointmentId);
+          console.warn('Chunks:', recordingChunks.length);
+          toast.warning("No recording data to save");
+        }
+      };
+
+      // Request any remaining data before stopping
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.requestData();
+        // Small delay to ensure data is collected
+        setTimeout(() => {
+          if (mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+          }
+        }, 100);
+      } else {
+        mediaRecorder.stop();
+      }
+
+      // Stop all tracks to release the microphone
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+
+      // Clean up audio analysis
+      if (audioCleanup) {
+        audioCleanup();
+        setAudioCleanup(null);
+      }
+
+      setIsRecording(false);
+      setIsPaused(false);
+      setMediaRecorder(null);
+      setMediaStream(null);
+      setRecordingChunks([]);
+      setAudioAnalyzer(null);
+      setAudioLevel(-60);
+      setShowRecordingControlDialog(false);
+
+      if (recordingTimer) {
+        clearInterval(recordingTimer);
+        setRecordingTimer(null);
+      }
+
+      toast.success("Recording stopped and saved");
+    }
+  };
+
+  // Format recording duration for display
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimer) {
+        clearInterval(recordingTimer);
+      }
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+      }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+      if (audioCleanup) {
+        audioCleanup();
+      }
+    };
+  }, [recordingTimer, mediaRecorder, mediaStream, isRecording, audioCleanup]);
+
+  const checkIfDirectConsultation = async (appointmentId: string) => {
+    try {
+      // Check if this appointment has a corresponding consultation record
+      const { data: consultation, error: consultationError } = await supabase
+        .from('consultations')
+        .select('consultation_patient_id, consultation_patients(*)')
+        .eq('appointment_id', appointmentId)
+        .single();
+
+      if (!consultationError && consultation?.consultation_patients) {
+        setIsDirectConsultation(true);
+        setConsultationPatientData(consultation.consultation_patients);
+        return consultation.consultation_patients;
+      } else {
+        setIsDirectConsultation(false);
+        setConsultationPatientData(null);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error checking consultation type:', error);
+      setIsDirectConsultation(false);
+      return null;
+    }
+  };
+
+  const fetchPatientPacketData = async (appointmentData: any, consultationPatient?: any) => {
     try {
       setLoadingPacket(true);
       let packetData = null;
 
-      // Check if this is a lead-based appointment
-      if (appointmentData.lead_id || (!appointmentData.patient_id && appointmentData.id)) {
-        const leadId = appointmentData.lead_id || appointmentData.id;
-        const { data: packets, error } = await getPatientPacketsByLeadId(leadId);
+      console.log('🔍 fetchPatientPacketData called with:', {
+        appointmentId: appointmentData?.id,
+        consultationPatient: consultationPatient?.id,
+        consultationPatientData: consultationPatientData?.id
+      });
 
-        if (!error && packets && packets.length > 0) {
-          // Get the most recent packet
-          const latestPacket = packets[0];
-          const { data: fullPacketData, error: packetError } = await getPatientPacket(latestPacket.id);
+      // First, try to find patient packet via consultation_patient_id
+      const consultationData = consultationPatient || consultationPatientData;
+      if (consultationData?.id) {
+        console.log('Fetching patient packet for consultation patient ID:', consultationData.id);
+        const { data: packets, error: packetError } = await getPatientPacketsByConsultationPatientId(consultationData.id);
 
+        if (!packetError && packets && packets.length > 0) {
+          console.log('Found patient packet via consultation_patient_id:', packets[0].id);
+          // Get the full packet data with proper conversion
+          const { data: fullPacketData, error: packetError } = await getPatientPacket(packets[0].id);
           if (!packetError && fullPacketData) {
             packetData = fullPacketData;
-            setPacketId(latestPacket.id);
+            setPacketId(packets[0].id);
+          }
+        } else {
+          console.log('No patient packet found for consultation_patient_id, trying shared patient packet lookup...');
+
+          // Try to find shared patient packet by patient identity
+          try {
+            const { getSharedPatientPacketForConsultation } = await import('@/services/sharedPatientPacketService');
+            const { data: sharedPacket, error: sharedError } = await getSharedPatientPacketForConsultation(consultationData.id);
+
+            if (!sharedError && sharedPacket) {
+              console.log('Found shared patient packet via patient identity:', sharedPacket.id);
+              const { data: fullPacketData, error: packetError } = await getPatientPacket(sharedPacket.id);
+              if (!packetError && fullPacketData) {
+                packetData = fullPacketData;
+                setPacketId(sharedPacket.id);
+              }
+            } else {
+              console.log('No shared patient packet found, trying consultation record...');
+            }
+          } catch (error) {
+            console.warn('Error finding shared patient packet:', error);
+            console.log('Falling back to consultation record lookup...');
+          }
+
+          if (!packetData) {
+            console.log('Trying consultation record lookup...');
+
+            // Fallback: try to find consultation record by appointment_id or consultation_patient_id
+          console.log('Fetching consultation data for appointment:', appointmentData.id);
+
+          // First try by appointment_id
+          let consultationRecord = null;
+          let consultationError = null;
+
+          const { data: consultationByAppointment, error: appointmentError } = await supabase
+            .from('consultations')
+            .select('*, new_patient_packets(*)')
+            .eq('appointment_id', appointmentData.id)
+            .maybeSingle();
+
+          if (!appointmentError && consultationByAppointment) {
+            consultationRecord = consultationByAppointment;
+          } else {
+            // If not found by appointment_id, try by consultation_patient_id
+            console.log('No consultation found by appointment_id, trying by consultation_patient_id:', consultationData.id);
+            const { data: consultationByPatient, error: patientError } = await supabase
+              .from('consultations')
+              .select('*, new_patient_packets(*)')
+              .eq('consultation_patient_id', consultationData.id)
+              .maybeSingle();
+
+            if (!patientError && consultationByPatient) {
+              consultationRecord = consultationByPatient;
+            }
+            consultationError = patientError;
+          }
+
+            if (!consultationError && consultationRecord?.new_patient_packets) {
+              console.log('Found patient packet via consultation record:', consultationRecord.new_patient_packets.id);
+              packetData = consultationRecord.new_patient_packets;
+              setPacketId(consultationRecord.new_patient_packets.id);
+            }
           }
         }
       }
-      // Check if this is a patient-based appointment
-      else if (appointmentData.patient_id) {
-        const { data: packets, error } = await getPatientPacketsByPatientId(appointmentData.patient_id);
 
-        if (!error && packets && packets.length > 0) {
-          // Get the most recent packet
-          const latestPacket = packets[0];
-          const { data: fullPacketData, error: packetError } = await getPatientPacket(latestPacket.id);
+      if (!packetData) {
+        console.log('No patient packet found via consultation methods, trying alternative methods...');
 
-          if (!packetError && fullPacketData) {
-            packetData = fullPacketData;
-            setPacketId(latestPacket.id);
+        // Fallback: check if this is a direct consultation and use consultation patient's lead_id
+        if (consultationData?.lead_id) {
+          console.log('Fetching patient packets for consultation patient with lead_id:', consultationData.lead_id);
+          const { data: packets, error } = await getPatientPacketsByLeadId(consultationData.lead_id);
+
+          if (!error && packets && packets.length > 0) {
+            console.log('Found patient packets for consultation:', packets.length);
+            // Get the most recent packet
+            const latestPacket = packets[0];
+            const { data: fullPacketData, error: packetError } = await getPatientPacket(latestPacket.id);
+
+            if (!packetError && fullPacketData) {
+              packetData = fullPacketData;
+              setPacketId(latestPacket.id);
+              console.log('Successfully loaded patient packet for consultation patient');
+            }
+          } else {
+            console.log('No patient packets found for consultation patient lead_id:', consultationData.lead_id);
+          }
+        }
+        // Check if this is a lead-based appointment
+        else if (appointmentData.lead_id || (!appointmentData.patient_id && appointmentData.id)) {
+          const leadId = appointmentData.lead_id || appointmentData.id;
+          const { data: packets, error } = await getPatientPacketsByLeadId(leadId);
+
+          if (!error && packets && packets.length > 0) {
+            // Get the most recent packet
+            const latestPacket = packets[0];
+            const { data: fullPacketData, error: packetError } = await getPatientPacket(latestPacket.id);
+
+            if (!packetError && fullPacketData) {
+              packetData = fullPacketData;
+              setPacketId(latestPacket.id);
+            }
+          }
+        }
+        // Check if this is a patient-based appointment
+        else if (appointmentData.patient_id) {
+          const { data: packets, error } = await getPatientPacketsByPatientId(appointmentData.patient_id);
+
+          if (!error && packets && packets.length > 0) {
+            // Get the most recent packet
+            const latestPacket = packets[0];
+            const { data: fullPacketData, error: packetError } = await getPatientPacket(latestPacket.id);
+
+            if (!packetError && fullPacketData) {
+              packetData = fullPacketData;
+              setPacketId(latestPacket.id);
+            }
           }
         }
       }
@@ -189,10 +748,22 @@ const ConsultationSessionPage = () => {
       if (packetData) {
         setPatientPacketData(packetData);
         setHasFilledPacket(true);
+
+        // Check consultation data
+        console.log('📦 Found patient packet, checking consultation data for packet ID:', packetData.id);
+        console.log('📦 Setting packetId state to:', packetData.id);
+        if (packetData.id && packetData.id !== 'undefined' && packetData.id !== 'null') {
+          await checkConsultationData(packetData.id);
+        } else {
+          console.log('❌ Invalid packetData.id, skipping consultation check');
+        }
       } else {
+        console.log('❌ No patient packet found');
         setHasFilledPacket(false);
         setPatientPacketData(null);
         setPacketId(null);
+        // Don't set consultation status here - let checkConsultationStatus handle it
+        // when packetId becomes null, the useEffect will handle the status appropriately
       }
     } catch (error) {
       console.error('Error fetching patient packet data:', error);
@@ -200,6 +771,73 @@ const ConsultationSessionPage = () => {
       setPatientPacketData(null);
     } finally {
       setLoadingPacket(false);
+    }
+  };
+
+  const checkConsultationData = async (packetId: string) => {
+    // Validate packetId first
+    if (!packetId || packetId === 'undefined' || packetId === 'null') {
+      console.log('❌ Invalid packetId provided:', packetId);
+      setHasConsultationData(false);
+      setConsultationCompleted(false);
+      setConsultationDataLoaded(true);
+      return;
+    }
+
+    // Prevent multiple simultaneous checks
+    if (checkingConsultation) {
+      console.log('⏳ Already checking consultation data, skipping...');
+      return;
+    }
+
+    setCheckingConsultation(true);
+    try {
+      console.log('🔍 Checking consultation data and status for packet ID:', packetId);
+      console.log('🔍 Appointment ID available:', appointmentId);
+
+      // Check if consultation record exists and get its status
+      // Prioritize appointment_id lookup for multiple consultations support
+      let consultationQuery = supabase
+        .from('consultations')
+        .select('id, consultation_status');
+
+      if (appointmentId) {
+        console.log('🔍 Query: SELECT id, consultation_status FROM consultations WHERE appointment_id =', appointmentId);
+        consultationQuery = consultationQuery.eq('appointment_id', appointmentId);
+      } else {
+        console.log('🔍 Query: SELECT id, consultation_status FROM consultations WHERE new_patient_packet_id =', packetId);
+        consultationQuery = consultationQuery.eq('new_patient_packet_id', packetId);
+      }
+
+      const { data, error } = await consultationQuery.maybeSingle();
+
+      console.log('🔍 Raw query result:', { data, error });
+
+      if (error) {
+        console.error('❌ Database error:', error);
+        console.log('🔄 Database error, setting states to false');
+        setHasConsultationData(false);
+        setConsultationCompleted(false);
+        setConsultationDataLoaded(true);
+        return;
+      }
+
+      const exists = data !== null;
+      const isCompleted = data?.consultation_status === 'completed';
+
+      console.log('📊 Consultation exists:', exists, 'Status:', data?.consultation_status, 'Is completed:', isCompleted);
+
+      setHasConsultationData(exists);
+      setConsultationCompleted(isCompleted);
+      setConsultationDataLoaded(true);
+    } catch (error) {
+      console.error('❌ Error checking consultation data:', error);
+      console.log('🔄 Catch error, setting states to false');
+      setHasConsultationData(false);
+      setConsultationCompleted(false);
+      setConsultationDataLoaded(true);
+    } finally {
+      setCheckingConsultation(false);
     }
   };
 
@@ -234,6 +872,13 @@ const ConsultationSessionPage = () => {
       setLoadingPacket(false);
     }
   };
+
+  const handleCompletePatientInfo = () => {
+    // Open the patient packet dialog (same as used in patient profile Forms tab)
+    setShowNewPatientPacketDialog(true);
+  };
+
+
 
   const handleCompleteConsultation = async () => {
     if (!packetId || !appointmentData) {
@@ -452,14 +1097,11 @@ const ConsultationSessionPage = () => {
                 <h1 className="text-2xl font-bold text-gray-900">
                   {appointmentData?.patient_name || 'Unknown Patient'}
                 </h1>
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                  Treatment
-                </Badge>
               </div>
             </div>
 
             {/* Section Buttons */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -479,25 +1121,89 @@ const ConsultationSessionPage = () => {
                   </button>
                 );
               })}
+
+              {/* Recordings Preview Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowRecordingsPreviewDialog(true)}
+                className="flex items-center gap-2 px-2 py-2 text-sm font-medium border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+                title="View recordings"
+              >
+                <FileAudio className="h-4 w-4" />
+              </Button>
+
+              {/* Record Consultation Button */}
+              {!isRecording ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRecordingConsentDialog(true)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                >
+                  <Mic className="h-4 w-4" />
+                  <span className="whitespace-nowrap">Record Consultation</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRecordingControlDialog(true)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                >
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <Mic className="h-4 w-4" />
+                  <span className="whitespace-nowrap">
+                    Recording {formatDuration(recordingDuration)}
+                  </span>
+                </Button>
+              )}
+
+              {/* Consultation Form Button */}
+              <Button
+                onClick={() => {
+                  console.log('🔘 Consultation button clicked, has data:', hasConsultationData);
+                  setShowConsultationFormDialog(true);
+                }}
+                disabled={!hasFilledPacket || !consultationDataLoaded}
+                className={`ml-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${
+                  !hasFilledPacket || !consultationDataLoaded
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : consultationCompleted
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {(() => {
+                  console.log('🎨 Rendering button - consultationDataLoaded:', consultationDataLoaded, 'consultationCompleted:', consultationCompleted, 'packetId:', packetId);
+
+                  if (!consultationDataLoaded) {
+                    return (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    );
+                  } else if (consultationCompleted) {
+                    return (
+                      <>
+                        <CheckCircle className="h-4 w-4" />
+                        Preview Consultation Form
+                      </>
+                    );
+                  } else {
+                    return (
+                      <>
+                        <CheckCircle className="h-4 w-4" />
+                        Consultation Form
+                      </>
+                    );
+                  }
+                })()}
+              </Button>
             </div>
 
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
-                <Calendar className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-800">
-                  {formatDate(appointmentData?.date)}
-                </span>
-              </div>
-              {appointmentData?.start_time && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
-                  <Clock className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">
-                    {formatTime(appointmentData.start_time)}
-                    {appointmentData.end_time && ` - ${formatTime(appointmentData.end_time)}`}
-                  </span>
-                </div>
-              )}
-            </div>
+
           </div>
         </div>
       </div>
@@ -523,9 +1229,13 @@ const ConsultationSessionPage = () => {
                     <h3 className="text-lg font-bold text-gray-900 mb-1">
                       {appointmentData?.patient_name || 'Unknown Patient'}
                     </h3>
-                    <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs px-2 py-1">
-                      Consultation
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      {isDirectConsultation && (
+                        <Badge className="bg-orange-100 text-orange-800 border-orange-300 text-xs px-2 py-1">
+                          Direct Consultation
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {/* Contact Information */}
@@ -940,6 +1650,8 @@ const ConsultationSessionPage = () => {
                   )}
                 </div>
 
+
+
                 {/* Additional Information Section */}
                 <div className="space-y-4 border-t border-gray-200 pt-6">
                   {(appointmentData?.hear_about_us || appointmentData?.additional_notes ||
@@ -1113,7 +1825,33 @@ const ConsultationSessionPage = () => {
                   {/* Patient Packet Content */}
                   {!loadingPacket && (
                     <div className="w-full pb-8">
-                      {hasFilledPacket && patientPacketData && !isEditingPacket ? (
+                      {/* Direct consultation without patient packet - show empty state */}
+                      {isDirectConsultation && !hasFilledPacket && !isEditingPacket ? (
+                        <div className="bg-blue-50 border-2 border-dashed border-blue-200 rounded-lg p-12 text-center">
+                          <div className="flex flex-col items-center gap-4">
+                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                              <FileText className="h-8 w-8 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                No Patient Packet Available
+                              </h3>
+                              <p className="text-gray-600 mb-4 max-w-md">
+                                This is a direct consultation appointment. Complete the patient packet to collect comprehensive patient information for better consultation outcomes.
+                              </p>
+                              <div className="flex justify-center">
+                                <Button
+                                  onClick={handleCompletePatientInfo}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                                >
+                                  <Plus className="h-5 w-5" />
+                                  Add Patient Packet
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : hasFilledPacket && patientPacketData && !isEditingPacket ? (
                         // Show filled packet viewer (read-only)
                         <FilledPatientPacketViewer
                           formData={patientPacketData}
@@ -1128,12 +1866,10 @@ const ConsultationSessionPage = () => {
                           key={`consultation-form-${isEditingPacket ? 'edit' : 'new'}-${packetId || 'new'}`}
                           ref={formRef}
                           onSubmit={(formData: NewPatientFormData) => {
+                            // This inline form is only used for editing existing packets
+                            // New packets are created via the dialog
                             if (hasFilledPacket && isEditingPacket) {
-                              // Update existing packet
                               handleUpdatePatientPacket(formData);
-                            } else {
-                              // Handle new form submission in consultation context
-                              console.log('New form submitted:', formData);
                             }
                           }}
                           onCancel={() => {
@@ -1144,8 +1880,16 @@ const ConsultationSessionPage = () => {
                             }
                           }}
                           patientName={appointmentData?.patient_name || 'Unknown Patient'}
-                          patientDateOfBirth={appointmentData?.date_of_birth || ''}
-                          patientGender={appointmentData?.gender || ''}
+                          patientDateOfBirth={
+                            isDirectConsultation && consultationPatientData?.date_of_birth
+                              ? consultationPatientData.date_of_birth
+                              : appointmentData?.date_of_birth || ''
+                          }
+                          patientGender={
+                            isDirectConsultation && consultationPatientData?.gender
+                              ? consultationPatientData.gender
+                              : appointmentData?.gender || ''
+                          }
                           showWelcomeHeader={false}
                           initialData={isEditingPacket ? patientPacketData : undefined}
                           submitButtonText={isEditingPacket ? 'Update Patient Packet' : 'Submit Patient Packet'}
@@ -1175,6 +1919,215 @@ const ConsultationSessionPage = () => {
           </div>
         </div>
       </div>
+
+      {/* New Patient Packet Form Dialog - Same as used in Patient Profile Forms tab */}
+      <Dialog open={showNewPatientPacketDialog} onOpenChange={(open) => {
+        setShowNewPatientPacketDialog(open);
+      }}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          {appointmentData && (
+            <NewPatientPacketForm
+              patientName={appointmentData.patient_name || 'Unknown Patient'}
+              patientDateOfBirth={
+                isDirectConsultation && consultationPatientData?.date_of_birth
+                  ? consultationPatientData.date_of_birth
+                  : appointmentData?.date_of_birth || ''
+              }
+              patientGender={
+                isDirectConsultation && consultationPatientData?.gender
+                  ? consultationPatientData.gender
+                  : appointmentData?.gender || ''
+              }
+              showWelcomeHeader={false}
+              submitButtonText="Save Patient Packet"
+              onSubmit={async (formData) => {
+                console.log('Patient packet submitted from consultation:', formData);
+
+                try {
+                  // Convert form data to database format
+                  const dbData = convertFormDataToDatabase(
+                    formData,
+                    null, // No existing patient ID for direct consultations
+                    consultationPatientData?.lead_id || null,
+                    'internal', // Use 'internal' as submission source for consultation sessions
+                    consultationPatientData?.id || null // Link to consultation patient
+                  );
+
+                  console.log('Attempting to save patient packet...');
+                  // Save the patient packet data to the database
+                  const { data: packetData, error: packetError } = await supabase
+                    .from('new_patient_packets')
+                    .insert([dbData])
+                    .select()
+                    .single();
+
+                  if (packetError) {
+                    console.error('Error saving patient packet:', packetError);
+                    throw packetError;
+                  }
+
+                  console.log('Patient packet saved successfully:', packetData);
+
+                  // Create or update consultation record to link with the patient packet
+                  // Note: This is a secondary operation and won't affect the main save success
+                  try {
+                    if (packetData?.id && appointmentData?.id) {
+                      console.log('Attempting to link consultation record...');
+                      // First check if consultation already exists for this appointment
+                      const { data: existingConsultation } = await supabase
+                        .from('consultations')
+                        .select('id')
+                        .eq('appointment_id', appointmentData.id)
+                        .single();
+
+                      if (existingConsultation) {
+                        // Update existing consultation with patient packet ID
+                        const { error: updateError } = await supabase
+                          .from('consultations')
+                          .update({
+                            new_patient_packet_id: packetData.id,
+                            patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
+                            updated_at: new Date().toISOString()
+                          })
+                          .eq('id', existingConsultation.id);
+
+                        if (updateError) {
+                          console.warn('Failed to update consultation record (non-critical):', updateError);
+                        } else {
+                          console.log('Successfully updated consultation with patient packet');
+                        }
+                      } else {
+                        // Create new consultation record
+                        const consultationData = {
+                          appointment_id: appointmentData.id,
+                          new_patient_packet_id: packetData.id,
+                          patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
+                          consultation_date: appointmentData.date || new Date().toISOString().split('T')[0],
+                          lead_id: consultationPatientData?.lead_id || null,
+                          consultation_status: 'draft'
+                        };
+
+                        const { error: insertError } = await supabase
+                          .from('consultations')
+                          .insert([consultationData]);
+
+                        if (insertError) {
+                          console.warn('Failed to create consultation record (non-critical):', insertError);
+                        } else {
+                          console.log('Successfully created consultation with patient packet');
+                        }
+                      }
+                    }
+                  } catch (consultationError) {
+                    console.warn('Non-critical error with consultation record:', consultationError);
+                    // Don't throw this error as it's not critical to the main save operation
+                  }
+
+                  // Update the consultation patient with the packet completion
+                  try {
+                    if (consultationPatientData?.id) {
+                      console.log('Updating consultation patient status...');
+                      await supabase
+                        .from('consultation_patients')
+                        .update({
+                          status: 'packet_completed'
+                        })
+                        .eq('id', consultationPatientData.id);
+                      console.log('Consultation patient status updated successfully');
+                    }
+                  } catch (statusError) {
+                    console.warn('Non-critical error updating consultation patient status:', statusError);
+                    // Don't throw this error as it's not critical to the main save operation
+                  }
+
+                  setPatientPacketData(formData);
+                  setHasFilledPacket(true);
+                  setIsEditingPacket(false);
+                  setPacketId(packetData.id);
+                  setShowNewPatientPacketDialog(false);
+
+                  // Refresh patient packet data to ensure connection is established
+                  await fetchPatientPacketData(appointmentData);
+
+                  console.log('✅ Direct consultation patient packet saved successfully - ALL OPERATIONS COMPLETED');
+                  toast.success('Patient packet saved successfully!');
+                } catch (error) {
+                  console.error('Error saving direct consultation patient packet:', error);
+                  toast.error('Failed to save patient packet. Please try again.');
+                }
+              }}
+              onCancel={() => {
+                setShowNewPatientPacketDialog(false);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Consultation Form Dialog */}
+      <ConsultationFormDialog
+        isOpen={showConsultationFormDialog}
+        onClose={() => setShowConsultationFormDialog(false)}
+        onComplete={() => {
+          setHasConsultationData(true);
+          setConsultationCompleted(true);
+          setShowConsultationFormDialog(false);
+          // Refresh consultation data from database to ensure consistency
+          if (packetId) {
+            checkConsultationData(packetId);
+          }
+        }}
+        patientPacketId={packetId || undefined}
+        patientName={appointmentData?.patient_name}
+        consultationPatientId={consultationPatientData?.id}
+        appointmentId={appointmentId}
+      />
+
+      {/* Recording Consent Dialog */}
+      <RecordingConsentDialog
+        isOpen={showRecordingConsentDialog}
+        onClose={() => setShowRecordingConsentDialog(false)}
+        onConsent={() => {
+          console.log('Recording consent given');
+        }}
+        onRecordingStart={startRecording}
+        patientName={appointmentData?.patient_name}
+      />
+
+      {/* Recording Control Dialog */}
+      <RecordingControlDialog
+        isOpen={showRecordingControlDialog}
+        onClose={() => setShowRecordingControlDialog(false)}
+        onStop={stopRecording}
+        duration={recordingDuration}
+        audioLevel={audioLevel}
+        patientName={appointmentData?.patient_name}
+      />
+
+      {/* Recordings Preview Dialog */}
+      <Dialog open={showRecordingsPreviewDialog} onOpenChange={setShowRecordingsPreviewDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileAudio className="h-5 w-5" />
+              Consultation Recordings
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="mt-4">
+            {appointmentId ? (
+              <RecordingsList
+                appointmentId={appointmentId}
+                patientName={appointmentData?.patient_name}
+              />
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No appointment ID available
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

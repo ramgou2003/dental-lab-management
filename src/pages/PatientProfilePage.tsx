@@ -29,6 +29,8 @@ import { MedicalRecordsReleaseForm } from "@/components/MedicalRecordsReleaseFor
 import { InformedConsentSmokingForm } from "@/components/InformedConsentSmokingForm";
 import { ThankYouPreSurgeryForm } from "@/components/ThankYouPreSurgeryForm";
 import { ThreeYearCarePackageForm } from "@/components/ThreeYearCarePackageForm";
+import { FiveYearWarrantyForm } from "@/components/FiveYearWarrantyForm";
+import { PartialPaymentAgreementForm } from "@/components/PartialPaymentAgreementForm";
 import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
@@ -89,6 +91,8 @@ import { getInformedConsentSmokingFormsByPatientId, deleteInformedConsentSmoking
 import { getFinalDesignApprovalFormsByPatientId, deleteFinalDesignApprovalForm, formatFinalDesignApprovalFormForDisplay, FinalDesignApprovalFormData } from "@/services/finalDesignApprovalService";
 import { getThankYouPreSurgeryFormsByPatientId, deleteThankYouPreSurgeryForm, formatThankYouPreSurgeryFormForDisplay, ThankYouPreSurgeryFormData } from "@/services/thankYouPreSurgeryService";
 import { getThreeYearCarePackageFormsByPatientId, deleteThreeYearCarePackageForm, formatThreeYearCarePackageFormForDisplay, ThreeYearCarePackageFormData, createThreeYearCarePackageForm, updateThreeYearCarePackageForm } from "@/services/threeYearCarePackageService";
+import { fiveYearWarrantyService, FiveYearWarrantyFormData, formatFiveYearWarrantyFormForDisplay } from "@/services/fiveYearWarrantyService";
+import { partialPaymentAgreementService, PartialPaymentAgreementFormData, formatPartialPaymentAgreementFormForDisplay } from "@/services/partialPaymentAgreementService";
 
 
 export function PatientProfilePage() {
@@ -246,6 +250,8 @@ export function PatientProfilePage() {
   const [showInformedConsentSmokingForm, setShowInformedConsentSmokingForm] = useState(false);
   const [showThankYouPreSurgeryForm, setShowThankYouPreSurgeryForm] = useState(false);
   const [showThreeYearCarePackageForm, setShowThreeYearCarePackageForm] = useState(false);
+  const [showFiveYearWarrantyForm, setShowFiveYearWarrantyForm] = useState(false);
+  const [showPartialPaymentAgreementForm, setShowPartialPaymentAgreementForm] = useState(false);
   const [selectedAdminFormType, setSelectedAdminFormType] = useState<string>("");
 
   // State for 3-Year Care Package Forms
@@ -257,6 +263,26 @@ export function PatientProfilePage() {
   const [threeYearCarePackageActiveDropdown, setThreeYearCarePackageActiveDropdown] = useState<string | null>(null);
   const [showDeleteThreeYearCarePackageFormConfirm, setShowDeleteThreeYearCarePackageFormConfirm] = useState(false);
   const [threeYearCarePackageFormToDelete, setThreeYearCarePackageFormToDelete] = useState<ThreeYearCarePackageFormData | null>(null);
+
+  // State for 5-Year Warranty Forms
+  const [fiveYearWarrantyForms, setFiveYearWarrantyForms] = useState<FiveYearWarrantyFormData[]>([]);
+  const [loadingFiveYearWarrantyForms, setLoadingFiveYearWarrantyForms] = useState(false);
+  const [selectedFiveYearWarrantyForm, setSelectedFiveYearWarrantyForm] = useState<FiveYearWarrantyFormData | null>(null);
+  const [isEditingFiveYearWarrantyForm, setIsEditingFiveYearWarrantyForm] = useState(false);
+  const [isViewingFiveYearWarrantyForm, setIsViewingFiveYearWarrantyForm] = useState(false);
+  const [fiveYearWarrantyActiveDropdown, setFiveYearWarrantyActiveDropdown] = useState<string | null>(null);
+  const [showDeleteFiveYearWarrantyFormConfirm, setShowDeleteFiveYearWarrantyFormConfirm] = useState(false);
+  const [fiveYearWarrantyFormToDelete, setFiveYearWarrantyFormToDelete] = useState<FiveYearWarrantyFormData | null>(null);
+
+  // State for Partial Payment Agreement Forms
+  const [partialPaymentAgreementForms, setPartialPaymentAgreementForms] = useState<any[]>([]);
+  const [loadingPartialPaymentAgreementForms, setLoadingPartialPaymentAgreementForms] = useState(false);
+  const [selectedPartialPaymentAgreementForm, setSelectedPartialPaymentAgreementForm] = useState<any | null>(null);
+  const [isEditingPartialPaymentAgreementForm, setIsEditingPartialPaymentAgreementForm] = useState(false);
+  const [isViewingPartialPaymentAgreementForm, setIsViewingPartialPaymentAgreementForm] = useState(false);
+  const [partialPaymentAgreementActiveDropdown, setPartialPaymentAgreementActiveDropdown] = useState<string | null>(null);
+  const [showDeletePartialPaymentAgreementFormConfirm, setShowDeletePartialPaymentAgreementFormConfirm] = useState(false);
+  const [partialPaymentAgreementFormToDelete, setPartialPaymentAgreementFormToDelete] = useState<any | null>(null);
 
   // Print Preview States
   const [showPrintPreview, setShowPrintPreview] = useState(false);
@@ -643,6 +669,8 @@ export function PatientProfilePage() {
       fetchFinalDesignApprovalForms();
       fetchThankYouPreSurgeryForms();
       fetchThreeYearCarePackageForms();
+      fetchFiveYearWarrantyForms();
+      fetchPartialPaymentAgreementForms();
     } else {
       // Use mock data if no patientId provided
       setPatient({
@@ -925,6 +953,42 @@ export function PatientProfilePage() {
     }
   };
 
+  const fetchFiveYearWarrantyForms = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingFiveYearWarrantyForms(true);
+      const data = await fiveYearWarrantyService.getFormsByPatient(patientId);
+      setFiveYearWarrantyForms(data || []);
+      console.log('🔍 5-Year Warranty Forms fetched:', data?.length || 0, 'forms');
+      if (data && data.length > 0) {
+        console.log('📋 5-Year Warranty Forms data:', data);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching 5-Year Warranty forms:', error);
+    } finally {
+      setLoadingFiveYearWarrantyForms(false);
+    }
+  };
+
+  const fetchPartialPaymentAgreementForms = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingPartialPaymentAgreementForms(true);
+      const data = await partialPaymentAgreementService.getFormsByPatientId(patientId);
+      setPartialPaymentAgreementForms(data || []);
+      console.log('🔍 Partial Payment Agreement Forms fetched:', data?.length || 0, 'forms');
+      if (data && data.length > 0) {
+        console.log('📋 Partial Payment Agreement Forms data:', data);
+      }
+    } catch (error) {
+      console.error('Unexpected error fetching Partial Payment Agreement forms:', error);
+    } finally {
+      setLoadingPartialPaymentAgreementForms(false);
+    }
+  };
+
   const handleDeleteConsentForm = async () => {
     if (!consentFormToDelete) return;
 
@@ -1149,6 +1213,35 @@ export function PatientProfilePage() {
     }
   };
 
+  const handleDeleteFiveYearWarrantyForm = async () => {
+    if (!fiveYearWarrantyFormToDelete) return;
+
+    try {
+      await fiveYearWarrantyService.deleteForm(fiveYearWarrantyFormToDelete.id!);
+
+      // Remove from local state
+      setFiveYearWarrantyForms(prev => prev.filter(form => form.id !== fiveYearWarrantyFormToDelete.id));
+
+      // Close confirmation dialog
+      setShowDeleteFiveYearWarrantyFormConfirm(false);
+      setFiveYearWarrantyFormToDelete(null);
+
+      toast({
+        title: "Success",
+        description: "5-Year Extended Warranty form deleted successfully!",
+      });
+
+      console.log('✅ Deleted 5-Year Warranty form:', fiveYearWarrantyFormToDelete.id);
+    } catch (error) {
+      console.error('Unexpected error deleting 5-Year Warranty form:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteFinancialAgreement = async () => {
     if (!financialAgreementToDelete) return;
 
@@ -1262,6 +1355,16 @@ export function PatientProfilePage() {
     console.log('Print 3-Year Care Package Form:', form);
     setPrintFormData(form);
     setPrintFormType('3-Year Care Package Enrollment Agreement');
+    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
+    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
+    setShowPrintPreview(true);
+  };
+
+  const handlePrintFiveYearWarrantyForm = (form: FiveYearWarrantyFormData) => {
+    console.log('Print 5-Year Warranty Form:', form);
+    const formattedData = formatFiveYearWarrantyFormForDisplay(form);
+    setPrintFormData(formattedData);
+    setPrintFormType('five-year-warranty');
     setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
     setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
     setShowPrintPreview(true);
@@ -4776,7 +4879,7 @@ export function PatientProfilePage() {
                       <div className="p-1.5 bg-blue-100 rounded-lg">
                         <Settings className="h-4 w-4 text-blue-600" />
                       </div>
-                      <h3 className="text-base font-semibold text-gray-900">Administrative Forms ({patientPackets.length + financialAgreements.length + consentForms.length + medicalRecordsReleaseForms.length + informedConsentSmokingForms.length + finalDesignApprovalForms.length + thankYouPreSurgeryForms.length + threeYearCarePackageForms.length})</h3>
+                      <h3 className="text-base font-semibold text-gray-900">Administrative Forms ({patientPackets.length + financialAgreements.length + consentForms.length + medicalRecordsReleaseForms.length + informedConsentSmokingForms.length + finalDesignApprovalForms.length + thankYouPreSurgeryForms.length + threeYearCarePackageForms.length + fiveYearWarrantyForms.length + partialPaymentAgreementForms.length})</h3>
                     </div>
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
@@ -4795,6 +4898,8 @@ export function PatientProfilePage() {
                               <SelectItem value="medical-records-release">Medical Records Release Form</SelectItem>
                               <SelectItem value="informed-consent-smoking">Informed Consent Form For Smoking</SelectItem>
                               <SelectItem value="three-year-care-package">3-Year Care Package Enrollment Form</SelectItem>
+                              <SelectItem value="five-year-warranty">5-Year Extended Warranty Plan</SelectItem>
+                              <SelectItem value="partial-payment-agreement">Partial Payment Agreement for Future Treatment</SelectItem>
                               <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
                               <SelectItem value="thank-you-pre-surgery">Thank You and Pre-Surgery Form</SelectItem>
                             </SelectContent>
@@ -4821,6 +4926,10 @@ export function PatientProfilePage() {
                                 setShowThankYouPreSurgeryForm(true);
                               } else if (selectedAdminFormType === 'three-year-care-package') {
                                 setShowThreeYearCarePackageForm(true);
+                              } else if (selectedAdminFormType === 'five-year-warranty') {
+                                setShowFiveYearWarrantyForm(true);
+                              } else if (selectedAdminFormType === 'partial-payment-agreement') {
+                                setShowPartialPaymentAgreementForm(true);
                               } else {
                                 // Handle other form types here
                                 alert(`Opening ${selectedAdminFormType} form - Not implemented yet`);
@@ -4832,12 +4941,12 @@ export function PatientProfilePage() {
                         </div>
 
                         {/* Administrative Forms List */}
-                        {(loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms || loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms || loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms) ? (
+                        {(loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms || loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms || loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms || loadingFiveYearWarrantyForms || loadingPartialPaymentAgreementForms) ? (
                           <div className="text-center py-6">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                             <p className="text-sm text-gray-500">Loading administrative forms...</p>
                           </div>
-                        ) : (patientPackets.length > 0 || financialAgreements.length > 0 || consentForms.length > 0 || medicalRecordsReleaseForms.length > 0 || informedConsentSmokingForms.length > 0 || finalDesignApprovalForms.length > 0 || thankYouPreSurgeryForms.length > 0 || threeYearCarePackageForms.length > 0) ? (
+                        ) : (patientPackets.length > 0 || financialAgreements.length > 0 || consentForms.length > 0 || medicalRecordsReleaseForms.length > 0 || informedConsentSmokingForms.length > 0 || finalDesignApprovalForms.length > 0 || thankYouPreSurgeryForms.length > 0 || threeYearCarePackageForms.length > 0 || fiveYearWarrantyForms.length > 0 || partialPaymentAgreementForms.length > 0) ? (
                           <div className="space-y-2">
                             {patientPackets.map((packet) => (
                               <div
@@ -5640,6 +5749,196 @@ export function PatientProfilePage() {
                                     </div>
                                   );
                                 })}
+                              </>
+                            )}
+
+                            {/* 5-Year Warranty Forms Section */}
+                            {fiveYearWarrantyForms.length > 0 && (
+                              <>
+                                {fiveYearWarrantyForms.map((form) => (
+                                  <div
+                                    key={form.id}
+                                    className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                    onClick={() => {
+                                      setSelectedFiveYearWarrantyForm(form);
+                                      setIsViewingFiveYearWarrantyForm(true);
+                                      setShowFiveYearWarrantyForm(true);
+                                    }}
+                                  >
+                                    {/* Header with form name and status */}
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                        <span className="text-sm font-semibold text-gray-900">
+                                          5-Year Extended Warranty Plan
+                                        </span>
+                                      </div>
+                                      <span className="text-xs text-gray-500">
+                                        {form.created_at ? new Date(form.created_at).toLocaleDateString() : 'No date'}
+                                      </span>
+                                    </div>
+
+                                    {/* Form details */}
+                                    <div className="text-xs text-gray-600 mb-3 space-y-1">
+                                      <div className="flex justify-between">
+                                        <span>Patient:</span>
+                                        <span className="font-medium">{form.patient_name || 'Not provided'}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Email:</span>
+                                        <span className="font-medium">{form.email || 'Not provided'}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Payment Authorized:</span>
+                                        <span className={`font-medium ${form.authorize_payment ? 'text-green-600' : 'text-red-600'}`}>
+                                          {form.authorize_payment ? 'Yes' : 'No'}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Action buttons */}
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                                        <span>5-Year Warranty</span>
+                                      </div>
+
+                                      <div className="flex items-center gap-1">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handlePrintFiveYearWarrantyForm(form);
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Print 5-Year Warranty form"
+                                        >
+                                          <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                        </button>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedFiveYearWarrantyForm(form);
+                                            setIsEditingFiveYearWarrantyForm(true);
+                                            setIsViewingFiveYearWarrantyForm(false);
+                                            setShowFiveYearWarrantyForm(true);
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Edit 5-Year Warranty form"
+                                        >
+                                          <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                        </button>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setFiveYearWarrantyFormToDelete(form);
+                                            setShowDeleteFiveYearWarrantyFormConfirm(true);
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Delete 5-Year Warranty form"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </>
+                            )}
+
+                            {/* Partial Payment Agreement Forms Section */}
+                            {partialPaymentAgreementForms.length > 0 && (
+                              <>
+                                {partialPaymentAgreementForms.map((form) => (
+                                  <div
+                                    key={form.id}
+                                    className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                    onClick={() => {
+                                      setSelectedPartialPaymentAgreementForm(form);
+                                      setIsViewingPartialPaymentAgreementForm(true);
+                                      setShowPartialPaymentAgreementForm(true);
+                                    }}
+                                  >
+                                    {/* Header with form name and status */}
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                                        <span className="text-sm font-semibold text-gray-900">
+                                          Partial Payment Agreement
+                                        </span>
+                                      </div>
+                                      <span className="text-xs text-gray-500">
+                                        {form.created_at ? new Date(form.created_at).toLocaleDateString() : 'No date'}
+                                      </span>
+                                    </div>
+
+                                    {/* Form details */}
+                                    <div className="text-xs text-gray-600 mb-3 space-y-1">
+                                      <div className="flex justify-between">
+                                        <span>Patient:</span>
+                                        <span className="font-medium">{form.first_name} {form.last_name}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Payment Amount:</span>
+                                        <span className="font-medium">${form.payment_amount}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Total Cost:</span>
+                                        <span className="font-medium">${form.estimated_total_cost}</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Action buttons */}
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                                        <span>Payment Agreement</span>
+                                      </div>
+
+                                      <div className="flex items-center gap-1">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const formattedData = formatPartialPaymentAgreementFormForDisplay(form);
+                                            setPrintFormData(formattedData);
+                                            setPrintFormType('partial-payment-agreement');
+                                            setPrintPatientName(patient?.full_name || '');
+                                            setPrintPatientDOB(patient?.date_of_birth || '');
+                                            setShowPrintPreview(true);
+                                          }}
+                                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                          title="Print form"
+                                        >
+                                          <Printer className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedPartialPaymentAgreementForm(form);
+                                            setIsEditingPartialPaymentAgreementForm(true);
+                                            setShowPartialPaymentAgreementForm(true);
+                                          }}
+                                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                          title="Edit form"
+                                        >
+                                          <Edit className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPartialPaymentAgreementFormToDelete(form);
+                                            setShowDeletePartialPaymentAgreementFormConfirm(true);
+                                          }}
+                                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                          title="Delete form"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
                               </>
                             )}
                           </div>
@@ -13737,6 +14036,157 @@ export function PatientProfilePage() {
         </DialogContent>
       </Dialog>
 
+      {/* 5-Year Extended Warranty Form Dialog */}
+      <Dialog open={showFiveYearWarrantyForm} onOpenChange={setShowFiveYearWarrantyForm}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          {patient && (
+            <FiveYearWarrantyForm
+              patientName={patient.full_name}
+              initialData={selectedFiveYearWarrantyForm}
+              isEditing={isEditingFiveYearWarrantyForm}
+              readOnly={isViewingFiveYearWarrantyForm}
+              onSubmit={async (formData) => {
+                try {
+                  if (isEditingFiveYearWarrantyForm && selectedFiveYearWarrantyForm) {
+                    // Update existing form
+                    const updatedForm = await fiveYearWarrantyService.updateForm(
+                      selectedFiveYearWarrantyForm.id!,
+                      { ...formData, patient_id: patientId }
+                    );
+
+                    // Update local state
+                    setFiveYearWarrantyForms(prev =>
+                      prev.map(form => form.id === selectedFiveYearWarrantyForm.id ? updatedForm : form)
+                    );
+
+                    toast({
+                      title: "Success",
+                      description: "5-Year Extended Warranty form updated successfully!",
+                    });
+                  } else {
+                    // Create new form
+                    const newForm = await fiveYearWarrantyService.createForm({
+                      ...formData,
+                      patient_id: patientId
+                    });
+
+                    // Add to local state
+                    setFiveYearWarrantyForms(prev => [newForm, ...prev]);
+
+                    toast({
+                      title: "Success",
+                      description: "5-Year Extended Warranty form saved successfully!",
+                    });
+                  }
+
+                  // Reset states and refresh forms
+                  setShowFiveYearWarrantyForm(false);
+                  setSelectedAdminFormType("");
+                  setSelectedFiveYearWarrantyForm(null);
+                  setIsEditingFiveYearWarrantyForm(false);
+                  setIsViewingFiveYearWarrantyForm(false);
+
+                  // Refresh the forms list
+                  fetchFiveYearWarrantyForms();
+                } catch (error) {
+                  console.error('Unexpected error saving 5-Year Warranty form:', error);
+                  toast({
+                    title: "Error",
+                    description: "An unexpected error occurred. Please try again.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              onCancel={() => {
+                setShowFiveYearWarrantyForm(false);
+                setSelectedAdminFormType("");
+                setSelectedFiveYearWarrantyForm(null);
+                setIsEditingFiveYearWarrantyForm(false);
+                setIsViewingFiveYearWarrantyForm(false);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Partial Payment Agreement Form Dialog */}
+      <Dialog open={showPartialPaymentAgreementForm} onOpenChange={(open) => {
+        setShowPartialPaymentAgreementForm(open);
+        if (!open) {
+          setIsViewingPartialPaymentAgreementForm(false);
+          setIsEditingPartialPaymentAgreementForm(false);
+          setSelectedPartialPaymentAgreementForm(null);
+        }
+      }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          {patient && (
+            <PartialPaymentAgreementForm
+              patientName={patient.full_name}
+              patientDateOfBirth={patient.date_of_birth}
+              initialData={selectedPartialPaymentAgreementForm}
+              isEditing={isEditingPartialPaymentAgreementForm}
+              readOnly={isViewingPartialPaymentAgreementForm}
+              onSubmit={async (formData) => {
+                try {
+                  if (isEditingPartialPaymentAgreementForm && selectedPartialPaymentAgreementForm) {
+                    // Update existing form
+                    const updatedForm = await partialPaymentAgreementService.updateForm(
+                      selectedPartialPaymentAgreementForm.id,
+                      { ...formData, patient_id: patient.id }
+                    );
+
+                    // Update local state
+                    setPartialPaymentAgreementForms(prev =>
+                      prev.map(form => form.id === selectedPartialPaymentAgreementForm.id ? updatedForm : form)
+                    );
+
+                    toast({
+                      title: "Success",
+                      description: "Partial Payment Agreement form updated successfully!",
+                    });
+                  } else {
+                    // Create new form
+                    const newForm = await partialPaymentAgreementService.createForm({
+                      ...formData,
+                      patient_id: patient.id
+                    });
+
+                    // Add to local state
+                    setPartialPaymentAgreementForms(prev => [newForm, ...prev]);
+
+                    toast({
+                      title: "Success",
+                      description: "Partial Payment Agreement form created successfully!",
+                    });
+                  }
+
+                  // Close dialog and reset states
+                  setShowPartialPaymentAgreementForm(false);
+                  setSelectedPartialPaymentAgreementForm(null);
+                  setIsEditingPartialPaymentAgreementForm(false);
+                  setIsViewingPartialPaymentAgreementForm(false);
+                  setSelectedAdminFormType("");
+                } catch (error) {
+                  console.error('Error saving Partial Payment Agreement form:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to save Partial Payment Agreement form. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              onCancel={() => {
+                setShowPartialPaymentAgreementForm(false);
+                setSelectedPartialPaymentAgreementForm(null);
+                setIsEditingPartialPaymentAgreementForm(false);
+                setIsViewingPartialPaymentAgreementForm(false);
+                setSelectedAdminFormType("");
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Treatment Confirmation Dialog */}
       <Dialog open={showDeleteTreatmentConfirmation} onOpenChange={setShowDeleteTreatmentConfirmation}>
         <DialogContent className="max-w-md">
@@ -14002,6 +14452,83 @@ export function PatientProfilePage() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteThreeYearCarePackageForm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete 5-Year Warranty Form Confirmation Dialog */}
+      <AlertDialog open={showDeleteFiveYearWarrantyFormConfirm} onOpenChange={setShowDeleteFiveYearWarrantyFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete 5-Year Extended Warranty Form
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this 5-Year Extended Warranty form? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteFiveYearWarrantyFormConfirm(false);
+              setFiveYearWarrantyFormToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFiveYearWarrantyForm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Partial Payment Agreement Form Confirmation Dialog */}
+      <AlertDialog open={showDeletePartialPaymentAgreementFormConfirm} onOpenChange={setShowDeletePartialPaymentAgreementFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Partial Payment Agreement Form
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this Partial Payment Agreement form? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeletePartialPaymentAgreementFormConfirm(false);
+              setPartialPaymentAgreementFormToDelete(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!partialPaymentAgreementFormToDelete) return;
+                try {
+                  await partialPaymentAgreementService.deleteForm(partialPaymentAgreementFormToDelete.id);
+                  setPartialPaymentAgreementForms(prev => prev.filter(form => form.id !== partialPaymentAgreementFormToDelete.id));
+                  setShowDeletePartialPaymentAgreementFormConfirm(false);
+                  setPartialPaymentAgreementFormToDelete(null);
+                  toast({
+                    title: "Success",
+                    description: "Partial Payment Agreement form deleted successfully!",
+                  });
+                } catch (error) {
+                  console.error('Error deleting Partial Payment Agreement form:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to delete Partial Payment Agreement form. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               Delete

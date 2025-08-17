@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { A4PrintTest } from "@/components/A4PrintTest";
+
 import {
   BarChart,
   Bar,
@@ -346,7 +347,9 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="h-[calc(100%-4rem)] sm:h-[calc(100%-5rem)] lg:h-[calc(100%-6rem)] grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3 lg:gap-4 max-h-full">
+
+
+        <div className="h-[calc(100%-8rem)] sm:h-[calc(100%-9rem)] lg:h-[calc(100%-10rem)] grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3 lg:gap-4 max-h-full">
 
           {/* Left Column - Main Analytics */}
           <div className="lg:col-span-8 flex flex-col gap-2 sm:gap-3 min-h-0">

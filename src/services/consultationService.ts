@@ -1,63 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
+import { Consultation, ConsultationInsert } from '@/types/consultation';
 
-export interface ConsultationData {
-  id?: string;
-  
-  // Patient Basic Details
-  patient_id?: string;
-  patient_packet_id: string;
-  patient_first_name?: string;
-  patient_last_name?: string;
-  patient_email?: string;
-  patient_phone?: string;
-  patient_date_of_birth?: string;
-  patient_gender?: string;
-  patient_address?: string;
-  
-  // New Patient Packet Summary
-  medical_conditions?: any;
-  allergies?: any;
-  current_medications?: any;
-  dental_status?: any;
-  current_symptoms?: any;
-  healing_issues?: any;
-  tobacco_use?: any;
-  patient_preferences?: any;
-  
-  // AI Summary Results
-  ai_medical_summary?: string;
-  ai_allergies_summary?: string;
-  ai_dental_summary?: string;
-  ai_attention_items?: string[];
-  ai_potential_complications?: string[];
-  ai_overall_assessment?: string;
-  
-  // Treatment Details
-  clinical_assessment?: string;
-  treatment_recommendations?: any;
-  treatment_notes?: string;
-  
-  // Financial & Outcome Details
-  treatment_cost?: number;
-  insurance_coverage?: number;
-  patient_payment?: number;
-  payment_plan?: any;
-  financial_notes?: string;
-  
-  // Consultation Outcome
-  consultation_status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
-  treatment_plan_approved?: boolean;
-  next_appointment_date?: string;
-  follow_up_required?: boolean;
-  follow_up_notes?: string;
-  
-  // Consultation Metadata
-  consultation_date?: string;
-  consultation_duration_minutes?: number;
-  consultation_type?: 'initial' | 'follow-up' | 'emergency' | 'consultation';
-  provider_id?: string;
-  provider_name?: string;
-}
+// Use the correct types from the types file
+export type ConsultationData = Consultation;
 
 /**
  * Create or update a comprehensive consultation record
@@ -164,7 +109,7 @@ export async function updateConsultationStatus(
 /**
  * Populate consultation with patient packet data
  */
-export async function populateConsultationFromPacket(patientPacketId: string): Promise<Partial<ConsultationData> | null> {
+export async function populateConsultationFromPacket(patientPacketId: string): Promise<ConsultationInsert | null> {
   try {
     // Get patient packet data
     const { data: packetData, error: packetError } = await supabase
@@ -175,11 +120,13 @@ export async function populateConsultationFromPacket(patientPacketId: string): P
           id,
           first_name,
           last_name,
-          email,
           phone,
           date_of_birth,
           gender,
-          address
+          street,
+          city,
+          state,
+          zip_code
         )
       `)
       .eq('id', patientPacketId)
@@ -204,52 +151,25 @@ export async function populateConsultationFromPacket(patientPacketId: string): P
       .eq('patient_packet_id', patientPacketId)
       .single();
 
-    // Construct consultation data
-    const consultationData: Partial<ConsultationData> = {
-      patient_packet_id: patientPacketId,
-      patient_id: packetData.patients?.id,
-      
-      // Patient basic details
-      patient_first_name: packetData.patients?.first_name || packetData.first_name,
-      patient_last_name: packetData.patients?.last_name || packetData.last_name,
-      patient_email: packetData.patients?.email || packetData.email,
-      patient_phone: packetData.patients?.phone || packetData.phone,
-      patient_date_of_birth: packetData.patients?.date_of_birth || packetData.date_of_birth,
-      patient_gender: packetData.patients?.gender || packetData.gender,
-      patient_address: packetData.patients?.address,
-      
-      // Patient packet data
-      medical_conditions: packetData.critical_conditions,
-      allergies: packetData.allergies,
-      current_medications: packetData.current_medications,
-      dental_status: packetData.dental_status,
-      current_symptoms: packetData.current_symptoms,
-      healing_issues: packetData.healing_issues,
-      tobacco_use: packetData.tobacco_use,
-      patient_preferences: {
-        anxiety_control: packetData.anxiety_control,
-        pain_injection: packetData.pain_injection,
-        communication: packetData.communication,
-        physical_comfort: packetData.physical_comfort
-      },
-      
-      // AI summary data
-      ai_medical_summary: summaryData?.medical_history_summary,
-      ai_allergies_summary: summaryData?.allergies_summary,
-      ai_dental_summary: summaryData?.dental_history_summary,
-      ai_attention_items: summaryData?.attention_items,
-      ai_potential_complications: summaryData?.potential_complications,
-      ai_overall_assessment: summaryData?.overall_assessment,
-      
-      // Treatment data
-      clinical_assessment: treatmentData?.clinical_assessment,
-      treatment_recommendations: treatmentData?.treatment_recommendations,
-      treatment_notes: treatmentData?.additional_information,
-      
+    // Construct consultation data - only use fields that exist in consultations table
+    const firstName = packetData.patients?.first_name || packetData.first_name || 'Unknown';
+    const lastName = packetData.patients?.last_name || packetData.last_name || 'Patient';
+
+    const consultationData: ConsultationInsert = {
+      new_patient_packet_id: patientPacketId,
+      consultation_patient_id: packetData.consultation_patient_id || undefined,
+      patient_id: packetData.patients?.id || undefined,
+      patient_name: `${firstName} ${lastName}`,
+
+      // Treatment data if available
+      clinical_assessment: treatmentData?.clinical_assessment || undefined,
+      treatment_recommendations: treatmentData?.treatment_recommendations || undefined,
+      additional_information: treatmentData?.additional_information || undefined,
+
       // Default consultation metadata
-      consultation_type: 'initial',
       consultation_status: 'scheduled',
-      consultation_date: new Date().toISOString()
+      consultation_date: new Date().toISOString(),
+      progress_step: 1
     };
 
     return consultationData;
@@ -270,7 +190,20 @@ export async function createConsultationFromPacket(patientPacketId: string): Pro
       throw new Error('Failed to populate consultation data');
     }
 
-    return await saveConsultation(consultationData as ConsultationData);
+    // Insert the consultation directly using Supabase
+    const { data, error } = await supabase
+      .from('consultations')
+      .insert(consultationData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating consultation:', error);
+      throw error;
+    }
+
+    console.log('✅ Consultation created successfully:', data.id);
+    return data;
   } catch (error) {
     console.error('❌ Failed to create consultation from packet:', error);
     return null;
@@ -323,11 +256,22 @@ export async function movePatientToMainTable(patientPacketId: string): Promise<s
     if (!patientId) {
       console.log('👤 Creating new patient in main table...');
 
-      const firstName = consultation.patient_first_name || packetData.first_name || 'Unknown';
-      const lastName = consultation.patient_last_name || packetData.last_name || 'Patient';
+      // Get patient data from packet (primary source) or consultation patient
+      let consultationPatientData = null;
+      if (consultation.consultation_patient_id) {
+        const { data: cpData } = await supabase
+          .from('consultation_patients')
+          .select('*')
+          .eq('id', consultation.consultation_patient_id)
+          .single();
+        consultationPatientData = cpData;
+      }
+
+      const firstName = packetData.first_name || consultationPatientData?.first_name || 'Unknown';
+      const lastName = packetData.last_name || consultationPatientData?.last_name || 'Patient';
 
       // Handle date of birth - ensure it's in the correct format
-      let dateOfBirth = consultation.patient_date_of_birth || packetData.date_of_birth;
+      let dateOfBirth = packetData.date_of_birth || consultationPatientData?.date_of_birth;
       if (!dateOfBirth) {
         // If no date provided, use a default date (this shouldn't happen in real scenarios)
         dateOfBirth = '1900-01-01';
@@ -340,7 +284,7 @@ export async function movePatientToMainTable(patientPacketId: string): Promise<s
       }
 
       // Handle gender - ensure it's a valid value
-      let gender = consultation.patient_gender || packetData.gender;
+      let gender = packetData.gender || consultationPatientData?.gender;
       if (gender && !['male', 'female'].includes(gender.toLowerCase())) {
         console.warn('⚠️ Invalid gender value, setting to null:', gender);
         gender = null;
@@ -352,7 +296,7 @@ export async function movePatientToMainTable(patientPacketId: string): Promise<s
         first_name: firstName,
         last_name: lastName,
         date_of_birth: dateOfBirth,
-        phone: consultation.patient_phone || packetData.phone || null,
+        phone: packetData.phone || null,
         gender: gender,
         street: packetData.street || null,
         city: packetData.city || null,
@@ -386,6 +330,20 @@ export async function movePatientToMainTable(patientPacketId: string): Promise<s
       patientId = newPatient.id;
       console.log('✅ Created new patient in main table:', patientId);
       console.log('👤 New patient data:', newPatient);
+
+      // Link the patient packet to the newly created patient
+      console.log('🔗 Linking patient packet to new patient...');
+      const { error: packetUpdateError } = await supabase
+        .from('new_patient_packets')
+        .update({ patient_id: patientId })
+        .eq('id', patientPacketId);
+
+      if (packetUpdateError) {
+        console.error('❌ Error linking patient packet to patient:', packetUpdateError);
+        // Don't throw error here as patient creation was successful
+      } else {
+        console.log('✅ Successfully linked patient packet to patient:', patientId);
+      }
 
       // Update consultation with patient_id
       await supabase

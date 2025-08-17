@@ -8,12 +8,14 @@ export function convertFormDataToDatabase(
   formData: NewPatientFormData,
   patientId?: string,
   leadId?: string,
-  submissionSource: 'public' | 'internal' = 'public'
+  submissionSource: 'public' | 'internal' = 'public',
+  consultationPatientId?: string
 ): NewPatientPacketDB {
   return {
     // IDs
     patient_id: patientId,
     lead_id: leadId,
+    consultation_patient_id: consultationPatientId,
     
     // Section 1: Patient Identification & Contacts
     first_name: formData.firstName,

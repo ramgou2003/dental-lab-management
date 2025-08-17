@@ -37,7 +37,7 @@ export const PAGE_VISIBILITY: PageVisibilityConfig = {
   // ❌ HIDDEN PAGES (can be enabled later)
   leadIn: false,             // Lead-in - Lead management system
   appointments: false,       // Appointments - Appointment scheduling
-  consultation: false,       // Consultation - Patient consultations
+  consultation: true,       // Consultation - Patient consultations
   lab: false,                // Lab - Laboratory management
   reportCards: false,        // Report Cards - Clinical reports
   manufacturing: false,      // Manufacturing - Production tracking

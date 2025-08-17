@@ -10,11 +10,12 @@ export async function savePatientPacket(
   formData: NewPatientFormData,
   patientId?: string,
   leadId?: string,
-  submissionSource: 'public' | 'internal' = 'public'
+  submissionSource: 'public' | 'internal' = 'public',
+  consultationPatientId?: string
 ): Promise<{ data: NewPatientPacketDB | null; error: any }> {
   try {
     console.log('Converting form data to database format...');
-    const dbData = convertFormDataToDatabase(formData, patientId, leadId, submissionSource);
+    const dbData = convertFormDataToDatabase(formData, patientId, leadId, submissionSource, consultationPatientId);
     console.log('Database data prepared:', {
       first_name: dbData.first_name,
       last_name: dbData.last_name,
@@ -150,6 +151,29 @@ export async function getPatientPacketsByLeadId(leadId: string): Promise<{ data:
     return { data, error: null };
   } catch (error) {
     console.error('Unexpected error fetching patient packets for lead:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Get patient packets by consultation patient ID
+ */
+export async function getPatientPacketsByConsultationPatientId(consultationPatientId: string): Promise<{ data: NewPatientPacketDB[] | null; error: any }> {
+  try {
+    const { data, error } = await supabase
+      .from('new_patient_packets')
+      .select('*')
+      .eq('consultation_patient_id', consultationPatientId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching patient packets by consultation patient ID:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error fetching patient packets by consultation patient ID:', error);
     return { data: null, error };
   }
 }

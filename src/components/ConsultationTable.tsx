@@ -4,14 +4,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Calendar, Clock, Phone, Mail, Play } from "lucide-react";
+import { Eye, Calendar, Clock, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppointments } from "@/hooks/useAppointments";
+import { PatientConsultationsDialog } from "@/components/PatientConsultationsDialog";
 
 interface ConsultationAppointment {
   id: string;
   patient_name: string;
   patient_id: string | null;
+  consultation_id: string | null;
   appointment_date: string;
   appointment_time: string;
   appointment_end_time: string;
@@ -25,6 +27,27 @@ interface ConsultationAppointment {
   email: string | null;
   first_name: string | null;
   last_name: string | null;
+  // Consultation status from consultations table
+  consultation_status?: string | null;
+}
+
+interface ConsultationPatient {
+  id: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;
+  gender: string;
+  consultation_date: string;
+  consultation_time: string;
+  appointment_id: string | null;
+  lead_id: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  // Treatment decision from consultations table
+  treatment_decision?: string | null;
+  // Consultation status from consultations table
+  consultation_status?: string | null;
 }
 
 interface ConsultationTableProps {
@@ -32,65 +55,70 @@ interface ConsultationTableProps {
   selectedDate?: Date;
   showScheduledLeads?: boolean;
   refreshTrigger?: number;
+  treatmentStatusFilter?: string;
 }
 
-export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads = false, refreshTrigger }: ConsultationTableProps) {
+export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads = false, refreshTrigger, treatmentStatusFilter = "all" }: ConsultationTableProps) {
   const [consultationAppointments, setConsultationAppointments] = useState<ConsultationAppointment[]>([]);
+  const [consultationPatients, setConsultationPatients] = useState<ConsultationPatient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [selectedPatientName, setSelectedPatientName] = useState<string>('');
+  const [isPatientDialogOpen, setIsPatientDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { appointments } = useAppointments(); // Get real-time appointments
+
+  const handleViewPatientConsultations = (patientId: string, patientName: string) => {
+    setSelectedPatientId(patientId);
+    setSelectedPatientName(patientName);
+    setIsPatientDialogOpen(true);
+  };
 
   const fetchConsultationAppointments = async () => {
     try {
       setLoading(true);
 
       if (showScheduledLeads) {
-        // For "Patients" tab: Show scheduled leads (not yet fixed appointments)
-        const { data: leadsData, error: leadsError } = await supabase
-          .from('new_patient_leads')
-          .select(`
-            id,
-            first_name,
-            last_name,
-            personal_first_name,
-            personal_last_name,
-            phone,
-            personal_phone,
-            email,
-            personal_email,
-            status,
-            created_at,
-            reason_for_visit,
-            best_contact_time
-          `)
-          .eq('status', 'scheduled')
+        // For "Patients" tab: Show all consultation patients with treatment decisions
+        // First get all consultation patients
+        const { data: consultationPatientsData, error: consultationPatientsError } = await supabase
+          .from('consultation_patients')
+          .select('*')
           .order('created_at', { ascending: false });
 
-        if (leadsError) {
-          throw leadsError;
+        if (consultationPatientsError) {
+          throw consultationPatientsError;
         }
 
-        // Transform leads data to match our interface
-        const transformedLeads: ConsultationAppointment[] = (leadsData || []).map((lead: any) => ({
-          id: lead.id,
-          patient_name: `${lead.first_name || lead.personal_first_name || ''} ${lead.last_name || lead.personal_last_name || ''}`.trim() || 'Unknown Patient',
-          patient_id: null,
-          appointment_date: '', // No specific date for scheduled leads
-          appointment_time: lead.best_contact_time || '',
-          appointment_end_time: '',
-          appointment_status: 'scheduled',
-          appointment_type: 'consultation',
-          appointment_notes: lead.reason_for_visit || null,
-          created_at: lead.created_at,
-          lead_id: lead.id,
-          phone: lead.phone || lead.personal_phone,
-          email: lead.email || lead.personal_email,
-          first_name: lead.first_name || lead.personal_first_name,
-          last_name: lead.last_name || lead.personal_last_name
+        // Get consultation patient IDs
+        const patientIds = (consultationPatientsData || []).map(patient => patient.id);
+
+        // Get treatment decisions and consultation status for these patients
+        let treatmentDecisions = new Map();
+        let consultationStatuses = new Map();
+        if (patientIds.length > 0) {
+          const { data: consultationsData, error: consultationsError } = await supabase
+            .from('consultations')
+            .select('consultation_patient_id, treatment_decision, consultation_status')
+            .in('consultation_patient_id', patientIds);
+
+          if (!consultationsError && consultationsData) {
+            consultationsData.forEach(consultation => {
+              treatmentDecisions.set(consultation.consultation_patient_id, consultation.treatment_decision);
+              consultationStatuses.set(consultation.consultation_patient_id, consultation.consultation_status);
+            });
+          }
+        }
+
+        // Transform the data to include treatment decisions and consultation status
+        const transformedPatients = (consultationPatientsData || []).map(patient => ({
+          ...patient,
+          treatment_decision: treatmentDecisions.get(patient.id) || null,
+          consultation_status: consultationStatuses.get(patient.id) || null
         }));
 
-        setConsultationAppointments(transformedLeads);
+        setConsultationPatients(transformedPatients);
         return;
       }
 
@@ -105,7 +133,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
 
       const queryDate = selectedDate ? formatDateForQuery(selectedDate) : formatDateForQuery(new Date());
 
-      // Query to get consultation appointments from the appointments table for the selected date
+      // Query to get consultation appointments with consultation patient info
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select(`
@@ -126,6 +154,26 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
 
       if (appointmentsError) {
         throw appointmentsError;
+      }
+
+      // Get consultation patient IDs for these appointments
+      const appointmentIds = (appointmentsData || []).map(apt => apt.id);
+      let consultationPatientsMap = new Map();
+      let consultationStatusMap = new Map();
+
+      if (appointmentIds.length > 0) {
+        // Get consultation records for these appointments
+        const { data: consultationsData, error: consultationError } = await supabase
+          .from('consultations')
+          .select('appointment_id, consultation_patient_id, consultation_status')
+          .in('appointment_id', appointmentIds);
+
+        if (!consultationError && consultationsData) {
+          consultationsData.forEach(consultation => {
+            consultationPatientsMap.set(consultation.appointment_id, consultation.consultation_patient_id);
+            consultationStatusMap.set(consultation.appointment_id, consultation.consultation_status);
+          });
+        }
       }
 
       // For appointments with patient_id = null (lead appointments), try to get lead info
@@ -186,6 +234,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
             id: appointment.id,
             patient_name: appointment.patient_name,
             patient_id: appointment.patient_id,
+            consultation_id: consultationPatientsMap.get(appointment.id) || null,
             appointment_date: appointment.date,
             appointment_time: appointment.start_time,
             appointment_end_time: appointment.end_time,
@@ -193,6 +242,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
             appointment_type: appointment.appointment_type,
             appointment_notes: appointment.notes,
             created_at: appointment.created_at,
+            consultation_status: consultationStatusMap.get(appointment.id) || null,
             ...leadInfo
           };
         })
@@ -224,18 +274,32 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
     }
   }, [appointments]);
 
-  // Filter appointments based on search term
-  const filteredAppointments = consultationAppointments.filter(appointment => {
-    const fullName = `${appointment.first_name || ''} ${appointment.last_name || ''}`.toLowerCase();
-    const patientName = appointment.patient_name.toLowerCase();
-    const phone = (appointment.phone || '').toLowerCase();
-    const email = (appointment.email || '').toLowerCase();
+  // Filter data based on search term and treatment status
+  const filteredAppointments = showScheduledLeads
+    ? consultationPatients.filter(patient => {
+        const fullName = `${patient.first_name} ${patient.last_name}`.toLowerCase();
+        const matchesSearch = fullName.includes(searchTerm.toLowerCase());
 
-    return fullName.includes(searchTerm.toLowerCase()) ||
-           patientName.includes(searchTerm.toLowerCase()) ||
-           phone.includes(searchTerm.toLowerCase()) ||
-           email.includes(searchTerm.toLowerCase());
-  });
+        // Apply treatment status filter
+        if (treatmentStatusFilter === "all") {
+          return matchesSearch;
+        } else if (treatmentStatusFilter === "not_set") {
+          return matchesSearch && !patient.treatment_decision;
+        } else {
+          return matchesSearch && patient.treatment_decision === treatmentStatusFilter;
+        }
+      })
+    : consultationAppointments.filter(appointment => {
+        const fullName = `${appointment.first_name || ''} ${appointment.last_name || ''}`.toLowerCase();
+        const patientName = appointment.patient_name.toLowerCase();
+        const phone = (appointment.phone || '').toLowerCase();
+        const email = (appointment.email || '').toLowerCase();
+
+        return fullName.includes(searchTerm.toLowerCase()) ||
+               patientName.includes(searchTerm.toLowerCase()) ||
+               phone.includes(searchTerm.toLowerCase()) ||
+               email.includes(searchTerm.toLowerCase());
+      });
 
   const getInitials = (firstName: string | null, lastName: string | null, patientName?: string) => {
     if (firstName && lastName) {
@@ -258,12 +322,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
     return appointment.patient_name || 'Unknown Patient';
   };
 
-  const getContactInfo = (appointment: ConsultationAppointment) => {
-    return {
-      phone: appointment.phone,
-      email: appointment.email
-    };
-  };
+
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -297,6 +356,49 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
     }
   };
 
+  const getConsultationStatus = (consultationStatus: string | null | undefined) => {
+    if (!consultationStatus) {
+      return { text: 'Pending', color: 'bg-yellow-100 text-yellow-800' };
+    }
+
+    switch (consultationStatus.toLowerCase()) {
+      case 'completed':
+        return { text: 'Completed', color: 'bg-green-100 text-green-800' };
+      case 'draft':
+        return { text: 'Pending', color: 'bg-yellow-100 text-yellow-800' };
+      default:
+        return { text: 'Pending', color: 'bg-yellow-100 text-yellow-800' };
+    }
+  };
+
+  const getTreatmentStatusColor = (treatmentDecision: string) => {
+    switch (treatmentDecision?.toLowerCase()) {
+      case 'accepted':
+        return 'bg-green-100 text-green-800';
+      case 'not_accepted':
+        return 'bg-red-100 text-red-800';
+      case 'followup-required':
+      case 'follow_up_required':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatTreatmentDecision = (treatmentDecision: string) => {
+    switch (treatmentDecision?.toLowerCase()) {
+      case 'accepted':
+        return 'Accepted';
+      case 'not_accepted':
+        return 'Not Accepted';
+      case 'followup-required':
+      case 'follow_up_required':
+        return 'Follow-up Required';
+      default:
+        return treatmentDecision;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -318,10 +420,6 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                 <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
               </th>
               <th className="px-6 py-4 text-center text-sm font-medium text-slate-900 uppercase tracking-wider relative">
-                Contact
-                <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
-              </th>
-              <th className="px-6 py-4 text-center text-sm font-medium text-slate-900 uppercase tracking-wider relative">
                 Appointment
                 <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
               </th>
@@ -329,10 +427,12 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                 Status
                 <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
               </th>
-              <th className="px-6 py-4 text-center text-sm font-medium text-slate-900 uppercase tracking-wider relative">
-                Type
-                <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
-              </th>
+              {showScheduledLeads && (
+                <th className="px-6 py-4 text-center text-sm font-medium text-slate-900 uppercase tracking-wider relative">
+                  Treatment Status
+                  <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                </th>
+              )}
               <th className="px-6 py-4 text-center text-sm font-medium text-slate-900 uppercase tracking-wider">
                 Actions
               </th>
@@ -341,7 +441,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredAppointments.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center">
+                <td colSpan={showScheduledLeads ? 5 : 4} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center">
                     <Calendar className="h-12 w-12 text-gray-400 mb-4" />
                     <h3 className="text-sm font-medium text-gray-900 mb-2">
@@ -360,136 +460,183 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                 </td>
               </tr>
             ) : (
-              filteredAppointments.map((appointment, index) => {
-              const { phone, email } = getContactInfo(appointment);
-              
-              return (
-                <tr key={`${appointment.id}-${index}`} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap relative">
-                    <div className="flex items-center">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src="" />
-                        <AvatarFallback className="bg-indigo-100 text-indigo-600">
-                          {getInitials(
-                            appointment.first_name,
-                            appointment.last_name,
-                            appointment.patient_name
-                          )}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {getDisplayName(appointment)}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {appointment.lead_id ? `Lead ID: ${appointment.lead_id.slice(0, 8)}...` : `Patient ID: ${appointment.patient_id?.slice(0, 8)}...`}
+              showScheduledLeads ? (
+                // Render consultation patients
+                filteredAppointments.map((patient: ConsultationPatient, index) => (
+                  <tr key={`${patient.id}-${index}`} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap relative">
+                      <div className="flex items-center">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src="" />
+                          <AvatarFallback className="bg-indigo-100 text-indigo-600">
+                            {`${patient.first_name.charAt(0)}${patient.last_name.charAt(0)}`.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {`${patient.first_name} ${patient.last_name}`}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Patient ID: {patient.id.slice(0, 8)}...
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap relative text-center">
-                    <div className="space-y-1 flex flex-col items-center">
-                      {phone && (
+                      <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap relative text-center">
+                      <div className="space-y-1 flex flex-col items-center">
+                        <div className="flex items-center text-sm text-gray-900">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {formatDate(patient.consultation_date)}
+                        </div>
                         <div className="flex items-center text-sm text-gray-600">
-                          <Phone className="h-3 w-3 mr-1" />
-                          {phone}
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatTime(patient.consultation_time)}
                         </div>
-                      )}
-                      {email && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Mail className="h-3 w-3 mr-1" />
-                          {email}
-                        </div>
-                      )}
-                    </div>
-                    <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap relative text-center">
-                    <div className="space-y-1 flex flex-col items-center">
-                      {showScheduledLeads ? (
-                        // For scheduled leads - show "Scheduled" status
-                        <div className="space-y-1">
-                          <div className="flex items-center text-sm text-gray-900">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            <span className="text-blue-600 font-medium">Scheduled</span>
-                          </div>
-                          {appointment.appointment_time && (
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Best time: {appointment.appointment_time}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        // For fixed appointments - show actual date and time
-                        <>
-                          <div className="flex items-center text-sm text-gray-900">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {formatDate(appointment.appointment_date)}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {formatTime(appointment.appointment_time)} - {formatTime(appointment.appointment_end_time)}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap relative text-center">
-                    <div className="flex justify-center">
-                      <Badge className={getStatusColor(appointment.appointment_status)}>
-                        {appointment.appointment_status}
-                      </Badge>
-                    </div>
-                    <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 relative text-center">
-                    {appointment.appointment_type}
-                    <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
-                    <div className="flex justify-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (showScheduledLeads) {
-                            // For Patients tab (scheduled leads) - go to lead page
-                            if (appointment.lead_id) {
-                              navigate(`/lead-in/${appointment.lead_id}`);
-                            } else if (appointment.patient_id) {
-                              navigate(`/patients/${appointment.patient_id}`);
-                            }
-                          } else {
-                            // For Consultations tab - start consultation session
-                            navigate(`/consultation/${appointment.id}`);
-                          }
-                        }}
-                        className="flex items-center gap-1"
-                      >
-                        {showScheduledLeads ? (
-                          <>
-                            <Eye className="h-3 w-3" />
-                            {appointment.lead_id ? 'View Lead' : 'View Patient'}
-                          </>
+                      </div>
+                      <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap relative text-center">
+                      <div className="flex justify-center">
+                        {(() => {
+                          const consultationStatus = getConsultationStatus(patient.consultation_status);
+                          return (
+                            <Badge className={consultationStatus.color}>
+                              {consultationStatus.text}
+                            </Badge>
+                          );
+                        })()}
+                      </div>
+                      <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap relative text-center">
+                      <div className="flex justify-center">
+                        {patient.treatment_decision ? (
+                          <Badge className={getTreatmentStatusColor(patient.treatment_decision)}>
+                            {formatTreatmentDecision(patient.treatment_decision)}
+                          </Badge>
                         ) : (
-                          <>
-                            <Play className="h-3 w-3" />
-                            Start Consultation
-                          </>
+                          <span className="text-sm text-gray-500">Not Set</span>
                         )}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })
+                      </div>
+                      <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
+                      <div className="flex justify-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            handleViewPatientConsultations(
+                              patient.id,
+                              `${patient.first_name} ${patient.last_name}`
+                            );
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" />
+                          View Consultations
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                // Render consultation appointments
+                filteredAppointments.map((appointment: ConsultationAppointment, index) => (
+                  <tr key={`${appointment.id}-${index}`} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap relative">
+                      <div className="flex items-center">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src="" />
+                          <AvatarFallback className="bg-indigo-100 text-indigo-600">
+                            {getInitials(
+                              appointment.first_name,
+                              appointment.last_name,
+                              appointment.patient_name
+                            )}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {getDisplayName(appointment)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {appointment.consultation_id ? `Consultation ID: ${appointment.consultation_id.slice(0, 8)}...` : 'No Consultation ID'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap relative text-center">
+                      <div className="space-y-1 flex flex-col items-center">
+                        <div className="flex items-center text-sm text-gray-900">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {formatDate(appointment.appointment_date)}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {formatTime(appointment.appointment_time)} - {formatTime(appointment.appointment_end_time)}
+                        </div>
+                      </div>
+                      <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap relative text-center">
+                      <div className="flex justify-center">
+                        {(() => {
+                          const consultationStatus = getConsultationStatus(appointment.consultation_status);
+                          return (
+                            <Badge className={consultationStatus.color}>
+                              {consultationStatus.text}
+                            </Badge>
+                          );
+                        })()}
+                      </div>
+                      <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
+                      <div className="flex justify-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigate(`/consultation/${appointment.id}`);
+                          }}
+                          className="flex items-center gap-1"
+                        >
+                          <Play className="h-3 w-3" />
+                          Start Consultation
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Patient Consultations Dialog */}
+      {selectedPatientId && (
+        <PatientConsultationsDialog
+          isOpen={isPatientDialogOpen}
+          onClose={() => {
+            setIsPatientDialogOpen(false);
+            setSelectedPatientId(null);
+            setSelectedPatientName('');
+          }}
+          patientId={selectedPatientId}
+          patientName={selectedPatientName}
+        />
+      )}
     </div>
   );
 }
