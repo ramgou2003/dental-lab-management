@@ -16,6 +16,16 @@ interface UserProfile {
   created_at: string;
   updated_at: string;
   last_login?: string;
+  title?: string;
+  specialty?: string;
+  education?: string;
+  license_number?: string;
+  years_experience?: number;
+  address_street?: string;
+  address_city?: string;
+  address_state?: string;
+  address_zip?: string;
+  specializations?: string[];
 }
 
 interface UserRole {
@@ -107,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         Promise.race([
           supabase
             .from('user_profiles')
-            .select('id, email, first_name, last_name, full_name, phone, avatar_url, status, created_at, updated_at, last_login')
+            .select('id, email, first_name, last_name, full_name, phone, avatar_url, status, created_at, updated_at, last_login, title, specialty, education, license_number, years_experience, address_street, address_city, address_state, address_zip, specializations')
             .eq('id', userId)
             .single(),
           new Promise<any>((_, reject) =>

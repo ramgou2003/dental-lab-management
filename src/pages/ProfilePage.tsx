@@ -1,11 +1,70 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Camera, Mail, Phone, MapPin, Calendar, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+interface UserProfileData {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  phone?: string;
+  avatar_url?: string;
+  title?: string;
+  specialty?: string;
+  education?: string;
+  license_number?: string;
+  years_experience?: number;
+  address_street?: string;
+  address_city?: string;
+  address_state?: string;
+  address_zip?: string;
+  specializations?: string[];
+}
 
 export function ProfilePage() {
+  const { userProfile, user } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileData, setProfileData] = useState<UserProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch detailed profile data
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching profile data:', error);
+          toast.error('Failed to load profile data');
+          return;
+        }
+
+        setProfileData(data);
+        if (data.avatar_url) {
+          setProfileImage(data.avatar_url);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast.error('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, [user?.id]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -21,6 +80,30 @@ export function ProfilePage() {
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Use profileData if available, fallback to userProfile, then to defaults
+  const displayData = profileData || userProfile;
+  if (!displayData) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">No profile data available</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -43,10 +126,10 @@ export function ProfilePage() {
                     />
                   ) : (
                     <div className="w-24 h-24 rounded-full bg-white text-indigo-600 flex items-center justify-center text-2xl font-bold border-4 border-white shadow-lg">
-                      {getInitials("Amelia", "Stone")}
+                      {getInitials(displayData.first_name, displayData.last_name)}
                     </div>
                   )}
-                  <button 
+                  <button
                     onClick={() => document.getElementById('profile-upload')?.click()}
                     className="absolute -bottom-2 -right-2 bg-white rounded-full p-2 shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200"
                   >
@@ -61,9 +144,11 @@ export function ProfilePage() {
                   />
                 </div>
                 <div className="text-white">
-                  <h1 className="text-3xl font-bold">Dr. Amelia Stone</h1>
-                  <p className="text-indigo-100 text-lg">General Dentistry</p>
-                  <p className="text-indigo-200 text-sm mt-1">DDS, University of California</p>
+                  <h1 className="text-3xl font-bold">
+                    {displayData.title || 'Dr.'} {displayData.first_name} {displayData.last_name}
+                  </h1>
+                  <p className="text-indigo-100 text-lg">{displayData.specialty || 'General Dentistry'}</p>
+                  <p className="text-indigo-200 text-sm mt-1">{displayData.education || 'DDS'}</p>
                 </div>
               </div>
             </div>
@@ -77,16 +162,26 @@ export function ProfilePage() {
                   <div className="space-y-4">
                     <div className="flex items-center space-x-3">
                       <Mail className="h-5 w-5 text-gray-400" />
-                      <span className="text-gray-600">amelia.stone@dentalclinic.com</span>
+                      <span className="text-gray-600">{displayData.email}</span>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <Phone className="h-5 w-5 text-gray-400" />
-                      <span className="text-gray-600">+1 (555) 123-4567</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <MapPin className="h-5 w-5 text-gray-400" />
-                      <span className="text-gray-600">123 Medical Center Dr, San Francisco, CA</span>
-                    </div>
+                    {displayData.phone && (
+                      <div className="flex items-center space-x-3">
+                        <Phone className="h-5 w-5 text-gray-400" />
+                        <span className="text-gray-600">{displayData.phone}</span>
+                      </div>
+                    )}
+                    {(displayData.address_street || displayData.address_city || displayData.address_state) && (
+                      <div className="flex items-center space-x-3">
+                        <MapPin className="h-5 w-5 text-gray-400" />
+                        <span className="text-gray-600">
+                          {[
+                            displayData.address_street,
+                            displayData.address_city,
+                            displayData.address_state
+                          ].filter(Boolean).join(', ')}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -94,14 +189,20 @@ export function ProfilePage() {
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Professional Details</h2>
                   <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <Award className="h-5 w-5 text-gray-400" />
-                      <span className="text-gray-600">License #: CA-DEN-12345</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Calendar className="h-5 w-5 text-gray-400" />
-                      <span className="text-gray-600">15 years of experience</span>
-                    </div>
+                    {displayData.license_number && (
+                      <div className="flex items-center space-x-3">
+                        <Award className="h-5 w-5 text-gray-400" />
+                        <span className="text-gray-600">License #: {displayData.license_number}</span>
+                      </div>
+                    )}
+                    {displayData.years_experience !== undefined && (
+                      <div className="flex items-center space-x-3">
+                        <Calendar className="h-5 w-5 text-gray-400" />
+                        <span className="text-gray-600">
+                          {displayData.years_experience} {displayData.years_experience === 1 ? 'year' : 'years'} of experience
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -110,7 +211,7 @@ export function ProfilePage() {
               <div className="mt-8">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Specializations</h2>
                 <div className="flex flex-wrap gap-2">
-                  {["General Dentistry", "Cosmetic Dentistry", "Oral Surgery", "Pediatric Dentistry", "Orthodontics"].map((spec) => (
+                  {(displayData.specializations || ['General Dentistry']).map((spec) => (
                     <span key={spec} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
                       {spec}
                     </span>
