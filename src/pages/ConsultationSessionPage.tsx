@@ -13,6 +13,7 @@ import { PatientSummaryAI } from "@/components/PatientSummaryAI";
 import { TreatmentForm } from "@/components/TreatmentForm";
 import { FinancialOutcomeForm } from "@/components/FinancialOutcomeForm";
 import { ConsultationFormDialog } from "@/components/ConsultationFormDialog";
+import { ConsultationPreviewDialog } from "@/components/ConsultationPreviewDialog";
 import { RecordingConsentDialog } from "@/components/RecordingConsentDialog";
 import { RecordingControlDialog } from "@/components/RecordingControlDialog";
 import { RecordingsList } from "@/components/RecordingsList";
@@ -48,6 +49,7 @@ const ConsultationSessionPage = () => {
   const [audioLevel, setAudioLevel] = useState<number>(-60);
   const [audioAnalyzer, setAudioAnalyzer] = useState<AnalyserNode | null>(null);
   const [audioCleanup, setAudioCleanup] = useState<(() => void) | null>(null);
+  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
   const [isDirectConsultation, setIsDirectConsultation] = useState(false);
   const [consultationPatientData, setConsultationPatientData] = useState<any>(null);
   const [consultationStatus, setConsultationStatus] = useState<string | null>(null);
@@ -57,6 +59,7 @@ const ConsultationSessionPage = () => {
   const [consultationDataLoaded, setConsultationDataLoaded] = useState<boolean>(false);
   const [showNewPatientPacketDialog, setShowNewPatientPacketDialog] = useState(false);
   const [showConsultationFormDialog, setShowConsultationFormDialog] = useState(false);
+  const [showConsultationPreviewDialog, setShowConsultationPreviewDialog] = useState(false);
   const formRef = useRef<NewPatientPacketFormRef>(null);
 
   const tabs = [
@@ -181,29 +184,28 @@ const ConsultationSessionPage = () => {
     fetchAppointmentData();
   }, [appointmentId]);
 
-  // Check consultation data whenever packetId changes
+  // Check consultation data whenever packetId changes or when there's no packet but we have appointmentId
   useEffect(() => {
-    console.log('🔄 useEffect triggered - packetId:', packetId);
-    if (packetId) {
-      console.log('🔄 PacketId exists, checking consultation data:', packetId);
-      // Add a small delay to prevent race conditions
-      const timeoutId = setTimeout(() => {
-        console.log('🔄 Timeout executed, calling checkConsultationData with:', packetId);
-        if (packetId && packetId !== 'undefined' && packetId !== 'null') {
-          checkConsultationData(packetId);
-        } else {
-          console.log('❌ Invalid packetId in timeout, skipping consultation check');
-        }
-      }, 100);
+    console.log('🔄 useEffect triggered - packetId:', packetId, 'appointmentId:', appointmentId);
 
-      return () => clearTimeout(timeoutId);
-    } else {
-      console.log('🔄 PacketId is null, setting consultation states to false');
-      setHasConsultationData(false);
-      setConsultationCompleted(false);
-      setConsultationDataLoaded(true);
-    }
-  }, [packetId]);
+    // Add a small delay to prevent race conditions
+    const timeoutId = setTimeout(() => {
+      if (packetId && packetId !== 'undefined' && packetId !== 'null') {
+        console.log('🔄 PacketId exists, checking consultation data:', packetId);
+        checkConsultationData(packetId);
+      } else if (appointmentId) {
+        console.log('🔄 No packetId but appointmentId exists, checking consultation data by appointment:', appointmentId);
+        checkConsultationDataByAppointment();
+      } else {
+        console.log('🔄 No packetId or appointmentId, setting consultation states');
+        setHasConsultationData(false);
+        setConsultationCompleted(false);
+        setConsultationDataLoaded(true);
+      }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [packetId, appointmentId]);
 
   // Recording functions
   const startRecording = (recorder: MediaRecorder) => {
@@ -455,18 +457,21 @@ const ConsultationSessionPage = () => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorder && isRecording) {
+    if (mediaRecorder && isRecording && !isProcessingRecording) {
       console.log('Stopping recording...');
       console.log('Current chunks before stop:', recordingChunks.length);
       console.log('MediaRecorder state:', mediaRecorder.state);
 
-      // Set up the stop handler before stopping
-      mediaRecorder.onstop = async () => {
-        console.log('Recording stopped, processing chunks...');
-        console.log('Final chunks count:', recordingChunks.length);
+      // Prevent multiple calls to stopRecording
+      setIsRecording(false);
+      setIsProcessingRecording(true);
 
-        // Give a small delay to ensure all data is collected
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Process and save the recording immediately with current chunks
+      const processRecording = async () => {
+        console.log('Processing recording with chunks:', recordingChunks.length);
+
+        // Give a small delay to ensure any final data is collected
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         // Combine all recording chunks into a single blob
         const finalBlob = new Blob(recordingChunks, { type: 'audio/webm' });
@@ -494,6 +499,7 @@ const ConsultationSessionPage = () => {
               );
 
               console.log('Recording saved successfully:', audioUrl);
+              toast.success("Recording stopped and saved");
             }
           } catch (error) {
             console.error('Error saving recording:', error);
@@ -505,6 +511,14 @@ const ConsultationSessionPage = () => {
           console.warn('Chunks:', recordingChunks.length);
           toast.warning("No recording data to save");
         }
+
+        // Reset processing state
+        setIsProcessingRecording(false);
+      };
+
+      // Set up a simple stop handler that doesn't duplicate the upload logic
+      mediaRecorder.onstop = () => {
+        console.log('MediaRecorder stopped');
       };
 
       // Request any remaining data before stopping
@@ -516,7 +530,7 @@ const ConsultationSessionPage = () => {
             mediaRecorder.stop();
           }
         }, 100);
-      } else {
+      } else if (mediaRecorder.state === 'paused') {
         mediaRecorder.stop();
       }
 
@@ -531,11 +545,10 @@ const ConsultationSessionPage = () => {
         setAudioCleanup(null);
       }
 
-      setIsRecording(false);
+      // Clean up state
       setIsPaused(false);
       setMediaRecorder(null);
       setMediaStream(null);
-      setRecordingChunks([]);
       setAudioAnalyzer(null);
       setAudioLevel(-60);
       setShowRecordingControlDialog(false);
@@ -545,7 +558,12 @@ const ConsultationSessionPage = () => {
         setRecordingTimer(null);
       }
 
-      toast.success("Recording stopped and saved");
+      // Process the recording after a short delay to ensure MediaRecorder has stopped
+      setTimeout(() => {
+        processRecording();
+        // Clear chunks after processing
+        setRecordingChunks([]);
+      }, 300);
     }
   };
 
@@ -838,6 +856,56 @@ const ConsultationSessionPage = () => {
       setConsultationDataLoaded(true);
     } finally {
       setCheckingConsultation(false);
+    }
+  };
+
+  // Check consultation data using appointment ID when there's no patient packet
+  const checkConsultationDataByAppointment = async () => {
+    if (!appointmentId) {
+      console.log('❌ No appointment ID available');
+      setHasConsultationData(false);
+      setConsultationCompleted(false);
+      setConsultationDataLoaded(true);
+      return;
+    }
+
+    // Prevent multiple simultaneous checks
+    if (checkingConsultation) {
+      console.log('⏳ Already checking consultation data, skipping...');
+      return;
+    }
+
+    setCheckingConsultation(true);
+    try {
+      console.log('🔍 Checking consultation data by appointment ID:', appointmentId);
+
+      // Check if consultation record exists for this appointment
+      const { data, error } = await supabase
+        .from('consultations')
+        .select('id, consultation_status')
+        .eq('appointment_id', appointmentId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('❌ Error querying consultation:', error);
+        setHasConsultationData(false);
+        setConsultationCompleted(false);
+      } else if (data) {
+        console.log('✅ Found consultation data:', data);
+        setHasConsultationData(true);
+        setConsultationCompleted(data.consultation_status === 'completed');
+      } else {
+        console.log('❌ No consultation data found');
+        setHasConsultationData(false);
+        setConsultationCompleted(false);
+      }
+    } catch (error) {
+      console.error('❌ Error checking consultation data by appointment:', error);
+      setHasConsultationData(false);
+      setConsultationCompleted(false);
+    } finally {
+      setCheckingConsultation(false);
+      setConsultationDataLoaded(true);
     }
   };
 
@@ -1162,12 +1230,18 @@ const ConsultationSessionPage = () => {
               {/* Consultation Form Button */}
               <Button
                 onClick={() => {
-                  console.log('🔘 Consultation button clicked, has data:', hasConsultationData);
-                  setShowConsultationFormDialog(true);
+                  console.log('🔘 Consultation button clicked, completed:', consultationCompleted);
+                  if (consultationCompleted) {
+                    // Show preview dialog for completed consultations
+                    setShowConsultationPreviewDialog(true);
+                  } else {
+                    // Show edit dialog for incomplete consultations
+                    setShowConsultationFormDialog(true);
+                  }
                 }}
-                disabled={!hasFilledPacket || !consultationDataLoaded}
+                disabled={!consultationDataLoaded}
                 className={`ml-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${
-                  !hasFilledPacket || !consultationDataLoaded
+                  !consultationDataLoaded
                     ? 'bg-gray-400 text-white cursor-not-allowed'
                     : consultationCompleted
                     ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -2075,6 +2149,8 @@ const ConsultationSessionPage = () => {
           // Refresh consultation data from database to ensure consistency
           if (packetId) {
             checkConsultationData(packetId);
+          } else if (appointmentId) {
+            checkConsultationDataByAppointment();
           }
         }}
         patientPacketId={packetId || undefined}
@@ -2128,6 +2204,19 @@ const ConsultationSessionPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Consultation Preview Dialog */}
+      <ConsultationPreviewDialog
+        isOpen={showConsultationPreviewDialog}
+        onClose={() => setShowConsultationPreviewDialog(false)}
+        appointmentId={appointmentId}
+        patientName={appointmentData?.patient_name}
+        onEdit={() => {
+          // Close preview dialog and open edit dialog
+          setShowConsultationPreviewDialog(false);
+          setShowConsultationFormDialog(true);
+        }}
+      />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, FileText, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,21 +12,15 @@ import { toast } from 'sonner';
 interface TreatmentFormData {
   clinicalAssessment: string;
   treatmentRecommendations: {
-    implantPlacement: boolean;
-    implantRestoration: boolean;
-    implantSupported: boolean;
-    extraction: boolean;
-    bonGraft: boolean;
-    sinusLift: boolean;
-    denture: boolean;
-    bridge: boolean;
-    crown: boolean;
+    archType: 'upper' | 'lower' | 'dual' | '';
+    upperTreatment: string;
+    lowerTreatment: string;
   };
   additionalInformation: string;
 }
 
 interface TreatmentFormProps {
-  patientPacketId: string;
+  patientPacketId?: string;
   patientName: string;
   consultationPatientId?: string;
   appointmentId?: string;
@@ -47,15 +42,9 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
   const [formData, setFormData] = useState<TreatmentFormData>({
     clinicalAssessment: '',
     treatmentRecommendations: {
-      implantPlacement: false,
-      implantRestoration: false,
-      implantSupported: false,
-      extraction: false,
-      bonGraft: false,
-      sinusLift: false,
-      denture: false,
-      bridge: false,
-      crown: false,
+      archType: '',
+      upperTreatment: '',
+      lowerTreatment: '',
     },
     additionalInformation: ''
   });
@@ -65,13 +54,17 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
 
   // Load existing treatment data from consultations table
   useEffect(() => {
+    console.log('🔄 TreatmentForm: useEffect triggered with appointmentId:', appointmentId);
+
     const loadTreatmentData = async () => {
       try {
         // Use appointment_id as primary lookup (required for multiple consultations)
         if (!appointmentId) {
-          console.warn('No appointment ID provided, cannot load treatment data');
+          console.warn('❌ TreatmentForm: No appointment ID provided, cannot load treatment data');
           return;
         }
+
+        console.log('📡 TreatmentForm: Loading data for appointmentId:', appointmentId);
 
         const { data, error } = await supabase
           .from('consultations')
@@ -80,22 +73,54 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
           .single();
 
         if (data && !error) {
+          console.log('✅ TreatmentForm: Data loaded successfully:', data);
+
+          // Handle migration from old format to new format
+          let treatmentRecommendations = formData.treatmentRecommendations;
+
+          if (data.treatment_recommendations) {
+            // Check if it's the new format (has archType) or old format (has boolean fields)
+            if (data.treatment_recommendations.archType !== undefined) {
+              // New format - use as is
+              console.log('📊 TreatmentForm: Using new arch-based format');
+              treatmentRecommendations = data.treatment_recommendations;
+            } else {
+              // Old format - migrate to new format
+              console.log('🔄 TreatmentForm: Migrating old format to new arch-based format');
+              treatmentRecommendations = {
+                archType: '',
+                upperTreatment: '',
+                lowerTreatment: '',
+              };
+            }
+          }
+
+          console.log('📝 TreatmentForm: Setting form data:', {
+            clinicalAssessment: data.clinical_assessment,
+            treatmentRecommendations,
+            additionalInformation: data.additional_information
+          });
+
           setFormData({
             clinicalAssessment: data.clinical_assessment || '',
-            treatmentRecommendations: data.treatment_recommendations || formData.treatmentRecommendations,
+            treatmentRecommendations,
             additionalInformation: data.additional_information || ''
           });
           setLastSaved(new Date(data.updated_at));
+        } else if (error) {
+          console.error('❌ TreatmentForm: Error loading data:', error);
+        } else {
+          console.warn('⚠️ TreatmentForm: No data found for appointmentId:', appointmentId);
         }
       } catch (error) {
         console.error('Error loading treatment data:', error);
       }
     };
 
-    if (patientPacketId) {
+    if (appointmentId) {
       loadTreatmentData();
     }
-  }, [patientPacketId, appointmentId]);
+  }, [appointmentId]);
 
   const handleSave = async () => {
     console.log('💾 Saving treatment data...');
@@ -114,7 +139,7 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
         .single();
 
       const treatmentData = {
-        new_patient_packet_id: patientPacketId,
+        new_patient_packet_id: patientPacketId || null,
         consultation_patient_id: consultationPatientId || null,
         appointment_id: appointmentId || null,
         patient_name: patientName || 'Unknown Patient',
@@ -188,12 +213,27 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
     getFormData: () => formData
   }));
 
-  const handleCheckboxChange = (field: keyof TreatmentFormData['treatmentRecommendations']) => {
+  const handleArchTypeChange = (archType: 'upper' | 'lower' | 'dual') => {
     const newData = {
       ...formData,
       treatmentRecommendations: {
         ...formData.treatmentRecommendations,
-        [field]: !formData.treatmentRecommendations[field]
+        archType,
+        // Reset treatments when arch type changes
+        upperTreatment: '',
+        lowerTreatment: '',
+      }
+    };
+    setFormData(newData);
+    onDataChange?.(newData);
+  };
+
+  const handleTreatmentChange = (type: 'upper' | 'lower', treatment: string) => {
+    const newData = {
+      ...formData,
+      treatmentRecommendations: {
+        ...formData.treatmentRecommendations,
+        [type === 'upper' ? 'upperTreatment' : 'lowerTreatment']: treatment
       }
     };
     setFormData(newData);
@@ -201,15 +241,14 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
   };
 
   const treatmentOptions = [
-    { key: 'implantPlacement', label: 'Implant Placement' },
-    { key: 'implantRestoration', label: 'Implant Restoration' },
-    { key: 'implantSupported', label: 'Implant Supported' },
-    { key: 'extraction', label: 'Extraction' },
-    { key: 'bonGraft', label: 'Bon Graft' },
-    { key: 'sinusLift', label: 'Sinus Lift' },
-    { key: 'denture', label: 'Denture' },
-    { key: 'bridge', label: 'Bridge' },
-    { key: 'crown', label: 'Crown' }
+    'NO TREATMENT',
+    'FULL ARCH FIXED',
+    'DENTURE',
+    'IMPLANT REMOVABLE DENTURE',
+    'SINGLE IMPLANT',
+    'MULTIPLE IMPLANTS',
+    'EXTRACTION',
+    'EXTRACTION AND GRAFT'
   ];
 
   return (
@@ -242,24 +281,161 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
             Treatment Recommendation
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
-            {treatmentOptions.map((option) => (
+        <CardContent className="space-y-6">
+          {/* Arch Type Selection */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <Label className="text-base font-medium text-gray-900">Select Arch Type</Label>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
               <Button
-                key={option.key}
                 type="button"
-                variant={formData.treatmentRecommendations[option.key as keyof TreatmentFormData['treatmentRecommendations']] ? "default" : "outline"}
-                onClick={() => handleCheckboxChange(option.key as keyof TreatmentFormData['treatmentRecommendations'])}
-                className={`px-4 py-3 h-auto text-left justify-start ${
-                  formData.treatmentRecommendations[option.key as keyof TreatmentFormData['treatmentRecommendations']]
+                variant={formData.treatmentRecommendations.archType === 'upper' ? "default" : "outline"}
+                onClick={() => handleArchTypeChange('upper')}
+                className={`px-4 py-3 h-auto ${
+                  formData.treatmentRecommendations.archType === 'upper'
                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                     : 'border-blue-300 text-blue-600 hover:bg-blue-50'
                 }`}
               >
-                {option.label}
+                Upper Arch
               </Button>
-            ))}
+              <Button
+                type="button"
+                variant={formData.treatmentRecommendations.archType === 'lower' ? "default" : "outline"}
+                onClick={() => handleArchTypeChange('lower')}
+                className={`px-4 py-3 h-auto ${
+                  formData.treatmentRecommendations.archType === 'lower'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'border-blue-300 text-blue-600 hover:bg-blue-50'
+                }`}
+              >
+                Lower Arch
+              </Button>
+              <Button
+                type="button"
+                variant={formData.treatmentRecommendations.archType === 'dual' ? "default" : "outline"}
+                onClick={() => handleArchTypeChange('dual')}
+                className={`px-4 py-3 h-auto ${
+                  formData.treatmentRecommendations.archType === 'dual'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'border-blue-300 text-blue-600 hover:bg-blue-50'
+                }`}
+              >
+                Dual Arch
+              </Button>
+            </div>
           </div>
+
+          {/* Treatment Selections - Side by side for dual arch, single for individual arch */}
+          {formData.treatmentRecommendations.archType === 'dual' && (
+            <div className="grid grid-cols-2 gap-6">
+              {/* Upper Arch Treatment */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <Label className="text-base font-medium text-gray-900">Upper Arch Treatment</Label>
+                </div>
+                <div>
+                  <Select
+                    value={formData.treatmentRecommendations.upperTreatment}
+                    onValueChange={(value) => handleTreatmentChange('upper', value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select upper treatment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {treatmentOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Lower Arch Treatment */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <Label className="text-base font-medium text-gray-900">Lower Arch Treatment</Label>
+                </div>
+                <div>
+                  <Select
+                    value={formData.treatmentRecommendations.lowerTreatment}
+                    onValueChange={(value) => handleTreatmentChange('lower', value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select lower treatment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {treatmentOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Upper Arch Treatment - Single column for upper only */}
+          {formData.treatmentRecommendations.archType === 'upper' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <Label className="text-base font-medium text-gray-900">Upper Arch Treatment</Label>
+              </div>
+              <div>
+                <Select
+                  value={formData.treatmentRecommendations.upperTreatment}
+                  onValueChange={(value) => handleTreatmentChange('upper', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select upper treatment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {treatmentOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* Lower Arch Treatment - Single column for lower only */}
+          {formData.treatmentRecommendations.archType === 'lower' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <Label className="text-base font-medium text-gray-900">Lower Arch Treatment</Label>
+              </div>
+              <div>
+                <Select
+                  value={formData.treatmentRecommendations.lowerTreatment}
+                  onValueChange={(value) => handleTreatmentChange('lower', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select lower treatment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {treatmentOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

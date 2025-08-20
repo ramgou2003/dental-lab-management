@@ -137,16 +137,7 @@ export function ConsultationFormDialog({
   };
 
   const renderCurrentSection = () => {
-    console.log('🔍 Rendering section with:', { patientPacketId, patientName, consultationPatientId, activeSection });
 
-    if (!patientPacketId) {
-      console.log('❌ No patient packet ID available');
-      return (
-        <div className="text-center py-8">
-          <p className="text-gray-500">No patient packet available</p>
-        </div>
-      );
-    }
 
     return (
       <div>
@@ -154,7 +145,7 @@ export function ConsultationFormDialog({
         <div style={{ display: activeSection === 1 ? 'block' : 'none' }}>
           <TreatmentForm
             ref={treatmentFormRef}
-            patientPacketId={patientPacketId}
+            patientPacketId={patientPacketId || undefined}
             patientName={patientName || 'Unknown Patient'}
             consultationPatientId={consultationPatientId}
             appointmentId={appointmentId}
@@ -163,7 +154,7 @@ export function ConsultationFormDialog({
         <div style={{ display: activeSection === 2 ? 'block' : 'none' }}>
           <FinancialOutcomeForm
             ref={financialFormRef}
-            patientPacketId={patientPacketId}
+            patientPacketId={patientPacketId || undefined}
             patientName={patientName || 'Unknown Patient'}
             consultationPatientId={consultationPatientId}
             appointmentId={appointmentId}

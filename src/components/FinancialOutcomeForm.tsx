@@ -15,10 +15,10 @@ import { toast } from 'sonner';
 interface FinancialOutcomeData {
   // Treatment Decision
   treatmentDecision: 'accepted' | 'not-accepted' | 'followup-required' | '';
-  
+
   // Financial Information (only if accepted)
-  treatmentCost: number;
-  globalTreatmentValue: number;
+  treatmentCost: string;
+  globalTreatmentValue: string;
   
   // Financing Options
   financingOptions: {
@@ -37,7 +37,7 @@ interface FinancialOutcomeData {
 }
 
 interface FinancialOutcomeFormProps {
-  patientPacketId: string;
+  patientPacketId?: string;
   patientName: string;
   consultationPatientId?: string;
   appointmentId?: string;
@@ -58,8 +58,8 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
 }, ref) => {
   const [formData, setFormData] = useState<FinancialOutcomeData>({
     treatmentDecision: '',
-    treatmentCost: 0,
-    globalTreatmentValue: 0,
+    treatmentCost: '',
+    globalTreatmentValue: '',
     financingOptions: {
       yesApproved: false,
       noNotApproved: false,
@@ -78,13 +78,17 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
 
   // Load existing outcome data
   useEffect(() => {
+    console.log('🔄 FinancialOutcomeForm: useEffect triggered with appointmentId:', appointmentId);
+
     const loadOutcomeData = async () => {
       try {
         // Use appointment_id as primary lookup (required for multiple consultations)
         if (!appointmentId) {
-          console.warn('No appointment ID provided, cannot load financial data');
+          console.warn('❌ FinancialOutcomeForm: No appointment ID provided, cannot load financial data');
           return;
         }
+
+        console.log('📡 FinancialOutcomeForm: Loading data for appointmentId:', appointmentId);
 
         const { data, error } = await supabase
           .from('consultations')
@@ -93,27 +97,37 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
           .single();
 
         if (data && !error) {
-          setFormData({
+          console.log('✅ FinancialOutcomeForm: Data loaded successfully:', data);
+
+          const formDataToSet = {
             treatmentDecision: data.treatment_decision || '',
-            treatmentCost: data.treatment_cost || 0,
-            globalTreatmentValue: data.global_treatment_value || 0,
+            treatmentCost: data.treatment_cost ? data.treatment_cost.toString() : '',
+            globalTreatmentValue: data.global_treatment_value ? data.global_treatment_value.toString() : '',
             financingOptions: data.financing_options || formData.financingOptions,
             financingNotApprovedReason: data.financing_not_approved_reason || '',
             outcomeNotes: data.financial_notes || '',
             followupDate: data.followup_date ? data.followup_date.split('T')[0] : '',
             followupReason: data.followup_reason || ''
-          });
+          };
+
+          console.log('📝 FinancialOutcomeForm: Setting form data:', formDataToSet);
+
+          setFormData(formDataToSet);
           setLastSaved(new Date(data.updated_at));
+        } else if (error) {
+          console.error('❌ FinancialOutcomeForm: Error loading data:', error);
+        } else {
+          console.warn('⚠️ FinancialOutcomeForm: No data found for appointmentId:', appointmentId);
         }
       } catch (error) {
         console.error('Error loading outcome data:', error);
       }
     };
 
-    if (patientPacketId) {
+    if (appointmentId) {
       loadOutcomeData();
     }
-  }, [patientPacketId, appointmentId]);
+  }, [appointmentId]);
 
   const handleSave = async () => {
     console.log('🔥 FinancialOutcomeForm handleSave called');
@@ -134,13 +148,13 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
         .single();
 
       const outcomeData = {
-        new_patient_packet_id: patientPacketId,
+        new_patient_packet_id: patientPacketId || null,
         consultation_patient_id: consultationPatientId || null,
         appointment_id: appointmentId || null,
         patient_name: patientName || 'Unknown Patient',
         treatment_decision: formData.treatmentDecision,
-        treatment_cost: formData.treatmentCost,
-        global_treatment_value: formData.globalTreatmentValue,
+        treatment_cost: formData.treatmentCost ? parseFloat(formData.treatmentCost) : null,
+        global_treatment_value: formData.globalTreatmentValue ? parseFloat(formData.globalTreatmentValue) : null,
         financing_options: formData.financingOptions,
         financing_not_approved_reason: formData.financingNotApprovedReason,
         financial_notes: formData.outcomeNotes,
@@ -339,8 +353,8 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
         </CardContent>
       </Card>
 
-      {/* Financial Information - Only show if treatment is accepted */}
-      {formData.treatmentDecision === 'accepted' && (
+      {/* Financial Information - Show for all treatment decisions except empty */}
+      {formData.treatmentDecision && formData.treatmentDecision !== '' && (
         <>
           {/* Treatment Cost */}
           <Card>
@@ -359,8 +373,8 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
                     type="number"
                     step="0.01"
                     value={formData.treatmentCost}
-                    onChange={(e) => setFormData(prev => ({ ...prev, treatmentCost: parseFloat(e.target.value) || 0 }))}
-                    placeholder="0.00"
+                    onChange={(e) => setFormData(prev => ({ ...prev, treatmentCost: e.target.value }))}
+                    placeholder="Enter treatment cost"
                   />
                 </div>
                 <div>
@@ -370,8 +384,8 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
                     type="number"
                     step="0.01"
                     value={formData.globalTreatmentValue}
-                    onChange={(e) => setFormData(prev => ({ ...prev, globalTreatmentValue: parseFloat(e.target.value) || 0 }))}
-                    placeholder="0.00"
+                    onChange={(e) => setFormData(prev => ({ ...prev, globalTreatmentValue: e.target.value }))}
+                    placeholder="Enter global treatment value"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Total value including all treatment phases

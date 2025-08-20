@@ -475,7 +475,7 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
               >
                 <CardContent className="p-4 text-center">
                   <UserCheck className="h-8 w-8 mx-auto mb-2 text-indigo-600" />
-                  <h4 className="font-medium text-gray-900">Consultation Patient</h4>
+                  <h4 className="font-medium text-gray-900">Follow-Up Patient</h4>
                   <p className="text-sm text-gray-500 mt-1">Previous consultation patient</p>
                 </CardContent>
               </Card>
@@ -498,13 +498,13 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-indigo-700 border-b border-indigo-200 pb-2 flex items-center gap-2">
                 <Search className="h-5 w-5" />
-                Search {patientType === 'consultation' ? 'Consultation' : 'Active'} Patients
+                Search {patientType === 'consultation' ? 'Follow-Up' : 'Active'} Patients
               </h3>
 
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder={`Search ${patientType === 'consultation' ? 'consultation' : 'active'} patients by name...`}
+                  placeholder={`Search ${patientType === 'consultation' ? 'follow-up' : 'active'} patients by name...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={`pl-10 ${errors.selectedPatient ? 'border-red-500' : ''}`}
@@ -537,7 +537,7 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
                         </div>
                       </div>
                       <Badge variant="outline">
-                        {patientType === 'consultation' ? 'Consultation' : 'Active'} Patient
+                        {patientType === 'consultation' ? 'Follow-Up' : 'Active'} Patient
                       </Badge>
                     </div>
                   ))}
