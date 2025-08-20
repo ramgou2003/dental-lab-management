@@ -113,8 +113,11 @@ export function Sidebar({
   const [startWidth, setStartWidth] = useState(0);
 
 
-  const { signOut, userProfile, loading } = useAuth();
+  const { signOut, userProfile, loading, userRoles } = useAuth();
   const { canAccessUserManagement } = usePermissions();
+
+  // Check if user has doctor role
+  const isDentist = userRoles.some(role => role.name === 'dentist');
 
   // Debug logging for user profile changes
   useEffect(() => {
@@ -337,7 +340,10 @@ export function Sidebar({
             </div>
             <div className={`transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden pointer-events-none' : 'opacity-100 ml-3'}`}>
               <h1 className="text-gray-900 text-sm font-semibold whitespace-nowrap">
-                {userProfile ? userProfile.full_name : "User"}
+                {userProfile ?
+                  `${isDentist ? 'Dr. ' : ''}${userProfile.first_name} ${userProfile.last_name}` :
+                  "User"
+                }
               </h1>
               <p className="text-gray-500 text-xs whitespace-nowrap">
                 {userProfile ? userProfile.email : ""}

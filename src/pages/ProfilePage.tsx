@@ -28,12 +28,15 @@ interface UserProfileData {
 }
 
 export function ProfilePage() {
-  const { userProfile, user } = useAuth();
+  const { userProfile, user, userRoles } = useAuth();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch detailed profile data
+  // Check if user has doctor role
+  const isDentist = userRoles.some(role => role.name === 'dentist');
+
+  // Fetch detailed profile data with roles
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!user?.id) return;
@@ -41,8 +44,19 @@ export function ProfilePage() {
       try {
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('*')
+          .select(`
+            *,
+            user_roles!inner (
+              status,
+              roles (
+                id,
+                name,
+                display_name
+              )
+            )
+          `)
           .eq('id', user.id)
+          .eq('user_roles.status', 'active')
           .single();
 
         if (error) {
@@ -145,10 +159,14 @@ export function ProfilePage() {
                 </div>
                 <div className="text-white">
                   <h1 className="text-3xl font-bold">
-                    {displayData.title || 'Dr.'} {displayData.first_name} {displayData.last_name}
+                    {isDentist ? 'Dr. ' : ''}{displayData.first_name} {displayData.last_name}
                   </h1>
-                  <p className="text-indigo-100 text-lg">{displayData.specialty || 'General Dentistry'}</p>
-                  <p className="text-indigo-200 text-sm mt-1">{displayData.education || 'DDS'}</p>
+                  <p className="text-indigo-100 text-lg">
+                    {displayData.specialty || (isDentist ? 'General Dentistry' : 'Staff Member')}
+                  </p>
+                  {displayData.education && (
+                    <p className="text-indigo-200 text-sm mt-1">{displayData.education}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -189,13 +207,13 @@ export function ProfilePage() {
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Professional Details</h2>
                   <div className="space-y-4">
-                    {displayData.license_number && (
+                    {isDentist && displayData.license_number && (
                       <div className="flex items-center space-x-3">
                         <Award className="h-5 w-5 text-gray-400" />
                         <span className="text-gray-600">License #: {displayData.license_number}</span>
                       </div>
                     )}
-                    {displayData.years_experience !== undefined && (
+                    {displayData.years_experience !== undefined && displayData.years_experience > 0 && (
                       <div className="flex items-center space-x-3">
                         <Calendar className="h-5 w-5 text-gray-400" />
                         <span className="text-gray-600">
@@ -203,21 +221,31 @@ export function ProfilePage() {
                         </span>
                       </div>
                     )}
+                    {/* Show user roles */}
+                    <div className="flex items-center space-x-3">
+                      <Award className="h-5 w-5 text-gray-400" />
+                      <span className="text-gray-600">
+                        Role: {userRoles.map(role => role.display_name).join(', ') || 'User'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Specializations */}
-              <div className="mt-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Specializations</h2>
-                <div className="flex flex-wrap gap-2">
-                  {(displayData.specializations || ['General Dentistry']).map((spec) => (
-                    <span key={spec} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
-                      {spec}
-                    </span>
-                  ))}
+              {/* Only show specializations for dentists */}
+              {isDentist && (
+                <div className="mt-8">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Specializations</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {(displayData.specializations || ['General Dentistry']).map((spec) => (
+                      <span key={spec} className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+                        {spec}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Action Buttons */}
               <div className="mt-8 flex space-x-4">
