@@ -479,3 +479,39 @@ input[type="date"]::-moz-calendar-picker-indicator {
   animation: slide-up 0.8s ease-out;
 }
 
+/* Touch device optimizations for scroll behavior */
+@media (pointer: coarse) {
+  /* Improve scroll behavior on touch devices */
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  /* Prevent scroll jumping during form interactions */
+  .consent-form-container {
+    scroll-behavior: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Stabilize form elements during touch interactions */
+  .consent-form-container input,
+  .consent-form-container textarea,
+  .consent-form-container select,
+  .consent-form-container button {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+}
+
+/* Tablet-specific optimizations */
+@media (min-width: 768px) and (max-width: 1024px) and (pointer: coarse) {
+  /* Additional tablet-specific scroll optimizations */
+  .consent-form-container {
+    contain: layout style;
+  }
+
+  /* Prevent layout shifts during form interactions */
+  .consent-form-container .space-y-6 > * {
+    contain: layout;
+  }
+}
+

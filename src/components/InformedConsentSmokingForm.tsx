@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
-import { Heart, AlertTriangle, Calendar, Users, CheckCircle, FileText, Check } from "lucide-react";
+import { Heart, AlertTriangle, Calendar, Users, CheckCircle, FileText, Check, Clock, AlertCircle } from "lucide-react";
 
 interface InformedConsentSmokingFormProps {
   onSubmit: (formData: any) => void;
@@ -19,6 +19,11 @@ interface InformedConsentSmokingFormProps {
   initialData?: any;
   isEditing?: boolean;
   readOnly?: boolean;
+  // Auto-save props
+  onAutoSave?: (formData: any) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  lastSavedTime?: string;
 }
 
 export function InformedConsentSmokingForm({
@@ -28,7 +33,11 @@ export function InformedConsentSmokingForm({
   patientDateOfBirth = "",
   initialData = null,
   isEditing = false,
-  readOnly = false
+  readOnly = false,
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  lastSavedTime = ''
 }: InformedConsentSmokingFormProps) {
   const [formData, setFormData] = useState({
     // Patient Information
@@ -56,6 +65,29 @@ export function InformedConsentSmokingForm({
 
   // Signature dialog states
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
+  const [hasFormData, setHasFormData] = useState(false);
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    if (!onAutoSave) return;
+
+    // Check if form has meaningful data
+    const hasData = formData.firstName || formData.lastName || formData.nicotineUse ||
+                   formData.understandsNicotineEffects || formData.understandsRisks ||
+                   formData.understandsTimeline || formData.understandsInsurance ||
+                   formData.offeredResources || formData.takesResponsibility ||
+                   formData.patientSignature;
+
+    setHasFormData(hasData);
+
+    if (!hasData) return;
+
+    const timeoutId = setTimeout(() => {
+      onAutoSave(formData);
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, onAutoSave]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -88,10 +120,30 @@ export function InformedConsentSmokingForm({
   return (
     <div className="max-w-4xl mx-auto">
       <DialogHeader className="mb-6">
-        <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-          <FileText className="h-6 w-6" />
-          Informed Consent - Nicotine Use and Surgery
-        </DialogTitle>
+        <div className="flex items-center justify-between">
+          <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
+            <FileText className="h-6 w-6" />
+            Informed Consent - Nicotine Use and Surgery
+          </DialogTitle>
+
+          {/* Auto-save Status Indicator */}
+          {onAutoSave && !readOnly && (hasFormData || autoSaveStatus === 'error') && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
+              autoSaveStatus === 'error'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200'
+            }`}>
+              {autoSaveStatus === 'error' ? (
+                <AlertCircle className="h-3 w-3 text-red-600" />
+              ) : (
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-green-200 border-t-green-600"></div>
+              )}
+              <span className="font-medium">
+                {autoSaveStatus === 'error' ? autoSaveMessage : 'Auto-saving changes...'}
+              </span>
+            </div>
+          )}
+        </div>
         <div className="w-full h-1 bg-blue-200 rounded-full mt-2"></div>
       </DialogHeader>
 

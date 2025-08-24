@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,11 @@ interface FiveYearWarrantyFormProps {
   initialData?: any;
   isEditing?: boolean;
   readOnly?: boolean;
+  onAutoSave?: (formData: any) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  setAutoSaveStatus?: (status: 'idle' | 'saving' | 'saved' | 'error') => void;
+  setAutoSaveMessage?: (message: string) => void;
 }
 
 export function FiveYearWarrantyForm({
@@ -28,7 +33,12 @@ export function FiveYearWarrantyForm({
   patientDateOfBirth = "",
   initialData = null,
   isEditing = false,
-  readOnly = false
+  readOnly = false,
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  setAutoSaveStatus,
+  setAutoSaveMessage
 }: FiveYearWarrantyFormProps) {
   const [formData, setFormData] = useState({
     // Patient Information
@@ -59,41 +69,67 @@ export function FiveYearWarrantyForm({
     practiceSignatureDate: initialData?.practice_signature_date || new Date().toISOString().split('T')[0]
   });
 
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-
   // Signature dialog states
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    console.log('🔍 FiveYearWarrantyForm - initialData received:', initialData);
     if (initialData) {
-      setFormData(prev => ({ ...prev, ...initialData }));
+      console.log('🔄 FiveYearWarrantyForm - Mapping database fields to form fields');
+      // Map database fields to form fields
+      setFormData(prev => ({
+        ...prev,
+        firstName: initialData.first_name || prev.firstName,
+        lastName: initialData.last_name || prev.lastName,
+        dateOfBirth: initialData.date_of_birth || prev.dateOfBirth,
+        phone: initialData.phone || prev.phone,
+        email: initialData.email || prev.email,
+        understandOptionalPlan: initialData.understand_optional_plan || prev.understandOptionalPlan,
+        understandMonthlyCost: initialData.understand_monthly_cost || prev.understandMonthlyCost,
+        understandCoverageDetails: initialData.understand_coverage_details || prev.understandCoverageDetails,
+        understandPaymentProcess: initialData.understand_payment_process || prev.understandPaymentProcess,
+        questionsAnswered: initialData.questions_answered || prev.questionsAnswered,
+        voluntarilyEnrolling: initialData.voluntarily_enrolling || prev.voluntarilyEnrolling,
+        coverageBeginsAfterPayment: initialData.coverage_begins_after_payment || prev.coverageBeginsAfterPayment,
+        authorizePayment: initialData.authorize_payment || prev.authorizePayment,
+        patientFullName: `${initialData.first_name || ''} ${initialData.last_name || ''}`.trim() || prev.patientFullName,
+        patientSignature: initialData.patient_signature || prev.patientSignature,
+        patientSignatureDate: initialData.patient_signature_date || prev.patientSignatureDate,
+        practiceRepName: initialData.practice_representative_name || prev.practiceRepName,
+        practiceRepTitle: initialData.practice_representative_title || prev.practiceRepTitle,
+        practiceSignatureDate: initialData.practice_signature_date || prev.practiceSignatureDate
+      }));
     }
   }, [initialData]);
 
-  // Auto-save functionality
+  // Auto-save effect
   useEffect(() => {
-    if (!readOnly && (formData.firstName || formData.email || formData.phone)) {
-      const timeoutId = setTimeout(() => {
-        handleAutoSave();
-      }, 2000);
+    if (readOnly || !onAutoSave) return;
 
-      return () => clearTimeout(timeoutId);
+    // Clear existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
     }
-  }, [formData, readOnly]);
 
-  const handleAutoSave = async () => {
-    if (readOnly) return;
-    
-    setAutoSaveStatus('saving');
-    try {
-      // Auto-save logic would go here
-      setAutoSaveStatus('saved');
-      setTimeout(() => setAutoSaveStatus('idle'), 2000);
-    } catch (error) {
-      setAutoSaveStatus('error');
-      setTimeout(() => setAutoSaveStatus('idle'), 3000);
-    }
-  };
+    // Set new timeout for auto-save
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      if (setAutoSaveStatus) {
+        setAutoSaveStatus('saving');
+      }
+      if (setAutoSaveMessage) {
+        setAutoSaveMessage('Auto-saving changes...');
+      }
+      onAutoSave(formData);
+    }, 2000); // Auto-save after 2 seconds of inactivity
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [formData, readOnly, onAutoSave, setAutoSaveStatus, setAutoSaveMessage]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -137,11 +173,21 @@ export function FiveYearWarrantyForm({
       return;
     }
 
+    // Ensure dates are properly formatted or use current date as fallback
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Validate date format function
+    const isValidDate = (dateString: string) => {
+      if (!dateString) return false;
+      const date = new Date(dateString);
+      return date instanceof Date && !isNaN(date.getTime()) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+    };
+
     // Convert form data to match service interface
     const submissionData = {
       first_name: formData.firstName,
       last_name: formData.lastName,
-      date_of_birth: formData.dateOfBirth,
+      date_of_birth: isValidDate(formData.dateOfBirth) ? formData.dateOfBirth : currentDate,
       phone: formData.phone,
       email: formData.email,
       understand_optional_plan: formData.understandOptionalPlan,
@@ -153,10 +199,10 @@ export function FiveYearWarrantyForm({
       coverage_begins_after_payment: formData.coverageBeginsAfterPayment,
       authorize_payment: formData.authorizePayment,
       patient_signature: formData.patientSignature,
-      patient_signature_date: formData.patientSignatureDate,
+      patient_signature_date: isValidDate(formData.patientSignatureDate) ? formData.patientSignatureDate : currentDate,
       practice_representative_name: formData.practiceRepName,
       practice_representative_title: formData.practiceRepTitle,
-      practice_signature_date: formData.practiceSignatureDate
+      practice_signature_date: isValidDate(formData.practiceSignatureDate) ? formData.practiceSignatureDate : currentDate
     };
 
     onSubmit(submissionData);
@@ -183,9 +229,26 @@ export function FiveYearWarrantyForm({
         <DialogTitle className="text-xl font-bold text-blue-600 flex items-center gap-2">
           <Shield className="h-5 w-5" />
           5-Year Extended Warranty Plan
-          {getAutoSaveIndicator() && (
-            <div className="ml-auto">
-              {getAutoSaveIndicator()}
+          {(autoSaveStatus !== 'idle' || autoSaveMessage) && (
+            <div className="ml-auto flex items-center gap-2">
+              {autoSaveStatus === 'saving' && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-green-600 font-medium">Auto-saving changes...</span>
+                </div>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-green-600 font-medium">Changes saved</span>
+                </div>
+              )}
+              {autoSaveStatus === 'error' && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span className="text-red-600 font-medium">{autoSaveMessage || 'Save error'}</span>
+                </div>
+              )}
             </div>
           )}
         </DialogTitle>
@@ -659,7 +722,7 @@ export function FiveYearWarrantyForm({
               </Button>
               {!readOnly ? (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  {isEditing ? 'Update Warranty Plan' : 'Save Warranty Plan'}
+                  Submit
                 </Button>
               ) : (
                 <Button type="button" disabled className="bg-gray-400 text-white">

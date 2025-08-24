@@ -20,17 +20,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EditPatientForm } from "@/components/EditPatientForm";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { TreatmentDialog, TreatmentData } from "@/components/TreatmentDialog";
-import { ConsentFullArchForm } from "@/components/ConsentFullArchForm";
-import { FinancialAgreementForm } from "@/components/FinancialAgreementForm";
+import { ConsentFullArchDialog } from "@/components/ConsentFullArchDialog";
+import { FinancialAgreementDialog } from "@/components/FinancialAgreementDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { FinalDesignApprovalForm } from "@/components/FinalDesignApprovalForm";
+import { FinalDesignApprovalDialog } from "@/components/FinalDesignApprovalDialog";
 import { NewPatientPacketForm } from "@/components/NewPatientPacketForm";
 import { MedicalRecordsReleaseForm } from "@/components/MedicalRecordsReleaseForm";
-import { InformedConsentSmokingForm } from "@/components/InformedConsentSmokingForm";
-import { ThankYouPreSurgeryForm } from "@/components/ThankYouPreSurgeryForm";
-import { ThreeYearCarePackageForm } from "@/components/ThreeYearCarePackageForm";
-import { FiveYearWarrantyForm } from "@/components/FiveYearWarrantyForm";
-import { PartialPaymentAgreementForm } from "@/components/PartialPaymentAgreementForm";
+import { InformedConsentSmokingDialog } from "@/components/InformedConsentSmokingDialog";
+import { ThankYouPreSurgeryDialog } from "@/components/ThankYouPreSurgeryDialog";
+import { ThreeYearCarePackageDialog } from "@/components/ThreeYearCarePackageDialog";
+import { FiveYearWarrantyDialog } from "@/components/FiveYearWarrantyDialog";
+import { PartialPaymentAgreementDialog } from "@/components/PartialPaymentAgreementDialog";
 import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
@@ -85,11 +85,11 @@ import { useSurgicalRecallSheets } from "@/hooks/useSurgicalRecallSheets";
 import { savePatientPacket, getPatientPacketsByPatientId, updatePatientPacket, deletePatientPacket } from "@/services/patientPacketService";
 import { convertDatabaseToFormData, convertFormDataToDatabase } from "@/utils/patientPacketConverter";
 import { getFinancialAgreementsByPatientId, deleteFinancialAgreement, updateFinancialAgreement } from "@/services/financialAgreementService";
-import { getConsentFormsByPatientId, deleteConsentForm, formatConsentFormForDisplay, ConsentFullArchFormData } from "@/services/consentFullArchService";
+import { getConsentFormsByPatientId, getConsentForm, deleteConsentForm, formatConsentFormForDisplay, ConsentFullArchFormData } from "@/services/consentFullArchService";
 import { getMedicalRecordsReleaseFormsByPatientId, deleteMedicalRecordsReleaseForm, formatMedicalRecordsReleaseFormForDisplay, MedicalRecordsReleaseFormData } from "@/services/medicalRecordsReleaseService";
 import { getInformedConsentSmokingFormsByPatientId, deleteInformedConsentSmokingForm, formatInformedConsentSmokingFormForDisplay, InformedConsentSmokingFormData } from "@/services/informedConsentSmokingService";
-import { getFinalDesignApprovalFormsByPatientId, deleteFinalDesignApprovalForm, formatFinalDesignApprovalFormForDisplay, FinalDesignApprovalFormData } from "@/services/finalDesignApprovalService";
-import { getThankYouPreSurgeryFormsByPatientId, deleteThankYouPreSurgeryForm, formatThankYouPreSurgeryFormForDisplay, ThankYouPreSurgeryFormData } from "@/services/thankYouPreSurgeryService";
+import { getFinalDesignApprovalFormsByPatientId, getFinalDesignApprovalForm, deleteFinalDesignApprovalForm, formatFinalDesignApprovalFormForDisplay, FinalDesignApprovalFormData } from "@/services/finalDesignApprovalService";
+import { getThankYouPreSurgeryFormsByPatientId, getThankYouPreSurgeryForm, deleteThankYouPreSurgeryForm, formatThankYouPreSurgeryFormForDisplay, ThankYouPreSurgeryFormData } from "@/services/thankYouPreSurgeryService";
 import { getThreeYearCarePackageFormsByPatientId, deleteThreeYearCarePackageForm, formatThreeYearCarePackageFormForDisplay, ThreeYearCarePackageFormData, createThreeYearCarePackageForm, updateThreeYearCarePackageForm } from "@/services/threeYearCarePackageService";
 import { fiveYearWarrantyService, FiveYearWarrantyFormData, formatFiveYearWarrantyFormForDisplay } from "@/services/fiveYearWarrantyService";
 import { partialPaymentAgreementService, PartialPaymentAgreementFormData, formatPartialPaymentAgreementFormForDisplay } from "@/services/partialPaymentAgreementService";
@@ -306,7 +306,7 @@ export function PatientProfilePage() {
   // Consent Forms state
   const [consentForms, setConsentForms] = useState<ConsentFullArchFormData[]>([]);
   const [loadingConsentForms, setLoadingConsentForms] = useState(false);
-  const [editingConsentForm, setEditingConsentForm] = useState<any | null>(null);
+  const [selectedConsentForm, setSelectedConsentForm] = useState<any | null>(null);
   const [isEditingConsentForm, setIsEditingConsentForm] = useState(false);
   const [isViewingConsentForm, setIsViewingConsentForm] = useState(false);
   const [showDeleteConsentFormConfirm, setShowDeleteConsentFormConfirm] = useState(false);
@@ -333,7 +333,7 @@ export function PatientProfilePage() {
   // Final Design Approval Forms state
   const [finalDesignApprovalForms, setFinalDesignApprovalForms] = useState<FinalDesignApprovalFormData[]>([]);
   const [loadingFinalDesignApprovalForms, setLoadingFinalDesignApprovalForms] = useState(false);
-  const [editingFinalDesignApprovalForm, setEditingFinalDesignApprovalForm] = useState<any | null>(null);
+  const [selectedFinalDesignApprovalForm, setSelectedFinalDesignApprovalForm] = useState<any | null>(null);
   const [isEditingFinalDesignApprovalForm, setIsEditingFinalDesignApprovalForm] = useState(false);
   const [isViewingFinalDesignApprovalForm, setIsViewingFinalDesignApprovalForm] = useState(false);
   const [showDeleteFinalDesignApprovalFormConfirm, setShowDeleteFinalDesignApprovalFormConfirm] = useState(false);
@@ -342,7 +342,7 @@ export function PatientProfilePage() {
   // Thank You Pre-Surgery Forms state
   const [thankYouPreSurgeryForms, setThankYouPreSurgeryForms] = useState<ThankYouPreSurgeryFormData[]>([]);
   const [loadingThankYouPreSurgeryForms, setLoadingThankYouPreSurgeryForms] = useState(false);
-  const [editingThankYouPreSurgeryForm, setEditingThankYouPreSurgeryForm] = useState<any | null>(null);
+  const [selectedThankYouPreSurgeryForm, setSelectedThankYouPreSurgeryForm] = useState<any | null>(null);
   const [isEditingThankYouPreSurgeryForm, setIsEditingThankYouPreSurgeryForm] = useState(false);
   const [isViewingThankYouPreSurgeryForm, setIsViewingThankYouPreSurgeryForm] = useState(false);
   const [showDeleteThankYouPreSurgeryFormConfirm, setShowDeleteThankYouPreSurgeryFormConfirm] = useState(false);
@@ -972,18 +972,28 @@ export function PatientProfilePage() {
   };
 
   const fetchPartialPaymentAgreementForms = async () => {
-    if (!patientId) return;
+    if (!patientId) {
+      console.log('⚠️ No patientId provided to fetchPartialPaymentAgreementForms');
+      return;
+    }
 
     try {
+      console.log('🔄 Fetching Partial Payment Agreement forms for patient:', patientId);
       setLoadingPartialPaymentAgreementForms(true);
       const data = await partialPaymentAgreementService.getFormsByPatientId(patientId);
+      console.log('📥 Raw data received from service:', data);
       setPartialPaymentAgreementForms(data || []);
       console.log('🔍 Partial Payment Agreement Forms fetched:', data?.length || 0, 'forms');
       if (data && data.length > 0) {
         console.log('📋 Partial Payment Agreement Forms data:', data);
+      } else {
+        console.log('⚠️ No Partial Payment Agreement forms found for patient:', patientId);
       }
     } catch (error) {
-      console.error('Unexpected error fetching Partial Payment Agreement forms:', error);
+      console.error('❌ Error fetching Partial Payment Agreement forms:', error);
+      console.error('❌ Error details:', error.message, error.stack);
+      // Set empty array on error to prevent undefined state
+      setPartialPaymentAgreementForms([]);
     } finally {
       setLoadingPartialPaymentAgreementForms(false);
     }
@@ -1365,7 +1375,7 @@ export function PatientProfilePage() {
     const formattedData = formatFiveYearWarrantyFormForDisplay(form);
     setPrintFormData(formattedData);
     setPrintFormType('five-year-warranty');
-    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
+    setPrintPatientName(`${form.first_name} ${form.last_name}` || patient?.full_name || 'Unknown Patient');
     setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
     setShowPrintPreview(true);
   };
@@ -5065,13 +5075,19 @@ export function PatientProfilePage() {
                               >
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <div className={`w-2 h-2 rounded-full ${
+                                      agreement.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                    }`}></div>
                                     <span className="text-sm font-semibold text-gray-900">
                                       Financial Agreement
                                     </span>
                                   </div>
-                                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-700">
-                                    Completed
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    agreement.status === 'completed'
+                                      ? 'bg-green-100 text-green-800 border border-green-200'
+                                      : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                  }`}>
+                                    {agreement.status === 'completed' ? 'Completed' : 'Draft'}
                                   </span>
                                 </div>
 
@@ -5080,13 +5096,16 @@ export function PatientProfilePage() {
                                   <div className="flex items-center justify-between text-xs">
                                     <span className="text-gray-500">Submitted on:</span>
                                     <span className="font-medium text-gray-700">
-                                      {new Date(agreement.created_at).toLocaleDateString('en-US', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
+                                      {agreement.created_at ?
+                                        new Date(agreement.created_at).toLocaleDateString('en-US', {
+                                          year: 'numeric',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        }) :
+                                        'Draft - Not submitted'
+                                      }
                                     </span>
                                   </div>
                                 </div>
@@ -5148,11 +5167,35 @@ export function PatientProfilePage() {
                                     <div
                                       key={form.id}
                                       className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                      onClick={() => {
-                                        setEditingConsentForm(form);
-                                        setIsEditingConsentForm(false);
-                                        setIsViewingConsentForm(true);
-                                        setShowConsentFullArchForm(true);
+                                      onClick={async () => {
+                                        try {
+                                          console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+                                          // Fetch fresh data from Supabase
+                                          const freshData = await getConsentForm(form.id);
+                                          console.log('📥 Fresh data from Supabase:', freshData);
+
+                                          if (freshData.data) {
+                                            const formattedData = formatConsentFormForDisplay(freshData.data);
+                                            console.log('✅ Formatted fresh data for view:', formattedData);
+                                            setSelectedConsentForm(formattedData);
+                                            setIsViewingConsentForm(true);
+                                            setShowConsentFullArchForm(true);
+                                          } else {
+                                            console.error('❌ No data found for form ID:', form.id);
+                                            toast({
+                                              title: "Error",
+                                              description: "Could not load form data. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        } catch (error) {
+                                          console.error('❌ Error fetching form data for view:', error);
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to load form data. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        }
                                       }}
                                     >
                                       <div className="flex items-center justify-between mb-2">
@@ -5210,12 +5253,37 @@ export function PatientProfilePage() {
                                           </button>
 
                                           <button
-                                            onClick={(e) => {
+                                            onClick={async (e) => {
                                               e.stopPropagation();
-                                              setEditingConsentForm(form);
-                                              setIsEditingConsentForm(true);
-                                              setIsViewingConsentForm(false);
-                                              setShowConsentFullArchForm(true);
+                                              try {
+                                                console.log('✏️ Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                // Fetch fresh data from Supabase
+                                                const freshData = await getConsentForm(form.id);
+                                                console.log('📥 Fresh data from Supabase:', freshData);
+
+                                                if (freshData.data) {
+                                                  const formattedData = formatConsentFormForDisplay(freshData.data);
+                                                  console.log('✅ Formatted fresh data for edit:', formattedData);
+                                                  setSelectedConsentForm(formattedData);
+                                                  setIsEditingConsentForm(true);
+                                                  setIsViewingConsentForm(false);
+                                                  setShowConsentFullArchForm(true);
+                                                } else {
+                                                  console.error('❌ No data found for form ID:', form.id);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Could not load form data. Please try again.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              } catch (error) {
+                                                console.error('❌ Error fetching form data for edit:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to load form data. Please try again.",
+                                                  variant: "destructive",
+                                                });
+                                              }
                                             }}
                                             className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
                                             title="Edit consent form"
@@ -5361,7 +5429,7 @@ export function PatientProfilePage() {
                                         setShowInformedConsentSmokingForm(true);
                                       }}
                                     >
-                                      <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-start justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             form.status === 'signed' ? 'bg-green-500' :
@@ -5371,19 +5439,21 @@ export function PatientProfilePage() {
                                             Informed Consent - Nicotine Use Form
                                           </span>
                                         </div>
-                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                          form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
                                         }`}>
                                           {form.status === 'signed' ? 'Signed' :
                                            form.status === 'submitted' ? 'Submitted' : 'Draft'}
                                         </span>
                                       </div>
 
-                                      {/* Submitted Date */}
+                                      {/* Submitted/Created Date */}
                                       <div className="mb-3">
                                         <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="text-gray-500">
+                                            {form.status === 'draft' ? 'Created on:' : 'Submitted on:'}
+                                          </span>
                                           <span className="font-medium text-gray-700">
                                             {new Date(form.created_at).toLocaleDateString('en-US', {
                                               year: 'numeric',
@@ -5457,11 +5527,35 @@ export function PatientProfilePage() {
                                     <div
                                       key={form.id}
                                       className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                      onClick={() => {
-                                        setEditingFinalDesignApprovalForm(form);
-                                        setIsEditingFinalDesignApprovalForm(false);
-                                        setIsViewingFinalDesignApprovalForm(true);
-                                        setShowFinalDesignApprovalForm(true);
+                                      onClick={async () => {
+                                        try {
+                                          console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+                                          // Fetch fresh data from Supabase
+                                          const freshData = await getFinalDesignApprovalForm(form.id);
+                                          console.log('📥 Fresh data from Supabase:', freshData);
+
+                                          if (freshData.data) {
+                                            const formattedData = formatFinalDesignApprovalFormForDisplay(freshData.data);
+                                            console.log('✅ Formatted fresh data for view:', formattedData);
+                                            setSelectedFinalDesignApprovalForm(formattedData);
+                                            setIsViewingFinalDesignApprovalForm(true);
+                                            setShowFinalDesignApprovalForm(true);
+                                          } else {
+                                            console.error('❌ No data found for form ID:', form.id);
+                                            toast({
+                                              title: "Error",
+                                              description: "Could not load form data. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        } catch (error) {
+                                          console.error('❌ Error fetching form data for view:', error);
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to load form data. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        }
                                       }}
                                     >
                                       <div className="flex items-center justify-between mb-2">
@@ -5519,12 +5613,36 @@ export function PatientProfilePage() {
                                           </button>
 
                                           <button
-                                            onClick={(e) => {
+                                            onClick={async (e) => {
                                               e.stopPropagation();
-                                              setEditingFinalDesignApprovalForm(form);
-                                              setIsEditingFinalDesignApprovalForm(true);
-                                              setIsViewingFinalDesignApprovalForm(false);
-                                              setShowFinalDesignApprovalForm(true);
+                                              try {
+                                                console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                // Fetch fresh data from Supabase
+                                                const freshData = await getFinalDesignApprovalForm(form.id);
+                                                console.log('📥 Fresh data from Supabase:', freshData);
+
+                                                if (freshData.data) {
+                                                  const formattedData = formatFinalDesignApprovalFormForDisplay(freshData.data);
+                                                  console.log('✅ Formatted fresh data:', formattedData);
+                                                  setSelectedFinalDesignApprovalForm(formattedData);
+                                                  setIsEditingFinalDesignApprovalForm(true);
+                                                  setShowFinalDesignApprovalForm(true);
+                                                } else {
+                                                  console.error('❌ No data found for form ID:', form.id);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Could not load form data. Please try again.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              } catch (error) {
+                                                console.error('❌ Error fetching form data:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to load form data. Please try again.",
+                                                  variant: "destructive",
+                                                });
+                                              }
                                             }}
                                             className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
                                             title="Edit final design approval form"
@@ -5560,11 +5678,35 @@ export function PatientProfilePage() {
                                     <div
                                       key={form.id}
                                       className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                      onClick={() => {
-                                        setEditingThankYouPreSurgeryForm(form);
-                                        setIsEditingThankYouPreSurgeryForm(false);
-                                        setIsViewingThankYouPreSurgeryForm(true);
-                                        setShowThankYouPreSurgeryForm(true);
+                                      onClick={async () => {
+                                        try {
+                                          console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+                                          // Fetch fresh data from Supabase
+                                          const freshData = await getThankYouPreSurgeryForm(form.id);
+                                          console.log('📥 Fresh data from Supabase:', freshData);
+
+                                          if (freshData.data) {
+                                            const formattedData = formatThankYouPreSurgeryFormForDisplay(freshData.data);
+                                            console.log('✅ Formatted fresh data for view:', formattedData);
+                                            setSelectedThankYouPreSurgeryForm(formattedData);
+                                            setIsViewingThankYouPreSurgeryForm(true);
+                                            setShowThankYouPreSurgeryForm(true);
+                                          } else {
+                                            console.error('❌ No data found for form ID:', form.id);
+                                            toast({
+                                              title: "Error",
+                                              description: "Could not load form data. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        } catch (error) {
+                                          console.error('❌ Error fetching form data for view:', error);
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to load form data. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        }
                                       }}
                                     >
                                       <div className="flex items-center justify-between mb-2">
@@ -5622,12 +5764,36 @@ export function PatientProfilePage() {
                                           </button>
 
                                           <button
-                                            onClick={(e) => {
+                                            onClick={async (e) => {
                                               e.stopPropagation();
-                                              setEditingThankYouPreSurgeryForm(form);
-                                              setIsEditingThankYouPreSurgeryForm(true);
-                                              setIsViewingThankYouPreSurgeryForm(false);
-                                              setShowThankYouPreSurgeryForm(true);
+                                              try {
+                                                console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                // Fetch fresh data from Supabase
+                                                const freshData = await getThankYouPreSurgeryForm(form.id);
+                                                console.log('📥 Fresh data from Supabase:', freshData);
+
+                                                if (freshData.data) {
+                                                  const formattedData = formatThankYouPreSurgeryFormForDisplay(freshData.data);
+                                                  console.log('✅ Formatted fresh data:', formattedData);
+                                                  setSelectedThankYouPreSurgeryForm(formattedData);
+                                                  setIsEditingThankYouPreSurgeryForm(true);
+                                                  setShowThankYouPreSurgeryForm(true);
+                                                } else {
+                                                  console.error('❌ No data found for form ID:', form.id);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Could not load form data. Please try again.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              } catch (error) {
+                                                console.error('❌ Error fetching form data:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to load form data. Please try again.",
+                                                  variant: "destructive",
+                                                });
+                                              }
                                             }}
                                             className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
                                             title="Edit thank you pre-surgery form"
@@ -5670,24 +5836,33 @@ export function PatientProfilePage() {
                                       }}
                                     >
                                       {/* Header with form name and status */}
-                                      <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-start justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            form.status === 'signed' ? 'bg-green-500' :
+                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                          }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             3-Year Care Package Enrollment Agreement
                                           </span>
                                         </div>
 
                                         {/* Status Badge */}
-                                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                                          Completed
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                          form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                        }`}>
+                                          {form.status === 'signed' ? 'Signed' :
+                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
                                         </span>
                                       </div>
 
-                                      {/* Submitted Date */}
+                                      {/* Submitted/Created Date */}
                                       <div className="mb-3">
                                         <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="text-gray-500">
+                                            {form.status === 'draft' ? 'Created on:' : 'Submitted on:'}
+                                          </span>
                                           <span className="font-medium text-gray-700">
                                             {form.created_at ? new Date(form.created_at).toLocaleDateString('en-US', {
                                               year: 'numeric',
@@ -5773,25 +5948,36 @@ export function PatientProfilePage() {
                                           5-Year Extended Warranty Plan
                                         </span>
                                       </div>
-                                      <span className="text-xs text-gray-500">
-                                        {form.created_at ? new Date(form.created_at).toLocaleDateString() : 'No date'}
-                                      </span>
+                                      {/* Status Badge - moved to top right */}
+                                      {form.status === 'draft' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                                          Draft
+                                        </span>
+                                      )}
+                                      {form.status === 'submitted' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                          Submitted
+                                        </span>
+                                      )}
+                                      {form.status === 'signed' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                          Signed
+                                        </span>
+                                      )}
                                     </div>
 
-                                    {/* Form details */}
-                                    <div className="text-xs text-gray-600 mb-3 space-y-1">
-                                      <div className="flex justify-between">
-                                        <span>Patient:</span>
-                                        <span className="font-medium">{form.patient_name || 'Not provided'}</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span>Email:</span>
-                                        <span className="font-medium">{form.email || 'Not provided'}</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span>Payment Authorized:</span>
-                                        <span className={`font-medium ${form.authorize_payment ? 'text-green-600' : 'text-red-600'}`}>
-                                          {form.authorize_payment ? 'Yes' : 'No'}
+                                    {/* Submitted Date */}
+                                    <div className="mb-3">
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-500">Submitted on:</span>
+                                        <span className="font-medium text-gray-700">
+                                          {form.created_at ?
+                                            new Date(form.created_at).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric'
+                                            }) : 'No date'
+                                          }
                                         </span>
                                       </div>
                                     </div>
@@ -5854,10 +6040,35 @@ export function PatientProfilePage() {
                                   <div
                                     key={form.id}
                                     className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                    onClick={() => {
-                                      setSelectedPartialPaymentAgreementForm(form);
-                                      setIsViewingPartialPaymentAgreementForm(true);
-                                      setShowPartialPaymentAgreementForm(true);
+                                    onClick={async () => {
+                                      try {
+                                        console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+                                        // Fetch fresh data from Supabase
+                                        const freshData = await partialPaymentAgreementService.getFormById(form.id);
+                                        console.log('📥 Fresh data from Supabase:', freshData);
+
+                                        if (freshData) {
+                                          const formattedData = formatPartialPaymentAgreementFormForDisplay(freshData);
+                                          console.log('✅ Formatted fresh data for view:', formattedData);
+                                          setSelectedPartialPaymentAgreementForm(formattedData);
+                                          setIsViewingPartialPaymentAgreementForm(true);
+                                          setShowPartialPaymentAgreementForm(true);
+                                        } else {
+                                          console.error('❌ No data found for form ID:', form.id);
+                                          toast({
+                                            title: "Error",
+                                            description: "Could not load form data. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      } catch (error) {
+                                        console.error('❌ Error fetching form data for view:', error);
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to load form data. Please try again.",
+                                          variant: "destructive",
+                                        });
+                                      }
                                     }}
                                   >
                                     {/* Header with form name and status */}
@@ -5868,26 +6079,41 @@ export function PatientProfilePage() {
                                           Partial Payment Agreement
                                         </span>
                                       </div>
-                                      <span className="text-xs text-gray-500">
-                                        {form.created_at ? new Date(form.created_at).toLocaleDateString() : 'No date'}
-                                      </span>
+                                      {/* Status Badge - moved to top right */}
+                                      {form.status === 'draft' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                                          Draft
+                                        </span>
+                                      )}
+                                      {form.status === 'submitted' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                          Submitted
+                                        </span>
+                                      )}
+                                      {form.status === 'signed' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                          Signed
+                                        </span>
+                                      )}
                                     </div>
 
-                                    {/* Form details */}
-                                    <div className="text-xs text-gray-600 mb-3 space-y-1">
-                                      <div className="flex justify-between">
-                                        <span>Patient:</span>
-                                        <span className="font-medium">{form.first_name} {form.last_name}</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span>Payment Amount:</span>
-                                        <span className="font-medium">${form.payment_amount}</span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span>Total Cost:</span>
-                                        <span className="font-medium">${form.estimated_total_cost}</span>
+                                    {/* Submitted Date */}
+                                    <div className="mb-3">
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-500">Submitted on:</span>
+                                        <span className="font-medium text-gray-700">
+                                          {form.created_at ?
+                                            new Date(form.created_at).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric'
+                                            }) : 'No date'
+                                          }
+                                        </span>
                                       </div>
                                     </div>
+
+
 
                                     {/* Action buttons */}
                                     <div className="flex items-center justify-between">
@@ -5913,11 +6139,36 @@ export function PatientProfilePage() {
                                           <Printer className="h-3.5 w-3.5" />
                                         </button>
                                         <button
-                                          onClick={(e) => {
+                                          onClick={async (e) => {
                                             e.stopPropagation();
-                                            setSelectedPartialPaymentAgreementForm(form);
-                                            setIsEditingPartialPaymentAgreementForm(true);
-                                            setShowPartialPaymentAgreementForm(true);
+                                            try {
+                                              console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                              // Fetch fresh data from Supabase
+                                              const freshData = await partialPaymentAgreementService.getFormById(form.id);
+                                              console.log('📥 Fresh data from Supabase:', freshData);
+
+                                              if (freshData) {
+                                                const formattedData = formatPartialPaymentAgreementFormForDisplay(freshData);
+                                                console.log('✅ Formatted fresh data:', formattedData);
+                                                setSelectedPartialPaymentAgreementForm(formattedData);
+                                                setIsEditingPartialPaymentAgreementForm(true);
+                                                setShowPartialPaymentAgreementForm(true);
+                                              } else {
+                                                console.error('❌ No data found for form ID:', form.id);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Could not load form data. Please try again.",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            } catch (error) {
+                                              console.error('❌ Error fetching form data:', error);
+                                              toast({
+                                                title: "Error",
+                                                description: "Failed to load form data. Please try again.",
+                                                variant: "destructive",
+                                              });
+                                            }
                                           }}
                                           className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
                                           title="Edit form"
@@ -13015,444 +13266,200 @@ export function PatientProfilePage() {
       />
 
       {/* Consent Packet for Full Arch Form Dialog */}
-      <Dialog open={showConsentFullArchForm} onOpenChange={(open) => {
-        setShowConsentFullArchForm(open);
-        if (!open) {
-          setIsViewingConsentForm(false);
-          setIsEditingConsentForm(false);
-          setEditingConsentForm(null);
-        }
-      }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
-          {patient && (
-            <ConsentFullArchForm
-              patientName={patient.full_name}
-              initialData={editingConsentForm}
-              isEditing={isEditingConsentForm}
-              readOnly={isViewingConsentForm}
-              onSubmit={async (formData) => {
-                try {
-                  // Map form data to separate database columns
-                  const payload: any = {
-                    patient_id: patient.id,
-                    patient_name: patient.full_name,
+      {patient && (
+        <ConsentFullArchDialog
+          isOpen={showConsentFullArchForm}
+          onClose={() => {
+            setShowConsentFullArchForm(false);
+            setIsViewingConsentForm(false);
+            setIsEditingConsentForm(false);
+            setSelectedConsentForm(null);
+            setSelectedAdminFormType("");
+          }}
+          patientId={patient.id}
+          patientName={patient.full_name}
+          patientDateOfBirth={patient.date_of_birth}
+          initialData={selectedConsentForm}
+          isEditing={isEditingConsentForm}
+          isViewing={isViewingConsentForm}
+          onSubmit={async (formData) => {
+            try {
+              // Update local state (the dialog handles the actual saving)
+              if (isEditingConsentForm && selectedConsentForm) {
+                setConsentForms(prev =>
+                  prev.map(form => form.id === selectedConsentForm.id ? formData : form)
+                );
+              } else {
+                setConsentForms(prev => [formData, ...prev]);
+              }
 
-                    // Patient & Interpreter Information
-                    chart_number: formData.chartNumber,
-                    consent_date: formData.date,
-                    consent_time: formData.time,
-                    primary_language: formData.primaryLanguage,
-                    other_language_text: formData.otherLanguageText,
-                    interpreter_required: formData.interpreterRequired,
-                    interpreter_name: formData.interpreterName,
-                    interpreter_credential: formData.interpreterCredential,
-                    patient_info_initials: formData.patientInfoInitials,
+              toast({
+                title: "Success",
+                description: "Consent Packet for Full Arch Surgery form saved successfully!",
+              });
 
-                    // Treatment Description & Alternatives
-                    arch_type: formData.archType,
-                    upper_jaw: formData.upperJaw,
-                    upper_teeth_regions: formData.upperTeethRegions,
-                    upper_implants: formData.upperImplants,
-                    upper_graft_allograft: formData.upperGraftMaterial?.allograft || false,
-                    upper_graft_xenograft: formData.upperGraftMaterial?.xenograft || false,
-                    upper_graft_autograft: formData.upperGraftMaterial?.autograft || false,
-                    upper_prosthesis_zirconia: formData.upperProsthesis?.zirconia || false,
-                    upper_prosthesis_overdenture: formData.upperProsthesis?.overdenture || false,
-                    upper_same_day_load: formData.upperSameDayLoad,
-                    lower_jaw: formData.lowerJaw,
-                    lower_teeth_regions: formData.lowerTeethRegions,
-                    lower_implants: formData.lowerImplants,
-                    lower_graft_allograft: formData.lowerGraftMaterial?.allograft || false,
-                    lower_graft_xenograft: formData.lowerGraftMaterial?.xenograft || false,
-                    lower_graft_autograft: formData.lowerGraftMaterial?.autograft || false,
-                    lower_prosthesis_zirconia: formData.lowerProsthesis?.zirconia || false,
-                    lower_prosthesis_overdenture: formData.lowerProsthesis?.overdenture || false,
-                    lower_same_day_load: formData.lowerSameDayLoad,
+              // Reset states and refresh forms
+              setShowConsentFullArchForm(false);
+              setIsEditingConsentForm(false);
+              setIsViewingConsentForm(false);
+              setSelectedConsentForm(null);
+              setSelectedAdminFormType("");
+              await fetchConsentForms();
 
-                    // Sedation Plan
-                    sedation_local_only: formData.sedationPlan?.localOnly || false,
-                    sedation_nitrous: formData.sedationPlan?.nitrous || false,
-                    sedation_iv_conscious: formData.sedationPlan?.ivConscious || false,
-                    sedation_general_hospital: formData.sedationPlan?.generalHospital || false,
-                    asa_physical_status: formData.asaPhysicalStatus,
-
-                    // Planned Drugs
-                    midazolam_dose: formData.plannedDrugs?.midazolam?.dose,
-                    midazolam_unit: formData.plannedDrugs?.midazolam?.unit || 'mg',
-                    fentanyl_dose: formData.plannedDrugs?.fentanyl?.dose,
-                    fentanyl_unit: formData.plannedDrugs?.fentanyl?.unit || 'µg',
-                    ketamine_dose: formData.plannedDrugs?.ketamine?.dose,
-                    ketamine_unit: formData.plannedDrugs?.ketamine?.unit || 'mg',
-                    dexamethasone_dose: formData.plannedDrugs?.dexamethasone?.dose,
-                    dexamethasone_unit: formData.plannedDrugs?.dexamethasone?.unit || 'mg',
-
-                    // Alternatives Initials
-                    alternatives_no_treatment_initials: formData.alternativesInitials?.noTreatment,
-                    alternatives_conventional_dentures_initials: formData.alternativesInitials?.conventionalDentures,
-                    alternatives_segmented_extraction_initials: formData.alternativesInitials?.segmentedExtraction,
-                    alternatives_removable_overdentures_initials: formData.alternativesInitials?.removableOverdentures,
-                    alternatives_zygomatic_implants_initials: formData.alternativesInitials?.zygomaticImplants,
-                    treatment_description_initials: formData.treatmentDescriptionInitials,
-
-                    // Material Risks
-                    risks_understood: formData.risksUnderstood || false,
-                    material_risks_initials: formData.materialRisksInitials,
-
-                    // Sedation & Anesthesia Consent
-                    escort_name: formData.escortName,
-                    escort_phone: formData.escortPhone,
-                    medications_disclosed: formData.medicationsDisclosed || false,
-                    decline_iv_sedation: formData.declineIVSedation || false,
-                    sedation_initials: formData.sedationInitials,
-                    anesthesia_provider_initials: formData.anesthesiaProviderInitials,
-
-                    // Financial Disclosure
-                    surgical_extractions_count: formData.surgicalExtractions?.count,
-                    surgical_extractions_fee: formData.surgicalExtractions?.fee,
-                    surgical_extractions_covered: formData.surgicalExtractions?.covered,
-                    implant_fixtures_count: formData.implantFixtures?.count,
-                    implant_fixtures_fee: formData.implantFixtures?.fee,
-                    implant_fixtures_covered: formData.implantFixtures?.covered,
-                    zirconia_bridge_fee: formData.zirconiabridge?.fee,
-                    zirconia_bridge_covered: formData.zirconiabridge?.covered,
-                    iv_sedation_fee: formData.ivSedation?.fee,
-                    iv_sedation_covered: formData.ivSedation?.covered,
-                    financial_initials: formData.financialInitials,
-
-                    // Photo/Video Authorization
-                    internal_record_keeping: formData.internalRecordKeeping,
-                    professional_education: formData.professionalEducation,
-                    marketing_social_media: formData.marketingSocialMedia,
-                    hipaa_email_sms: formData.hipaaEmailSms || false,
-                    hipaa_email: formData.hipaaEmail,
-                    hipaa_phone: formData.hipaaPhone,
-                    photo_video_initials: formData.photoVideoInitials,
-
-                    // Opioid Consent
-                    opioid_initials: formData.opioidInitials,
-                    smallest_opioid_supply: formData.smallestOpioidSupply || false,
-
-                    // Final Acknowledgment & Signatures
-                    surgeon_name: formData.surgeonName,
-                    surgeon_signature: formData.surgeonSignature,
-                    surgeon_date: formData.surgeonDate,
-                    anesthesia_provider_name: formData.anesthesiaProviderName,
-                    anesthesia_provider_signature: formData.anesthesiaProviderSignature,
-                    anesthesia_provider_date: formData.anesthesiaProviderDate,
-                    patient_signature: formData.patientSignature,
-                    patient_signature_date: formData.patientSignatureDate,
-                    witness_name: formData.witnessName,
-                    witness_signature: formData.witnessSignature,
-                    witness_signature_date: formData.witnessSignatureDate,
-                    final_initials: formData.finalInitials,
-
-                    // Patient Acknowledgment Checkboxes
-                    acknowledgment_read: formData.acknowledgmentRead || false,
-                    acknowledgment_outcome: formData.acknowledgmentOutcome || false,
-                    acknowledgment_authorize: formData.acknowledgmentAuthorize || false,
-
-                    // Keep form_data for backward compatibility (required field)
-                    form_data: formData,
-                    status: 'signed'
-                  };
-
-                  let data, error;
-
-                  if (isEditingConsentForm && editingConsentForm) {
-                    // Update existing consent form
-                    const result = await supabase
-                      .from('consent_full_arch_forms')
-                      .update(payload)
-                      .eq('id', editingConsentForm.id)
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  } else {
-                    // Create new consent form
-                    const result = await supabase
-                      .from('consent_full_arch_forms')
-                      .insert([payload])
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  }
-
-                  if (error) throw error;
-
-                  console.log('✅ Consent form saved:', data?.id);
-                  toast({
-                    title: 'Success',
-                    description: `Consent form ${isEditingConsentForm ? 'updated' : 'saved'} successfully!`
-                  });
-
-                  setShowConsentFullArchForm(false);
-                  setSelectedAdminFormType("");
-                  setEditingConsentForm(null);
-                  setIsEditingConsentForm(false);
-                  setIsViewingConsentForm(false);
-
-                  // Refresh the consent forms list
-                  await fetchConsentForms();
-                } catch (error: any) {
-                  console.error('❌ Error saving consent to Supabase:', error);
-                  console.error('❌ Details:', { message: error?.message, details: error?.details, hint: error?.hint, code: error?.code });
-                  toast({ title: 'Save failed', description: 'Could not save consent form. See console for details.' });
-                }
-              }}
-              onCancel={() => {
-                setShowConsentFullArchForm(false);
-                setSelectedAdminFormType("");
-                setEditingConsentForm(null);
-                setIsEditingConsentForm(false);
-                setIsViewingConsentForm(false);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+              // Navigate to Forms section
+              setActiveTab("forms");
+            } catch (error) {
+              console.error('Error in onSubmit:', error);
+              toast({
+                title: "Error",
+                description: "Failed to save form. Please try again.",
+                variant: "destructive",
+              });
+            }
+          }}
+        />
+      )}
 
       {/* Financial Agreement Form Dialog */}
-      <Dialog open={showFinancialAgreementForm} onOpenChange={(open) => {
-        setShowFinancialAgreementForm(open);
-        if (!open) {
+      <FinancialAgreementDialog
+        isOpen={showFinancialAgreementForm}
+        onClose={async () => {
+          setShowFinancialAgreementForm(false);
           setIsViewingFinancialAgreement(false);
           setIsEditingFinancialAgreement(false);
           setEditingFinancialAgreement(null);
-        }
-      }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          {patient && (
-            <FinancialAgreementForm
-              patientName={patient.full_name}
-              patientDateOfBirth={patient.date_of_birth}
-              initialData={editingFinancialAgreement}
-              isEditing={isEditingFinancialAgreement}
-              readOnly={isViewingFinancialAgreement}
-              onSubmit={async (formData) => {
-                console.log('💾 Financial agreement submitted:', formData);
-                console.log('🔍 Patient ID:', patient.id);
-                console.log('🔄 Is editing:', isEditingFinancialAgreement);
+          setSelectedAdminFormType("");
 
-                try {
-                  // Prepare data for database insertion (following the pattern of other forms)
-                  const financialAgreementData = {
-                    patient_id: patient.id,
-                    patient_name: formData.patientName || patient.full_name,
-                    chart_number: formData.chartNumber || null,
-                    date_of_birth: formData.dateOfBirth || patient.date_of_birth,
-                    date_of_execution: formData.dateOfExecution || new Date().toISOString().split('T')[0],
-                    time_of_execution: formData.timeOfExecution || new Date().toTimeString().slice(0, 5),
-                    accepted_treatments: formData.acceptedTreatments || [],
-                    total_cost_of_treatment: formData.totalCostOfTreatment ? parseFloat(formData.totalCostOfTreatment) : null,
-                    patient_payment_today: formData.patientPaymentToday ? parseFloat(formData.patientPaymentToday) : null,
-                    remaining_balance: formData.remainingBalance ? parseFloat(formData.remainingBalance) : null,
-                    balance_due_date: formData.balanceDueDate || null,
-                    payment_terms_initials: formData.paymentTermsInitials || null,
-                    lab_fee_initials: formData.labFeeInitials || null,
-                    care_package_fee: formData.carePackageFee ? parseFloat(formData.carePackageFee) : null,
-                    care_package_election: formData.carePackageElection || null,
-                    warranty_initials: formData.warrantyInitials || null,
-                    capacity_confirmed: formData.capacityConfirmed || false,
-                    hipaa_acknowledged: formData.hipaaAcknowledged || false,
-                    capacity_initials: formData.capacityInitials || null,
-                    dispute_initials: formData.disputeInitials || null,
-                    terms_agreed: formData.termsAgreed || false,
-                    patient_signature: formData.patientSignature || null,
-                    patient_signature_date: formData.patientSignatureDate || null,
-                    patient_signature_time: formData.patientSignatureTime || null,
-                    witness_name: formData.witnessName || null,
-                    witness_role: formData.witnessRole || null,
-                    witness_signature: formData.witnessSignature || null,
-                    witness_signature_date: formData.witnessSignatureDate || null,
-                    witness_signature_time: formData.witnessSignatureTime || null,
-                    scanned_to_chart: formData.scannedToChart || false,
-                    countersigned_by_manager: formData.countersignedByManager || false,
-                    status: 'completed',
-                    form_version: '1.0'
-                  };
+          // Refresh the financial agreements list to show any auto-saved drafts
+          await fetchFinancialAgreements();
+        }}
+        patientName={patient?.full_name || ""}
+        patientDateOfBirth={patient?.date_of_birth || ""}
+        patientId={patient?.id}
+        initialData={editingFinancialAgreement}
+        isEditing={isEditingFinancialAgreement}
+        onSubmit={async (formData) => {
+          if (!patient) return;
 
-                  console.log('💾 Saving financial agreement data:', financialAgreementData);
+          console.log('💾 Financial agreement submitted:', formData);
+          console.log('🔍 Patient ID:', patient.id);
+          console.log('🔄 Is editing:', isEditingFinancialAgreement);
 
-                  let data, error;
+          try {
+            let data, error;
 
-                  if (isEditingFinancialAgreement && editingFinancialAgreement) {
-                    // Update existing financial agreement
-                    const result = await updateFinancialAgreement(editingFinancialAgreement.id, formData, patient.id);
-                    data = result.data;
-                    error = result.error;
-                  } else {
-                    // Create new financial agreement
-                    const result = await supabase
-                      .from('financial_agreements')
-                      .insert([financialAgreementData])
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  }
+            if (isEditingFinancialAgreement && editingFinancialAgreement) {
+              // Update existing financial agreement (will mark as completed)
+              const result = await updateFinancialAgreement(editingFinancialAgreement.id, formData, patient.id);
+              data = result.data;
+              error = result.error;
+            } else {
+              // Check if there's an existing draft for this patient
+              const existingDrafts = financialAgreements.filter(fa => fa.status === 'draft');
 
-                  if (error) {
-                    console.error('❌ Error saving financial agreement:', error);
-                    toast({
-                      title: "Error",
-                      description: `Failed to ${isEditingFinancialAgreement ? 'update' : 'save'} financial agreement: ${error.message}`,
-                      variant: "destructive",
-                    });
-                    return;
-                  }
+              if (existingDrafts.length > 0) {
+                // Update the existing draft to completed
+                const result = await updateFinancialAgreement(existingDrafts[0].id, formData, patient.id);
+                data = result.data;
+                error = result.error;
+              } else {
+                // Create new financial agreement (will mark as completed)
+                const { saveFinancialAgreement } = await import("@/services/financialAgreementService");
+                const result = await saveFinancialAgreement(formData, patient.id);
+                data = result.data;
+                error = result.error;
+              }
+            }
 
-                  console.log('✅ Financial agreement saved successfully:', data);
-                  setShowFinancialAgreementForm(false);
-                  setSelectedAdminFormType("");
-                  setEditingFinancialAgreement(null);
-                  setIsEditingFinancialAgreement(false);
+            if (error) {
+              console.error('❌ Error saving financial agreement:', error);
+              toast({
+                title: "Error",
+                description: `Failed to ${isEditingFinancialAgreement ? 'update' : 'save'} financial agreement: ${error.message}`,
+                variant: "destructive",
+              });
+              return;
+            }
 
-                  // Refresh the financial agreements list
-                  await fetchFinancialAgreements();
+            console.log('✅ Financial agreement saved successfully:', data);
+            setShowFinancialAgreementForm(false);
+            setSelectedAdminFormType("");
+            setEditingFinancialAgreement(null);
+            setIsEditingFinancialAgreement(false);
 
-                  // Show success message
-                  toast({
-                    title: "Success",
-                    description: `Financial agreement ${isEditingFinancialAgreement ? 'updated' : 'saved'} successfully!`,
-                  });
-                } catch (error) {
-                  console.error('💥 Unexpected error saving financial agreement:', error);
-                  toast({
-                    title: "Error",
-                    description: `An unexpected error occurred: ${error.message}`,
-                    variant: "destructive",
-                  });
-                }
-              }}
-              onCancel={() => {
-                setShowFinancialAgreementForm(false);
-                setSelectedAdminFormType("");
-                setEditingFinancialAgreement(null);
-                setIsEditingFinancialAgreement(false);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+            // Refresh the financial agreements list
+            await fetchFinancialAgreements();
+
+            // Show success message
+            toast({
+              title: "Success",
+              description: `Financial agreement ${isEditingFinancialAgreement ? 'updated' : 'saved'} successfully!`,
+            });
+          } catch (error) {
+            console.error('💥 Unexpected error saving financial agreement:', error);
+            toast({
+              title: "Error",
+              description: "An unexpected error occurred while saving the financial agreement.",
+              variant: "destructive",
+            });
+          }
+        }}
+      />
 
       {/* Final Design Approval Form Dialog */}
-      <Dialog open={showFinalDesignApprovalForm} onOpenChange={(open) => {
-        setShowFinalDesignApprovalForm(open);
-        if (!open) {
-          setIsViewingFinalDesignApprovalForm(false);
-          setIsEditingFinalDesignApprovalForm(false);
-          setEditingFinalDesignApprovalForm(null);
-        }
-      }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          {patient && (
-            <FinalDesignApprovalForm
-              patientName={patient.full_name}
-              patientDateOfBirth={patient.date_of_birth}
-              initialData={editingFinalDesignApprovalForm}
-              isEditing={isEditingFinalDesignApprovalForm}
-              readOnly={isViewingFinalDesignApprovalForm}
-              onSubmit={async (formData) => {
-                try {
-                  // Map form data to database columns
-                  const payload: any = {
-                    patient_id: patient.id,
-                    status: 'signed',
+      {patient && (
+        <FinalDesignApprovalDialog
+          isOpen={showFinalDesignApprovalForm}
+          onClose={() => {
+            setShowFinalDesignApprovalForm(false);
+            setIsViewingFinalDesignApprovalForm(false);
+            setIsEditingFinalDesignApprovalForm(false);
+            setSelectedFinalDesignApprovalForm(null);
+            setSelectedAdminFormType("");
+          }}
+          patientId={patient.id}
+          patientName={patient.full_name}
+          patientDateOfBirth={patient.date_of_birth}
+          initialData={selectedFinalDesignApprovalForm}
+          isEditing={isEditingFinalDesignApprovalForm}
+          isViewing={isViewingFinalDesignApprovalForm}
+          onSubmit={async (formData) => {
+            try {
+              // Update local state (the dialog handles the actual saving)
+              if (isEditingFinalDesignApprovalForm && selectedFinalDesignApprovalForm) {
+                setFinalDesignApprovalForms(prev =>
+                  prev.map(form => form.id === selectedFinalDesignApprovalForm.id ? formData : form)
+                );
+              } else {
+                setFinalDesignApprovalForms(prev => [formData, ...prev]);
+              }
 
-                    // Patient Information
-                    first_name: formData.firstName,
-                    last_name: formData.lastName,
-                    date_of_birth: formData.dateOfBirth,
-                    date_of_service: formData.dateOfService,
+              toast({
+                title: "Success",
+                description: "Final Design Approval form saved successfully!",
+              });
 
-                    // Treatment Details
-                    treatment: formData.treatment,
-                    material: formData.material,
-                    shade_selected: formData.shadeSelected,
+              // Reset states and refresh forms
+              setShowFinalDesignApprovalForm(false);
+              setIsEditingFinalDesignApprovalForm(false);
+              setIsViewingFinalDesignApprovalForm(false);
+              setSelectedFinalDesignApprovalForm(null);
+              setSelectedAdminFormType("");
+              await fetchFinalDesignApprovalForms();
 
-                    // Design Approval & Fee Agreement Acknowledgments
-                    design_review_acknowledged: formData.designReviewAcknowledged,
-                    final_fabrication_approved: formData.finalFabricationApproved,
-                    post_approval_changes_understood: formData.postApprovalChangesUnderstood,
-                    warranty_reminder_understood: formData.warrantyReminderUnderstood,
-
-                    // Signatures
-                    patient_full_name: formData.patientFullName,
-                    patient_signature: formData.patientSignature,
-                    patient_signature_date: formData.patientSignatureDate,
-                    witness_name: formData.witnessName,
-                    witness_signature: formData.witnessSignature,
-                    witness_signature_date: formData.witnessSignatureDate,
-
-                    // Office Use Only
-                    design_added_to_chart: formData.designAddedToChart,
-                    fee_agreement_scanned: formData.feeAgreementScanned,
-
-                    // Keep form_data as backup
-                    form_data: formData
-                  };
-
-                  let data, error;
-
-                  if (isEditingFinalDesignApprovalForm && editingFinalDesignApprovalForm) {
-                    // Update existing form
-                    const result = await supabase
-                      .from('final_design_approval_forms')
-                      .update(payload)
-                      .eq('id', editingFinalDesignApprovalForm.id)
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  } else {
-                    // Create new form
-                    const result = await supabase
-                      .from('final_design_approval_forms')
-                      .insert([payload])
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  }
-
-                  if (error) throw error;
-
-                  console.log('✅ Final design approval form saved:', data?.id);
-                  toast({
-                    title: 'Success',
-                    description: `Final design approval form ${isEditingFinalDesignApprovalForm ? 'updated' : 'saved'} successfully!`
-                  });
-
-                  setShowFinalDesignApprovalForm(false);
-                  setSelectedAdminFormType("");
-                  setEditingFinalDesignApprovalForm(null);
-                  setIsEditingFinalDesignApprovalForm(false);
-                  setIsViewingFinalDesignApprovalForm(false);
-
-                  // Refresh the forms list
-                  await fetchFinalDesignApprovalForms();
-                } catch (error: any) {
-                  console.error('❌ Error saving final design approval form:', error);
-                  toast({
-                    title: 'Save failed',
-                    description: 'Could not save final design approval form. See console for details.',
-                    variant: 'destructive'
-                  });
-                }
-              }}
-              onCancel={() => {
-                setShowFinalDesignApprovalForm(false);
-                setSelectedAdminFormType("");
-                setEditingFinalDesignApprovalForm(null);
-                setIsEditingFinalDesignApprovalForm(false);
-                setIsViewingFinalDesignApprovalForm(false);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+              // Navigate to Forms section
+              setActiveTab("forms");
+            } catch (error) {
+              console.error('Error in onSubmit:', error);
+              toast({
+                title: "Error",
+                description: "Failed to save form. Please try again.",
+                variant: "destructive",
+              });
+            }
+          }}
+        />
+      )}
 
       {/* Medical Records Release Form Dialog */}
       <Dialog open={showMedicalRecordsReleaseForm} onOpenChange={(open) => {
@@ -13697,495 +13704,343 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* Informed Consent Form For Smoking Dialog */}
-      <Dialog open={showInformedConsentSmokingForm} onOpenChange={(open) => {
-        setShowInformedConsentSmokingForm(open);
-        if (!open) {
+      <InformedConsentSmokingDialog
+        isOpen={showInformedConsentSmokingForm}
+        onClose={async () => {
+          setShowInformedConsentSmokingForm(false);
           setIsViewingInformedConsentSmokingForm(false);
           setIsEditingInformedConsentSmokingForm(false);
           setEditingInformedConsentSmokingForm(null);
-        }
-      }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          {patient && (
-            <InformedConsentSmokingForm
-              patientName={patient.full_name}
-              patientDateOfBirth={patient.date_of_birth}
-              initialData={editingInformedConsentSmokingForm}
-              isEditing={isEditingInformedConsentSmokingForm}
-              readOnly={isViewingInformedConsentSmokingForm}
-              onSubmit={async (formData) => {
-                try {
-                  // Map form data to database columns
-                  const payload: any = {
-                    patient_id: patient.id,
-                    status: 'signed',
+          setSelectedAdminFormType("");
+          // Refresh the forms list to show any auto-saved drafts
+          await fetchInformedConsentSmokingForms();
+        }}
+        onSubmit={async (formData) => {
+          if (!patient) return;
 
-                    // Patient Information
-                    first_name: formData.firstName,
-                    last_name: formData.lastName,
-                    date_of_birth: formData.dateOfBirth,
-                    nicotine_use: formData.nicotineUse,
+          console.log('💾 Informed consent smoking form submitted:', formData);
+          console.log('🔍 Patient ID:', patient.id);
+          console.log('🔄 Is editing:', isEditingInformedConsentSmokingForm);
 
-                    // Patient Understanding and Agreement
-                    understands_nicotine_effects: formData.understandsNicotineEffects,
-                    understands_risks: formData.understandsRisks,
-                    understands_timeline: formData.understandsTimeline,
-                    understands_insurance: formData.understandsInsurance,
-                    offered_resources: formData.offeredResources,
-                    takes_responsibility: formData.takesResponsibility,
+          try {
+            // Map form data to database columns
+            const payload: any = {
+              patient_id: patient.id,
+              status: formData.status || 'submitted',
 
-                    // Signatures
-                    patient_signature: formData.patientSignature,
-                    signature_date: formData.signatureDate,
+              // Patient Information
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+              date_of_birth: formData.dateOfBirth,
+              nicotine_use: formData.nicotineUse,
 
-                    // Staff Use
-                    signed_consent: formData.signedConsent,
-                    refusal_reason: formData.refusalReason,
+              // Patient Understanding and Agreement
+              understands_nicotine_effects: formData.understandsNicotineEffects,
+              understands_risks: formData.understandsRisks,
+              understands_timeline: formData.understandsTimeline,
+              understands_insurance: formData.understandsInsurance,
+              offered_resources: formData.offeredResources,
+              takes_responsibility: formData.takesResponsibility,
 
-                    // Keep form_data as backup
-                    form_data: formData
-                  };
+              // Signatures
+              patient_signature: formData.patientSignature,
+              signature_date: formData.signatureDate,
 
-                  let data, error;
+              // Staff Use
+              signed_consent: formData.signedConsent,
+              refusal_reason: formData.refusalReason,
 
-                  if (isEditingInformedConsentSmokingForm && editingInformedConsentSmokingForm) {
-                    // Update existing form
-                    const result = await supabase
-                      .from('informed_consent_smoking_forms')
-                      .update(payload)
-                      .eq('id', editingInformedConsentSmokingForm.id)
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  } else {
-                    // Create new form
-                    const result = await supabase
-                      .from('informed_consent_smoking_forms')
-                      .insert([payload])
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  }
+              // Keep form_data as backup
+              form_data: formData
+            };
 
-                  if (error) throw error;
+            let data, error;
 
-                  console.log('✅ Informed consent smoking form saved:', data?.id);
-                  toast({
-                    title: 'Success',
-                    description: `Informed consent smoking form ${isEditingInformedConsentSmokingForm ? 'updated' : 'saved'} successfully!`
-                  });
+            if (isEditingInformedConsentSmokingForm && editingInformedConsentSmokingForm) {
+              // Update existing form (will mark as submitted)
+              const { updateInformedConsentSmokingForm } = await import("@/services/informedConsentSmokingService");
+              const result = await updateInformedConsentSmokingForm(editingInformedConsentSmokingForm.id, payload);
+              data = result.data;
+              error = result.error;
+            } else {
+              // Check if there's an existing draft for this patient
+              const existingDrafts = informedConsentSmokingForms.filter(form => form.status === 'draft');
 
-                  setShowInformedConsentSmokingForm(false);
-                  setSelectedAdminFormType("");
-                  setEditingInformedConsentSmokingForm(null);
-                  setIsEditingInformedConsentSmokingForm(false);
-                  setIsViewingInformedConsentSmokingForm(false);
+              if (existingDrafts.length > 0) {
+                // Update the existing draft to submitted
+                const { updateInformedConsentSmokingForm } = await import("@/services/informedConsentSmokingService");
+                const result = await updateInformedConsentSmokingForm(existingDrafts[0].id, payload);
+                data = result.data;
+                error = result.error;
+              } else {
+                // Create new form (will mark as submitted)
+                const { createInformedConsentSmokingForm } = await import("@/services/informedConsentSmokingService");
+                const result = await createInformedConsentSmokingForm(payload);
+                data = result.data;
+                error = result.error;
+              }
+            }
 
-                  // Refresh the forms list
-                  await fetchInformedConsentSmokingForms();
-                } catch (error: any) {
-                  console.error('❌ Error saving informed consent smoking form:', error);
-                  toast({
-                    title: 'Save failed',
-                    description: 'Could not save informed consent smoking form. See console for details.',
-                    variant: 'destructive'
-                  });
-                }
-              }}
-              onCancel={() => {
-                setShowInformedConsentSmokingForm(false);
-                setSelectedAdminFormType("");
-                setEditingInformedConsentSmokingForm(null);
-                setIsEditingInformedConsentSmokingForm(false);
-                setIsViewingInformedConsentSmokingForm(false);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+            if (error) throw error;
+
+            console.log('✅ Informed consent smoking form saved:', data?.id);
+            toast({
+              title: 'Success',
+              description: `Informed consent smoking form ${isEditingInformedConsentSmokingForm ? 'updated' : 'saved'} successfully!`
+            });
+
+            setShowInformedConsentSmokingForm(false);
+            setSelectedAdminFormType("");
+            setEditingInformedConsentSmokingForm(null);
+            setIsEditingInformedConsentSmokingForm(false);
+            setIsViewingInformedConsentSmokingForm(false);
+
+            // Refresh the forms list
+            await fetchInformedConsentSmokingForms();
+          } catch (error: any) {
+            console.error('❌ Error saving informed consent smoking form:', error);
+            toast({
+              title: 'Save failed',
+              description: 'Could not save informed consent smoking form. See console for details.',
+              variant: 'destructive'
+            });
+          }
+        }}
+        patientName={patient?.full_name}
+        patientDateOfBirth={patient?.date_of_birth}
+        patientId={patient?.id}
+        initialData={editingInformedConsentSmokingForm}
+        isEditing={isEditingInformedConsentSmokingForm}
+      />
 
       {/* Thank You and Pre-Surgery Form Dialog */}
-      <Dialog open={showThankYouPreSurgeryForm} onOpenChange={(open) => {
-        setShowThankYouPreSurgeryForm(open);
-        if (!open) {
-          setIsViewingThankYouPreSurgeryForm(false);
-          setIsEditingThankYouPreSurgeryForm(false);
-          setEditingThankYouPreSurgeryForm(null);
-        }
-      }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          {patient && (
-            <ThankYouPreSurgeryForm
-              patientName={patient.full_name}
-              patientDateOfBirth={patient.date_of_birth}
-              initialData={editingThankYouPreSurgeryForm}
-              isEditing={isEditingThankYouPreSurgeryForm}
-              readOnly={isViewingThankYouPreSurgeryForm}
-              onSubmit={async (formData) => {
-                try {
-                  // Map form data to database columns
-                  const payload: any = {
-                    patient_id: patient.id,
-                    status: 'signed',
+      {patient && (
+        <ThankYouPreSurgeryDialog
+          isOpen={showThankYouPreSurgeryForm}
+          onClose={() => {
+            setShowThankYouPreSurgeryForm(false);
+            setIsViewingThankYouPreSurgeryForm(false);
+            setIsEditingThankYouPreSurgeryForm(false);
+            setSelectedThankYouPreSurgeryForm(null);
+            setSelectedAdminFormType("");
+          }}
+          patientId={patient.id}
+          patientName={patient.full_name}
+          patientDateOfBirth={patient.date_of_birth}
+          initialData={selectedThankYouPreSurgeryForm}
+          isEditing={isEditingThankYouPreSurgeryForm}
+          isViewing={isViewingThankYouPreSurgeryForm}
+          onSubmit={async (formData) => {
+            try {
+              // Update local state (the dialog handles the actual saving)
+              if (isEditingThankYouPreSurgeryForm && selectedThankYouPreSurgeryForm) {
+                setThankYouPreSurgeryForms(prev =>
+                  prev.map(form => form.id === selectedThankYouPreSurgeryForm.id ? formData : form)
+                );
+              } else {
+                setThankYouPreSurgeryForms(prev => [formData, ...prev]);
+              }
 
-                    // Patient Information
-                    patient_name: formData.patientName,
-                    phone: formData.phone,
-                    date_of_birth: formData.dateOfBirth,
-                    email: formData.email,
-                    treatment_type: formData.treatmentType,
-                    form_date: formData.formDate,
+              toast({
+                title: "Success",
+                description: "Thank You and Pre-Surgery Instructions form saved successfully!",
+              });
 
-                    // Medical Screening
-                    heart_conditions: formData.medicalConditions?.heartConditions || false,
-                    blood_thinners: formData.medicalConditions?.bloodThinners || false,
-                    diabetes: formData.medicalConditions?.diabetes || false,
-                    high_blood_pressure: formData.medicalConditions?.highBloodPressure || false,
-                    allergies: formData.medicalConditions?.allergies || false,
-                    pregnancy_nursing: formData.medicalConditions?.pregnancyNursing || false,
-                    recent_illness: formData.medicalConditions?.recentIllness || false,
-                    medication_changes: formData.medicalConditions?.medicationChanges || false,
+              // Reset states and refresh forms
+              setShowThankYouPreSurgeryForm(false);
+              setIsEditingThankYouPreSurgeryForm(false);
+              setIsViewingThankYouPreSurgeryForm(false);
+              setSelectedThankYouPreSurgeryForm(null);
+              setSelectedAdminFormType("");
+              await fetchThankYouPreSurgeryForms();
 
-                    // Timeline Acknowledgments - 3 Days Before
-                    start_medrol: formData.threeDaysBefore?.startMedrol || false,
-                    start_amoxicillin: formData.threeDaysBefore?.startAmoxicillin || false,
-                    no_alcohol_3days: formData.threeDaysBefore?.noAlcohol || false,
-                    arrange_ride: formData.threeDaysBefore?.arrangeRide || false,
-
-                    // Timeline Acknowledgments - Night Before
-                    take_diazepam: formData.nightBefore?.takeDiazepam || false,
-                    no_food_after_midnight: formData.nightBefore?.noFoodAfterMidnight || false,
-                    no_water_after_6am: formData.nightBefore?.noWaterAfter6AM || false,
-                    confirm_ride: formData.nightBefore?.confirmRide || false,
-
-                    // Timeline Acknowledgments - Morning Of
-                    no_breakfast: formData.morningOf?.noBreakfast || false,
-                    no_pills: formData.morningOf?.noPills || false,
-                    wear_comfortable: formData.morningOf?.wearComfortable || false,
-                    arrive_on_time: formData.morningOf?.arriveOnTime || false,
-
-                    // Timeline Acknowledgments - After Surgery
-                    no_alcohol_24hrs: formData.afterSurgery?.noAlcohol24hrs || false,
-                    no_driving_24hrs: formData.afterSurgery?.noDriving24hrs || false,
-                    follow_instructions: formData.afterSurgery?.followInstructions || false,
-                    call_if_concerns: formData.afterSurgery?.callIfConcerns || false,
-
-                    // Patient Acknowledgments
-                    read_instructions: formData.acknowledgments?.readInstructions || false,
-                    understand_medications: formData.acknowledgments?.understandMedications || false,
-                    understand_sedation: formData.acknowledgments?.understandSedation || false,
-                    arranged_transport: formData.acknowledgments?.arrangedTransport || false,
-                    understand_restrictions: formData.acknowledgments?.understandRestrictions || false,
-                    will_follow_instructions: formData.acknowledgments?.willFollowInstructions || false,
-                    understand_emergency: formData.acknowledgments?.understandEmergency || false,
-
-                    // Signatures
-                    patient_signature: formData.patientSignature,
-                    signature_date: formData.signatureDate,
-                    patient_print_name: formData.patientPrintName,
-
-                    // Keep form_data as backup
-                    form_data: formData
-                  };
-
-                  let data, error;
-
-                  if (isEditingThankYouPreSurgeryForm && editingThankYouPreSurgeryForm) {
-                    // Update existing form
-                    const result = await supabase
-                      .from('thank_you_pre_surgery_forms')
-                      .update(payload)
-                      .eq('id', editingThankYouPreSurgeryForm.id)
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  } else {
-                    // Create new form
-                    const result = await supabase
-                      .from('thank_you_pre_surgery_forms')
-                      .insert([payload])
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  }
-
-                  if (error) throw error;
-
-                  console.log('✅ Thank you pre-surgery form saved:', data?.id);
-                  toast({
-                    title: 'Success',
-                    description: `Thank you pre-surgery form ${isEditingThankYouPreSurgeryForm ? 'updated' : 'saved'} successfully!`
-                  });
-
-                  setShowThankYouPreSurgeryForm(false);
-                  setSelectedAdminFormType("");
-                  setEditingThankYouPreSurgeryForm(null);
-                  setIsEditingThankYouPreSurgeryForm(false);
-                  setIsViewingThankYouPreSurgeryForm(false);
-
-                  // Refresh the forms list
-                  await fetchThankYouPreSurgeryForms();
-                } catch (error: any) {
-                  console.error('❌ Error saving thank you pre-surgery form:', error);
-                  toast({
-                    title: 'Save failed',
-                    description: 'Could not save thank you pre-surgery form. See console for details.',
-                    variant: 'destructive'
-                  });
-                }
-              }}
-              onCancel={() => {
-                setShowThankYouPreSurgeryForm(false);
-                setSelectedAdminFormType("");
-                setEditingThankYouPreSurgeryForm(null);
-                setIsEditingThankYouPreSurgeryForm(false);
-                setIsViewingThankYouPreSurgeryForm(false);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+              // Navigate to Forms section
+              setActiveTab("forms");
+            } catch (error) {
+              console.error('Error in onSubmit:', error);
+              toast({
+                title: "Error",
+                description: "Failed to save form. Please try again.",
+                variant: "destructive",
+              });
+            }
+          }}
+        />
+      )}
 
       {/* 3-Year Care Package Enrollment Form Dialog */}
-      <Dialog open={showThreeYearCarePackageForm} onOpenChange={setShowThreeYearCarePackageForm}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          {patient && (
-            <ThreeYearCarePackageForm
-              patientName={patient.full_name}
-              patientDateOfBirth={patient.date_of_birth}
-              initialData={selectedThreeYearCarePackageForm ? formatThreeYearCarePackageFormForDisplay(selectedThreeYearCarePackageForm) : undefined}
-              isEditing={isEditingThreeYearCarePackageForm}
-              isViewing={isViewingThreeYearCarePackageForm}
-              onSubmit={async (formData) => {
-                try {
-                  if (isEditingThreeYearCarePackageForm && selectedThreeYearCarePackageForm) {
-                    // Update existing form
-                    const { data, error } = await updateThreeYearCarePackageForm(
-                      selectedThreeYearCarePackageForm.id!,
-                      formData,
-                      patientId
-                    );
+      <ThreeYearCarePackageDialog
+        isOpen={showThreeYearCarePackageForm}
+        onClose={async () => {
+          setShowThreeYearCarePackageForm(false);
+          setIsViewingThreeYearCarePackageForm(false);
+          setIsEditingThreeYearCarePackageForm(false);
+          setSelectedThreeYearCarePackageForm(null);
+          setSelectedAdminFormType("");
+          // Refresh the forms list to show any auto-saved drafts
+          await fetchThreeYearCarePackageForms();
+        }}
+        onSubmit={async (formData) => {
+          try {
+            // Update local state (the dialog handles the actual saving)
+            if (isEditingThreeYearCarePackageForm && selectedThreeYearCarePackageForm) {
+              setThreeYearCarePackageForms(prev =>
+                prev.map(form => form.id === selectedThreeYearCarePackageForm.id ? formData : form)
+              );
+            } else {
+              setThreeYearCarePackageForms(prev => [formData, ...prev]);
+            }
 
-                    if (error) {
-                      console.error('Error updating 3-Year Care Package form:', error);
-                      toast({
-                        title: "Error",
-                        description: "Failed to update 3-Year Care Package form. Please try again.",
-                        variant: "destructive"
-                      });
-                      return;
-                    }
+            toast({
+              title: "Success",
+              description: "3-Year Care Package form submitted successfully!",
+            });
 
-                    console.log('✅ Updated 3-Year Care Package form:', data?.id);
-                    toast({
-                      title: "Success",
-                      description: "3-Year Care Package form updated successfully!",
-                    });
-                  } else {
-                    // Create new form
-                    const { data, error } = await createThreeYearCarePackageForm(formData, patientId);
+            // Reset states and refresh forms
+            setShowThreeYearCarePackageForm(false);
+            setIsEditingThreeYearCarePackageForm(false);
+            setIsViewingThreeYearCarePackageForm(false);
+            setSelectedThreeYearCarePackageForm(null);
+            setSelectedAdminFormType("");
+            await fetchThreeYearCarePackageForms();
 
-                    if (error) {
-                      console.error('Error creating 3-Year Care Package form:', error);
-                      toast({
-                        title: "Error",
-                        description: "Failed to save 3-Year Care Package form. Please try again.",
-                        variant: "destructive"
-                      });
-                      return;
-                    }
-
-                    console.log('✅ Created 3-Year Care Package form:', data?.id);
-                    toast({
-                      title: "Success",
-                      description: "3-Year Care Package form saved successfully!",
-                    });
-                  }
-
-                  // Reset states and refresh forms
-                  setShowThreeYearCarePackageForm(false);
-                  setSelectedAdminFormType("");
-                  setSelectedThreeYearCarePackageForm(null);
-                  setIsEditingThreeYearCarePackageForm(false);
-                  setIsViewingThreeYearCarePackageForm(false);
-
-                  // Refresh the forms list
-                  fetchThreeYearCarePackageForms();
-                } catch (error) {
-                  console.error('Unexpected error saving 3-Year Care Package form:', error);
-                  toast({
-                    title: "Error",
-                    description: "An unexpected error occurred. Please try again.",
-                    variant: "destructive"
-                  });
-                }
-              }}
-              onCancel={() => {
-                setShowThreeYearCarePackageForm(false);
-                setSelectedAdminFormType("");
-                setSelectedThreeYearCarePackageForm(null);
-                setIsEditingThreeYearCarePackageForm(false);
-                setIsViewingThreeYearCarePackageForm(false);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+            // Navigate to Forms section
+            setActiveTab("forms");
+          } catch (error) {
+            console.error('Error handling 3-Year Care Package form submission:', error);
+            toast({
+              title: "Error",
+              description: "Failed to process form submission. Please try again.",
+              variant: "destructive"
+            });
+          }
+        }}
+        patientName={patient?.full_name}
+        patientDateOfBirth={patient?.date_of_birth}
+        patientId={patient?.id}
+        initialData={selectedThreeYearCarePackageForm ? formatThreeYearCarePackageFormForDisplay(selectedThreeYearCarePackageForm) : undefined}
+        isEditing={isEditingThreeYearCarePackageForm}
+        isViewing={isViewingThreeYearCarePackageForm}
+      />
 
       {/* 5-Year Extended Warranty Form Dialog */}
-      <Dialog open={showFiveYearWarrantyForm} onOpenChange={setShowFiveYearWarrantyForm}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          {patient && (
-            <FiveYearWarrantyForm
-              patientName={patient.full_name}
-              initialData={selectedFiveYearWarrantyForm}
-              isEditing={isEditingFiveYearWarrantyForm}
-              readOnly={isViewingFiveYearWarrantyForm}
-              onSubmit={async (formData) => {
-                try {
-                  if (isEditingFiveYearWarrantyForm && selectedFiveYearWarrantyForm) {
-                    // Update existing form
-                    const updatedForm = await fiveYearWarrantyService.updateForm(
-                      selectedFiveYearWarrantyForm.id!,
-                      { ...formData, patient_id: patientId }
-                    );
+      {patient && (
+        <FiveYearWarrantyDialog
+          isOpen={showFiveYearWarrantyForm}
+          onClose={() => {
+            setShowFiveYearWarrantyForm(false);
+            setSelectedAdminFormType("");
+            setSelectedFiveYearWarrantyForm(null);
+            setIsEditingFiveYearWarrantyForm(false);
+            setIsViewingFiveYearWarrantyForm(false);
+            // Refresh forms to show any auto-saved drafts
+            fetchFiveYearWarrantyForms();
+          }}
+          patientId={patientId}
+          patientName={patient.full_name}
+          patientDateOfBirth={patient.date_of_birth}
+          initialData={(() => {
+            const formattedData = selectedFiveYearWarrantyForm ? formatFiveYearWarrantyFormForDisplay(selectedFiveYearWarrantyForm) : null;
+            console.log('🔍 PatientProfilePage - selectedFiveYearWarrantyForm:', selectedFiveYearWarrantyForm);
+            console.log('🔍 PatientProfilePage - formattedData:', formattedData);
+            return formattedData;
+          })()}
+          isEditing={isEditingFiveYearWarrantyForm}
+          isViewing={isViewingFiveYearWarrantyForm}
+          onSubmit={async (formData) => {
+            try {
+              // Update local state
+              if (isEditingFiveYearWarrantyForm && selectedFiveYearWarrantyForm) {
+                setFiveYearWarrantyForms(prev =>
+                  prev.map(form => form.id === selectedFiveYearWarrantyForm.id ? formData : form)
+                );
+              } else {
+                setFiveYearWarrantyForms(prev => [formData, ...prev]);
+              }
 
-                    // Update local state
-                    setFiveYearWarrantyForms(prev =>
-                      prev.map(form => form.id === selectedFiveYearWarrantyForm.id ? updatedForm : form)
-                    );
+              toast({
+                title: "Success",
+                description: "5-Year Extended Warranty form saved successfully!",
+              });
 
-                    toast({
-                      title: "Success",
-                      description: "5-Year Extended Warranty form updated successfully!",
-                    });
-                  } else {
-                    // Create new form
-                    const newForm = await fiveYearWarrantyService.createForm({
-                      ...formData,
-                      patient_id: patientId
-                    });
+              // Reset states and refresh forms
+              setShowFiveYearWarrantyForm(false);
+              setSelectedAdminFormType("");
+              setSelectedFiveYearWarrantyForm(null);
+              setIsEditingFiveYearWarrantyForm(false);
+              setIsViewingFiveYearWarrantyForm(false);
 
-                    // Add to local state
-                    setFiveYearWarrantyForms(prev => [newForm, ...prev]);
+              // Navigate to forms section
+              handleTabChange('clinical');
 
-                    toast({
-                      title: "Success",
-                      description: "5-Year Extended Warranty form saved successfully!",
-                    });
-                  }
-
-                  // Reset states and refresh forms
-                  setShowFiveYearWarrantyForm(false);
-                  setSelectedAdminFormType("");
-                  setSelectedFiveYearWarrantyForm(null);
-                  setIsEditingFiveYearWarrantyForm(false);
-                  setIsViewingFiveYearWarrantyForm(false);
-
-                  // Refresh the forms list
-                  fetchFiveYearWarrantyForms();
-                } catch (error) {
-                  console.error('Unexpected error saving 5-Year Warranty form:', error);
-                  toast({
-                    title: "Error",
-                    description: "An unexpected error occurred. Please try again.",
-                    variant: "destructive"
-                  });
-                }
-              }}
-              onCancel={() => {
-                setShowFiveYearWarrantyForm(false);
-                setSelectedAdminFormType("");
-                setSelectedFiveYearWarrantyForm(null);
-                setIsEditingFiveYearWarrantyForm(false);
-                setIsViewingFiveYearWarrantyForm(false);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+              // Refresh the forms list
+              fetchFiveYearWarrantyForms();
+            } catch (error) {
+              console.error('Unexpected error saving 5-Year Warranty form:', error);
+              toast({
+                title: "Error",
+                description: "An unexpected error occurred. Please try again.",
+                variant: "destructive"
+              });
+            }
+          }}
+        />
+      )}
 
       {/* Partial Payment Agreement Form Dialog */}
-      <Dialog open={showPartialPaymentAgreementForm} onOpenChange={(open) => {
-        setShowPartialPaymentAgreementForm(open);
-        if (!open) {
-          setIsViewingPartialPaymentAgreementForm(false);
-          setIsEditingPartialPaymentAgreementForm(false);
-          setSelectedPartialPaymentAgreementForm(null);
-        }
-      }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          {patient && (
-            <PartialPaymentAgreementForm
-              patientName={patient.full_name}
-              patientDateOfBirth={patient.date_of_birth}
-              initialData={selectedPartialPaymentAgreementForm}
-              isEditing={isEditingPartialPaymentAgreementForm}
-              readOnly={isViewingPartialPaymentAgreementForm}
-              onSubmit={async (formData) => {
-                try {
-                  if (isEditingPartialPaymentAgreementForm && selectedPartialPaymentAgreementForm) {
-                    // Update existing form
-                    const updatedForm = await partialPaymentAgreementService.updateForm(
-                      selectedPartialPaymentAgreementForm.id,
-                      { ...formData, patient_id: patient.id }
-                    );
+      {patient && (
+        <PartialPaymentAgreementDialog
+          isOpen={showPartialPaymentAgreementForm}
+          onClose={() => {
+            setShowPartialPaymentAgreementForm(false);
+            setIsViewingPartialPaymentAgreementForm(false);
+            setIsEditingPartialPaymentAgreementForm(false);
+            setSelectedPartialPaymentAgreementForm(null);
+            setSelectedAdminFormType("");
+          }}
+          patientId={patient.id}
+          patientName={patient.full_name}
+          patientDateOfBirth={patient.date_of_birth}
+          initialData={selectedPartialPaymentAgreementForm}
+          isEditing={isEditingPartialPaymentAgreementForm}
+          isViewing={isViewingPartialPaymentAgreementForm}
+          onSubmit={async (formData) => {
+            try {
+              // Update local state (the dialog handles the actual saving)
+              if (isEditingPartialPaymentAgreementForm && selectedPartialPaymentAgreementForm) {
+                setPartialPaymentAgreementForms(prev =>
+                  prev.map(form => form.id === selectedPartialPaymentAgreementForm.id ? formData : form)
+                );
+              } else {
+                setPartialPaymentAgreementForms(prev => [formData, ...prev]);
+              }
 
-                    // Update local state
-                    setPartialPaymentAgreementForms(prev =>
-                      prev.map(form => form.id === selectedPartialPaymentAgreementForm.id ? updatedForm : form)
-                    );
+              toast({
+                title: "Success",
+                description: "Partial Payment Agreement form saved successfully!",
+              });
 
-                    toast({
-                      title: "Success",
-                      description: "Partial Payment Agreement form updated successfully!",
-                    });
-                  } else {
-                    // Create new form
-                    const newForm = await partialPaymentAgreementService.createForm({
-                      ...formData,
-                      patient_id: patient.id
-                    });
+              // Reset states and refresh forms
+              setShowPartialPaymentAgreementForm(false);
+              setIsEditingPartialPaymentAgreementForm(false);
+              setIsViewingPartialPaymentAgreementForm(false);
+              setSelectedPartialPaymentAgreementForm(null);
+              setSelectedAdminFormType("");
+              await fetchPartialPaymentAgreementForms();
 
-                    // Add to local state
-                    setPartialPaymentAgreementForms(prev => [newForm, ...prev]);
-
-                    toast({
-                      title: "Success",
-                      description: "Partial Payment Agreement form created successfully!",
-                    });
-                  }
-
-                  // Close dialog and reset states
-                  setShowPartialPaymentAgreementForm(false);
-                  setSelectedPartialPaymentAgreementForm(null);
-                  setIsEditingPartialPaymentAgreementForm(false);
-                  setIsViewingPartialPaymentAgreementForm(false);
-                  setSelectedAdminFormType("");
-                } catch (error) {
-                  console.error('Error saving Partial Payment Agreement form:', error);
-                  toast({
-                    title: "Error",
-                    description: "Failed to save Partial Payment Agreement form. Please try again.",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              onCancel={() => {
-                setShowPartialPaymentAgreementForm(false);
-                setSelectedPartialPaymentAgreementForm(null);
-                setIsEditingPartialPaymentAgreementForm(false);
-                setIsViewingPartialPaymentAgreementForm(false);
-                setSelectedAdminFormType("");
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+              // Navigate to Forms section
+              setActiveTab("forms");
+            } catch (error) {
+              console.error('Error handling Partial Payment Agreement form submission:', error);
+              toast({
+                title: "Error",
+                description: "Failed to process form submission. Please try again.",
+                variant: "destructive"
+              });
+            }
+          }}
+        />
+      )}
 
       {/* Delete Treatment Confirmation Dialog */}
       <Dialog open={showDeleteTreatmentConfirmation} onOpenChange={setShowDeleteTreatmentConfirmation}>

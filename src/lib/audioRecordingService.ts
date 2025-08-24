@@ -1,18 +1,34 @@
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
+// Track ongoing uploads to prevent duplicates
+const ongoingUploads = new Set<string>();
+
 // Upload audio recording to Supabase Storage
 export async function uploadAudioRecording(
-  audioBlob: Blob, 
-  appointmentId: string, 
+  audioBlob: Blob,
+  appointmentId: string,
   patientName?: string
 ): Promise<string | null> {
+  // Create a unique key for this upload to prevent duplicates
+  const uploadKey = `${appointmentId}-${audioBlob.size}-${Date.now()}`;
+
+  // Check if this upload is already in progress
+  if (ongoingUploads.has(uploadKey)) {
+    console.log('Upload already in progress for:', uploadKey);
+    return null;
+  }
+
+  // Mark this upload as in progress
+  ongoingUploads.add(uploadKey);
+
   try {
-    console.log('Starting audio upload:', { 
-      size: audioBlob.size, 
-      type: audioBlob.type, 
+    console.log('Starting audio upload:', {
+      size: audioBlob.size,
+      type: audioBlob.type,
       appointmentId,
-      patientName 
+      patientName,
+      uploadKey
     });
 
     // Determine file extension based on blob type
@@ -25,10 +41,11 @@ export async function uploadAudioRecording(
       fileExt = 'wav';
     }
 
-    // Create a unique filename with timestamp and appointment ID
+    // Create a unique filename with timestamp, appointment ID, and blob size for uniqueness
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const patientPrefix = patientName ? `${patientName.replace(/[^a-zA-Z0-9]/g, '_')}_` : '';
-    const fileName = `${patientPrefix}consultation_${appointmentId}_${timestamp}.${fileExt}`;
+    const uniqueId = `${timestamp}_${audioBlob.size}_${Math.random().toString(36).substr(2, 9)}`;
+    const fileName = `${patientPrefix}consultation_${appointmentId}_${uniqueId}.${fileExt}`;
     const filePath = `consultations/${appointmentId}/${fileName}`;
 
     console.log('Uploading to path:', filePath);
@@ -67,6 +84,9 @@ export async function uploadAudioRecording(
     console.error('Error uploading audio recording:', error);
     toast.error('Failed to save recording');
     return null;
+  } finally {
+    // Remove the upload key from ongoing uploads
+    ongoingUploads.delete(uploadKey);
   }
 }
 
@@ -144,26 +164,51 @@ export async function listRecordingsForAppointment(appointmentId: string): Promi
     }
 
     // Filter for audio files and get public URLs
-    const audioFiles = data?.filter(file => 
-      file.name.endsWith('.webm') || 
-      file.name.endsWith('.mp4') || 
-      file.name.endsWith('.ogg') || 
+    const audioFiles = data?.filter(file =>
+      file.name.endsWith('.webm') ||
+      file.name.endsWith('.mp4') ||
+      file.name.endsWith('.ogg') ||
       file.name.endsWith('.wav')
     ) || [];
 
-    const urls = audioFiles.map(file => {
+    // Remove duplicates based on file size and creation time proximity
+    const uniqueFiles = removeDuplicateFiles(audioFiles);
+
+    const urls = uniqueFiles.map(file => {
       const { data: urlData } = supabase.storage
         .from('consultation-recordings')
         .getPublicUrl(`consultations/${appointmentId}/${file.name}`);
       return urlData.publicUrl;
     });
 
-    console.log('Found recordings:', urls);
+    console.log('Found recordings (after deduplication):', urls);
     return urls;
   } catch (error) {
     console.error('Error listing recordings:', error);
     return [];
   }
+}
+
+// Helper function to remove duplicate files based on size and creation time
+function removeDuplicateFiles(files: any[]): any[] {
+  const seen = new Map<string, any>();
+
+  for (const file of files) {
+    // Create a key based on file size and rounded creation time (within 5 minutes)
+    const createdAt = new Date(file.created_at);
+    const roundedTime = Math.floor(createdAt.getTime() / (5 * 60 * 1000)); // 5-minute intervals
+    const key = `${file.metadata?.size || 0}-${roundedTime}`;
+
+    // Keep the first file for each unique key (most recent due to sorting)
+    if (!seen.has(key)) {
+      seen.set(key, file);
+    } else {
+      // Log potential duplicate
+      console.log('Potential duplicate detected:', file.name, 'vs', seen.get(key)?.name);
+    }
+  }
+
+  return Array.from(seen.values());
 }
 
 // Delete a recording

@@ -96,43 +96,52 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getRecordingName = (url: string) => {
+  const getRecordingDateTime = (url: string) => {
     try {
       const urlObj = new URL(url);
       const pathParts = urlObj.pathname.split('/');
       const fileName = pathParts[pathParts.length - 1];
 
-      // Extract meaningful parts from filename
+      // Extract timestamp from filename
       const parts = fileName.split('_');
       if (parts.length >= 3) {
-        const timestamp = parts[parts.length - 1].replace('.webm', '').replace('.mp4', '').replace('.ogg', '').replace('.wav', '');
-
-        // Convert the timestamp back to ISO format
-        // The timestamp format is: 2024-01-15T10-30-45-123Z (ISO with dashes instead of colons and dots)
-        const isoTimestamp = timestamp.replace(/-/g, (match, offset, string) => {
-          // Only replace dashes that are in time positions (after T)
-          const beforeT = string.substring(0, offset);
-          const tIndex = beforeT.lastIndexOf('T');
-          if (tIndex !== -1) {
-            // This dash is after T, so it should be a colon or dot
-            const afterT = string.substring(tIndex + 1, offset);
-            const dashCount = (afterT.match(/-/g) || []).length;
-            if (dashCount === 0) return ':'; // First dash after T -> colon (hours:minutes)
-            if (dashCount === 1) return ':'; // Second dash after T -> colon (minutes:seconds)
-            if (dashCount === 2) return '.'; // Third dash after T -> dot (seconds.milliseconds)
+        // Find the timestamp part (contains T and Z)
+        let timestampPart = '';
+        for (const part of parts) {
+          if (part.includes('T') && part.includes('Z')) {
+            timestampPart = part.replace(/\.(webm|mp4|ogg|wav)$/, '');
+            break;
           }
-          return match; // Keep original dash (for date part)
-        });
+        }
 
-        const date = new Date(isoTimestamp);
-        if (!isNaN(date.getTime())) {
-          return `Recording ${date.toLocaleString()}`;
+        if (timestampPart) {
+          // Convert the timestamp back to ISO format
+          // The timestamp format is: 2025-08-20T11-06-38-428Z (ISO with dashes instead of colons and dots)
+          const isoTimestamp = timestampPart.replace(/-/g, (match, offset, string) => {
+            // Only replace dashes that are in time positions (after T)
+            const beforeT = string.substring(0, offset);
+            const tIndex = beforeT.lastIndexOf('T');
+            if (tIndex !== -1) {
+              // This dash is after T, so it should be a colon or dot
+              const afterT = string.substring(tIndex + 1, offset);
+              const dashCount = (afterT.match(/-/g) || []).length;
+              if (dashCount === 0) return ':'; // First dash after T -> colon (hours:minutes)
+              if (dashCount === 1) return ':'; // Second dash after T -> colon (minutes:seconds)
+              if (dashCount === 2) return '.'; // Third dash after T -> dot (seconds.milliseconds)
+            }
+            return match; // Keep original dash (for date part)
+          });
+
+          const date = new Date(isoTimestamp);
+          if (!isNaN(date.getTime())) {
+            return date.toLocaleString();
+          }
         }
       }
 
-      return fileName;
+      return new Date().toLocaleString(); // Fallback to current time
     } catch {
-      return 'Recording';
+      return new Date().toLocaleString();
     }
   };
 
@@ -179,7 +188,9 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
     try {
       const link = document.createElement('a');
       link.href = url;
-      link.download = getRecordingName(url);
+      // Create a filename based on the recording date/time
+      const dateTime = getRecordingDateTime(url);
+      link.download = `Recording_${dateTime.replace(/[/:,\s]/g, '_')}.webm`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -296,7 +307,7 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <h4 className="font-semibold text-gray-900 text-sm truncate">
-                    {getRecordingName(url)}
+                    Recording {getRecordingDateTime(url)}
                   </h4>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-500">

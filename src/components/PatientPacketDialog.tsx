@@ -259,12 +259,7 @@ export function PatientPacketDialog({
 
   if (showPacketViewer && selectedPacket) {
     return (
-      <Dialog open={showPacketViewer} onOpenChange={() => {
-        setShowPacketViewer(false);
-        setIsEditMode(false);
-        setEditingPacketId(null);
-        setIsFormReady(false);
-      }}>
+      <Dialog open={showPacketViewer} onOpenChange={() => {}}>
         <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-0">
           <div className="p-6">
             {isEditMode ? (

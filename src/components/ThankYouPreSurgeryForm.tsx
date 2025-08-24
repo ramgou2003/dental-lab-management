@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,13 @@ interface ThankYouPreSurgeryFormProps {
   initialData?: any;
   isEditing?: boolean;
   readOnly?: boolean;
+  // Auto-save props
+  onAutoSave?: (formData: any) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  lastSavedTime?: string;
+  setAutoSaveStatus?: (status: 'idle' | 'saving' | 'saved' | 'error') => void;
+  setAutoSaveMessage?: (message: string) => void;
 }
 
 export function ThankYouPreSurgeryForm({
@@ -40,91 +48,204 @@ export function ThankYouPreSurgeryForm({
   patientDateOfBirth = "",
   initialData = null,
   isEditing = false,
-  readOnly = false
+  readOnly = false,
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  lastSavedTime = '',
+  setAutoSaveStatus,
+  setAutoSaveMessage
 }: ThankYouPreSurgeryFormProps) {
-  const [formData, setFormData] = useState({
-    // Patient Information
-    patientName: initialData?.patient_name || patientName,
-    phone: initialData?.phone || "",
-    dateOfBirth: initialData?.date_of_birth || patientDateOfBirth || "",
-    email: initialData?.email || "",
-    treatmentType: initialData?.treatment_type || "",
-    formDate: initialData?.form_date || new Date().toISOString().split('T')[0],
+  const [formData, setFormData] = useState(() => {
+    // The initialData comes from the service already converted to camelCase
+    const today = new Date().toISOString().split('T')[0];
 
-    // Medical Screening
-    medicalConditions: {
-      heartConditions: initialData?.heart_conditions || false,
-      bloodThinners: initialData?.blood_thinners || false,
-      diabetes: initialData?.diabetes || false,
-      highBloodPressure: initialData?.high_blood_pressure || false,
-      allergies: initialData?.allergies || false,
-      pregnancyNursing: initialData?.pregnancy_nursing || false,
-      recentIllness: initialData?.recent_illness || false,
-      medicationChanges: initialData?.medication_changes || false
-    },
+    const initialFormData = {
+      // Patient Information
+      patientName: initialData?.patientName || patientName || "",
+      phone: initialData?.phone || "",
+      dateOfBirth: initialData?.dateOfBirth || patientDateOfBirth || "",
+      email: initialData?.email || "",
+      treatmentType: initialData?.treatmentType || "",
+      formDate: initialData?.formDate || today,
 
-    // Timeline Acknowledgments
-    threeDaysBefore: {
-      startMedrol: initialData?.start_medrol || false,
-      startAmoxicillin: initialData?.start_amoxicillin || false,
-      noAlcohol: initialData?.no_alcohol_3days || false,
-      arrangeRide: initialData?.arrange_ride || false
-    },
-    nightBefore: {
-      takeDiazepam: initialData?.take_diazepam || false,
-      noFoodAfterMidnight: initialData?.no_food_after_midnight || false,
-      noWaterAfter6AM: initialData?.no_water_after_6am || false,
-      confirmRide: initialData?.confirm_ride || false
-    },
-    morningOf: {
-      noBreakfast: initialData?.no_breakfast || false,
-      noPills: initialData?.no_pills || false,
-      wearComfortable: initialData?.wear_comfortable || false,
-      arriveOnTime: initialData?.arrive_on_time || false
-    },
-    afterSurgery: {
-      noAlcohol24hrs: initialData?.no_alcohol_24hrs || false,
-      noDriving24hrs: initialData?.no_driving_24hrs || false,
-      followInstructions: initialData?.follow_instructions || false,
-      callIfConcerns: initialData?.call_if_concerns || false
-    },
+      // Medical Screening - flattened structure
+      heartConditions: initialData?.heartConditions ?? false,
+      bloodThinners: initialData?.bloodThinners ?? false,
+      diabetes: initialData?.diabetes ?? false,
+      highBloodPressure: initialData?.highBloodPressure ?? false,
+      allergies: initialData?.allergies ?? false,
+      pregnancyNursing: initialData?.pregnancyNursing ?? false,
+      recentIllness: initialData?.recentIllness ?? false,
+      medicationChanges: initialData?.medicationChanges ?? false,
 
-    // Patient Acknowledgments
-    acknowledgments: {
-      readInstructions: initialData?.read_instructions || false,
-      understandMedications: initialData?.understand_medications || false,
-      understandSedation: initialData?.understand_sedation || false,
-      arrangedTransport: initialData?.arranged_transport || false,
-      understandRestrictions: initialData?.understand_restrictions || false,
-      willFollowInstructions: initialData?.will_follow_instructions || false,
-      understandEmergency: initialData?.understand_emergency || false
-    },
+      // Timeline Acknowledgments - 3 Days Before
+      startMedrol: initialData?.startMedrol ?? false,
+      startAmoxicillin: initialData?.startAmoxicillin ?? false,
+      noAlcohol3Days: initialData?.noAlcohol3Days ?? false,
+      arrangeRide: initialData?.arrangeRide ?? false,
 
-    // Signatures
-    patientSignature: initialData?.patient_signature || "",
-    signatureDate: initialData?.signature_date || new Date().toISOString().split('T')[0],
-    patientPrintName: initialData?.patient_print_name || ""
+      // Timeline Acknowledgments - Night Before
+      takeDiazepam: initialData?.takeDiazepam ?? false,
+      noFoodAfterMidnight: initialData?.noFoodAfterMidnight ?? false,
+      noWaterAfter6Am: initialData?.noWaterAfter6Am ?? false,
+      confirmRide: initialData?.confirmRide ?? false,
+
+      // Timeline Acknowledgments - Morning Of
+      noBreakfast: initialData?.noBreakfast ?? false,
+      noPills: initialData?.noPills ?? false,
+      wearComfortable: initialData?.wearComfortable ?? false,
+      arriveOnTime: initialData?.arriveOnTime ?? false,
+
+      // Timeline Acknowledgments - After Surgery
+      noAlcohol24Hrs: initialData?.noAlcohol24Hrs ?? false,
+      noDriving24Hrs: initialData?.noDriving24Hrs ?? false,
+      followInstructions: initialData?.followInstructions ?? false,
+      callIfConcerns: initialData?.callIfConcerns ?? false,
+
+      // Patient Acknowledgments
+      readInstructions: initialData?.readInstructions ?? false,
+      understandMedications: initialData?.understandMedications ?? false,
+      understandSedation: initialData?.understandSedation ?? false,
+      arrangedTransport: initialData?.arrangedTransport ?? false,
+      understandRestrictions: initialData?.understandRestrictions ?? false,
+      willFollowInstructions: initialData?.willFollowInstructions ?? false,
+      understandEmergency: initialData?.understandEmergency ?? false,
+
+      // Signatures
+      patientSignature: initialData?.patientSignature || "",
+      signatureDate: initialData?.signatureDate || today,
+      patientPrintName: initialData?.patientPrintName || ""
+    };
+
+    console.log('🏁 Initial Thank You Pre-Surgery form data setup:', {
+      patientName: initialFormData.patientName,
+      treatmentType: initialFormData.treatmentType,
+      patientSignature: initialFormData.patientSignature,
+      fromInitialData: !!initialData,
+      initialDataId: initialData?.id,
+      hasInitialData: !!initialData
+    });
+
+    return initialFormData;
   });
+
+  const [hasFormData, setHasFormData] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
 
   // Signature dialog states
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
 
+  // Update form data when initialData changes
+  useEffect(() => {
+    if (initialData && initialData.id) {
+      console.log('🔄 Updating Thank You Pre-Surgery form data from initialData:', initialData);
+      console.log('🔍 isEditing:', isEditing, 'readOnly:', readOnly);
+
+      const today = new Date().toISOString().split('T')[0];
+
+      setFormData(prev => ({
+        ...prev,
+        // Patient Information
+        patientName: initialData.patientName || prev.patientName || "",
+        phone: initialData.phone || prev.phone || "",
+        dateOfBirth: initialData.dateOfBirth || prev.dateOfBirth || "",
+        email: initialData.email || prev.email || "",
+        treatmentType: initialData.treatmentType || prev.treatmentType || "",
+        formDate: initialData.formDate || prev.formDate || today,
+
+        // Medical Screening
+        heartConditions: initialData.heartConditions ?? prev.heartConditions ?? false,
+        bloodThinners: initialData.bloodThinners ?? prev.bloodThinners ?? false,
+        diabetes: initialData.diabetes ?? prev.diabetes ?? false,
+        highBloodPressure: initialData.highBloodPressure ?? prev.highBloodPressure ?? false,
+        allergies: initialData.allergies ?? prev.allergies ?? false,
+        pregnancyNursing: initialData.pregnancyNursing ?? prev.pregnancyNursing ?? false,
+        recentIllness: initialData.recentIllness ?? prev.recentIllness ?? false,
+        medicationChanges: initialData.medicationChanges ?? prev.medicationChanges ?? false,
+
+        // Timeline Acknowledgments - 3 Days Before
+        startMedrol: initialData.startMedrol ?? prev.startMedrol ?? false,
+        startAmoxicillin: initialData.startAmoxicillin ?? prev.startAmoxicillin ?? false,
+        noAlcohol3Days: initialData.noAlcohol3Days ?? prev.noAlcohol3Days ?? false,
+        arrangeRide: initialData.arrangeRide ?? prev.arrangeRide ?? false,
+
+        // Timeline Acknowledgments - Night Before
+        takeDiazepam: initialData.takeDiazepam ?? prev.takeDiazepam ?? false,
+        noFoodAfterMidnight: initialData.noFoodAfterMidnight ?? prev.noFoodAfterMidnight ?? false,
+        noWaterAfter6Am: initialData.noWaterAfter6Am ?? prev.noWaterAfter6Am ?? false,
+        confirmRide: initialData.confirmRide ?? prev.confirmRide ?? false,
+
+        // Timeline Acknowledgments - Morning Of
+        noBreakfast: initialData.noBreakfast ?? prev.noBreakfast ?? false,
+        noPills: initialData.noPills ?? prev.noPills ?? false,
+        wearComfortable: initialData.wearComfortable ?? prev.wearComfortable ?? false,
+        arriveOnTime: initialData.arriveOnTime ?? prev.arriveOnTime ?? false,
+
+        // Timeline Acknowledgments - After Surgery
+        noAlcohol24Hrs: initialData.noAlcohol24Hrs ?? prev.noAlcohol24Hrs ?? false,
+        noDriving24Hrs: initialData.noDriving24Hrs ?? prev.noDriving24Hrs ?? false,
+        followInstructions: initialData.followInstructions ?? prev.followInstructions ?? false,
+        callIfConcerns: initialData.callIfConcerns ?? prev.callIfConcerns ?? false,
+
+        // Patient Acknowledgments
+        readInstructions: initialData.readInstructions ?? prev.readInstructions ?? false,
+        understandMedications: initialData.understandMedications ?? prev.understandMedications ?? false,
+        understandSedation: initialData.understandSedation ?? prev.understandSedation ?? false,
+        arrangedTransport: initialData.arrangedTransport ?? prev.arrangedTransport ?? false,
+        understandRestrictions: initialData.understandRestrictions ?? prev.understandRestrictions ?? false,
+        willFollowInstructions: initialData.willFollowInstructions ?? prev.willFollowInstructions ?? false,
+        understandEmergency: initialData.understandEmergency ?? prev.understandEmergency ?? false,
+
+        // Signatures
+        patientSignature: initialData.patientSignature || prev.patientSignature || "",
+        signatureDate: initialData.signatureDate || prev.signatureDate || today,
+        patientPrintName: initialData.patientPrintName || prev.patientPrintName || ""
+      }));
+
+      // Mark form as initialized after loading initial data
+      setIsFormInitialized(true);
+    } else if (!initialData?.id) {
+      // Mark form as initialized for new forms (no initial data)
+      setIsFormInitialized(true);
+    }
+  }, [initialData?.id, patientName]);
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    if (!onAutoSave || !isFormInitialized) return;
+
+    // Check if form has meaningful data
+    const hasData = formData.patientName || formData.treatmentType || formData.patientSignature ||
+                   formData.readInstructions || formData.understandMedications ||
+                   formData.heartConditions || formData.startMedrol;
+
+    setHasFormData(hasData);
+
+    if (!hasData) return;
+
+    const timeoutId = setTimeout(() => {
+      console.log('🔄 Auto-saving Thank You Pre-Surgery form with data:', {
+        patientName: formData.patientName,
+        treatmentType: formData.treatmentType,
+        patientSignature: formData.patientSignature,
+        isFormInitialized: isFormInitialized
+      });
+      onAutoSave(formData);
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, onAutoSave, isFormInitialized]);
+
   const handleInputChange = (field: string, value: any) => {
+    console.log('📝 Input changed:', field, '=', value);
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleNestedChange = (section: string, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section as keyof typeof prev],
-        [field]: value
-      }
-    }));
-  };
+
 
   const handlePatientSignatureSave = (signature: string) => {
     handleInputChange('patientSignature', signature);
@@ -137,15 +258,129 @@ export function ThankYouPreSurgeryForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    // Validation
+    if (!formData.patientName) {
+      toast.error('Please enter patient name');
+      return;
+    }
+
+    if (!formData.treatmentType) {
+      toast.error('Please enter treatment type');
+      return;
+    }
+
+    if (!formData.readInstructions || !formData.understandMedications ||
+        !formData.understandSedation || !formData.arrangedTransport ||
+        !formData.understandRestrictions || !formData.willFollowInstructions ||
+        !formData.understandEmergency) {
+      toast.error('Please acknowledge all patient acknowledgment items');
+      return;
+    }
+
+    if (!formData.patientSignature) {
+      toast.error('Patient signature is required');
+      return;
+    }
+
+    // Ensure dates are properly formatted or use current date as fallback
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Validate date format function
+    const isValidDate = (dateString: string) => {
+      if (!dateString) return false;
+      const date = new Date(dateString);
+      return date instanceof Date && !isNaN(date.getTime()) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+    };
+
+    // Convert form data to match service interface
+    const submissionData = {
+      patient_name: formData.patientName,
+      phone: formData.phone,
+      date_of_birth: isValidDate(formData.dateOfBirth) ? formData.dateOfBirth : null,
+      email: formData.email,
+      treatment_type: formData.treatmentType,
+      form_date: isValidDate(formData.formDate) ? formData.formDate : currentDate,
+
+      // Medical Screening
+      heart_conditions: formData.heartConditions,
+      blood_thinners: formData.bloodThinners,
+      diabetes: formData.diabetes,
+      high_blood_pressure: formData.highBloodPressure,
+      allergies: formData.allergies,
+      pregnancy_nursing: formData.pregnancyNursing,
+      recent_illness: formData.recentIllness,
+      medication_changes: formData.medicationChanges,
+
+      // Timeline Acknowledgments - 3 Days Before
+      start_medrol: formData.startMedrol,
+      start_amoxicillin: formData.startAmoxicillin,
+      no_alcohol_3days: formData.noAlcohol3Days,
+      arrange_ride: formData.arrangeRide,
+
+      // Timeline Acknowledgments - Night Before
+      take_diazepam: formData.takeDiazepam,
+      no_food_after_midnight: formData.noFoodAfterMidnight,
+      no_water_after_6am: formData.noWaterAfter6Am,
+      confirm_ride: formData.confirmRide,
+
+      // Timeline Acknowledgments - Morning Of
+      no_breakfast: formData.noBreakfast,
+      no_pills: formData.noPills,
+      wear_comfortable: formData.wearComfortable,
+      arrive_on_time: formData.arriveOnTime,
+
+      // Timeline Acknowledgments - After Surgery
+      no_alcohol_24hrs: formData.noAlcohol24Hrs,
+      no_driving_24hrs: formData.noDriving24Hrs,
+      follow_instructions: formData.followInstructions,
+      call_if_concerns: formData.callIfConcerns,
+
+      // Patient Acknowledgments
+      read_instructions: formData.readInstructions,
+      understand_medications: formData.understandMedications,
+      understand_sedation: formData.understandSedation,
+      arranged_transport: formData.arrangedTransport,
+      understand_restrictions: formData.understandRestrictions,
+      will_follow_instructions: formData.willFollowInstructions,
+      understand_emergency: formData.understandEmergency,
+
+      // Signatures
+      patient_signature: formData.patientSignature,
+      signature_date: isValidDate(formData.signatureDate) ? formData.signatureDate : currentDate,
+      patient_print_name: formData.patientPrintName
+    };
+
+    onSubmit(submissionData);
+    toast.success('Thank You and Pre-Surgery Instructions form submitted successfully');
   };
 
   return (
     <div className="max-w-4xl mx-auto">
       <DialogHeader className="mb-6">
-        <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-          <Heart className="h-6 w-6" />
-          Thank You and Pre-Surgery Instructions
+        <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Heart className="h-6 w-6" />
+            Thank You and Pre-Surgery Instructions
+          </div>
+
+          {/* Auto-save Status Indicator */}
+          {onAutoSave && !readOnly && (hasFormData || autoSaveStatus === 'error') && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
+              autoSaveStatus === 'error'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200'
+            }`}>
+              {autoSaveStatus === 'error' ? (
+                <AlertTriangle className="h-3 w-3 text-red-600" />
+              ) : (
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-green-200 border-t-green-600"></div>
+              )}
+              <span className="font-medium">
+                {autoSaveStatus === 'error' ? autoSaveMessage : 'Auto-saving changes...'}
+              </span>
+            </div>
+          )}
         </DialogTitle>
         <div className="w-full h-1 bg-blue-200 rounded-full mt-2"></div>
         <p className="text-sm text-gray-600 mt-2">New York Dental Implants | 344 North Main Street, Canandaigua, NY 14424</p>
@@ -329,19 +564,19 @@ export function ThankYouPreSurgeryForm({
                 <div key={item.key} className="flex items-start space-x-3">
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
-                      formData.medicalConditions[item.key as keyof typeof formData.medicalConditions]
+                      formData[item.key as keyof typeof formData]
                         ? 'bg-red-100'
                         : 'border-2 border-gray-300 bg-white hover:border-red-300'
                     }`}
-                    onClick={() => handleNestedChange('medicalConditions', item.key, !formData.medicalConditions[item.key as keyof typeof formData.medicalConditions])}
+                    onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                   >
-                    {formData.medicalConditions[item.key as keyof typeof formData.medicalConditions] && (
+                    {formData[item.key as keyof typeof formData] && (
                       <Check className="h-3 w-3 text-red-600" />
                     )}
                   </div>
                   <Label
                     className="text-sm font-medium cursor-pointer text-red-800"
-                    onClick={() => handleNestedChange('medicalConditions', item.key, !formData.medicalConditions[item.key as keyof typeof formData.medicalConditions])}
+                    onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                   >
                     {item.text}
                   </Label>
@@ -379,25 +614,25 @@ export function ThankYouPreSurgeryForm({
                 {[
                   { key: 'startMedrol', text: 'Start taking Medrol Dose Pack as directed' },
                   { key: 'startAmoxicillin', text: 'Start taking Amoxicillin 500mg (3 times daily)' },
-                  { key: 'noAlcohol', text: 'No alcohol consumption' },
+                  { key: 'noAlcohol3Days', text: 'No alcohol consumption' },
                   { key: 'arrangeRide', text: 'Confirm transportation arrangements' }
                 ].map((item) => (
                   <div key={item.key} className="flex items-start space-x-3">
                     <div
                       className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
-                        formData.threeDaysBefore[item.key as keyof typeof formData.threeDaysBefore]
+                        formData[item.key as keyof typeof formData]
                           ? 'bg-green-100'
                           : 'border-2 border-gray-300 bg-white hover:border-green-300'
                       }`}
-                      onClick={() => handleNestedChange('threeDaysBefore', item.key, !formData.threeDaysBefore[item.key as keyof typeof formData.threeDaysBefore])}
+                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
-                      {formData.threeDaysBefore[item.key as keyof typeof formData.threeDaysBefore] && (
+                      {formData[item.key as keyof typeof formData] && (
                         <Check className="h-3 w-3 text-green-600" />
                       )}
                     </div>
                     <Label
                       className="text-sm cursor-pointer text-gray-700"
-                      onClick={() => handleNestedChange('threeDaysBefore', item.key, !formData.threeDaysBefore[item.key as keyof typeof formData.threeDaysBefore])}
+                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {item.text}
                     </Label>
@@ -413,25 +648,25 @@ export function ThankYouPreSurgeryForm({
                 {[
                   { key: 'takeDiazepam', text: 'Take Diazepam 10mg at bedtime (if prescribed)' },
                   { key: 'noFoodAfterMidnight', text: 'No food or drink after midnight' },
-                  { key: 'noWaterAfter6AM', text: 'No water after 6:00 AM on surgery day' },
+                  { key: 'noWaterAfter6Am', text: 'No water after 6:00 AM on surgery day' },
                   { key: 'confirmRide', text: 'Confirm your ride for surgery day' }
                 ].map((item) => (
                   <div key={item.key} className="flex items-start space-x-3">
                     <div
                       className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
-                        formData.nightBefore[item.key as keyof typeof formData.nightBefore]
+                        formData[item.key as keyof typeof formData]
                           ? 'bg-green-100'
                           : 'border-2 border-gray-300 bg-white hover:border-green-300'
                       }`}
-                      onClick={() => handleNestedChange('nightBefore', item.key, !formData.nightBefore[item.key as keyof typeof formData.nightBefore])}
+                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
-                      {formData.nightBefore[item.key as keyof typeof formData.nightBefore] && (
+                      {formData[item.key as keyof typeof formData] && (
                         <Check className="h-3 w-3 text-green-600" />
                       )}
                     </div>
                     <Label
                       className="text-sm cursor-pointer text-gray-700"
-                      onClick={() => handleNestedChange('nightBefore', item.key, !formData.nightBefore[item.key as keyof typeof formData.nightBefore])}
+                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {item.text}
                     </Label>
@@ -453,19 +688,19 @@ export function ThankYouPreSurgeryForm({
                   <div key={item.key} className="flex items-start space-x-3">
                     <div
                       className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
-                        formData.morningOf[item.key as keyof typeof formData.morningOf]
+                        formData[item.key as keyof typeof formData]
                           ? 'bg-green-100'
                           : 'border-2 border-gray-300 bg-white hover:border-green-300'
                       }`}
-                      onClick={() => handleNestedChange('morningOf', item.key, !formData.morningOf[item.key as keyof typeof formData.morningOf])}
+                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
-                      {formData.morningOf[item.key as keyof typeof formData.morningOf] && (
+                      {formData[item.key as keyof typeof formData] && (
                         <Check className="h-3 w-3 text-green-600" />
                       )}
                     </div>
                     <Label
                       className="text-sm cursor-pointer text-gray-700"
-                      onClick={() => handleNestedChange('morningOf', item.key, !formData.morningOf[item.key as keyof typeof formData.morningOf])}
+                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {item.text}
                     </Label>
@@ -487,19 +722,19 @@ export function ThankYouPreSurgeryForm({
                   <div key={item.key} className="flex items-start space-x-3">
                     <div
                       className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
-                        formData.afterSurgery[item.key as keyof typeof formData.afterSurgery]
+                        formData[item.key as keyof typeof formData]
                           ? 'bg-green-100'
                           : 'border-2 border-gray-300 bg-white hover:border-green-300'
                       }`}
-                      onClick={() => handleNestedChange('afterSurgery', item.key, !formData.afterSurgery[item.key as keyof typeof formData.afterSurgery])}
+                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
-                      {formData.afterSurgery[item.key as keyof typeof formData.afterSurgery] && (
+                      {formData[item.key as keyof typeof formData] && (
                         <Check className="h-3 w-3 text-green-600" />
                       )}
                     </div>
                     <Label
                       className="text-sm cursor-pointer text-gray-700"
-                      onClick={() => handleNestedChange('afterSurgery', item.key, !formData.afterSurgery[item.key as keyof typeof formData.afterSurgery])}
+                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {item.text}
                     </Label>
@@ -665,19 +900,19 @@ export function ThankYouPreSurgeryForm({
               <div key={item.key} className="flex items-start space-x-3">
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
-                    formData.acknowledgments[item.key as keyof typeof formData.acknowledgments]
+                    formData[item.key as keyof typeof formData]
                       ? 'bg-blue-100'
                       : 'border-2 border-gray-300 bg-white hover:border-blue-300'
                   }`}
-                  onClick={() => handleNestedChange('acknowledgments', item.key, !formData.acknowledgments[item.key as keyof typeof formData.acknowledgments])}
+                  onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                 >
-                  {formData.acknowledgments[item.key as keyof typeof formData.acknowledgments] && (
+                  {formData[item.key as keyof typeof formData] && (
                     <Check className="h-3 w-3 text-blue-600" />
                   )}
                 </div>
                 <Label
                   className="text-sm font-medium cursor-pointer text-gray-700"
-                  onClick={() => handleNestedChange('acknowledgments', item.key, !formData.acknowledgments[item.key as keyof typeof formData.acknowledgments])}
+                  onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                 >
                   {item.text}
                 </Label>
@@ -750,7 +985,7 @@ export function ThankYouPreSurgeryForm({
           </Button>
           {!readOnly ? (
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-              {isEditing ? 'Update Pre-Surgery Form' : 'Save Pre-Surgery Form'}
+              Submit
             </Button>
           ) : (
             <Button type="button" disabled className="bg-gray-400 text-white">

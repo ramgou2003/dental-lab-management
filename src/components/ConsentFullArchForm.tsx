@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { toast } from "sonner";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,18 +18,33 @@ interface ConsentFullArchFormProps {
   onSubmit: (formData: any) => void;
   onCancel: () => void;
   patientName?: string;
+  patientDateOfBirth?: string;
   initialData?: any;
   isEditing?: boolean;
   readOnly?: boolean;
+  // Auto-save props
+  onAutoSave?: (formData: any) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  lastSavedTime?: string;
+  setAutoSaveStatus?: (status: 'idle' | 'saving' | 'saved' | 'error') => void;
+  setAutoSaveMessage?: (message: string) => void;
 }
 
 export function ConsentFullArchForm({
   onSubmit,
   onCancel,
   patientName = "",
+  patientDateOfBirth = "",
   initialData = null,
   isEditing = false,
-  readOnly = false
+  readOnly = false,
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  lastSavedTime = '',
+  setAutoSaveStatus,
+  setAutoSaveMessage
 }: ConsentFullArchFormProps) {
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -76,22 +92,234 @@ export function ConsentFullArchForm({
 
   const isFirstStep = getCurrentArrayIndex() === 0;
   const isLastStep = getCurrentArrayIndex() === steps.length - 1;
-  const [formData, setFormData] = useState({
-    // Patient & Interpreter Information
-    patientName: initialData?.patient_name || patientName,
-    chartNumber: initialData?.chart_number || "",
-    date: initialData?.consent_date || new Date().toISOString().split('T')[0],
-    time: initialData?.consent_time || "",
-    primaryLanguage: initialData?.primary_language || "english",
-    otherLanguageText: initialData?.other_language_text || "",
-    interpreterRequired: initialData?.interpreter_required || "no",
-    interpreterName: initialData?.interpreter_name || "",
-    interpreterCredential: initialData?.interpreter_credential || "",
-    patientInfoInitials: initialData?.patient_info_initials || "",
+  const [formData, setFormData] = useState(() => {
+    // The initialData comes from the service already converted to camelCase
+    const today = new Date().toISOString().split('T')[0];
 
-    // Treatment Description & Alternatives
-    archType: initialData?.arch_type || "", // "upper", "lower", "dual"
-    upperJaw: initialData?.upper_jaw || "",
+    const initialFormData = {
+      // Patient & Interpreter Information
+      patientName: initialData?.patientName || patientName || "",
+      chartNumber: initialData?.chartNumber || "",
+      consentDate: initialData?.consentDate || today,
+      consentTime: initialData?.consentTime || "",
+      primaryLanguage: initialData?.primaryLanguage || "english",
+      otherLanguageText: initialData?.otherLanguageText || "",
+      interpreterRequired: initialData?.interpreterRequired || "no",
+      interpreterName: initialData?.interpreterName || "",
+      interpreterCredential: initialData?.interpreterCredential || "",
+      patientInfoInitials: initialData?.patientInfoInitials || "",
+
+      // Treatment Description
+      archType: initialData?.archType || "", // "upper", "lower", "dual"
+      upperJaw: initialData?.upperJaw || "",
+      lowerJaw: initialData?.lowerJaw || "",
+
+      // Upper Arch Treatment Details
+      upperTeethRegions: initialData?.upperTeethRegions || "",
+      upperImplants: initialData?.upperImplants || "",
+      upperSameDayLoad: initialData?.upperSameDayLoad || "",
+
+      // Lower Arch Treatment Details
+      lowerTeethRegions: initialData?.lowerTeethRegions || "",
+      lowerImplants: initialData?.lowerImplants || "",
+      lowerSameDayLoad: initialData?.lowerSameDayLoad || "",
+
+      // ASA Physical Status
+      asaPhysicalStatus: initialData?.asaPhysicalStatus || "",
+
+      // Treatment Description Initials
+      treatmentDescriptionInitials: initialData?.treatmentDescriptionInitials || "",
+
+      // Planned Drugs
+      midazolam: initialData?.midazolam ?? false,
+      fentanyl: initialData?.fentanyl ?? false,
+      ketamine: initialData?.ketamine ?? false,
+      dexamethasone: initialData?.dexamethasone ?? false,
+
+      // Signatures
+      patientSignature: initialData?.patientSignature || "",
+      patientSignatureDate: initialData?.patientSignatureDate || today,
+      surgeonSignature: initialData?.surgeonSignature || "",
+      surgeonDate: initialData?.surgeonDate || today,
+      witnessSignature: initialData?.witnessSignature || "",
+      witnessSignatureDate: initialData?.witnessSignatureDate || today,
+
+      // Legacy nested objects for form compatibility (to prevent undefined errors)
+      sedationPlan: {
+        localOnly: initialData?.sedationLocalOnly ?? false,
+        nitrous: initialData?.sedationNitrous ?? false,
+        ivConscious: initialData?.sedationIvConscious ?? false,
+        generalHospital: initialData?.sedationGeneralHospital ?? false
+      },
+      plannedDrugs: {
+        midazolam: initialData?.midazolam ?? false,
+        fentanyl: initialData?.fentanyl ?? false,
+        ketamine: initialData?.ketamine ?? false,
+        dexamethasone: initialData?.dexamethasone ?? false
+      },
+      upperGraftMaterial: {
+        allograft: initialData?.upperGraftAllograft ?? false,
+        xenograft: initialData?.upperGraftXenograft ?? false,
+        autograft: initialData?.upperGraftAutograft ?? false
+      },
+      upperProsthesis: {
+        zirconia: initialData?.upperProsthesisZirconia ?? false,
+        overdenture: initialData?.upperProsthesisOverdenture ?? false
+      },
+      lowerGraftMaterial: {
+        allograft: initialData?.lowerGraftAllograft ?? false,
+        xenograft: initialData?.lowerGraftXenograft ?? false,
+        autograft: initialData?.lowerGraftAutograft ?? false
+      },
+      lowerProsthesis: {
+        zirconia: initialData?.lowerProsthesisZirconia ?? false,
+        overdenture: initialData?.lowerProsthesisOverdenture ?? false
+      },
+      alternativesInitials: {
+        noTreatment: initialData?.alternativesNoTreatmentInitials || "",
+        conventionalDentures: initialData?.alternativesConventionalDenturesInitials || "",
+        segmentedExtraction: initialData?.alternativesSegmentedExtractionInitials || "",
+        removableOverdentures: initialData?.alternativesRemovableOverdenturesInitials || "",
+        zygomaticImplants: initialData?.alternativesZygomaticImplantsInitials || ""
+      },
+      surgicalExtractions: {
+        count: "",
+        fee: "",
+        covered: ""
+      },
+      implantFixtures: {
+        count: "",
+        fee: "",
+        covered: ""
+      },
+      zirconiabridge: {
+        fee: "",
+        covered: ""
+      },
+      ivSedation: {
+        fee: "",
+        covered: ""
+      }
+    };
+
+    console.log('🏁 Initial Consent Full Arch form data setup:', {
+      patientName: initialFormData.patientName,
+      archType: initialFormData.archType,
+      patientSignature: initialFormData.patientSignature,
+      fromInitialData: !!initialData,
+      initialDataId: initialData?.id,
+      hasInitialData: !!initialData
+    });
+
+    return initialFormData;
+  });
+
+  const [hasFormData, setHasFormData] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
+
+  // Update form data when initialData changes
+  useEffect(() => {
+    if (initialData && initialData.id) {
+      console.log('🔄 Updating Consent Full Arch form data from initialData:', initialData);
+      console.log('🔍 isEditing:', isEditing, 'readOnly:', readOnly);
+
+      const today = new Date().toISOString().split('T')[0];
+
+      setFormData(prev => ({
+        ...prev,
+        // Patient & Interpreter Information
+        patientName: initialData.patientName || prev.patientName || "",
+        chartNumber: initialData.chartNumber || prev.chartNumber || "",
+        consentDate: initialData.consentDate || prev.consentDate || today,
+        consentTime: initialData.consentTime || prev.consentTime || "",
+        primaryLanguage: initialData.primaryLanguage || prev.primaryLanguage || "english",
+        otherLanguageText: initialData.otherLanguageText || prev.otherLanguageText || "",
+        interpreterRequired: initialData.interpreterRequired || prev.interpreterRequired || "no",
+        interpreterName: initialData.interpreterName || prev.interpreterName || "",
+        interpreterCredential: initialData.interpreterCredential || prev.interpreterCredential || "",
+        patientInfoInitials: initialData.patientInfoInitials || prev.patientInfoInitials || "",
+
+        // Treatment Description
+        archType: initialData.archType || prev.archType || "",
+        upperJaw: initialData.upperJaw || prev.upperJaw || "",
+        lowerJaw: initialData.lowerJaw || prev.lowerJaw || "",
+
+        // Upper Arch Treatment Details
+        upperTeethRegions: initialData.upperTeethRegions || prev.upperTeethRegions || "",
+        upperImplants: initialData.upperImplants || prev.upperImplants || "",
+        upperSameDayLoad: initialData.upperSameDayLoad || prev.upperSameDayLoad || "",
+
+        // Lower Arch Treatment Details
+        lowerTeethRegions: initialData.lowerTeethRegions || prev.lowerTeethRegions || "",
+        lowerImplants: initialData.lowerImplants || prev.lowerImplants || "",
+        lowerSameDayLoad: initialData.lowerSameDayLoad || prev.lowerSameDayLoad || "",
+
+        // ASA Physical Status
+        asaPhysicalStatus: initialData.asaPhysicalStatus || prev.asaPhysicalStatus || "",
+
+        // Treatment Description Initials
+        treatmentDescriptionInitials: initialData.treatmentDescriptionInitials || prev.treatmentDescriptionInitials || "",
+
+        // Planned Drugs
+        midazolam: initialData.midazolam ?? prev.midazolam ?? false,
+        fentanyl: initialData.fentanyl ?? prev.fentanyl ?? false,
+        ketamine: initialData.ketamine ?? prev.ketamine ?? false,
+        dexamethasone: initialData.dexamethasone ?? prev.dexamethasone ?? false,
+
+        // Signatures
+        patientSignature: initialData.patientSignature || prev.patientSignature || "",
+        patientSignatureDate: initialData.patientSignatureDate || prev.patientSignatureDate || today,
+        surgeonSignature: initialData.surgeonSignature || prev.surgeonSignature || "",
+        surgeonDate: initialData.surgeonDate || prev.surgeonDate || today,
+        witnessSignature: initialData.witnessSignature || prev.witnessSignature || "",
+        witnessSignatureDate: initialData.witnessSignatureDate || prev.witnessSignatureDate || today
+      }));
+
+      // Mark form as initialized after loading initial data
+      setIsFormInitialized(true);
+    } else if (!initialData?.id) {
+      // Mark form as initialized for new forms (no initial data)
+      setIsFormInitialized(true);
+    }
+  }, [initialData?.id, patientName]);
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    if (!onAutoSave || !isFormInitialized) return;
+
+    // Check if form has meaningful data
+    const hasData = formData.patientName || formData.archType || formData.patientSignature ||
+                   formData.plannedDrugs.midazolam || formData.plannedDrugs.fentanyl || formData.plannedDrugs.ketamine || formData.plannedDrugs.dexamethasone ||
+                   formData.upperTeethRegions || formData.upperImplants || formData.upperSameDayLoad ||
+                   formData.lowerTeethRegions || formData.lowerImplants || formData.lowerSameDayLoad ||
+                   formData.asaPhysicalStatus || formData.treatmentDescriptionInitials ||
+                   formData.upperGraftMaterial.allograft || formData.upperGraftMaterial.xenograft || formData.upperGraftMaterial.autograft ||
+                   formData.lowerGraftMaterial.allograft || formData.lowerGraftMaterial.xenograft || formData.lowerGraftMaterial.autograft ||
+                   formData.upperProsthesis.zirconia || formData.upperProsthesis.overdenture ||
+                   formData.lowerProsthesis.zirconia || formData.lowerProsthesis.overdenture ||
+                   formData.sedationPlan.localOnly || formData.sedationPlan.nitrous || formData.sedationPlan.ivConscious || formData.sedationPlan.generalHospital ||
+                   formData.alternativesInitials.noTreatment || formData.alternativesInitials.conventionalDentures ||
+                   formData.alternativesInitials.segmentedExtraction || formData.alternativesInitials.removableOverdentures || formData.alternativesInitials.zygomaticImplants;
+
+    setHasFormData(hasData);
+
+    if (!hasData) return;
+
+    const timeoutId = setTimeout(() => {
+      console.log('🔄 Auto-saving Consent Full Arch form with data:', {
+        patientName: formData.patientName,
+        archType: formData.archType,
+        patientSignature: formData.patientSignature,
+        isFormInitialized: isFormInitialized
+      });
+      onAutoSave(formData);
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, onAutoSave, isFormInitialized]);
+
+  // Legacy form state (keeping for compatibility with existing form UI)
+  const [legacyFormData, setLegacyFormData] = useState({
     upperTeethRegions: initialData?.upper_teeth_regions || "",
     upperImplants: initialData?.upper_implants || "",
     upperGraftMaterial: {
@@ -125,22 +353,10 @@ export function ConsentFullArchForm({
     },
     asaPhysicalStatus: initialData?.asa_physical_status || "",
     plannedDrugs: {
-      midazolam: {
-        dose: initialData?.midazolam_dose || "",
-        unit: initialData?.midazolam_unit || "mg"
-      },
-      fentanyl: {
-        dose: initialData?.fentanyl_dose || "",
-        unit: initialData?.fentanyl_unit || "µg"
-      },
-      ketamine: {
-        dose: initialData?.ketamine_dose || "",
-        unit: initialData?.ketamine_unit || "mg"
-      },
-      dexamethasone: {
-        dose: initialData?.dexamethasone_dose || "",
-        unit: initialData?.dexamethasone_unit || "mg"
-      }
+      midazolam: initialData?.midazolam || false,
+      fentanyl: initialData?.fentanyl || false,
+      ketamine: initialData?.ketamine || false,
+      dexamethasone: initialData?.dexamethasone || false
     },
     alternativesInitials: {
       noTreatment: initialData?.alternatives_no_treatment_initials || "",
@@ -243,19 +459,6 @@ export function ConsentFullArchForm({
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const preserveScroll = () => {
-    const el = scrollRef.current;
-    return el ? el.scrollTop : 0;
-  };
-  const restoreScroll = (top: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // Use layout effect timing to avoid visual jump
-    requestAnimationFrame(() => {
-      el.scrollTop = top;
-    });
-  };
-
   // Keep footer pinned by ensuring the scroll container consumes leftover height
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -266,16 +469,13 @@ export function ConsentFullArchForm({
   }, [activeTab]);
 
   const handleInputChange = (field: string, value: any) => {
-    const top = preserveScroll();
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
-    restoreScroll(top);
   };
 
   const handleNestedInputChange = (parentField: string, childField: string, value: any) => {
-    const top = preserveScroll();
     setFormData(prev => ({
       ...prev,
       [parentField]: {
@@ -283,30 +483,16 @@ export function ConsentFullArchForm({
         [childField]: value
       }
     }));
-    restoreScroll(top);
   };
 
   const toggleSedation = (key: 'localOnly' | 'nitrous' | 'ivConscious' | 'generalHospital') => {
-    const top = preserveScroll();
     setFormData(prev => ({
       ...prev,
       sedationPlan: { ...(prev.sedationPlan as any), [key]: !(prev.sedationPlan as any)[key] }
     }));
-    restoreScroll(top);
   };
 
-  const handleDrugChange = (drugName: string, field: 'dose' | 'unit', value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      plannedDrugs: {
-        ...prev.plannedDrugs,
-        [drugName]: {
-          ...prev.plannedDrugs[drugName as keyof typeof prev.plannedDrugs],
-          [field]: value
-        }
-      }
-    }));
-  };
+
 
   const handleSignatureDialogOpen = (type: string) => {
     setSignatureDialogs(prev => ({
@@ -340,100 +526,158 @@ export function ConsentFullArchForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate required fields
-    const requiredFields = ['patientName', 'chartNumber', 'date', 'time'] as const;
-    const missingFields = requiredFields.filter(field => !formData[field]);
-
-    // Check if all required signatures/initials are completed
-    const requiredSignatures = [
-      'patientInfoInitials',
-      'treatmentDescriptionInitials',
-      'materialRisksInitials',
-      'sedationInitials',
-      'financialInitials',
-      'photoVideoInitials',
-      'opioidInitials',
-      'patientSignature',
-      'witnessSignature'
-    ] as const;
-
-    const missingSignatures = requiredSignatures.filter(sig => !formData[sig]);
-
-    // Check alternatives initials
-    const alternativesFields = Object.values(formData.alternativesInitials);
-    if (alternativesFields.some(field => !field || (typeof field === 'string' && field.trim() === ''))) {
-      missingSignatures.push('All alternatives must be initialed');
-    }
-
-    if (missingFields.length > 0 || missingSignatures.length > 0) {
-      // Map missing items to their tabs and labels for a guided message
-      const fieldToTab: Record<string, string> = {
-        patientName: 'patient-info',
-        chartNumber: 'patient-info',
-        date: 'patient-info',
-        time: 'patient-info',
-      };
-      const signatureToTab: Record<string, string> = {
-        patientInfoInitials: 'patient-info',
-        treatmentDescriptionInitials: 'treatment',
-        materialRisksInitials: 'risks',
-        sedationInitials: 'sedation',
-        financialInitials: 'financial',
-        photoVideoInitials: 'media',
-        opioidInitials: 'opioid',
-        patientSignature: 'final',
-        witnessSignature: 'final',
-      };
-      const signatureLabels: Record<string, string> = {
-        patientInfoInitials: 'Patient Info Initials',
-        treatmentDescriptionInitials: 'Treatment Description Initials',
-        materialRisksInitials: 'Material Risks Initials',
-        sedationInitials: 'Sedation Initials',
-        financialInitials: 'Financial Initials',
-        photoVideoInitials: 'Photo/Video Initials',
-        opioidInitials: 'Opioid Initials',
-        patientSignature: 'Patient Signature',
-        witnessSignature: 'Witness Signature',
-      };
-
-      const issues: Array<{tab: string; label: string; key: string}> = [];
-      for (const f of missingFields) {
-        issues.push({ tab: fieldToTab[f], label: f.replace(/([A-Z])/g, ' $1'), key: f });
-      }
-      for (const s of missingSignatures) {
-        if (s === 'All alternatives must be initialed') {
-          issues.push({ tab: 'treatment', label: 'All alternatives must be initialed', key: 'alternativesInitials' });
-        } else {
-          issues.push({ tab: signatureToTab[s], label: signatureLabels[s] || s, key: s });
-        }
-      }
-
-      // Build readable, grouped message
-      const grouped: Record<string, string[]> = {};
-      for (const item of issues) {
-        grouped[item.tab] = grouped[item.tab] || [];
-        grouped[item.tab].push(item.label);
-      }
-      const lines = Object.entries(grouped).map(([tab, labels]) => `- ${steps.find(s => s.id === tab)?.label || tab}: ${labels.join(', ')}`);
-
-      alert(`Please complete the following:\n${lines.join('\n')}`);
-
-      // Auto-navigate to the first tab with issues
-      const firstTab = issues[0]?.tab;
-      if (firstTab && firstTab !== activeTab) setActiveTab(firstTab);
+    // Validation
+    if (!formData.patientName) {
+      toast.error('Please enter patient name');
       return;
     }
 
-    onSubmit(formData);
+    if (!formData.archType) {
+      toast.error('Please select arch type (Upper, Lower, or Dual)');
+      return;
+    }
+
+    if (!formData.patientSignature) {
+      toast.error('Patient signature is required');
+      return;
+    }
+
+    // Ensure dates are properly formatted or use current date as fallback
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Validate date format function
+    const isValidDate = (dateString: string) => {
+      if (!dateString) return false;
+      const date = new Date(dateString);
+      return date instanceof Date && !isNaN(date.getTime()) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+    };
+
+    // Helper function to validate time format
+    const validateTime = (timeValue: any): string | null => {
+      if (!timeValue) return null;
+      if (typeof timeValue === 'string' && timeValue.trim() === '') return null;
+
+      // Check if it's already in HH:MM or HH:MM:SS format
+      if (typeof timeValue === 'string' && timeValue.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
+        return timeValue;
+      }
+
+      return null;
+    };
+
+    // Convert form data to match service interface
+    const submissionData = {
+      patient_name: formData.patientName,
+      chart_number: formData.chartNumber,
+      consent_date: isValidDate(formData.consentDate) ? formData.consentDate : currentDate,
+      consent_time: validateTime(formData.consentTime),
+
+      // Patient & Interpreter Information
+      primary_language: formData.primaryLanguage,
+      other_language_text: formData.otherLanguageText,
+      interpreter_required: formData.interpreterRequired,
+      interpreter_name: formData.interpreterName,
+      interpreter_credential: formData.interpreterCredential,
+      patient_info_initials: formData.patientInfoInitials,
+
+      // Treatment Description
+      arch_type: formData.archType,
+      upper_jaw: formData.upperJaw,
+      lower_jaw: formData.lowerJaw,
+
+      // Upper Arch Treatment Details
+      upper_teeth_regions: formData.upperTeethRegions,
+      upper_implants: formData.upperImplants,
+      upper_same_day_load: formData.upperSameDayLoad,
+
+      // Lower Arch Treatment Details
+      lower_teeth_regions: formData.lowerTeethRegions,
+      lower_implants: formData.lowerImplants,
+      lower_same_day_load: formData.lowerSameDayLoad,
+
+      // ASA Physical Status
+      asa_physical_status: formData.asaPhysicalStatus,
+
+      // Treatment Description Initials
+      treatment_description_initials: formData.treatmentDescriptionInitials,
+
+      // Upper Arch Graft Material
+      upper_graft_allograft: formData.upperGraftMaterial.allograft,
+      upper_graft_xenograft: formData.upperGraftMaterial.xenograft,
+      upper_graft_autograft: formData.upperGraftMaterial.autograft,
+
+      // Upper Arch Prosthesis
+      upper_prosthesis_zirconia: formData.upperProsthesis.zirconia,
+      upper_prosthesis_overdenture: formData.upperProsthesis.overdenture,
+
+      // Lower Arch Graft Material
+      lower_graft_allograft: formData.lowerGraftMaterial.allograft,
+      lower_graft_xenograft: formData.lowerGraftMaterial.xenograft,
+      lower_graft_autograft: formData.lowerGraftMaterial.autograft,
+
+      // Lower Arch Prosthesis
+      lower_prosthesis_zirconia: formData.lowerProsthesis.zirconia,
+      lower_prosthesis_overdenture: formData.lowerProsthesis.overdenture,
+
+      // Sedation Plan
+      sedation_local_only: formData.sedationPlan.localOnly,
+      sedation_nitrous: formData.sedationPlan.nitrous,
+      sedation_iv_conscious: formData.sedationPlan.ivConscious,
+      sedation_general_hospital: formData.sedationPlan.generalHospital,
+
+      // Planned Drugs
+      midazolam: formData.plannedDrugs.midazolam,
+      fentanyl: formData.plannedDrugs.fentanyl,
+      ketamine: formData.plannedDrugs.ketamine,
+      dexamethasone: formData.plannedDrugs.dexamethasone,
+
+      // Alternatives Initials
+      alternatives_no_treatment_initials: formData.alternativesInitials.noTreatment,
+      alternatives_conventional_dentures_initials: formData.alternativesInitials.conventionalDentures,
+      alternatives_segmented_extraction_initials: formData.alternativesInitials.segmentedExtraction,
+      alternatives_removable_overdentures_initials: formData.alternativesInitials.removableOverdentures,
+      alternatives_zygomatic_implants_initials: formData.alternativesInitials.zygomaticImplants,
+
+      // Signatures
+      patient_signature: formData.patientSignature,
+      patient_signature_date: isValidDate(formData.patientSignatureDate) ? formData.patientSignatureDate : currentDate,
+      surgeon_signature: formData.surgeonSignature,
+      surgeon_date: isValidDate(formData.surgeonDate) ? formData.surgeonDate : currentDate,
+      witness_signature: formData.witnessSignature,
+      witness_signature_date: isValidDate(formData.witnessSignatureDate) ? formData.witnessSignatureDate : currentDate
+    };
+
+    onSubmit(submissionData);
+    toast.success('Consent Packet for Full Arch Surgery form submitted successfully');
   };
 
   return (
     <div className="h-[80vh] flex flex-col">
       {/* Fixed Header - Full Width */}
       <DialogHeader className="flex-shrink-0 w-full px-6 pt-6 pb-4 border-b">
-        <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-          <FileText className="h-6 w-6" />
-          Consent Packet for Full Arch Surgery
+        <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="h-6 w-6" />
+            Consent Packet for Full Arch Surgery
+          </div>
+
+          {/* Auto-save Status Indicator */}
+          {onAutoSave && !readOnly && (hasFormData || autoSaveStatus === 'error') && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
+              autoSaveStatus === 'error'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200'
+            }`}>
+              {autoSaveStatus === 'error' ? (
+                <AlertTriangle className="h-3 w-3 text-red-600" />
+              ) : (
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-green-200 border-t-green-600"></div>
+              )}
+              <span className="font-medium">
+                {autoSaveStatus === 'error' ? autoSaveMessage : 'Auto-saving changes...'}
+              </span>
+            </div>
+          )}
         </DialogTitle>
       </DialogHeader>
 
@@ -570,8 +814,8 @@ export function ConsentFullArchForm({
                       <Input
                         id="time"
                         type="time"
-                        value={formData.time}
-                        onChange={(e) => handleInputChange('time', e.target.value)}
+                        value={formData.consentTime}
+                        onChange={(e) => handleInputChange('consentTime', e.target.value)}
                         required
                         className="pr-32"
                       />
@@ -582,7 +826,7 @@ export function ConsentFullArchForm({
                         onClick={() => {
                           const now = new Date();
                           const currentTime = now.toTimeString().slice(0, 5); // Format: HH:MM
-                          handleInputChange('time', currentTime);
+                          handleInputChange('consentTime', currentTime);
                         }}
                         className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 px-2 flex items-center gap-1 border border-blue-300 bg-white hover:bg-blue-50 text-blue-600 text-xs rounded-md"
                         title="Set current time"
@@ -770,24 +1014,15 @@ export function ConsentFullArchForm({
                       <RadioGroup
                         value={formData.archType}
                         onValueChange={(value) => {
-                          handleInputChange('archType', value);
-                          // Reset jaw selections when arch type changes
-                          if (value === 'upper') {
-                            handleInputChange('upperJaw', 'yes');
-                            handleInputChange('lowerJaw', '');
-                            handleInputChange('upperSameDayLoad', '');
-                            handleInputChange('lowerSameDayLoad', '');
-                          } else if (value === 'lower') {
-                            handleInputChange('upperJaw', '');
-                            handleInputChange('lowerJaw', 'yes');
-                            handleInputChange('upperSameDayLoad', '');
-                            handleInputChange('lowerSameDayLoad', '');
-                          } else if (value === 'dual') {
-                            handleInputChange('upperJaw', 'yes');
-                            handleInputChange('lowerJaw', 'yes');
-                            handleInputChange('upperSameDayLoad', '');
-                            handleInputChange('lowerSameDayLoad', '');
-                          }
+                          setFormData(prev => ({
+                            ...prev,
+                            archType: value,
+                            // Reset related fields when arch type changes
+                            upperJaw: value === 'upper' || value === 'dual' ? 'yes' : '',
+                            lowerJaw: value === 'lower' || value === 'dual' ? 'yes' : '',
+                            upperSameDayLoad: '',
+                            lowerSameDayLoad: ''
+                          }));
                         }}
                         className="flex flex-wrap gap-4"
                       >
@@ -872,7 +1107,7 @@ export function ConsentFullArchForm({
                             <Input
                               id="upperTeethRegions"
                               value={formData.upperTeethRegions}
-                              onChange={(e) => handleInputChange('upperTeethRegions', e.target.value)}
+                              onChange={(e) => setFormData(prev => ({ ...prev, upperTeethRegions: e.target.value }))}
                               placeholder="Enter teeth/regions"
                               className="h-10"
                             />
@@ -885,7 +1120,7 @@ export function ConsentFullArchForm({
                               id="upperImplants"
                               type="number"
                               value={formData.upperImplants}
-                              onChange={(e) => handleInputChange('upperImplants', e.target.value)}
+                              onChange={(e) => setFormData(prev => ({ ...prev, upperImplants: e.target.value }))}
                               placeholder="Number of implants"
                               className="h-10"
                             />
@@ -896,60 +1131,48 @@ export function ConsentFullArchForm({
                         <div className="space-y-3">
                           <Label className="text-sm font-medium text-gray-700">Graft Material</Label>
                           <div className="flex flex-wrap gap-2">
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="upperAllograft"
-                                checked={formData.upperGraftMaterial.allograft}
-                                onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, allograft: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="upperAllograft"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.upperGraftMaterial.allograft
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Allograft
-                              </Label>
-                            </div>
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="upperXenograft"
-                                checked={formData.upperGraftMaterial.xenograft}
-                                onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, xenograft: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="upperXenograft"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.upperGraftMaterial.xenograft
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Xenograft
-                              </Label>
-                            </div>
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="upperAutograft"
-                                checked={formData.upperGraftMaterial.autograft}
-                                onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, autograft: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="upperAutograft"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.upperGraftMaterial.autograft
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Autograft
-                              </Label>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                upperGraftMaterial: { ...prev.upperGraftMaterial, allograft: !prev.upperGraftMaterial.allograft }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.upperGraftMaterial.allograft
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Allograft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                upperGraftMaterial: { ...prev.upperGraftMaterial, xenograft: !prev.upperGraftMaterial.xenograft }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.upperGraftMaterial.xenograft
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Xenograft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                upperGraftMaterial: { ...prev.upperGraftMaterial, autograft: !prev.upperGraftMaterial.autograft }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.upperGraftMaterial.autograft
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Autograft
+                            </button>
                           </div>
                         </div>
 
@@ -957,80 +1180,64 @@ export function ConsentFullArchForm({
                         <div className="space-y-3">
                           <Label className="text-sm font-medium text-gray-700">Prosthesis</Label>
                           <div className="flex flex-wrap gap-2">
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="upperZirconia"
-                                checked={formData.upperProsthesis.zirconia}
-                                onCheckedChange={(checked) => handleInputChange('upperProsthesis', {...formData.upperProsthesis, zirconia: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="upperZirconia"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.upperProsthesis.zirconia
-                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Fixed Zirconia Bridge
-                              </Label>
-                            </div>
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="upperOverdenture"
-                                checked={formData.upperProsthesis.overdenture}
-                                onCheckedChange={(checked) => handleInputChange('upperProsthesis', {...formData.upperProsthesis, overdenture: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="upperOverdenture"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.upperProsthesis.overdenture
-                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Removable Overdenture
-                              </Label>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                upperProsthesis: { ...prev.upperProsthesis, zirconia: !prev.upperProsthesis.zirconia }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.upperProsthesis.zirconia
+                                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Fixed Zirconia Bridge
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                upperProsthesis: { ...prev.upperProsthesis, overdenture: !prev.upperProsthesis.overdenture }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.upperProsthesis.overdenture
+                                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Removable Overdenture
+                            </button>
                           </div>
                         </div>
 
                         {/* Same-day Load */}
                         <div className="flex items-center gap-4">
                           <Label className="text-sm font-medium text-gray-700 w-32">Same-day Load:</Label>
-                          <RadioGroup
-                            value={formData.upperSameDayLoad}
-                            onValueChange={(value) => handleInputChange('upperSameDayLoad', value)}
-                            className="flex gap-4"
-                          >
-                            <div className="flex items-center space-x-1">
-                              <RadioGroupItem value="yes" id="upperSameDayYes" className="sr-only" />
-                              <Label
-                                htmlFor="upperSameDayYes"
-                                className={`px-6 py-3 rounded-lg border cursor-pointer text-base font-medium transition-all ${
-                                  formData.upperSameDayLoad === 'yes'
-                                    ? 'border-green-500 bg-green-50 text-green-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Yes
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <RadioGroupItem value="no" id="upperSameDayNo" className="sr-only" />
-                              <Label
-                                htmlFor="upperSameDayNo"
-                                className={`px-6 py-3 rounded-lg border cursor-pointer text-base font-medium transition-all ${
-                                  formData.upperSameDayLoad === 'no'
-                                    ? 'border-red-500 bg-red-50 text-red-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                No
-                              </Label>
-                            </div>
-                          </RadioGroup>
+                          <div className="flex gap-4">
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'yes' }))}
+                              className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${
+                                formData.upperSameDayLoad === 'yes'
+                                  ? 'border-green-500 bg-green-50 text-green-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Yes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'no' }))}
+                              className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${
+                                formData.upperSameDayLoad === 'no'
+                                  ? 'border-red-500 bg-red-50 text-red-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              No
+                            </button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -1056,7 +1263,7 @@ export function ConsentFullArchForm({
                             <Input
                               id="lowerTeethRegions"
                               value={formData.lowerTeethRegions}
-                              onChange={(e) => handleInputChange('lowerTeethRegions', e.target.value)}
+                              onChange={(e) => setFormData(prev => ({ ...prev, lowerTeethRegions: e.target.value }))}
                               placeholder="Enter teeth/regions"
                               className="h-10"
                             />
@@ -1069,7 +1276,7 @@ export function ConsentFullArchForm({
                               id="lowerImplants"
                               type="number"
                               value={formData.lowerImplants}
-                              onChange={(e) => handleInputChange('lowerImplants', e.target.value)}
+                              onChange={(e) => setFormData(prev => ({ ...prev, lowerImplants: e.target.value }))}
                               placeholder="Number of implants"
                               className="h-10"
                             />
@@ -1080,60 +1287,48 @@ export function ConsentFullArchForm({
                         <div className="space-y-3">
                           <Label className="text-sm font-medium text-gray-700">Graft Material</Label>
                           <div className="flex flex-wrap gap-2">
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="lowerAllograft"
-                                checked={formData.lowerGraftMaterial.allograft}
-                                onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, allograft: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="lowerAllograft"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.lowerGraftMaterial.allograft
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Allograft
-                              </Label>
-                            </div>
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="lowerXenograft"
-                                checked={formData.lowerGraftMaterial.xenograft}
-                                onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, xenograft: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="lowerXenograft"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.lowerGraftMaterial.xenograft
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Xenograft
-                              </Label>
-                            </div>
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="lowerAutograft"
-                                checked={formData.lowerGraftMaterial.autograft}
-                                onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, autograft: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="lowerAutograft"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.lowerGraftMaterial.autograft
-                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Autograft
-                              </Label>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                lowerGraftMaterial: { ...prev.lowerGraftMaterial, allograft: !prev.lowerGraftMaterial.allograft }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.lowerGraftMaterial.allograft
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Allograft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                lowerGraftMaterial: { ...prev.lowerGraftMaterial, xenograft: !prev.lowerGraftMaterial.xenograft }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.lowerGraftMaterial.xenograft
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Xenograft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                lowerGraftMaterial: { ...prev.lowerGraftMaterial, autograft: !prev.lowerGraftMaterial.autograft }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.lowerGraftMaterial.autograft
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Autograft
+                            </button>
                           </div>
                         </div>
 
@@ -1141,80 +1336,64 @@ export function ConsentFullArchForm({
                         <div className="space-y-3">
                           <Label className="text-sm font-medium text-gray-700">Prosthesis</Label>
                           <div className="flex flex-wrap gap-2">
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="lowerZirconia"
-                                checked={formData.lowerProsthesis.zirconia}
-                                onCheckedChange={(checked) => handleInputChange('lowerProsthesis', {...formData.lowerProsthesis, zirconia: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="lowerZirconia"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.lowerProsthesis.zirconia
-                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Fixed Zirconia Bridge
-                              </Label>
-                            </div>
-                            <div className="flex items-center">
-                              <Checkbox
-                                id="lowerOverdenture"
-                                checked={formData.lowerProsthesis.overdenture}
-                                onCheckedChange={(checked) => handleInputChange('lowerProsthesis', {...formData.lowerProsthesis, overdenture: checked})}
-                                className="sr-only"
-                              />
-                              <Label
-                                htmlFor="lowerOverdenture"
-                                className={`px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                  formData.lowerProsthesis.overdenture
-                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Removable Overdenture
-                              </Label>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                lowerProsthesis: { ...prev.lowerProsthesis, zirconia: !prev.lowerProsthesis.zirconia }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.lowerProsthesis.zirconia
+                                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Fixed Zirconia Bridge
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                lowerProsthesis: { ...prev.lowerProsthesis, overdenture: !prev.lowerProsthesis.overdenture }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.lowerProsthesis.overdenture
+                                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Removable Overdenture
+                            </button>
                           </div>
                         </div>
 
                         {/* Same-day Load */}
                         <div className="flex items-center gap-4">
                           <Label className="text-sm font-medium text-gray-700 w-32">Same-day Load:</Label>
-                          <RadioGroup
-                            value={formData.lowerSameDayLoad}
-                            onValueChange={(value) => handleInputChange('lowerSameDayLoad', value)}
-                            className="flex gap-4"
-                          >
-                            <div className="flex items-center space-x-1">
-                              <RadioGroupItem value="yes" id="lowerSameDayYes" className="sr-only" />
-                              <Label
-                                htmlFor="lowerSameDayYes"
-                                className={`px-6 py-3 rounded-lg border cursor-pointer text-base font-medium transition-all ${
-                                  formData.lowerSameDayLoad === 'yes'
-                                    ? 'border-green-500 bg-green-50 text-green-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                Yes
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <RadioGroupItem value="no" id="lowerSameDayNo" className="sr-only" />
-                              <Label
-                                htmlFor="lowerSameDayNo"
-                                className={`px-6 py-3 rounded-lg border cursor-pointer text-base font-medium transition-all ${
-                                  formData.lowerSameDayLoad === 'no'
-                                    ? 'border-red-500 bg-red-50 text-red-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                              >
-                                No
-                              </Label>
-                            </div>
-                          </RadioGroup>
+                          <div className="flex gap-4">
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'yes' }))}
+                              className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${
+                                formData.lowerSameDayLoad === 'yes'
+                                  ? 'border-green-500 bg-green-50 text-green-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              Yes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'no' }))}
+                              className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${
+                                formData.lowerSameDayLoad === 'no'
+                                  ? 'border-red-500 bg-red-50 text-red-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              No
+                            </button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -1256,7 +1435,7 @@ export function ConsentFullArchForm({
                                 <Input
                                   id="upperTeethRegions"
                                   value={formData.upperTeethRegions}
-                                  onChange={(e) => handleInputChange('upperTeethRegions', e.target.value)}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, upperTeethRegions: e.target.value }))}
                                   placeholder="Enter teeth/regions"
                                   className="h-10"
                                 />
@@ -1269,7 +1448,7 @@ export function ConsentFullArchForm({
                                   id="upperImplants"
                                   type="number"
                                   value={formData.upperImplants}
-                                  onChange={(e) => handleInputChange('upperImplants', e.target.value)}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, upperImplants: e.target.value }))}
                                   placeholder="Number of implants"
                                   className="h-10"
                                 />
@@ -1280,60 +1459,48 @@ export function ConsentFullArchForm({
                             <div className="space-y-3">
                               <Label className="text-sm font-medium text-gray-700">Graft Material</Label>
                               <div className="flex flex-wrap gap-2">
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="upperAllograft"
-                                    checked={formData.upperGraftMaterial.allograft}
-                                    onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, allograft: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="upperAllograft"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.upperGraftMaterial.allograft
-                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Allograft
-                                  </Label>
-                                </div>
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="upperXenograft"
-                                    checked={formData.upperGraftMaterial.xenograft}
-                                    onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, xenograft: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="upperXenograft"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.upperGraftMaterial.xenograft
-                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Xenograft
-                                  </Label>
-                                </div>
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="upperAutograft"
-                                    checked={formData.upperGraftMaterial.autograft}
-                                    onCheckedChange={(checked) => handleInputChange('upperGraftMaterial', {...formData.upperGraftMaterial, autograft: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="upperAutograft"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.upperGraftMaterial.autograft
-                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Autograft
-                                  </Label>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    upperGraftMaterial: { ...prev.upperGraftMaterial, allograft: !prev.upperGraftMaterial.allograft }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.upperGraftMaterial.allograft
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Allograft
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    upperGraftMaterial: { ...prev.upperGraftMaterial, xenograft: !prev.upperGraftMaterial.xenograft }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.upperGraftMaterial.xenograft
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Xenograft
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    upperGraftMaterial: { ...prev.upperGraftMaterial, autograft: !prev.upperGraftMaterial.autograft }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.upperGraftMaterial.autograft
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Autograft
+                                </button>
                               </div>
                             </div>
 
@@ -1341,80 +1508,64 @@ export function ConsentFullArchForm({
                             <div className="space-y-3">
                               <Label className="text-sm font-medium text-gray-700">Prosthesis</Label>
                               <div className="flex flex-wrap gap-2">
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="upperZirconia"
-                                    checked={formData.upperProsthesis.zirconia}
-                                    onCheckedChange={(checked) => handleInputChange('upperProsthesis', {...formData.upperProsthesis, zirconia: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="upperZirconia"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.upperProsthesis.zirconia
-                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Fixed Zirconia Bridge
-                                  </Label>
-                                </div>
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="upperOverdenture"
-                                    checked={formData.upperProsthesis.overdenture}
-                                    onCheckedChange={(checked) => handleInputChange('upperProsthesis', {...formData.upperProsthesis, overdenture: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="upperOverdenture"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.upperProsthesis.overdenture
-                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Removable Overdenture
-                                  </Label>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    upperProsthesis: { ...prev.upperProsthesis, zirconia: !prev.upperProsthesis.zirconia }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.upperProsthesis.zirconia
+                                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Fixed Zirconia Bridge
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    upperProsthesis: { ...prev.upperProsthesis, overdenture: !prev.upperProsthesis.overdenture }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.upperProsthesis.overdenture
+                                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Removable Overdenture
+                                </button>
                               </div>
                             </div>
 
                             {/* Upper Same-day Load */}
                             <div className="space-y-2">
                               <Label className="text-sm font-medium text-gray-700">Same-day Load:</Label>
-                              <RadioGroup
-                                value={formData.upperSameDayLoad}
-                                onValueChange={(value) => handleInputChange('upperSameDayLoad', value)}
-                                className="flex gap-3"
-                              >
-                                <div className="flex items-center space-x-1">
-                                  <RadioGroupItem value="yes" id="upperSameDayYes" className="sr-only" />
-                                  <Label
-                                    htmlFor="upperSameDayYes"
-                                    className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                      formData.upperSameDayLoad === 'yes'
-                                        ? 'border-green-500 bg-green-50 text-green-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Yes
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <RadioGroupItem value="no" id="upperSameDayNo" className="sr-only" />
-                                  <Label
-                                    htmlFor="upperSameDayNo"
-                                    className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                      formData.upperSameDayLoad === 'no'
-                                        ? 'border-red-500 bg-red-50 text-red-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    No
-                                  </Label>
-                                </div>
-                              </RadioGroup>
+                              <div className="flex gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'yes' }))}
+                                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                    formData.upperSameDayLoad === 'yes'
+                                      ? 'border-green-500 bg-green-50 text-green-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Yes
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'no' }))}
+                                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                    formData.upperSameDayLoad === 'no'
+                                      ? 'border-red-500 bg-red-50 text-red-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  No
+                                </button>
+                              </div>
                             </div>
                           </div>
 
@@ -1436,7 +1587,7 @@ export function ConsentFullArchForm({
                                 <Input
                                   id="lowerTeethRegions"
                                   value={formData.lowerTeethRegions}
-                                  onChange={(e) => handleInputChange('lowerTeethRegions', e.target.value)}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, lowerTeethRegions: e.target.value }))}
                                   placeholder="Enter teeth/regions"
                                   className="h-10"
                                 />
@@ -1449,7 +1600,7 @@ export function ConsentFullArchForm({
                                   id="lowerImplants"
                                   type="number"
                                   value={formData.lowerImplants}
-                                  onChange={(e) => handleInputChange('lowerImplants', e.target.value)}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, lowerImplants: e.target.value }))}
                                   placeholder="Number of implants"
                                   className="h-10"
                                 />
@@ -1460,60 +1611,48 @@ export function ConsentFullArchForm({
                             <div className="space-y-3">
                               <Label className="text-sm font-medium text-gray-700">Graft Material</Label>
                               <div className="flex flex-wrap gap-2">
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="lowerAllograft"
-                                    checked={formData.lowerGraftMaterial.allograft}
-                                    onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, allograft: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="lowerAllograft"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.lowerGraftMaterial.allograft
-                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Allograft
-                                  </Label>
-                                </div>
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="lowerXenograft"
-                                    checked={formData.lowerGraftMaterial.xenograft}
-                                    onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, xenograft: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="lowerXenograft"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.lowerGraftMaterial.xenograft
-                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Xenograft
-                                  </Label>
-                                </div>
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="lowerAutograft"
-                                    checked={formData.lowerGraftMaterial.autograft}
-                                    onCheckedChange={(checked) => handleInputChange('lowerGraftMaterial', {...formData.lowerGraftMaterial, autograft: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="lowerAutograft"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.lowerGraftMaterial.autograft
-                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Autograft
-                                  </Label>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    lowerGraftMaterial: { ...prev.lowerGraftMaterial, allograft: !prev.lowerGraftMaterial.allograft }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.lowerGraftMaterial.allograft
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Allograft
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    lowerGraftMaterial: { ...prev.lowerGraftMaterial, xenograft: !prev.lowerGraftMaterial.xenograft }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.lowerGraftMaterial.xenograft
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Xenograft
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    lowerGraftMaterial: { ...prev.lowerGraftMaterial, autograft: !prev.lowerGraftMaterial.autograft }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.lowerGraftMaterial.autograft
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Autograft
+                                </button>
                               </div>
                             </div>
 
@@ -1521,80 +1660,64 @@ export function ConsentFullArchForm({
                             <div className="space-y-3">
                               <Label className="text-sm font-medium text-gray-700">Prosthesis</Label>
                               <div className="flex flex-wrap gap-2">
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="lowerZirconia"
-                                    checked={formData.lowerProsthesis.zirconia}
-                                    onCheckedChange={(checked) => handleInputChange('lowerProsthesis', {...formData.lowerProsthesis, zirconia: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="lowerZirconia"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.lowerProsthesis.zirconia
-                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Fixed Zirconia Bridge
-                                  </Label>
-                                </div>
-                                <div className="flex items-center">
-                                  <Checkbox
-                                    id="lowerOverdenture"
-                                    checked={formData.lowerProsthesis.overdenture}
-                                    onCheckedChange={(checked) => handleInputChange('lowerProsthesis', {...formData.lowerProsthesis, overdenture: checked})}
-                                    className="sr-only"
-                                  />
-                                  <Label
-                                    htmlFor="lowerOverdenture"
-                                    className={`px-2 py-1 rounded border cursor-pointer text-xs font-medium transition-all ${
-                                      formData.lowerProsthesis.overdenture
-                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Removable Overdenture
-                                  </Label>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    lowerProsthesis: { ...prev.lowerProsthesis, zirconia: !prev.lowerProsthesis.zirconia }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.lowerProsthesis.zirconia
+                                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Fixed Zirconia Bridge
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    lowerProsthesis: { ...prev.lowerProsthesis, overdenture: !prev.lowerProsthesis.overdenture }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.lowerProsthesis.overdenture
+                                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Removable Overdenture
+                                </button>
                               </div>
                             </div>
 
                             {/* Lower Same-day Load */}
                             <div className="space-y-2">
                               <Label className="text-sm font-medium text-gray-700">Same-day Load:</Label>
-                              <RadioGroup
-                                value={formData.lowerSameDayLoad}
-                                onValueChange={(value) => handleInputChange('lowerSameDayLoad', value)}
-                                className="flex gap-3"
-                              >
-                                <div className="flex items-center space-x-1">
-                                  <RadioGroupItem value="yes" id="lowerSameDayYes" className="sr-only" />
-                                  <Label
-                                    htmlFor="lowerSameDayYes"
-                                    className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                      formData.lowerSameDayLoad === 'yes'
-                                        ? 'border-green-500 bg-green-50 text-green-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    Yes
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <RadioGroupItem value="no" id="lowerSameDayNo" className="sr-only" />
-                                  <Label
-                                    htmlFor="lowerSameDayNo"
-                                    className={`px-4 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
-                                      formData.lowerSameDayLoad === 'no'
-                                        ? 'border-red-500 bg-red-50 text-red-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                  >
-                                    No
-                                  </Label>
-                                </div>
-                              </RadioGroup>
+                              <div className="flex gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'yes' }))}
+                                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                    formData.lowerSameDayLoad === 'yes'
+                                      ? 'border-green-500 bg-green-50 text-green-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  Yes
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'no' }))}
+                                  className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                    formData.lowerSameDayLoad === 'no'
+                                      ? 'border-red-500 bg-red-50 text-red-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  No
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1689,115 +1812,76 @@ export function ConsentFullArchForm({
                   </div>
 
                   <div>
-                    <Label className="text-sm font-semibold mb-3 block">Planned Drugs & Max Doses:</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Midazolam */}
-                      <div className="space-y-2">
-                        <Label htmlFor="midazolam" className="text-sm font-medium text-gray-700">Midazolam</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="midazolam"
-                            type="number"
-                            placeholder="0"
-                            value={formData.plannedDrugs.midazolam.dose}
-                            onChange={(e) => handleDrugChange('midazolam', 'dose', e.target.value)}
-                            className="flex-1 h-10"
-                          />
-                          <Select
-                            value={formData.plannedDrugs.midazolam.unit}
-                            onValueChange={(value) => handleDrugChange('midazolam', 'unit', value)}
-                          >
-                            <SelectTrigger className="w-20 h-10">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mg">mg</SelectItem>
-                              <SelectItem value="ml">ml</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* Fentanyl */}
-                      <div className="space-y-2">
-                        <Label htmlFor="fentanyl" className="text-sm font-medium text-gray-700">Fentanyl</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="fentanyl"
-                            type="number"
-                            placeholder="0"
-                            value={formData.plannedDrugs.fentanyl.dose}
-                            onChange={(e) => handleDrugChange('fentanyl', 'dose', e.target.value)}
-                            className="flex-1 h-10"
-                          />
-                          <Select
-                            value={formData.plannedDrugs.fentanyl.unit}
-                            onValueChange={(value) => handleDrugChange('fentanyl', 'unit', value)}
-                          >
-                            <SelectTrigger className="w-20 h-10">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="µg">µg</SelectItem>
-                              <SelectItem value="ml">ml</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* Ketamine */}
-                      <div className="space-y-2">
-                        <Label htmlFor="ketamine" className="text-sm font-medium text-gray-700">Ketamine</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="ketamine"
-                            type="number"
-                            placeholder="0"
-                            value={formData.plannedDrugs.ketamine.dose}
-                            onChange={(e) => handleDrugChange('ketamine', 'dose', e.target.value)}
-                            className="flex-1 h-10"
-                          />
-                          <Select
-                            value={formData.plannedDrugs.ketamine.unit}
-                            onValueChange={(value) => handleDrugChange('ketamine', 'unit', value)}
-                          >
-                            <SelectTrigger className="w-20 h-10">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mg">mg</SelectItem>
-                              <SelectItem value="ml">ml</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* Dexamethasone */}
-                      <div className="space-y-2">
-                        <Label htmlFor="dexamethasone" className="text-sm font-medium text-gray-700">Dexamethasone</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="dexamethasone"
-                            type="number"
-                            placeholder="0"
-                            value={formData.plannedDrugs.dexamethasone.dose}
-                            onChange={(e) => handleDrugChange('dexamethasone', 'dose', e.target.value)}
-                            className="flex-1 h-10"
-                          />
-                          <Select
-                            value={formData.plannedDrugs.dexamethasone.unit}
-                            onValueChange={(value) => handleDrugChange('dexamethasone', 'unit', value)}
-                          >
-                            <SelectTrigger className="w-20 h-10">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mg">mg</SelectItem>
-                              <SelectItem value="ml">ml</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                    <Label className="text-sm font-semibold mb-3 block">Planned Drugs:</Label>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, midazolam: !prev.plannedDrugs.midazolam }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.midazolam
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.midazolam && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Midazolam
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, fentanyl: !prev.plannedDrugs.fentanyl }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.fentanyl
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.fentanyl && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Fentanyl
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, ketamine: !prev.plannedDrugs.ketamine }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.ketamine
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.ketamine && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Ketamine
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, dexamethasone: !prev.plannedDrugs.dexamethasone }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.dexamethasone
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.dexamethasone && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Dexamethasone
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -3687,7 +3771,7 @@ export function ConsentFullArchForm({
               !readOnly ? (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2">
                   <CheckCircle className="h-4 w-4" />
-                  {isEditing ? 'Update Form' : 'Save Form'}
+                  Submit
                 </Button>
               ) : (
                 <Button type="button" disabled className="bg-gray-400 text-white flex items-center gap-2 px-4 py-2">

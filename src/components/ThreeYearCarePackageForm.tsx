@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,8 @@ import {
   Phone,
   Mail,
   Check,
-  Edit
+  Edit,
+  AlertCircle
 } from "lucide-react";
 
 interface ThreeYearCarePackageFormProps {
@@ -31,6 +32,13 @@ interface ThreeYearCarePackageFormProps {
   initialData?: any;
   isEditing?: boolean;
   isViewing?: boolean;
+  // Auto-save props
+  onAutoSave?: (formData: any) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  lastSavedTime?: string;
+  setAutoSaveStatus?: (status: 'idle' | 'saving' | 'saved' | 'error') => void;
+  setAutoSaveMessage?: (message: string) => void;
 }
 
 export function ThreeYearCarePackageForm({
@@ -40,17 +48,24 @@ export function ThreeYearCarePackageForm({
   patientDateOfBirth = "",
   initialData,
   isEditing = false,
-  isViewing = false
+  isViewing = false,
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  lastSavedTime = '',
+  setAutoSaveStatus,
+  setAutoSaveMessage
 }: ThreeYearCarePackageFormProps) {
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
   const [showWitnessSignatureDialog, setShowWitnessSignatureDialog] = useState(false);
 
-  const [formData, setFormData] = useState({
-    // Patient Information
-    patientName: initialData?.patientName || patientName,
-    dateOfBirth: initialData?.dateOfBirth || patientDateOfBirth || "",
-    enrollmentDate: initialData?.enrollmentDate || new Date().toISOString().split('T')[0],
-    enrollmentTime: initialData?.enrollmentTime || new Date().toTimeString().slice(0, 5),
+  const [formData, setFormData] = useState(() => {
+    const initialFormData = {
+      // Patient Information
+      patientName: initialData?.patientName || patientName,
+      dateOfBirth: initialData?.dateOfBirth || patientDateOfBirth || "",
+      enrollmentDate: initialData?.enrollmentDate || new Date().toISOString().split('T')[0],
+      enrollmentTime: initialData?.enrollmentTime || new Date().toTimeString().slice(0, 5),
 
     // Daily Care Requirements Acknowledgment
     chlorhexidineRinse: initialData?.chlorhexidineRinse || false,
@@ -84,16 +99,115 @@ export function ThreeYearCarePackageForm({
     // Acknowledgment
     acknowledgmentRead: initialData?.acknowledgmentRead || false,
 
-    // Staff Use
-    staffProcessedBy: initialData?.staffProcessedBy || "",
-    staffProcessedDate: initialData?.staffProcessedDate || ""
+      // Staff Use
+      staffProcessedBy: initialData?.staffProcessedBy || "",
+      staffProcessedDate: initialData?.staffProcessedDate || ""
+    };
+
+    console.log('🏁 Initial form data setup:', {
+      patientName: initialFormData.patientName,
+      fromInitialData: initialData?.patientName,
+      fromPatientName: patientName,
+      hasInitialData: !!initialData,
+      initialDataId: initialData?.id
+    });
+
+    return initialFormData;
   });
 
+  const [hasFormData, setHasFormData] = useState(false);
+
+  // Update form data when initialData changes
+  useEffect(() => {
+    if (initialData && initialData.id) {
+      console.log('🔄 Updating 3-Year Care Package form data from initialData:', initialData);
+      console.log('🔍 isEditing:', isEditing, 'isViewing:', isViewing);
+      setFormData(prev => ({
+        ...prev,
+        // Patient Information
+        patientName: initialData.patientName || prev.patientName,
+        dateOfBirth: initialData.dateOfBirth || prev.dateOfBirth,
+        enrollmentDate: initialData.enrollmentDate || prev.enrollmentDate,
+        enrollmentTime: initialData.enrollmentTime || prev.enrollmentTime,
+
+        // Daily Care Requirements Acknowledgment
+        chlorhexidineRinse: initialData.chlorhexidineRinse ?? prev.chlorhexidineRinse,
+        waterFlosser: initialData.waterFlosser ?? prev.waterFlosser,
+        electricToothbrush: initialData.electricToothbrush ?? prev.electricToothbrush,
+        attendCheckups: initialData.attendCheckups ?? prev.attendCheckups,
+
+        // Enrollment Choice
+        enrollmentChoice: initialData.enrollmentChoice || prev.enrollmentChoice,
+
+        // Payment Method
+        paymentMethod: initialData.paymentMethod || prev.paymentMethod,
+
+        // Legal Acknowledgments
+        cancellationPolicy: initialData.cancellationPolicy ?? prev.cancellationPolicy,
+        governingLaw: initialData.governingLaw ?? prev.governingLaw,
+        arbitrationClause: initialData.arbitrationClause ?? prev.arbitrationClause,
+        hipaaConsent: initialData.hipaaConsent ?? prev.hipaaConsent,
+
+        // Signatures
+        patientSignature: initialData.patientSignature || prev.patientSignature,
+        patientSignatureDate: initialData.patientSignatureDate || prev.patientSignatureDate,
+        witnessName: initialData.witnessName || prev.witnessName,
+        witnessSignature: initialData.witnessSignature || prev.witnessSignature,
+        witnessSignatureDate: initialData.witnessSignatureDate || prev.witnessSignatureDate,
+
+        // Age/Language Confirmation
+        ageConfirmation: initialData.ageConfirmation ?? prev.ageConfirmation,
+        languageConfirmation: initialData.languageConfirmation ?? prev.languageConfirmation,
+
+        // Acknowledgment
+        acknowledgmentRead: initialData.acknowledgmentRead ?? prev.acknowledgmentRead,
+
+        // Staff Use
+        staffProcessedBy: initialData.staffProcessedBy || prev.staffProcessedBy,
+        staffProcessedDate: initialData.staffProcessedDate || prev.staffProcessedDate
+      }));
+    }
+  }, [initialData?.id]); // Trigger when form ID changes
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    if (!onAutoSave) return;
+
+    // Check if form has meaningful data
+    const hasData = formData.patientName || formData.enrollmentChoice ||
+                   formData.paymentMethod || formData.chlorhexidineRinse ||
+                   formData.waterFlosser || formData.electricToothbrush ||
+                   formData.attendCheckups || formData.cancellationPolicy ||
+                   formData.governingLaw || formData.arbitrationClause ||
+                   formData.hipaaConsent || formData.patientSignature ||
+                   formData.witnessSignature;
+
+    setHasFormData(hasData);
+
+    if (!hasData) return;
+
+    const timeoutId = setTimeout(() => {
+      console.log('🔄 Auto-saving 3-Year Care Package form with data:', {
+        patientName: formData.patientName,
+        enrollmentChoice: formData.enrollmentChoice,
+        paymentMethod: formData.paymentMethod
+      });
+      onAutoSave(formData);
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, onAutoSave]);
+
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    console.log(`🔄 Form field changed: ${field} = ${value}`);
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [field]: value
+      };
+      console.log('📝 Updated form data:', { [field]: value, patientName: newData.patientName });
+      return newData;
+    });
   };
 
   const handlePatientSignatureSave = (signatureData: string) => {
@@ -116,6 +230,18 @@ export function ThreeYearCarePackageForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🚀 3-Year Care Package form handleSubmit called');
+    console.log('🔍 Current formData:', JSON.stringify(formData, null, 2));
+    console.log('🔍 Patient name:', formData.patientName);
+    console.log('🔍 Enrollment choice:', formData.enrollmentChoice);
+    console.log('🔍 Payment method:', formData.paymentMethod);
+    console.log('🔍 Form data has values:', Object.keys(formData).filter(key => formData[key] && formData[key] !== ""));
+
+    // Validate that we have some data before submitting
+    if (!formData.patientName) {
+      console.error('❌ No patient name in form data - something is wrong!');
+    }
+
     onSubmit(formData);
   };
 
@@ -141,10 +267,32 @@ export function ThreeYearCarePackageForm({
     <div className="max-w-4xl mx-auto p-6 bg-white">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Header */}
-        <div className="text-center bg-gradient-to-r from-blue-700 to-blue-900 text-white p-6 rounded-xl">
-          <h1 className="text-2xl font-bold mb-2">NEW YORK DENTAL IMPLANTS</h1>
-          <h2 className="text-xl font-semibold mb-1">3-Year Care Package Enrollment Agreement</h2>
-          <p className="text-sm opacity-90">Form Version 2.0 | Effective 07/2025</p>
+        <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white p-6 rounded-xl">
+          <div className="flex items-center justify-between">
+            <div className="text-center flex-1">
+              <h1 className="text-2xl font-bold mb-2">NEW YORK DENTAL IMPLANTS</h1>
+              <h2 className="text-xl font-semibold mb-1">3-Year Care Package Enrollment Agreement</h2>
+              <p className="text-sm opacity-90">Form Version 2.0 | Effective 07/2025</p>
+            </div>
+
+            {/* Auto-save Status Indicator */}
+            {onAutoSave && !isViewing && (hasFormData || autoSaveStatus === 'error') && (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
+                autoSaveStatus === 'error'
+                  ? 'bg-red-50 text-red-700 border border-red-200'
+                  : 'bg-green-50 text-green-700 border border-green-200'
+              }`}>
+                {autoSaveStatus === 'error' ? (
+                  <AlertCircle className="h-3 w-3 text-red-600" />
+                ) : (
+                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-green-200 border-t-green-600"></div>
+                )}
+                <span className="font-medium">
+                  {autoSaveStatus === 'error' ? autoSaveMessage : 'Auto-saving changes...'}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Urgent Deadline Warning */}
@@ -1007,7 +1155,7 @@ export function ThreeYearCarePackageForm({
             Cancel
           </Button>
           <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-            Save Form
+            Submit
           </Button>
         </div>
       </form>

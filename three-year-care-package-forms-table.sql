@@ -44,7 +44,10 @@ CREATE TABLE IF NOT EXISTS three_year_care_package_forms (
     -- Staff Use
     staff_processed_by TEXT,
     staff_processed_date TEXT,
-    
+
+    -- Status
+    status TEXT DEFAULT 'draft', -- 'draft', 'submitted', 'signed'
+
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

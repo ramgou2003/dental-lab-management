@@ -441,7 +441,7 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
   const timeSlots = generateTimeSlots();
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-indigo-600 flex items-center gap-2">

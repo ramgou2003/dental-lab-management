@@ -203,7 +203,7 @@ export function LeadAppointmentScheduler({
   const selectedTimeSlot = timeSlots.find(slot => slot.value === selectedTime);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-5xl w-[90vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">

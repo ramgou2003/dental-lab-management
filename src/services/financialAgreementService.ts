@@ -170,6 +170,9 @@ export async function saveFinancialAgreement(
 
     const dbData = convertFormDataToDatabase(formData, patientId, leadId, newPatientPacketId);
 
+    // Set status to completed for manual save
+    dbData.status = 'completed';
+
     console.log('🗄️ Financial agreement database data prepared:', {
       patient_name: dbData.patient_name,
       patient_id: dbData.patient_id,
@@ -235,7 +238,10 @@ export async function updateFinancialAgreement(
   try {
     console.log('Converting financial agreement form data to database format for update...');
     const dbData = convertFormDataToDatabase(formData, patientId, leadId, newPatientPacketId);
-    
+
+    // Set status to completed for manual update
+    dbData.status = 'completed';
+
     console.log('Attempting to update financial agreement:', id);
     const { data, error } = await supabase
       .from('financial_agreements')
@@ -253,6 +259,77 @@ export async function updateFinancialAgreement(
     return { data, error: null };
   } catch (error) {
     console.error('Unexpected error updating financial agreement:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Auto-save financial agreement (upsert with draft status)
+ */
+export async function autoSaveFinancialAgreement(
+  formData: any,
+  patientId?: string,
+  leadId?: string,
+  newPatientPacketId?: string,
+  existingId?: string
+): Promise<{ data: any | null; error: any }> {
+  try {
+    console.log('🔄 Auto-saving financial agreement...');
+    const dbData = convertFormDataToDatabase(formData, patientId, leadId, newPatientPacketId);
+
+    if (existingId) {
+      // Check current status before updating
+      console.log('📝 Checking current status of financial agreement:', existingId);
+      const { data: currentRecord, error: fetchError } = await supabase
+        .from('financial_agreements')
+        .select('status')
+        .eq('id', existingId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Error fetching current status:', fetchError);
+        return { data: null, error: fetchError };
+      }
+
+      // Preserve completed status, otherwise set to draft
+      dbData.status = currentRecord?.status === 'completed' ? 'completed' : 'draft';
+
+      // Update existing record
+      console.log('📝 Updating existing financial agreement with status:', dbData.status);
+      const { data, error } = await supabase
+        .from('financial_agreements')
+        .update(dbData)
+        .eq('id', existingId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error updating financial agreement:', error);
+        return { data: null, error };
+      }
+
+      console.log('✅ Financial agreement auto-saved successfully:', data);
+      return { data, error: null };
+    } else {
+      // Create new record - always start as draft
+      dbData.status = 'draft';
+      console.log('📝 Creating new financial agreement draft');
+      const { data, error } = await supabase
+        .from('financial_agreements')
+        .insert(dbData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error creating financial agreement:', error);
+        return { data: null, error };
+      }
+
+      console.log('✅ Financial agreement auto-saved successfully:', data);
+      return { data, error: null };
+    }
+  } catch (error) {
+    console.error('❌ Error auto-saving financial agreement:', error);
     return { data: null, error };
   }
 }

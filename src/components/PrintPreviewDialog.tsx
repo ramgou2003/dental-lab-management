@@ -294,7 +294,7 @@ export const PrintPreviewDialog: React.FC<PrintPreviewDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-[210mm] max-h-[95vh] overflow-y-auto p-0">
         {/* A4 Print Styles - Enhanced for form components */}
         <style>{`

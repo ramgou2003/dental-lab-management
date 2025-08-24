@@ -18,6 +18,13 @@ interface PartialPaymentAgreementFormProps {
   initialData?: any;
   isEditing?: boolean;
   readOnly?: boolean;
+  // Auto-save props
+  onAutoSave?: (formData: any) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  lastSavedTime?: string;
+  setAutoSaveStatus?: (status: 'idle' | 'saving' | 'saved' | 'error') => void;
+  setAutoSaveMessage?: (message: string) => void;
 }
 
 export function PartialPaymentAgreementForm({
@@ -27,49 +34,75 @@ export function PartialPaymentAgreementForm({
   patientDateOfBirth = "",
   initialData = null,
   isEditing = false,
-  readOnly = false
+  readOnly = false,
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  lastSavedTime = '',
+  setAutoSaveStatus,
+  setAutoSaveMessage
 }: PartialPaymentAgreementFormProps) {
-  const [formData, setFormData] = useState({
-    // Agreement Details
-    agreementDate: initialData?.agreement_date || new Date().toISOString().split('T')[0],
-    providerLicenseNumber: initialData?.provider_license_number || "",
-    
-    // Patient Information
-    firstName: initialData?.first_name || patientName.split(' ')[0] || "",
-    lastName: initialData?.last_name || patientName.split(' ').slice(1).join(' ') || "",
-    address: initialData?.address || "",
-    email: initialData?.email || "",
-    phone: initialData?.phone || "",
-    
-    // Payment Details
-    paymentAmount: initialData?.payment_amount || "",
-    paymentDate: initialData?.payment_date || new Date().toISOString().split('T')[0],
-    estimatedTotalCost: initialData?.estimated_total_cost || "",
-    remainingBalance: initialData?.remaining_balance || "",
-    finalPaymentDueDate: initialData?.final_payment_due_date || "",
-    
-    // Treatment Selection
-    selectedTreatments: initialData?.selected_treatments || [],
-    
-    // Patient Acknowledgments
-    readAndUnderstood: initialData?.read_and_understood || false,
-    understandRefundPolicy: initialData?.understand_refund_policy || false,
-    understandFullPaymentRequired: initialData?.understand_full_payment_required || false,
-    agreeNoDisputes: initialData?.agree_no_disputes || false,
-    understandOneYearValidity: initialData?.understand_one_year_validity || false,
-    understandNoCashPayments: initialData?.understand_no_cash_payments || false,
-    enteringVoluntarily: initialData?.entering_voluntarily || false,
-    
-    // Signatures
-    patientFullName: initialData?.patient_full_name || patientName,
-    patientSignature: initialData?.patient_signature || "",
-    patientSignatureDate: initialData?.patient_signature_date || new Date().toISOString().split('T')[0],
-    providerRepName: initialData?.provider_representative_name || "",
-    providerRepTitle: initialData?.provider_representative_title || "",
-    practiceSignatureDate: initialData?.practice_signature_date || new Date().toISOString().split('T')[0]
+  const [formData, setFormData] = useState(() => {
+    // The initialData comes from the service already converted to camelCase
+    const today = new Date().toISOString().split('T')[0];
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 1); // 1 year from now
+    const oneYearFromNow = futureDate.toISOString().split('T')[0];
+
+    const initialFormData = {
+      // Agreement Details
+      agreementDate: initialData?.agreementDate || today,
+      providerLicenseNumber: initialData?.providerLicenseNumber || "",
+
+      // Patient Information
+      firstName: initialData?.firstName || patientName.split(' ')[0] || "",
+      lastName: initialData?.lastName || patientName.split(' ').slice(1).join(' ') || "",
+      address: initialData?.address || "",
+      email: initialData?.email || "",
+      phone: initialData?.phone || "",
+
+      // Payment Details
+      paymentAmount: initialData?.paymentAmount || "",
+      paymentDate: initialData?.paymentDate || today,
+      estimatedTotalCost: initialData?.estimatedTotalCost || "",
+      remainingBalance: initialData?.remainingBalance || "",
+      finalPaymentDueDate: initialData?.finalPaymentDueDate || oneYearFromNow,
+
+      // Treatment Selection
+      selectedTreatments: initialData?.selectedTreatments || [],
+
+      // Patient Acknowledgments
+      readAndUnderstood: initialData?.readAndUnderstood ?? false,
+      understandRefundPolicy: initialData?.understandRefundPolicy ?? false,
+      understandFullPaymentRequired: initialData?.understandFullPaymentRequired ?? false,
+      agreeNoDisputes: initialData?.agreeNoDisputes ?? false,
+      understandOneYearValidity: initialData?.understandOneYearValidity ?? false,
+      understandNoCashPayments: initialData?.understandNoCashPayments ?? false,
+      enteringVoluntarily: initialData?.enteringVoluntarily ?? false,
+
+      // Signatures
+      patientFullName: initialData?.patientFullName || patientName || "",
+      patientSignature: initialData?.patientSignature || "",
+      patientSignatureDate: initialData?.patientSignatureDate || today,
+      providerRepName: initialData?.providerRepresentativeName || "Dr. Smith",
+      providerRepTitle: initialData?.providerRepresentativeTitle || "Practice Manager",
+      practiceSignatureDate: initialData?.practiceSignatureDate || today
+    };
+
+    console.log('🏁 Initial Partial Payment Agreement form data setup:', {
+      firstName: initialFormData.firstName,
+      lastName: initialFormData.lastName,
+      paymentAmount: initialFormData.paymentAmount,
+      fromInitialData: !!initialData,
+      initialDataId: initialData?.id,
+      hasInitialData: !!initialData
+    });
+
+    return initialFormData;
   });
 
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [hasFormData, setHasFormData] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
 
   // Treatment options
@@ -94,35 +127,97 @@ export function PartialPaymentAgreementForm({
     "Lateral Window Sinus Lift"
   ];
 
+  // Update form data when initialData changes
   useEffect(() => {
-    if (initialData) {
-      setFormData(prev => ({ ...prev, ...initialData }));
-    }
-  }, [initialData]);
+    if (initialData && initialData.id) {
+      console.log('🔄 Updating Partial Payment Agreement form data from initialData:', initialData);
+      console.log('🔍 isEditing:', isEditing, 'readOnly:', readOnly);
 
-  // Auto-save functionality
+      // The initialData comes from the service with camelCase field names
+      // We need to map them to the form's expected field names
+      const today = new Date().toISOString().split('T')[0];
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 1);
+      const oneYearFromNow = futureDate.toISOString().split('T')[0];
+
+      setFormData(prev => ({
+        ...prev,
+        // Agreement Details
+        agreementDate: initialData.agreementDate || prev.agreementDate || today,
+        providerLicenseNumber: initialData.providerLicenseNumber || prev.providerLicenseNumber || "",
+
+        // Patient Information
+        firstName: initialData.firstName || prev.firstName || "",
+        lastName: initialData.lastName || prev.lastName || "",
+        address: initialData.address || prev.address || "",
+        email: initialData.email || prev.email || "",
+        phone: initialData.phone || prev.phone || "",
+
+        // Payment Details
+        paymentAmount: initialData.paymentAmount || prev.paymentAmount || "",
+        paymentDate: initialData.paymentDate || prev.paymentDate || today,
+        estimatedTotalCost: initialData.estimatedTotalCost || prev.estimatedTotalCost || "",
+        remainingBalance: initialData.remainingBalance || prev.remainingBalance || "",
+        finalPaymentDueDate: initialData.finalPaymentDueDate || prev.finalPaymentDueDate || oneYearFromNow,
+
+        // Treatment Selection
+        selectedTreatments: initialData.selectedTreatments || prev.selectedTreatments || [],
+
+        // Agreement Acknowledgments (use ?? for boolean values to preserve false)
+        readAndUnderstood: initialData.readAndUnderstood ?? prev.readAndUnderstood ?? false,
+        understandRefundPolicy: initialData.understandRefundPolicy ?? prev.understandRefundPolicy ?? false,
+        understandFullPaymentRequired: initialData.understandFullPaymentRequired ?? prev.understandFullPaymentRequired ?? false,
+        agreeNoDisputes: initialData.agreeNoDisputes ?? prev.agreeNoDisputes ?? false,
+        understandOneYearValidity: initialData.understandOneYearValidity ?? prev.understandOneYearValidity ?? false,
+        understandNoCashPayments: initialData.understandNoCashPayments ?? prev.understandNoCashPayments ?? false,
+        enteringVoluntarily: initialData.enteringVoluntarily ?? prev.enteringVoluntarily ?? false,
+
+        // Signatures
+        patientSignature: initialData.patientSignature || prev.patientSignature || "",
+        patientSignatureDate: initialData.patientSignatureDate || prev.patientSignatureDate || today,
+        patientFullName: initialData.patientFullName || prev.patientFullName || patientName || "",
+        providerRepName: initialData.providerRepresentativeName || prev.providerRepName || "Dr. Smith",
+        providerRepTitle: initialData.providerRepresentativeTitle || prev.providerRepTitle || "Practice Manager",
+        practiceSignatureDate: initialData.practiceSignatureDate || prev.practiceSignatureDate || today
+      }));
+
+      // Mark form as initialized after loading initial data
+      setIsFormInitialized(true);
+    } else if (!initialData?.id) {
+      // Mark form as initialized for new forms (no initial data)
+      setIsFormInitialized(true);
+    }
+  }, [initialData?.id, patientName]);
+
+  // Auto-save effect with debouncing
   useEffect(() => {
-    if (!readOnly && (formData.firstName || formData.email || formData.phone)) {
-      const timeoutId = setTimeout(() => {
-        handleAutoSave();
-      }, 2000);
+    if (!onAutoSave || !isFormInitialized) return;
 
-      return () => clearTimeout(timeoutId);
-    }
-  }, [formData, readOnly]);
+    // Check if form has meaningful data (including address)
+    const hasData = formData.firstName || formData.lastName || formData.paymentAmount ||
+                   formData.estimatedTotalCost || formData.selectedTreatments?.length ||
+                   formData.patientSignature || formData.email || formData.phone ||
+                   formData.address || formData.providerLicenseNumber;
 
-  const handleAutoSave = async () => {
-    if (readOnly) return;
-    
-    setAutoSaveStatus('saving');
-    try {
-      setAutoSaveStatus('saved');
-      setTimeout(() => setAutoSaveStatus('idle'), 2000);
-    } catch (error) {
-      setAutoSaveStatus('error');
-      setTimeout(() => setAutoSaveStatus('idle'), 3000);
-    }
-  };
+    setHasFormData(hasData);
+
+    if (!hasData) return;
+
+    const timeoutId = setTimeout(() => {
+      console.log('🔄 Auto-saving Partial Payment Agreement form with data:', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        paymentAmount: formData.paymentAmount,
+        estimatedTotalCost: formData.estimatedTotalCost,
+        address: formData.address,
+        providerLicenseNumber: formData.providerLicenseNumber,
+        isFormInitialized: isFormInitialized
+      });
+      onAutoSave(formData);
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, onAutoSave, isFormInitialized]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -153,6 +248,17 @@ export function PartialPaymentAgreementForm({
     const payment = parseFloat(formData.paymentAmount) || 0;
     return total - payment;
   };
+
+  // Auto-calculate remaining balance when payment amount or total cost changes
+  useEffect(() => {
+    const calculatedBalance = calculateRemainingBalance();
+    if (calculatedBalance >= 0 && calculatedBalance !== parseFloat(formData.remainingBalance || "0")) {
+      setFormData(prev => ({
+        ...prev,
+        remainingBalance: calculatedBalance.toFixed(2)
+      }));
+    }
+  }, [formData.paymentAmount, formData.estimatedTotalCost]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,9 +292,19 @@ export function PartialPaymentAgreementForm({
       return;
     }
 
+    // Ensure dates are properly formatted or use current date as fallback
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Validate date format function
+    const isValidDate = (dateString: string) => {
+      if (!dateString) return false;
+      const date = new Date(dateString);
+      return date instanceof Date && !isNaN(date.getTime()) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+    };
+
     // Convert form data to match service interface
     const submissionData = {
-      agreement_date: formData.agreementDate,
+      agreement_date: isValidDate(formData.agreementDate) ? formData.agreementDate : currentDate,
       provider_license_number: formData.providerLicenseNumber,
       first_name: formData.firstName,
       last_name: formData.lastName,
@@ -196,10 +312,10 @@ export function PartialPaymentAgreementForm({
       email: formData.email,
       phone: formData.phone,
       payment_amount: formData.paymentAmount,
-      payment_date: formData.paymentDate,
+      payment_date: isValidDate(formData.paymentDate) ? formData.paymentDate : currentDate,
       estimated_total_cost: formData.estimatedTotalCost,
       remaining_balance: calculateRemainingBalance().toString(),
-      final_payment_due_date: formData.finalPaymentDueDate,
+      final_payment_due_date: isValidDate(formData.finalPaymentDueDate) ? formData.finalPaymentDueDate : currentDate,
       selected_treatments: formData.selectedTreatments,
       read_and_understood: formData.readAndUnderstood,
       understand_refund_policy: formData.understandRefundPolicy,
@@ -209,11 +325,11 @@ export function PartialPaymentAgreementForm({
       understand_no_cash_payments: formData.understandNoCashPayments,
       entering_voluntarily: formData.enteringVoluntarily,
       patient_signature: formData.patientSignature,
-      patient_signature_date: formData.patientSignatureDate,
+      patient_signature_date: isValidDate(formData.patientSignatureDate) ? formData.patientSignatureDate : currentDate,
       patient_full_name: formData.patientFullName,
       provider_representative_name: formData.providerRepName,
       provider_representative_title: formData.providerRepTitle,
-      practice_signature_date: formData.practiceSignatureDate
+      practice_signature_date: isValidDate(formData.practiceSignatureDate) ? formData.practiceSignatureDate : currentDate
     };
 
     onSubmit(submissionData);
@@ -255,12 +371,34 @@ export function PartialPaymentAgreementForm({
           <div className="flex-1 overflow-hidden px-6">
             <div className="space-y-6 h-full overflow-y-auto scrollbar-hidden">
               {/* Practice Header */}
-              <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white p-6 rounded-lg text-center">
-                <h1 className="text-2xl font-bold mb-2">NEW YORK DENTAL IMPLANTS</h1>
-                <h2 className="text-lg mb-2">PARTIAL PAYMENT AGREEMENT FOR FUTURE TREATMENT</h2>
-                <div className="text-sm">
-                  <p>344 North Main Street, Canandaigua, NY 14424</p>
-                  <p>Phone: (585) 394-5910</p>
+              <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white p-6 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="text-center flex-1">
+                    <h1 className="text-2xl font-bold mb-2">NEW YORK DENTAL IMPLANTS</h1>
+                    <h2 className="text-lg mb-2">PARTIAL PAYMENT AGREEMENT FOR FUTURE TREATMENT</h2>
+                    <div className="text-sm">
+                      <p>344 North Main Street, Canandaigua, NY 14424</p>
+                      <p>Phone: (585) 394-5910</p>
+                    </div>
+                  </div>
+
+                  {/* Auto-save Status Indicator */}
+                  {onAutoSave && !readOnly && (hasFormData || autoSaveStatus === 'error') && (
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
+                      autoSaveStatus === 'error'
+                        ? 'bg-red-50 text-red-700 border border-red-200'
+                        : 'bg-green-50 text-green-700 border border-green-200'
+                    }`}>
+                      {autoSaveStatus === 'error' ? (
+                        <AlertTriangle className="h-3 w-3 text-red-600" />
+                      ) : (
+                        <div className="animate-spin rounded-full h-3 w-3 border-2 border-green-200 border-t-green-600"></div>
+                      )}
+                      <span className="font-medium">
+                        {autoSaveStatus === 'error' ? autoSaveMessage : 'Auto-saving changes...'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -927,7 +1065,7 @@ export function PartialPaymentAgreementForm({
               </Button>
               {!readOnly ? (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  {isEditing ? 'Update Agreement' : 'Save Agreement'}
+                  Submit
                 </Button>
               ) : (
                 <Button type="button" disabled className="bg-gray-400 text-white">

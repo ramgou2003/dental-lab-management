@@ -10,7 +10,7 @@ import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
 import { CustomCheckbox } from "@/components/CustomCheckbox";
 import { SimpleCheckbox } from "@/components/SimpleCheckbox";
-import { FileText, User, DollarSign, Shield, AlertTriangle, Scale, Edit, Clock } from "lucide-react";
+import { FileText, User, DollarSign, Shield, AlertTriangle, Scale, Edit, Clock, CheckCircle, AlertCircle } from "lucide-react";
 
 interface FinancialAgreementFormProps {
   onSubmit: (formData: any) => void;
@@ -20,6 +20,11 @@ interface FinancialAgreementFormProps {
   initialData?: any; // database record for editing/preview
   isEditing?: boolean;
   readOnly?: boolean; // preview mode
+  // Auto-save props
+  onAutoSave?: (formData: any) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  lastSavedTime?: string;
 }
 
 export function FinancialAgreementForm({
@@ -30,6 +35,10 @@ export function FinancialAgreementForm({
   initialData,
   isEditing = false,
   readOnly = false,
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  lastSavedTime = ''
 }: FinancialAgreementFormProps) {
   const [formData, setFormData] = useState({
     // Patient & Treatment Identification
@@ -166,6 +175,25 @@ export function FinancialAgreementForm({
 
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
   const [showWitnessSignatureDialog, setShowWitnessSignatureDialog] = useState(false);
+  const [hasFormData, setHasFormData] = useState(false);
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    if (!onAutoSave || readOnly) return;
+
+    // Check if form has meaningful data
+    const hasMeaningfulData = formData.patientName || formData.acceptedTreatments.length > 0 || formData.totalCostOfTreatment;
+    setHasFormData(hasMeaningfulData);
+
+    const timeoutId = setTimeout(() => {
+      // Only auto-save if there's meaningful data
+      if (hasMeaningfulData) {
+        onAutoSave(formData);
+      }
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, onAutoSave, readOnly]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => {
@@ -277,11 +305,33 @@ export function FinancialAgreementForm({
   return (
     <div className="max-w-5xl mx-auto">
       <DialogHeader className="mb-6">
-        <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-          <FileText className="h-6 w-6" />
-          Financial Agreement & Payment Terms
-        </DialogTitle>
-        <p className="text-sm text-gray-600 mt-2">Form Version 1.0 – Effective 07/2025 | Page 1 of 2</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
+              <FileText className="h-6 w-6" />
+              Financial Agreement & Payment Terms
+            </DialogTitle>
+            <p className="text-sm text-gray-600 mt-2">Form Version 1.0 – Effective 07/2025 | Page 1 of 2</p>
+          </div>
+
+          {/* Auto-save Status Indicator */}
+          {onAutoSave && !readOnly && (hasFormData || autoSaveStatus === 'error') && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
+              autoSaveStatus === 'error'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200'
+            }`}>
+              {autoSaveStatus === 'error' ? (
+                <AlertCircle className="h-3 w-3 text-red-600" />
+              ) : (
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-green-200 border-t-green-600"></div>
+              )}
+              <span className="font-medium">
+                {autoSaveStatus === 'error' ? autoSaveMessage : 'Auto-saving changes...'}
+              </span>
+            </div>
+          )}
+        </div>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-6">

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
-import { FileText, User, CheckCircle, Edit, Building2, Check } from "lucide-react";
+import { FileText, User, CheckCircle, Edit, Building2, Check, AlertTriangle } from "lucide-react";
 
 interface FinalDesignApprovalFormProps {
   onSubmit: (formData: any) => void;
@@ -20,6 +21,13 @@ interface FinalDesignApprovalFormProps {
   initialData?: any;
   isEditing?: boolean;
   readOnly?: boolean;
+  // Auto-save props
+  onAutoSave?: (formData: any) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  lastSavedTime?: string;
+  setAutoSaveStatus?: (status: 'idle' | 'saving' | 'saved' | 'error') => void;
+  setAutoSaveMessage?: (message: string) => void;
 }
 
 export function FinalDesignApprovalForm({
@@ -29,7 +37,13 @@ export function FinalDesignApprovalForm({
   patientDateOfBirth = "",
   initialData = null,
   isEditing = false,
-  readOnly = false
+  readOnly = false,
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  lastSavedTime = '',
+  setAutoSaveStatus,
+  setAutoSaveMessage
 }: FinalDesignApprovalFormProps) {
   // Material and Shade options from lab scripts form
   const materialOptions = [
@@ -43,42 +57,138 @@ export function FinalDesignApprovalForm({
     "BLEACH", "NW", "Clear", "Custom"
   ];
 
-  const [formData, setFormData] = useState({
-    // Patient Information
-    firstName: initialData?.first_name || patientName.split(' ')[0] || "",
-    lastName: initialData?.last_name || patientName.split(' ').slice(1).join(' ') || "",
-    dateOfBirth: initialData?.date_of_birth || patientDateOfBirth,
-    dateOfService: initialData?.date_of_service || new Date().toISOString().split('T')[0],
+  const [formData, setFormData] = useState(() => {
+    // The initialData comes from the service already converted to camelCase
+    const today = new Date().toISOString().split('T')[0];
 
-    // Treatment Details
-    treatment: initialData?.treatment || "", // "UPPER", "LOWER", "DUAL"
-    material: initialData?.material || "",
-    shadeSelected: initialData?.shade_selected || "",
+    const initialFormData = {
+      // Patient Information
+      firstName: initialData?.firstName || patientName.split(' ')[0] || "",
+      lastName: initialData?.lastName || patientName.split(' ').slice(1).join(' ') || "",
+      dateOfBirth: initialData?.dateOfBirth || patientDateOfBirth || "",
+      dateOfService: initialData?.dateOfService || today,
 
-    // Design Approval & Fee Agreement Acknowledgments
-    designReviewAcknowledged: initialData?.design_review_acknowledged || false,
-    finalFabricationApproved: initialData?.final_fabrication_approved || false,
-    postApprovalChangesUnderstood: initialData?.post_approval_changes_understood || false,
-    warrantyReminderUnderstood: initialData?.warranty_reminder_understood || false,
+      // Treatment Details
+      treatment: initialData?.treatment || "", // "UPPER", "LOWER", "DUAL"
+      material: initialData?.material || "",
+      shadeSelected: initialData?.shadeSelected || "",
 
-    // Signatures
-    patientFullName: initialData?.patient_full_name || patientName,
-    patientSignature: initialData?.patient_signature || "",
-    patientSignatureDate: initialData?.patient_signature_date || new Date().toISOString().split('T')[0],
-    witnessName: initialData?.witness_name || "",
-    witnessSignature: initialData?.witness_signature || "",
-    witnessSignatureDate: initialData?.witness_signature_date || new Date().toISOString().split('T')[0],
+      // Design Approval & Fee Agreement Acknowledgments
+      designReviewAcknowledged: initialData?.designReviewAcknowledged ?? false,
+      finalFabricationApproved: initialData?.finalFabricationApproved ?? false,
+      postApprovalChangesUnderstood: initialData?.postApprovalChangesUnderstood ?? false,
+      warrantyReminderUnderstood: initialData?.warrantyReminderUnderstood ?? false,
 
-    // Office Use Only
-    designAddedToChart: initialData?.design_added_to_chart || false,
-    feeAgreementScanned: initialData?.fee_agreement_scanned || false
+      // Signatures
+      patientFullName: initialData?.patientFullName || patientName || "",
+      patientSignature: initialData?.patientSignature || "",
+      patientSignatureDate: initialData?.patientSignatureDate || today,
+      witnessName: initialData?.witnessName || "",
+      witnessSignature: initialData?.witnessSignature || "",
+      witnessSignatureDate: initialData?.witnessSignatureDate || today,
+
+      // Office Use Only
+      designAddedToChart: initialData?.designAddedToChart ?? false,
+      feeAgreementScanned: initialData?.feeAgreementScanned ?? false
+    };
+
+    console.log('🏁 Initial Final Design Approval form data setup:', {
+      firstName: initialFormData.firstName,
+      lastName: initialFormData.lastName,
+      treatment: initialFormData.treatment,
+      material: initialFormData.material,
+      fromInitialData: !!initialData,
+      initialDataId: initialData?.id,
+      hasInitialData: !!initialData
+    });
+
+    return initialFormData;
   });
+
+  const [hasFormData, setHasFormData] = useState(false);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
 
   // Signature dialog states
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
   const [showWitnessSignatureDialog, setShowWitnessSignatureDialog] = useState(false);
 
+  // Update form data when initialData changes
+  useEffect(() => {
+    if (initialData && initialData.id) {
+      console.log('🔄 Updating Final Design Approval form data from initialData:', initialData);
+      console.log('🔍 isEditing:', isEditing, 'readOnly:', readOnly);
+
+      const today = new Date().toISOString().split('T')[0];
+
+      setFormData(prev => ({
+        ...prev,
+        // Patient Information
+        firstName: initialData.firstName || prev.firstName || "",
+        lastName: initialData.lastName || prev.lastName || "",
+        dateOfBirth: initialData.dateOfBirth || prev.dateOfBirth || "",
+        dateOfService: initialData.dateOfService || prev.dateOfService || today,
+
+        // Treatment Details
+        treatment: initialData.treatment || prev.treatment || "",
+        material: initialData.material || prev.material || "",
+        shadeSelected: initialData.shadeSelected || prev.shadeSelected || "",
+
+        // Design Approval & Fee Agreement Acknowledgments
+        designReviewAcknowledged: initialData.designReviewAcknowledged ?? prev.designReviewAcknowledged ?? false,
+        finalFabricationApproved: initialData.finalFabricationApproved ?? prev.finalFabricationApproved ?? false,
+        postApprovalChangesUnderstood: initialData.postApprovalChangesUnderstood ?? prev.postApprovalChangesUnderstood ?? false,
+        warrantyReminderUnderstood: initialData.warrantyReminderUnderstood ?? prev.warrantyReminderUnderstood ?? false,
+
+        // Signatures
+        patientFullName: initialData.patientFullName || prev.patientFullName || patientName || "",
+        patientSignature: initialData.patientSignature || prev.patientSignature || "",
+        patientSignatureDate: initialData.patientSignatureDate || prev.patientSignatureDate || today,
+        witnessName: initialData.witnessName || prev.witnessName || "",
+        witnessSignature: initialData.witnessSignature || prev.witnessSignature || "",
+        witnessSignatureDate: initialData.witnessSignatureDate || prev.witnessSignatureDate || today,
+
+        // Office Use Only
+        designAddedToChart: initialData.designAddedToChart ?? prev.designAddedToChart ?? false,
+        feeAgreementScanned: initialData.feeAgreementScanned ?? prev.feeAgreementScanned ?? false
+      }));
+
+      // Mark form as initialized after loading initial data
+      setIsFormInitialized(true);
+    } else if (!initialData?.id) {
+      // Mark form as initialized for new forms (no initial data)
+      setIsFormInitialized(true);
+    }
+  }, [initialData?.id, patientName]);
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    if (!onAutoSave || !isFormInitialized) return;
+
+    // Check if form has meaningful data
+    const hasData = formData.firstName || formData.lastName || formData.treatment ||
+                   formData.material || formData.patientSignature ||
+                   formData.designReviewAcknowledged || formData.finalFabricationApproved;
+
+    setHasFormData(hasData);
+
+    if (!hasData) return;
+
+    const timeoutId = setTimeout(() => {
+      console.log('🔄 Auto-saving Final Design Approval form with data:', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        treatment: formData.treatment,
+        material: formData.material,
+        isFormInitialized: isFormInitialized
+      });
+      onAutoSave(formData);
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, onAutoSave, isFormInitialized]);
+
   const handleInputChange = (field: string, value: any) => {
+    console.log('📝 Input changed:', field, '=', value);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -112,16 +222,98 @@ export function FinalDesignApprovalForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    // Validation
+    if (!formData.firstName || !formData.lastName) {
+      toast.error('Please fill in patient first and last name');
+      return;
+    }
+
+    if (!formData.treatment) {
+      toast.error('Please select a treatment type');
+      return;
+    }
+
+    if (!formData.material) {
+      toast.error('Please select a material');
+      return;
+    }
+
+    if (!formData.designReviewAcknowledged || !formData.finalFabricationApproved ||
+        !formData.postApprovalChangesUnderstood || !formData.warrantyReminderUnderstood) {
+      toast.error('Please acknowledge all design approval items');
+      return;
+    }
+
+    if (!formData.patientSignature) {
+      toast.error('Patient signature is required');
+      return;
+    }
+
+    // Ensure dates are properly formatted or use current date as fallback
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Validate date format function
+    const isValidDate = (dateString: string) => {
+      if (!dateString) return false;
+      const date = new Date(dateString);
+      return date instanceof Date && !isNaN(date.getTime()) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+    };
+
+    // Convert form data to match service interface
+    const submissionData = {
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      date_of_birth: isValidDate(formData.dateOfBirth) ? formData.dateOfBirth : null,
+      date_of_service: isValidDate(formData.dateOfService) ? formData.dateOfService : currentDate,
+      treatment: formData.treatment,
+      material: formData.material,
+      shade_selected: formData.shadeSelected,
+      design_review_acknowledged: formData.designReviewAcknowledged,
+      final_fabrication_approved: formData.finalFabricationApproved,
+      post_approval_changes_understood: formData.postApprovalChangesUnderstood,
+      warranty_reminder_understood: formData.warrantyReminderUnderstood,
+      patient_full_name: formData.patientFullName,
+      patient_signature: formData.patientSignature,
+      patient_signature_date: isValidDate(formData.patientSignatureDate) ? formData.patientSignatureDate : currentDate,
+      witness_name: formData.witnessName,
+      witness_signature: formData.witnessSignature,
+      witness_signature_date: isValidDate(formData.witnessSignatureDate) ? formData.witnessSignatureDate : currentDate,
+      design_added_to_chart: formData.designAddedToChart,
+      fee_agreement_scanned: formData.feeAgreementScanned
+    };
+
+    onSubmit(submissionData);
+    toast.success('Final Design Approval form submitted successfully');
   };
 
   return (
     <div className="h-[80vh] flex flex-col">
       {/* Fixed Header - Full Width */}
       <DialogHeader className="flex-shrink-0 mb-3 w-full px-3 py-2">
-        <DialogTitle className="text-xl font-bold text-blue-600 flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          Final Design Approval Form
+        <DialogTitle className="text-xl font-bold text-blue-600 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Final Design Approval Form
+          </div>
+
+          {/* Auto-save Status Indicator */}
+          {onAutoSave && !readOnly && (hasFormData || autoSaveStatus === 'error') && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
+              autoSaveStatus === 'error'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200'
+            }`}>
+              {autoSaveStatus === 'error' ? (
+                <AlertTriangle className="h-3 w-3 text-red-600" />
+              ) : (
+                <div className="animate-spin rounded-full h-3 w-3 border-2 border-green-200 border-t-green-600"></div>
+              )}
+              <span className="font-medium">
+                {autoSaveStatus === 'error' ? autoSaveMessage : 'Auto-saving changes...'}
+              </span>
+            </div>
+          )}
         </DialogTitle>
       </DialogHeader>
 
@@ -575,7 +767,7 @@ export function FinalDesignApprovalForm({
               </Button>
               {!readOnly ? (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  {isEditing ? 'Update Final Design Approval' : 'Save Final Design Approval'}
+                  Submit
                 </Button>
               ) : (
                 <Button type="button" disabled className="bg-gray-400 text-white">

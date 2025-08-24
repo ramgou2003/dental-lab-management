@@ -43,7 +43,10 @@ export interface ThreeYearCarePackageFormData {
   // Staff Use
   staff_processed_by: string;
   staff_processed_date: string;
-  
+
+  // Status
+  status?: string; // 'draft', 'submitted', 'signed'
+
   created_at?: string;
   updated_at?: string;
 }
@@ -55,11 +58,33 @@ export function convertFormDataToDatabase(
   formData: any,
   patientId?: string
 ): Omit<ThreeYearCarePackageFormData, 'id' | 'created_at' | 'updated_at'> {
+  // Helper function to validate and format dates
+  const validateDate = (dateValue: any): string | null => {
+    if (!dateValue) return null;
+    if (typeof dateValue === 'string' && dateValue.trim() === '') return null;
+
+    // Check if it's already in YYYY-MM-DD format
+    if (typeof dateValue === 'string' && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        return dateValue;
+      }
+    }
+
+    // Try to parse and format the date
+    const date = new Date(dateValue);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+
+    return null;
+  };
+
   return {
     patient_id: patientId,
     patient_name: formData.patientName || '',
-    date_of_birth: formData.dateOfBirth || '',
-    enrollment_date: formData.enrollmentDate || '',
+    date_of_birth: validateDate(formData.dateOfBirth),
+    enrollment_date: validateDate(formData.enrollmentDate),
     enrollment_time: formData.enrollmentTime || '',
     
     // Daily Care Requirements Acknowledgment
@@ -82,10 +107,10 @@ export function convertFormDataToDatabase(
     
     // Signatures
     patient_signature: formData.patientSignature || '',
-    patient_signature_date: formData.patientSignatureDate || '',
+    patient_signature_date: validateDate(formData.patientSignatureDate),
     witness_name: formData.witnessName || '',
     witness_signature: formData.witnessSignature || '',
-    witness_signature_date: formData.witnessSignatureDate || '',
+    witness_signature_date: validateDate(formData.witnessSignatureDate),
     
     // Age/Language Confirmation
     age_confirmation: formData.ageConfirmation || false,
@@ -96,7 +121,10 @@ export function convertFormDataToDatabase(
     
     // Staff Use
     staff_processed_by: formData.staffProcessedBy || '',
-    staff_processed_date: formData.staffProcessedDate || ''
+    staff_processed_date: validateDate(formData.staffProcessedDate),
+
+    // Status
+    status: formData.status || 'draft'
   };
 }
 
@@ -144,7 +172,10 @@ export function convertDatabaseToFormData(dbData: ThreeYearCarePackageFormData):
     
     // Staff Use
     staffProcessedBy: dbData.staff_processed_by || '',
-    staffProcessedDate: dbData.staff_processed_date || ''
+    staffProcessedDate: dbData.staff_processed_date || '',
+
+    // Status
+    status: dbData.status || 'draft'
   };
 }
 
@@ -258,6 +289,130 @@ export async function deleteThreeYearCarePackageForm(
   } catch (error) {
     console.error('Unexpected error deleting 3-Year Care Package form:', error);
     return { error };
+  }
+}
+
+/**
+ * Auto-save 3-Year Care Package form (upsert with draft status)
+ */
+export async function autoSaveThreeYearCarePackageForm(
+  formData: any,
+  patientId?: string,
+  leadId?: string,
+  newPatientPacketId?: string,
+  existingId?: string
+): Promise<{ data: any | null; error: any }> {
+  try {
+    console.log('🔄 Auto-saving 3-Year Care Package form...');
+    console.log('📝 Input formData:', JSON.stringify(formData, null, 2));
+    console.log('📝 patientId:', patientId);
+    console.log('📝 existingId:', existingId);
+    const dbData = convertFormDataToDatabase(formData, patientId);
+    console.log('📝 Processed dbData:', JSON.stringify(dbData, null, 2));
+
+    // Validate that we have some meaningful data
+    if (!dbData.patient_name && !dbData.enrollment_choice && !dbData.payment_method) {
+      console.warn('⚠️ Warning: Saving form with minimal data');
+    }
+
+    if (existingId) {
+      // Get current record to check status
+      const { data: currentRecord } = await supabase
+        .from('three_year_care_package_forms')
+        .select('status')
+        .eq('id', existingId)
+        .single();
+
+      // Use the status from formData if provided, otherwise preserve current status or set to draft
+      dbData.status = formData.status ||
+        (currentRecord?.status === 'submitted' ? 'submitted' : 'draft');
+
+      // Update existing record
+      console.log('📝 Updating existing 3-Year Care Package form with status:', dbData.status);
+      const { data, error } = await supabase
+        .from('three_year_care_package_forms')
+        .update({
+          ...dbData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error updating 3-Year Care Package form:', error);
+        return { data: null, error };
+      }
+
+      console.log('✅ 3-Year Care Package form auto-saved successfully:', data);
+      return { data, error: null };
+    } else {
+      // Check for existing forms for this patient first
+      if (patientId) {
+        // Check for any existing forms (both draft and submitted)
+        const { data: existingForms } = await supabase
+          .from('three_year_care_package_forms')
+          .select('id, status')
+          .eq('patient_id', patientId)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (existingForms && existingForms.length > 0) {
+          // Check if there's already a submitted form
+          const submittedForm = existingForms.find(form => form.status === 'submitted');
+          if (submittedForm && !formData.status) {
+            // Don't create new drafts if a submitted form already exists (unless explicitly submitting)
+            console.log('⚠️ Submitted form already exists, not creating new draft');
+            return { data: submittedForm, error: null };
+          }
+
+          // Look for existing draft to update
+          const draftForm = existingForms.find(form => form.status === 'draft');
+          if (draftForm) {
+            // Update the existing draft instead of creating a new one
+            console.log('📝 Updating existing 3-Year Care Package draft:', draftForm.id);
+            const { data, error } = await supabase
+              .from('three_year_care_package_forms')
+              .update({
+                ...dbData,
+                status: formData.status || 'draft',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', draftForm.id)
+              .select()
+              .single();
+
+            if (error) {
+              console.error('❌ Error updating existing 3-Year Care Package draft:', error);
+              return { data: null, error };
+            }
+
+            console.log('✅ 3-Year Care Package draft updated successfully:', data);
+            return { data, error: null };
+          }
+        }
+      }
+
+      // Create new record only if no existing draft found
+      dbData.status = 'draft';
+      console.log('📝 Creating new 3-Year Care Package form draft');
+      const { data, error } = await supabase
+        .from('three_year_care_package_forms')
+        .insert(dbData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error creating 3-Year Care Package form:', error);
+        return { data: null, error };
+      }
+
+      console.log('✅ 3-Year Care Package form auto-saved successfully:', data);
+      return { data, error: null };
+    }
+  } catch (error) {
+    console.error('❌ Error auto-saving 3-Year Care Package form:', error);
+    return { data: null, error };
   }
 }
 

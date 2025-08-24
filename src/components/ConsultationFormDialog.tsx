@@ -168,7 +168,7 @@ export function ConsultationFormDialog({
   const progress = (activeSection / sections.length) * 100;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
         <div className="w-full space-y-6 p-6">
           {/* Header */}
