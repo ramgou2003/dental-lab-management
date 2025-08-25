@@ -222,6 +222,60 @@ export function ConsentFullArchForm({
     if (initialData && initialData.id) {
       console.log('🔄 Updating Consent Full Arch form data from initialData:', initialData);
       console.log('🔍 isEditing:', isEditing, 'readOnly:', readOnly);
+      console.log('🔍 Risks data from initialData:', {
+        risksUnderstood: initialData.risksUnderstood,
+        materialRisksInitials: initialData.materialRisksInitials
+      });
+      console.log('🔍 Sedation data from initialData:', {
+        escortName: initialData.escortName,
+        escortPhone: initialData.escortPhone,
+        medicationsDisclosed: initialData.medicationsDisclosed,
+        declineIVSedation: initialData.declineIVSedation,
+        sedationInitials: initialData.sedationInitials,
+
+        ivSedation: initialData.ivSedation
+      });
+      console.log('🔍 Financial data from initialData:', {
+        surgicalExtractions: initialData.surgicalExtractions,
+        implantFixtures: initialData.implantFixtures,
+        zirconiabridge: initialData.zirconiabridge,
+        financialInitials: initialData.financialInitials
+      });
+      console.log('🔍 Media data from initialData:', {
+        internalRecordKeeping: initialData.internalRecordKeeping,
+        professionalEducation: initialData.professionalEducation,
+        marketingSocialMedia: initialData.marketingSocialMedia,
+        photoVideoInitials: initialData.photoVideoInitials
+      });
+      console.log('🔍 HIPAA data from initialData:', {
+        hipaaEmailSms: initialData.hipaaEmailSms,
+        hipaaEmail: initialData.hipaaEmail,
+        hipaaPhone: initialData.hipaaPhone
+      });
+      console.log('🔍 Opioid data from initialData:', {
+        opioidInitials: initialData.opioidInitials,
+        smallestOpioidSupply: initialData.smallestOpioidSupply
+      });
+      console.log('🔍 Final section data from initialData:', {
+        surgeonName: initialData.surgeonName,
+        surgeonSignature: initialData.surgeonSignature,
+        surgeonDate: initialData.surgeonDate,
+        patientSignature: initialData.patientSignature,
+        patientSignatureDate: initialData.patientSignatureDate,
+        witnessName: initialData.witnessName,
+        witnessSignature: initialData.witnessSignature,
+        witnessSignatureDate: initialData.witnessSignatureDate,
+        finalInitials: initialData.finalInitials
+      });
+      console.log('🔍 Acknowledgment data from initialData:', {
+        acknowledgmentRead: initialData.acknowledgmentRead,
+        acknowledgmentOutcome: initialData.acknowledgmentOutcome,
+        acknowledgmentAuthorize: initialData.acknowledgmentAuthorize
+      });
+      console.log('🔍 Date/Time data from initialData:', {
+        consentDate: initialData.consentDate,
+        consentTime: initialData.consentTime
+      });
 
       const today = new Date().toISOString().split('T')[0];
 
@@ -260,19 +314,75 @@ export function ConsentFullArchForm({
         // Treatment Description Initials
         treatmentDescriptionInitials: initialData.treatmentDescriptionInitials || prev.treatmentDescriptionInitials || "",
 
+        // Material Risks
+        risksUnderstood: initialData.risksUnderstood ?? prev.risksUnderstood ?? false,
+        materialRisksInitials: initialData.materialRisksInitials || prev.materialRisksInitials || "",
+
+        // Sedation & Anesthesia Consent
+        escortName: initialData.escortName || prev.escortName || "",
+        escortPhone: initialData.escortPhone || prev.escortPhone || "",
+        medicationsDisclosed: initialData.medicationsDisclosed ?? prev.medicationsDisclosed ?? false,
+        declineIVSedation: initialData.declineIVSedation ?? prev.declineIVSedation ?? false,
+        sedationInitials: initialData.sedationInitials || prev.sedationInitials || "",
+
+        ivSedation: {
+          fee: initialData.ivSedation?.fee || prev.ivSedation?.fee || "",
+          covered: initialData.ivSedation?.covered || prev.ivSedation?.covered || ""
+        },
+
         // Planned Drugs
         midazolam: initialData.midazolam ?? prev.midazolam ?? false,
         fentanyl: initialData.fentanyl ?? prev.fentanyl ?? false,
         ketamine: initialData.ketamine ?? prev.ketamine ?? false,
         dexamethasone: initialData.dexamethasone ?? prev.dexamethasone ?? false,
 
+        // Financial Disclosure
+        surgicalExtractions: {
+          count: initialData.surgicalExtractions?.count || prev.surgicalExtractions?.count || "",
+          fee: initialData.surgicalExtractions?.fee || prev.surgicalExtractions?.fee || "",
+          covered: initialData.surgicalExtractions?.covered || prev.surgicalExtractions?.covered || ""
+        },
+        implantFixtures: {
+          count: initialData.implantFixtures?.count || prev.implantFixtures?.count || "",
+          fee: initialData.implantFixtures?.fee || prev.implantFixtures?.fee || "",
+          covered: initialData.implantFixtures?.covered || prev.implantFixtures?.covered || ""
+        },
+        zirconiabridge: {
+          fee: initialData.zirconiabridge?.fee || prev.zirconiabridge?.fee || "",
+          covered: initialData.zirconiabridge?.covered || prev.zirconiabridge?.covered || ""
+        },
+        financialInitials: initialData.financialInitials || prev.financialInitials || "",
+
+        // Photo/Video Authorization
+        internalRecordKeeping: initialData.internalRecordKeeping || prev.internalRecordKeeping || "",
+        professionalEducation: initialData.professionalEducation || prev.professionalEducation || "",
+        marketingSocialMedia: initialData.marketingSocialMedia || prev.marketingSocialMedia || "",
+        photoVideoInitials: initialData.photoVideoInitials || prev.photoVideoInitials || "",
+
+        // HIPAA Email/SMS Authorization
+        hipaaEmailSms: initialData.hipaaEmailSms ?? prev.hipaaEmailSms ?? false,
+        hipaaEmail: initialData.hipaaEmail || prev.hipaaEmail || "",
+        hipaaPhone: initialData.hipaaPhone || prev.hipaaPhone || "",
+
+        // Opioid Consent
+        opioidInitials: initialData.opioidInitials || prev.opioidInitials || "",
+        smallestOpioidSupply: initialData.smallestOpioidSupply ?? prev.smallestOpioidSupply ?? false,
+
+        // Patient Acknowledgment & Authorization
+        acknowledgmentRead: initialData.acknowledgmentRead ?? prev.acknowledgmentRead ?? false,
+        acknowledgmentOutcome: initialData.acknowledgmentOutcome ?? prev.acknowledgmentOutcome ?? false,
+        acknowledgmentAuthorize: initialData.acknowledgmentAuthorize ?? prev.acknowledgmentAuthorize ?? false,
+
         // Signatures
-        patientSignature: initialData.patientSignature || prev.patientSignature || "",
-        patientSignatureDate: initialData.patientSignatureDate || prev.patientSignatureDate || today,
+        surgeonName: initialData.surgeonName || prev.surgeonName || "",
         surgeonSignature: initialData.surgeonSignature || prev.surgeonSignature || "",
         surgeonDate: initialData.surgeonDate || prev.surgeonDate || today,
+        patientSignature: initialData.patientSignature || prev.patientSignature || "",
+        patientSignatureDate: initialData.patientSignatureDate || prev.patientSignatureDate || today,
+        witnessName: initialData.witnessName || prev.witnessName || "",
         witnessSignature: initialData.witnessSignature || prev.witnessSignature || "",
-        witnessSignatureDate: initialData.witnessSignatureDate || prev.witnessSignatureDate || today
+        witnessSignatureDate: initialData.witnessSignatureDate || prev.witnessSignatureDate || today,
+        finalInitials: initialData.finalInitials || prev.finalInitials || ""
       }));
 
       // Mark form as initialized after loading initial data
@@ -299,7 +409,31 @@ export function ConsentFullArchForm({
                    formData.lowerProsthesis.zirconia || formData.lowerProsthesis.overdenture ||
                    formData.sedationPlan.localOnly || formData.sedationPlan.nitrous || formData.sedationPlan.ivConscious || formData.sedationPlan.generalHospital ||
                    formData.alternativesInitials.noTreatment || formData.alternativesInitials.conventionalDentures ||
-                   formData.alternativesInitials.segmentedExtraction || formData.alternativesInitials.removableOverdentures || formData.alternativesInitials.zygomaticImplants;
+                   formData.alternativesInitials.segmentedExtraction || formData.alternativesInitials.removableOverdentures || formData.alternativesInitials.zygomaticImplants ||
+                   // Include risks section fields
+                   formData.risksUnderstood || formData.materialRisksInitials ||
+                   // Include sedation/anesthesia fields
+                   formData.escortName || formData.escortPhone || formData.medicationsDisclosed || formData.declineIVSedation ||
+                   formData.sedationInitials || formData.ivSedation.fee || formData.ivSedation.covered ||
+                   // Include financial fields
+                   formData.surgicalExtractions.count || formData.surgicalExtractions.fee || formData.surgicalExtractions.covered ||
+                   formData.implantFixtures.count || formData.implantFixtures.fee || formData.implantFixtures.covered ||
+                   formData.zirconiabridge.fee || formData.zirconiabridge.covered || formData.financialInitials ||
+                   // Include media fields
+                   formData.internalRecordKeeping || formData.professionalEducation || formData.marketingSocialMedia ||
+                   formData.photoVideoInitials ||
+                   // Include HIPAA fields
+                   formData.hipaaEmailSms || formData.hipaaEmail || formData.hipaaPhone ||
+                   // Include opioid fields
+                   formData.opioidInitials || formData.smallestOpioidSupply ||
+                   // Include final section fields
+                   formData.surgeonName || formData.surgeonSignature || formData.surgeonDate ||
+                   formData.witnessName || formData.witnessSignature || formData.witnessSignatureDate ||
+                   formData.finalInitials ||
+                   // Include consent acknowledgments
+                   formData.acknowledgmentRead || formData.acknowledgmentOutcome || formData.acknowledgmentAuthorize ||
+                   // Include other important fields
+                   formData.chartNumber || formData.consentDate || formData.consentTime;
 
     setHasFormData(hasData);
 
@@ -310,7 +444,48 @@ export function ConsentFullArchForm({
         patientName: formData.patientName,
         archType: formData.archType,
         patientSignature: formData.patientSignature,
-        isFormInitialized: isFormInitialized
+        isFormInitialized: isFormInitialized,
+        financialData: {
+          surgicalExtractions: formData.surgicalExtractions,
+          implantFixtures: formData.implantFixtures,
+          zirconiabridge: formData.zirconiabridge,
+          financialInitials: formData.financialInitials
+        },
+        mediaData: {
+          internalRecordKeeping: formData.internalRecordKeeping,
+          professionalEducation: formData.professionalEducation,
+          marketingSocialMedia: formData.marketingSocialMedia,
+          photoVideoInitials: formData.photoVideoInitials
+        },
+        hipaaData: {
+          hipaaEmailSms: formData.hipaaEmailSms,
+          hipaaEmail: formData.hipaaEmail,
+          hipaaPhone: formData.hipaaPhone
+        },
+        opioidData: {
+          opioidInitials: formData.opioidInitials,
+          smallestOpioidSupply: formData.smallestOpioidSupply
+        },
+        finalSectionData: {
+          surgeonName: formData.surgeonName,
+          surgeonSignature: formData.surgeonSignature,
+          surgeonDate: formData.surgeonDate,
+          patientSignature: formData.patientSignature,
+          patientSignatureDate: formData.patientSignatureDate,
+          witnessName: formData.witnessName,
+          witnessSignature: formData.witnessSignature,
+          witnessSignatureDate: formData.witnessSignatureDate,
+          finalInitials: formData.finalInitials
+        },
+        acknowledgmentData: {
+          acknowledgmentRead: formData.acknowledgmentRead,
+          acknowledgmentOutcome: formData.acknowledgmentOutcome,
+          acknowledgmentAuthorize: formData.acknowledgmentAuthorize
+        },
+        dateTimeData: {
+          consentDate: formData.consentDate,
+          consentTime: formData.consentTime
+        }
       });
       onAutoSave(formData);
     }, 2000); // 2 second debounce
@@ -368,69 +543,65 @@ export function ConsentFullArchForm({
     treatmentDescriptionInitials: initialData?.treatment_description_initials || "",
 
     // Material Risks
-    risksUnderstood: initialData?.risks_understood || false,
-    materialRisksInitials: initialData?.material_risks_initials || "",
+    risksUnderstood: initialData?.risksUnderstood || false,
+    materialRisksInitials: initialData?.materialRisksInitials || "",
 
     // Sedation & Anesthesia Consent
-    escortName: initialData?.escort_name || "",
-    escortPhone: initialData?.escort_phone || "",
-    medicationsDisclosed: initialData?.medications_disclosed || false,
-    declineIVSedation: initialData?.decline_iv_sedation || false,
-    sedationInitials: initialData?.sedation_initials || "",
-    anesthesiaProviderInitials: initialData?.anesthesia_provider_initials || "",
-
+    escortName: initialData?.escortName || "",
+    escortPhone: initialData?.escortPhone || "",
+    medicationsDisclosed: initialData?.medicationsDisclosed || false,
+    declineIVSedation: initialData?.declineIVSedation || false,
+    sedationInitials: initialData?.sedationInitials || "",
     // Financial Disclosure
     surgicalExtractions: {
-      count: initialData?.surgical_extractions_count || "",
-      fee: initialData?.surgical_extractions_fee || "",
-      covered: initialData?.surgical_extractions_covered || ""
+      count: initialData?.surgicalExtractions?.count || "",
+      fee: initialData?.surgicalExtractions?.fee || "",
+      covered: initialData?.surgicalExtractions?.covered || ""
     },
     implantFixtures: {
-      count: initialData?.implant_fixtures_count || "",
-      fee: initialData?.implant_fixtures_fee || "",
-      covered: initialData?.implant_fixtures_covered || ""
+      count: initialData?.implantFixtures?.count || "",
+      fee: initialData?.implantFixtures?.fee || "",
+      covered: initialData?.implantFixtures?.covered || ""
     },
     zirconiabridge: {
-      fee: initialData?.zirconia_bridge_fee || "",
-      covered: initialData?.zirconia_bridge_covered || ""
+      fee: initialData?.zirconiabridge?.fee || "",
+      covered: initialData?.zirconiabridge?.covered || ""
     },
     ivSedation: {
-      fee: initialData?.iv_sedation_fee || "",
-      covered: initialData?.iv_sedation_covered || ""
+      fee: initialData?.ivSedation?.fee || "",
+      covered: initialData?.ivSedation?.covered || ""
     },
-    financialInitials: initialData?.financial_initials || "",
+    financialInitials: initialData?.financialInitials || "",
 
     // Photo/Video Authorization
-    internalRecordKeeping: initialData?.internal_record_keeping || "",
-    professionalEducation: initialData?.professional_education || "",
-    marketingSocialMedia: initialData?.marketing_social_media || "",
-    hipaaEmailSms: initialData?.hipaa_email_sms || false,
-    hipaaEmail: initialData?.hipaa_email || "",
-    hipaaPhone: initialData?.hipaa_phone || "",
-    photoVideoInitials: initialData?.photo_video_initials || "",
+    internalRecordKeeping: initialData?.internalRecordKeeping || "",
+    professionalEducation: initialData?.professionalEducation || "",
+    marketingSocialMedia: initialData?.marketingSocialMedia || "",
+    hipaaEmailSms: initialData?.hipaaEmailSms || false,
+    hipaaEmail: initialData?.hipaaEmail || "",
+    hipaaPhone: initialData?.hipaaPhone || "",
+    photoVideoInitials: initialData?.photoVideoInitials || "",
 
     // Opioid Consent
-    opioidInitials: initialData?.opioid_initials || "",
-    smallestOpioidSupply: initialData?.smallest_opioid_supply || false,
+    opioidInitials: initialData?.opioidInitials || "",
+    smallestOpioidSupply: initialData?.smallestOpioidSupply || false,
 
     // Final Acknowledgment & Signatures
-    surgeonName: initialData?.surgeon_name || "",
-    surgeonSignature: initialData?.surgeon_signature || "",
-    surgeonDate: initialData?.surgeon_date || "",
-    anesthesiaProviderName: initialData?.anesthesia_provider_name || "",
-    anesthesiaProviderSignature: initialData?.anesthesia_provider_signature || "",
-    anesthesiaProviderDate: initialData?.anesthesia_provider_date || "",
-    patientSignature: initialData?.patient_signature || "",
-    patientSignatureDate: initialData?.patient_signature_date || new Date().toISOString().split('T')[0],
-    witnessName: initialData?.witness_name || "",
-    witnessSignature: initialData?.witness_signature || "",
-    witnessSignatureDate: initialData?.witness_signature_date || new Date().toISOString().split('T')[0],
-    finalInitials: initialData?.final_initials || "",
+    surgeonName: initialData?.surgeonName || "",
+    surgeonSignature: initialData?.surgeonSignature || "",
+    surgeonDate: initialData?.surgeonDate || "",
+
+    patientSignature: initialData?.patientSignature || "",
+    patientSignatureDate: initialData?.patientSignatureDate || new Date().toISOString().split('T')[0],
+    witnessName: initialData?.witnessName || "",
+    witnessSignature: initialData?.witnessSignature || "",
+    witnessSignatureDate: initialData?.witnessSignatureDate || new Date().toISOString().split('T')[0],
+    finalInitials: initialData?.finalInitials || "",
 
     // Patient Acknowledgment Checkboxes
-    acknowledgmentRead: initialData?.acknowledgment_read || false,
-    acknowledgmentOutcome: initialData?.acknowledgment_outcome || false,
-    acknowledgmentAuthorize: initialData?.acknowledgment_authorize || false
+    acknowledgmentRead: initialData?.acknowledgmentRead || false,
+    acknowledgmentOutcome: initialData?.acknowledgmentOutcome || false,
+    acknowledgmentAuthorize: initialData?.acknowledgmentAuthorize || false
   });
 
   // Auto-sync patient name when it changes
@@ -446,13 +617,13 @@ export function ConsentFullArchForm({
     treatmentDescriptionInitials: false,
     materialRisksInitials: false,
     sedationInitials: false,
-    anesthesiaProviderInitials: false,
+
     financialInitials: false,
     photoVideoInitials: false,
     opioidInitials: false,
     finalInitials: false,
     surgeonSignature: false,
-    anesthesiaProviderSignature: false,
+
     patientSignature: false,
     witnessSignature: false
   });
@@ -638,13 +809,61 @@ export function ConsentFullArchForm({
       alternatives_removable_overdentures_initials: formData.alternativesInitials.removableOverdentures,
       alternatives_zygomatic_implants_initials: formData.alternativesInitials.zygomaticImplants,
 
+      // Material Risks
+      risks_understood: formData.risksUnderstood,
+      material_risks_initials: formData.materialRisksInitials,
+
+      // Sedation & Anesthesia Consent
+      escort_name: formData.escortName,
+      escort_phone: formData.escortPhone,
+      medications_disclosed: formData.medicationsDisclosed,
+      decline_iv_sedation: formData.declineIVSedation,
+      sedation_initials: formData.sedationInitials,
+
+      iv_sedation_fee: formData.ivSedation.fee,
+      iv_sedation_covered: formData.ivSedation.covered,
+
+      // Financial Disclosure
+      surgical_extractions_count: formData.surgicalExtractions.count,
+      surgical_extractions_fee: formData.surgicalExtractions.fee,
+      surgical_extractions_covered: formData.surgicalExtractions.covered,
+      implant_fixtures_count: formData.implantFixtures.count,
+      implant_fixtures_fee: formData.implantFixtures.fee,
+      implant_fixtures_covered: formData.implantFixtures.covered,
+      zirconia_bridge_fee: formData.zirconiabridge.fee,
+      zirconia_bridge_covered: formData.zirconiabridge.covered,
+      financial_initials: formData.financialInitials,
+
+      // Photo/Video Authorization
+      internal_record_keeping: formData.internalRecordKeeping,
+      professional_education: formData.professionalEducation,
+      marketing_social_media: formData.marketingSocialMedia,
+      photo_video_initials: formData.photoVideoInitials,
+
+      // HIPAA Email/SMS Authorization
+      hipaa_email_sms: formData.hipaaEmailSms,
+      hipaa_email: formData.hipaaEmail,
+      hipaa_phone: formData.hipaaPhone,
+
+      // Opioid Consent
+      opioid_initials: formData.opioidInitials,
+      smallest_opioid_supply: formData.smallestOpioidSupply,
+
+      // Patient Acknowledgment & Authorization
+      acknowledgment_read: formData.acknowledgmentRead,
+      acknowledgment_outcome: formData.acknowledgmentOutcome,
+      acknowledgment_authorize: formData.acknowledgmentAuthorize,
+
       // Signatures
-      patient_signature: formData.patientSignature,
-      patient_signature_date: isValidDate(formData.patientSignatureDate) ? formData.patientSignatureDate : currentDate,
+      surgeon_name: formData.surgeonName,
       surgeon_signature: formData.surgeonSignature,
       surgeon_date: isValidDate(formData.surgeonDate) ? formData.surgeonDate : currentDate,
+      patient_signature: formData.patientSignature,
+      patient_signature_date: isValidDate(formData.patientSignatureDate) ? formData.patientSignatureDate : currentDate,
+      witness_name: formData.witnessName,
       witness_signature: formData.witnessSignature,
-      witness_signature_date: isValidDate(formData.witnessSignatureDate) ? formData.witnessSignatureDate : currentDate
+      witness_signature_date: isValidDate(formData.witnessSignatureDate) ? formData.witnessSignatureDate : currentDate,
+      final_initials: formData.finalInitials
     };
 
     onSubmit(submissionData);
@@ -2327,37 +2546,8 @@ export function ConsentFullArchForm({
 
                 <div className="flex flex-col space-y-6">
                   {/* Signature Row */}
-                  <div className="flex items-center justify-between gap-8">
-                    {/* Anesthesia Provider Initials - Left Side */}
-                    <div className="flex flex-col items-center space-y-3">
-                      <div className="flex items-center justify-center">
-                        {formData.anesthesiaProviderInitials ? (
-                          <SignaturePreview
-                            signature={formData.anesthesiaProviderInitials}
-                            onEdit={() => handleSignatureDialogOpen('anesthesiaProviderInitials')}
-                            onClear={() => handleSignatureClear('anesthesiaProviderInitials')}
-                            className="w-64 h-16 border border-gray-300 rounded-md"
-                          />
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => handleSignatureDialogOpen('anesthesiaProviderInitials')}
-                            className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                            Sign Here
-                          </Button>
-                        )}
-                      </div>
-                      <div className="w-64 border-t border-gray-300 pt-2">
-                        <div className="flex items-center justify-center">
-                          <Label className="text-sm font-semibold">Anesthesia Provider Signature</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Patient Initials - Right Side */}
+                  <div className="flex items-center justify-center gap-8">
+                    {/* Patient Initials - Centered */}
                     <div className="flex flex-col items-center space-y-3">
                       <div className="flex items-center justify-center">
                         {formData.sedationInitials ? (
@@ -2464,6 +2654,16 @@ export function ConsentFullArchForm({
                                     <Checkbox
                                       id="surgicalExtractionsYes"
                                       className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                      checked={formData.surgicalExtractions.covered === "yes"}
+                                      onCheckedChange={(checked) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          surgicalExtractions: {
+                                            ...prev.surgicalExtractions,
+                                            covered: checked ? "yes" : ""
+                                          }
+                                        }));
+                                      }}
                                     />
                                     <Label htmlFor="surgicalExtractionsYes" className="text-sm cursor-pointer">Yes</Label>
                                   </div>
@@ -2471,6 +2671,16 @@ export function ConsentFullArchForm({
                                     <Checkbox
                                       id="surgicalExtractionsNo"
                                       className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                      checked={formData.surgicalExtractions.covered === "no"}
+                                      onCheckedChange={(checked) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          surgicalExtractions: {
+                                            ...prev.surgicalExtractions,
+                                            covered: checked ? "no" : ""
+                                          }
+                                        }));
+                                      }}
                                     />
                                     <Label htmlFor="surgicalExtractionsNo" className="text-sm cursor-pointer">No</Label>
                                   </div>
@@ -2530,6 +2740,16 @@ export function ConsentFullArchForm({
                                     <Checkbox
                                       id="implantFixturesYes"
                                       className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                      checked={formData.implantFixtures.covered === "yes"}
+                                      onCheckedChange={(checked) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          implantFixtures: {
+                                            ...prev.implantFixtures,
+                                            covered: checked ? "yes" : ""
+                                          }
+                                        }));
+                                      }}
                                     />
                                     <Label htmlFor="implantFixturesYes" className="text-sm cursor-pointer">Yes</Label>
                                   </div>
@@ -2537,6 +2757,16 @@ export function ConsentFullArchForm({
                                     <Checkbox
                                       id="implantFixturesNo"
                                       className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                      checked={formData.implantFixtures.covered === "no"}
+                                      onCheckedChange={(checked) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          implantFixtures: {
+                                            ...prev.implantFixtures,
+                                            covered: checked ? "no" : ""
+                                          }
+                                        }));
+                                      }}
                                     />
                                     <Label htmlFor="implantFixturesNo" className="text-sm cursor-pointer">No</Label>
                                   </div>
@@ -2593,6 +2823,16 @@ export function ConsentFullArchForm({
                                     <Checkbox
                                       id="zirconiabridgeYes"
                                       className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                      checked={formData.zirconiabridge.covered === "yes"}
+                                      onCheckedChange={(checked) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          zirconiabridge: {
+                                            ...prev.zirconiabridge,
+                                            covered: checked ? "yes" : ""
+                                          }
+                                        }));
+                                      }}
                                     />
                                     <Label htmlFor="zirconiabridgeYes" className="text-sm cursor-pointer">Yes</Label>
                                   </div>
@@ -2600,6 +2840,16 @@ export function ConsentFullArchForm({
                                     <Checkbox
                                       id="zirconiabridgeNo"
                                       className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                      checked={formData.zirconiabridge.covered === "no"}
+                                      onCheckedChange={(checked) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          zirconiabridge: {
+                                            ...prev.zirconiabridge,
+                                            covered: checked ? "no" : ""
+                                          }
+                                        }));
+                                      }}
                                     />
                                     <Label htmlFor="zirconiabridgeNo" className="text-sm cursor-pointer">No</Label>
                                   </div>
@@ -2656,6 +2906,16 @@ export function ConsentFullArchForm({
                                     <Checkbox
                                       id="ivSedationYes"
                                       className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                      checked={formData.ivSedation.covered === "yes"}
+                                      onCheckedChange={(checked) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          ivSedation: {
+                                            ...prev.ivSedation,
+                                            covered: checked ? "yes" : ""
+                                          }
+                                        }));
+                                      }}
                                     />
                                     <Label htmlFor="ivSedationYes" className="text-sm cursor-pointer">Yes</Label>
                                   </div>
@@ -2663,6 +2923,16 @@ export function ConsentFullArchForm({
                                     <Checkbox
                                       id="ivSedationNo"
                                       className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                                      checked={formData.ivSedation.covered === "no"}
+                                      onCheckedChange={(checked) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          ivSedation: {
+                                            ...prev.ivSedation,
+                                            covered: checked ? "no" : ""
+                                          }
+                                        }));
+                                      }}
                                     />
                                     <Label htmlFor="ivSedationNo" className="text-sm cursor-pointer">No</Label>
                                   </div>
@@ -3554,87 +3824,7 @@ export function ConsentFullArchForm({
                         </CardContent>
                       </Card>
 
-                      {/* Anesthesia Provider Information */}
-                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
-                        <CardContent className="p-4">
-                          <div className="flex gap-2">
-                            {/* Left side - Provider Information */}
-                            <div className="flex-1 space-y-4">
-                              {/* Provider Name and Role on same row */}
-                              <div className="flex gap-4 items-end">
-                                <div className="flex-1 space-y-2">
-                                  <Label className="text-sm font-medium text-gray-700">Provider Name</Label>
-                                  <Input
-                                    value={formData.anesthesiaProviderName}
-                                    onChange={(e) => handleInputChange('anesthesiaProviderName', e.target.value)}
-                                    placeholder="Dr. _______________"
-                                    className="h-10"
-                                  />
-                                </div>
 
-                                <div className="space-y-2 flex-shrink-0">
-                                  <Label className="text-sm font-medium text-gray-700">Role</Label>
-                                  <div className="h-10 flex items-center">
-                                    <span className="text-sm font-medium text-blue-700 bg-blue-100 px-3 py-2 rounded-lg">Anesthesia</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Date/Time on separate row */}
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium text-gray-700">Date/Time</Label>
-                                <Input
-                                  type="datetime-local"
-                                  value={formData.anesthesiaProviderDate}
-                                  onChange={(e) => handleInputChange('anesthesiaProviderDate', e.target.value)}
-                                  className="h-10"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => {
-                                    const now = new Date();
-                                    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                                    handleInputChange('anesthesiaProviderDate', localDateTime);
-                                  }}
-                                  className="w-full h-8 text-xs"
-                                >
-                                  Current Time and Date
-                                </Button>
-                              </div>
-                            </div>
-
-                            {/* Right side - Signature */}
-                            <div className="flex flex-col items-center justify-center space-y-3 flex-shrink-0">
-                              <div className="flex items-center justify-center">
-                                {formData.anesthesiaProviderSignature ? (
-                                  <SignaturePreview
-                                    signature={formData.anesthesiaProviderSignature}
-                                    onEdit={() => handleSignatureDialogOpen('anesthesiaProviderSignature')}
-                                    onClear={() => handleSignatureClear('anesthesiaProviderSignature')}
-                                    className="w-64 h-32 border border-gray-300 rounded-md"
-                                  />
-                                ) : (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => handleSignatureDialogOpen('anesthesiaProviderSignature')}
-                                    className="w-64 h-32 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                    Sign Here
-                                  </Button>
-                                )}
-                              </div>
-                              <div className="w-64 border-t border-gray-300 pt-2">
-                                <div className="flex items-center justify-center">
-                                  <Label className="text-sm font-semibold">Anesthesia Provider Signature</Label>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
                     </div>
                   </CardContent>
                 </Card>
@@ -3815,13 +4005,13 @@ export function ConsentFullArchForm({
       treatmentDescriptionInitials: "Patient Initials - Treatment Description",
       materialRisksInitials: "Patient Initials - Material Risks",
       sedationInitials: "Patient Initials - Sedation Consent",
-      anesthesiaProviderInitials: "Anesthesia Provider Initials",
+
       financialInitials: "Patient Initials - Financial Disclosure",
       photoVideoInitials: "Patient Initials - Photo/Video Authorization",
       opioidInitials: "Patient Initials - Opioid Consent",
       // finalInitials removed; using Patient Signature instead on Final tab
       surgeonSignature: "Surgeon Signature",
-      anesthesiaProviderSignature: "Anesthesia Provider Signature",
+
       patientSignature: "Patient Signature",
       witnessSignature: "Witness Signature"
     };

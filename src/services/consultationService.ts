@@ -36,6 +36,12 @@ export async function saveConsultation(consultationData: ConsultationData): Prom
  */
 export async function getConsultationByPacketId(patientPacketId: string): Promise<ConsultationData | null> {
   try {
+    // Validate input
+    if (!patientPacketId || typeof patientPacketId !== 'string') {
+      console.error('❌ Invalid patient packet ID provided:', patientPacketId);
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('consultations')
       .select('*')
@@ -157,14 +163,16 @@ export async function populateConsultationFromPacket(patientPacketId: string): P
 
     const consultationData: ConsultationInsert = {
       new_patient_packet_id: patientPacketId,
-      consultation_patient_id: packetData.consultation_patient_id || undefined,
-      patient_id: packetData.patients?.id || undefined,
       patient_name: `${firstName} ${lastName}`,
 
+      // Only include UUID fields if they have valid values (not undefined)
+      ...(packetData.consultation_patient_id && { consultation_patient_id: packetData.consultation_patient_id }),
+      ...(packetData.patients?.id && { patient_id: packetData.patients.id }),
+
       // Treatment data if available
-      clinical_assessment: treatmentData?.clinical_assessment || undefined,
-      treatment_recommendations: treatmentData?.treatment_recommendations || undefined,
-      additional_information: treatmentData?.additional_information || undefined,
+      ...(treatmentData?.clinical_assessment && { clinical_assessment: treatmentData.clinical_assessment }),
+      ...(treatmentData?.treatment_recommendations && { treatment_recommendations: treatmentData.treatment_recommendations }),
+      ...(treatmentData?.additional_information && { additional_information: treatmentData.additional_information }),
 
       // Default consultation metadata
       consultation_status: 'scheduled',
@@ -213,10 +221,16 @@ export async function createConsultationFromPacket(patientPacketId: string): Pro
 /**
  * Move patient from consultation to main patients table when treatment is accepted
  */
-export async function movePatientToMainTable(patientPacketId: string): Promise<string | null> {
+export async function movePatientToMainTable(patientPacketId?: string): Promise<string | null> {
   try {
     console.log('🔄 Moving patient to main patients table...');
     console.log('📋 Patient Packet ID received:', patientPacketId);
+
+    // Validate input
+    if (!patientPacketId || typeof patientPacketId !== 'string' || patientPacketId === 'undefined') {
+      console.error('❌ Invalid or missing patient packet ID provided:', patientPacketId);
+      throw new Error('Patient packet ID is required to move patient to main table. Please ensure the consultation is linked to a patient packet.');
+    }
 
     // Get consultation data
     let consultation = await getConsultationByPacketId(patientPacketId);
@@ -292,16 +306,17 @@ export async function movePatientToMainTable(patientPacketId: string): Promise<s
         gender = gender.toLowerCase();
       }
 
+      // Map packet data fields to patient table fields
       const patientData = {
         first_name: firstName,
         last_name: lastName,
         date_of_birth: dateOfBirth,
-        phone: packetData.phone || null,
+        phone: packetData.phone_cell || packetData.phone_work || null, // Use cell phone first, then work phone
         gender: gender,
-        street: packetData.street || null,
-        city: packetData.city || null,
-        state: packetData.state || null,
-        zip_code: packetData.zip_code || null,
+        street: packetData.address_street || null,
+        city: packetData.address_city || null,
+        state: packetData.address_state || null,
+        zip_code: packetData.address_zip || null,
         status: 'Treatment not started', // Valid status from constraint
         treatment_type: 'Consultation Completed'
         // Note: full_name is a generated column and will be automatically created
@@ -340,20 +355,30 @@ export async function movePatientToMainTable(patientPacketId: string): Promise<s
 
       if (packetUpdateError) {
         console.error('❌ Error linking patient packet to patient:', packetUpdateError);
-        // Don't throw error here as patient creation was successful
+        console.error('❌ Packet update error details:', packetUpdateError);
+        // Don't throw error here as patient creation was successful, but log the issue
       } else {
         console.log('✅ Successfully linked patient packet to patient:', patientId);
       }
 
       // Update consultation with patient_id
-      await supabase
+      console.log('🔗 Updating consultation with patient ID...');
+      const { error: consultationUpdateError } = await supabase
         .from('consultations')
         .update({ patient_id: patientId })
         .eq('new_patient_packet_id', patientPacketId);
 
+      if (consultationUpdateError) {
+        console.error('❌ Error updating consultation with patient ID:', consultationUpdateError);
+        console.error('❌ Consultation update error details:', consultationUpdateError);
+        // Don't throw error here as patient creation was successful, but log the issue
+      } else {
+        console.log('✅ Successfully updated consultation with patient ID:', patientId);
+      }
+
     } else {
       // Update existing patient status
-      await supabase
+      const { error: updateError } = await supabase
         .from('patients')
         .update({
           status: 'Treatment not started',
@@ -361,7 +386,11 @@ export async function movePatientToMainTable(patientPacketId: string): Promise<s
         })
         .eq('id', patientId);
 
-      console.log('✅ Updated existing patient status:', patientId);
+      if (updateError) {
+        console.error('❌ Error updating existing patient status:', updateError);
+      } else {
+        console.log('✅ Updated existing patient status:', patientId);
+      }
     }
 
     // Update lead status to indicate patient has been moved
@@ -384,12 +413,354 @@ export async function movePatientToMainTable(patientPacketId: string): Promise<s
   }
 }
 
+/**
+ * Move patient from consultation to main patients table using appointment ID
+ * This is used when there's no patient packet ID available
+ */
+export async function movePatientToMainTableByAppointment(appointmentId: string, consultationPatientId?: string): Promise<string | null> {
+  try {
+    console.log('🔄 Moving patient to main patients table by appointment...');
+    console.log('📋 Appointment ID received:', appointmentId);
+    console.log('📋 Consultation Patient ID received:', consultationPatientId);
+
+    // Validate input
+    if (!appointmentId || typeof appointmentId !== 'string') {
+      console.error('❌ Invalid appointment ID provided:', appointmentId);
+      throw new Error('Appointment ID is required to move patient to main table.');
+    }
+
+    // Get consultation data by appointment ID
+    const { data: consultation, error: consultationError } = await supabase
+      .from('consultations')
+      .select('*')
+      .eq('appointment_id', appointmentId)
+      .single();
+
+    if (consultationError) {
+      console.error('❌ Failed to fetch consultation by appointment ID:', consultationError);
+      throw new Error(`Failed to fetch consultation: ${consultationError.message}`);
+    }
+
+    console.log('📊 Consultation data:', consultation);
+
+    // Check if patient already exists in main table
+    let patientId = consultation.patient_id;
+    console.log('🔍 Existing patient ID in consultation:', patientId);
+
+    if (!patientId) {
+      console.log('👤 Creating new patient in main table...');
+
+      // Get consultation patient data if available
+      let consultationPatientData = null;
+      if (consultationPatientId || consultation.consultation_patient_id) {
+        const { data: cpData } = await supabase
+          .from('consultation_patients')
+          .select('*')
+          .eq('id', consultationPatientId || consultation.consultation_patient_id)
+          .single();
+        consultationPatientData = cpData;
+      }
+
+      if (!consultationPatientData) {
+        throw new Error('No consultation patient data found. Cannot create patient without basic information.');
+      }
+
+      const firstName = consultationPatientData.first_name || 'Unknown';
+      const lastName = consultationPatientData.last_name || 'Patient';
+
+      // Handle date of birth - ensure it's in the correct format
+      let dateOfBirth = consultationPatientData.date_of_birth;
+      if (!dateOfBirth) {
+        // If no date provided, use a default date (this shouldn't happen in real scenarios)
+        dateOfBirth = '1900-01-01';
+        console.warn('⚠️ No date of birth provided, using default date');
+      }
+
+      // Ensure date is in YYYY-MM-DD format
+      if (typeof dateOfBirth === 'string' && dateOfBirth.includes('T')) {
+        dateOfBirth = dateOfBirth.split('T')[0];
+      }
+
+      // Handle gender - ensure it's a valid value
+      let gender = consultationPatientData.gender;
+      if (gender && !['male', 'female'].includes(gender.toLowerCase())) {
+        console.warn('⚠️ Invalid gender value, setting to null:', gender);
+        gender = null;
+      } else if (gender) {
+        gender = gender.toLowerCase();
+      }
+
+      const patientData = {
+        first_name: firstName,
+        last_name: lastName,
+        date_of_birth: dateOfBirth,
+        phone: null, // consultation_patients table doesn't have phone field
+        gender: gender,
+        street: null, // consultation_patients table doesn't have address fields
+        city: null,
+        state: null,
+        zip_code: null,
+        status: 'Treatment not started', // Valid status from constraint
+        treatment_type: 'Consultation Completed'
+      };
+
+      console.log('📝 Patient data to insert:', patientData);
+
+      // Validate required fields
+      if (!patientData.first_name || !patientData.last_name || !patientData.date_of_birth) {
+        throw new Error(`Missing required patient data: first_name=${patientData.first_name}, last_name=${patientData.last_name}, date_of_birth=${patientData.date_of_birth}`);
+      }
+
+      // Create new patient in main patients table
+      const { data: newPatient, error: createError } = await supabase
+        .from('patients')
+        .insert(patientData)
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('❌ Error creating patient:', createError);
+        throw new Error(`Failed to create patient: ${createError.message}`);
+      }
+
+      patientId = newPatient.id;
+      console.log('✅ Created new patient in main table:', patientId);
+      console.log('👤 New patient data:', newPatient);
+
+      // Update consultation with patient_id
+      const { error: consultationUpdateError } = await supabase
+        .from('consultations')
+        .update({ patient_id: patientId })
+        .eq('appointment_id', appointmentId);
+
+      if (consultationUpdateError) {
+        console.error('❌ Error updating consultation with patient ID:', consultationUpdateError);
+        // Don't throw error here as patient creation was successful
+      } else {
+        console.log('✅ Successfully updated consultation with patient ID:', patientId);
+      }
+
+      // If this consultation is linked to a patient packet, link the packet to the new patient as well
+      if (consultation.new_patient_packet_id) {
+        console.log('🔗 Linking patient packet to new patient...');
+        const { error: packetUpdateError } = await supabase
+          .from('new_patient_packets')
+          .update({ patient_id: patientId })
+          .eq('id', consultation.new_patient_packet_id);
+
+        if (packetUpdateError) {
+          console.error('❌ Error linking patient packet to patient:', packetUpdateError);
+          // Don't throw error here as patient creation was successful
+        } else {
+          console.log('✅ Successfully linked patient packet to patient:', patientId);
+        }
+      }
+
+    } else {
+      // Update existing patient status
+      const { error: updateError } = await supabase
+        .from('patients')
+        .update({
+          status: 'Treatment not started',
+          treatment_type: 'Consultation Completed'
+        })
+        .eq('id', patientId);
+
+      if (updateError) {
+        console.error('❌ Error updating existing patient status:', updateError);
+      } else {
+        console.log('✅ Updated existing patient status:', patientId);
+      }
+    }
+
+    return patientId;
+  } catch (error) {
+    console.error('❌ Failed to move patient to main table by appointment:', error);
+    return null;
+  }
+}
+
+/**
+ * Verify that all linkages are properly established between patient packet, consultation, and main patient
+ */
+export async function verifyPatientLinkages(patientPacketId: string): Promise<{
+  success: boolean;
+  patientId?: string;
+  linkages: {
+    packetToPatient: boolean;
+    consultationToPatient: boolean;
+    packetToConsultation: boolean;
+  };
+  details: any;
+}> {
+  try {
+    console.log('🔍 Verifying patient linkages for packet ID:', patientPacketId);
+
+    // Get patient packet data
+    const { data: packetData, error: packetError } = await supabase
+      .from('new_patient_packets')
+      .select('*')
+      .eq('id', patientPacketId)
+      .single();
+
+    if (packetError) {
+      return {
+        success: false,
+        linkages: { packetToPatient: false, consultationToPatient: false, packetToConsultation: false },
+        details: { error: 'Failed to fetch patient packet', packetError }
+      };
+    }
+
+    // Get consultation data
+    const { data: consultationData, error: consultationError } = await supabase
+      .from('consultations')
+      .select('*')
+      .eq('new_patient_packet_id', patientPacketId)
+      .single();
+
+    if (consultationError) {
+      return {
+        success: false,
+        linkages: { packetToPatient: false, consultationToPatient: false, packetToConsultation: true },
+        details: { error: 'Failed to fetch consultation', consultationError, packetData }
+      };
+    }
+
+    // Check linkages
+    const linkages = {
+      packetToPatient: !!packetData.patient_id,
+      consultationToPatient: !!consultationData.patient_id,
+      packetToConsultation: consultationData.new_patient_packet_id === patientPacketId
+    };
+
+    const allLinked = linkages.packetToPatient && linkages.consultationToPatient && linkages.packetToConsultation;
+    const patientIdsMatch = packetData.patient_id === consultationData.patient_id;
+
+    console.log('🔍 Linkage verification results:', {
+      linkages,
+      allLinked,
+      patientIdsMatch,
+      packetPatientId: packetData.patient_id,
+      consultationPatientId: consultationData.patient_id
+    });
+
+    return {
+      success: allLinked && patientIdsMatch,
+      patientId: packetData.patient_id || consultationData.patient_id,
+      linkages,
+      details: {
+        packetData,
+        consultationData,
+        patientIdsMatch,
+        allLinked
+      }
+    };
+  } catch (error) {
+    console.error('❌ Error verifying patient linkages:', error);
+    return {
+      success: false,
+      linkages: { packetToPatient: false, consultationToPatient: false, packetToConsultation: false },
+      details: { error: 'Verification failed', errorDetails: error }
+    };
+  }
+}
+
+/**
+ * Fix broken linkages between patient packet, consultation, and main patient
+ */
+export async function fixPatientLinkages(patientPacketId: string): Promise<{ success: boolean; details: any }> {
+  try {
+    console.log('🔧 Attempting to fix patient linkages for packet ID:', patientPacketId);
+
+    // First verify current state
+    const verification = await verifyPatientLinkages(patientPacketId);
+    console.log('🔍 Current linkage state:', verification);
+
+    if (verification.success) {
+      console.log('✅ All linkages are already correct');
+      return { success: true, details: 'All linkages are already correct' };
+    }
+
+    const { packetData, consultationData } = verification.details;
+
+    // Determine the correct patient ID
+    let correctPatientId = packetData?.patient_id || consultationData?.patient_id;
+
+    if (!correctPatientId) {
+      console.error('❌ No patient ID found in either packet or consultation');
+      return { success: false, details: 'No patient ID found to link' };
+    }
+
+    const updates = [];
+
+    // Fix packet to patient linkage
+    if (!verification.linkages.packetToPatient && packetData) {
+      console.log('🔧 Fixing packet to patient linkage...');
+      const { error: packetError } = await supabase
+        .from('new_patient_packets')
+        .update({ patient_id: correctPatientId })
+        .eq('id', patientPacketId);
+
+      if (packetError) {
+        console.error('❌ Failed to fix packet linkage:', packetError);
+        updates.push({ type: 'packet', success: false, error: packetError });
+      } else {
+        console.log('✅ Fixed packet to patient linkage');
+        updates.push({ type: 'packet', success: true });
+      }
+    }
+
+    // Fix consultation to patient linkage
+    if (!verification.linkages.consultationToPatient && consultationData) {
+      console.log('🔧 Fixing consultation to patient linkage...');
+      const { error: consultationError } = await supabase
+        .from('consultations')
+        .update({ patient_id: correctPatientId })
+        .eq('new_patient_packet_id', patientPacketId);
+
+      if (consultationError) {
+        console.error('❌ Failed to fix consultation linkage:', consultationError);
+        updates.push({ type: 'consultation', success: false, error: consultationError });
+      } else {
+        console.log('✅ Fixed consultation to patient linkage');
+        updates.push({ type: 'consultation', success: true });
+      }
+    }
+
+    // Verify fixes
+    const finalVerification = await verifyPatientLinkages(patientPacketId);
+    console.log('🔍 Final verification after fixes:', finalVerification);
+
+    return {
+      success: finalVerification.success,
+      details: {
+        updates,
+        finalVerification,
+        correctPatientId
+      }
+    };
+  } catch (error) {
+    console.error('❌ Error fixing patient linkages:', error);
+    return { success: false, details: { error: 'Fix operation failed', errorDetails: error } };
+  }
+}
+
 // Test function for debugging - can be called from browser console
 if (typeof window !== 'undefined') {
   (window as any).testMovePatient = async (patientPacketId: string) => {
     console.log('🧪 Testing patient move for packet ID:', patientPacketId);
     const result = await movePatientToMainTable(patientPacketId);
     console.log('🧪 Test result:', result);
+
+    // Also verify linkages
+    if (result) {
+      const verification = await verifyPatientLinkages(patientPacketId);
+      console.log('🧪 Linkage verification:', verification);
+    }
+
     return result;
   };
+
+  (window as any).verifyPatientLinkages = verifyPatientLinkages;
+  (window as any).fixPatientLinkages = fixPatientLinkages;
 }

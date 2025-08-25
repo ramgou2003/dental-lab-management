@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Save, DollarSign, CheckCircle, XCircle, Clock, AlertCircle, UserCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { movePatientToMainTable } from '@/services/consultationService';
+import { movePatientToMainTable, movePatientToMainTableByAppointment, verifyPatientLinkages } from '@/services/consultationService';
 import { toast } from 'sonner';
 
 interface FinancialOutcomeData {
@@ -213,16 +213,51 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
       if (formData.treatmentDecision === 'accepted') {
         console.log('🔄 Treatment accepted, starting patient move process...');
         console.log('📋 Patient Packet ID:', patientPacketId);
+        console.log('📋 Consultation Patient ID:', consultationPatientId);
+        console.log('📋 Appointment ID:', appointmentId);
 
         setIsMovingPatient(true);
         try {
-          const patientId = await movePatientToMainTable(patientPacketId);
+          let patientId: string | null = null;
+
+          // Try to move patient using patient packet ID first
+          if (patientPacketId && patientPacketId !== 'undefined') {
+            console.log('🔄 Using patient packet ID for patient move...');
+            patientId = await movePatientToMainTable(patientPacketId);
+          }
+          // If no patient packet ID, try using appointment ID
+          else if (appointmentId) {
+            console.log('🔄 No patient packet ID, using appointment ID for patient move...');
+            patientId = await movePatientToMainTableByAppointment(appointmentId, consultationPatientId);
+          }
+          // If neither is available, show error
+          else {
+            console.error('❌ No patient packet ID or appointment ID available for patient move');
+            toast.error('Cannot move patient: No patient packet ID or appointment ID found. Please ensure the consultation is properly configured.');
+            return;
+          }
+
           if (patientId) {
             setPatientMoved(true);
             console.log('✅ Patient moved to main patients table:', patientId);
 
-            // Show success toast
-            toast.success(`Success! Patient has been moved to the main Patients table. Patient ID: ${patientId}`);
+            // Verify linkages if we have a patient packet ID
+            if (patientPacketId && patientPacketId !== 'undefined') {
+              console.log('🔍 Verifying patient linkages...');
+              const verification = await verifyPatientLinkages(patientPacketId);
+              console.log('🔍 Linkage verification result:', verification);
+
+              if (verification.success) {
+                console.log('✅ All patient linkages verified successfully');
+                toast.success(`Success! Patient has been moved to the main Patients table and all linkages are verified. Patient ID: ${patientId}`);
+              } else {
+                console.warn('⚠️ Patient moved but some linkages may be incomplete:', verification.linkages);
+                toast.success(`Patient moved to main table (ID: ${patientId}), but some linkages may need attention. Check console for details.`);
+              }
+            } else {
+              // Show success toast for appointment-based moves
+              toast.success(`Success! Patient has been moved to the main Patients table. Patient ID: ${patientId}`);
+            }
           } else {
             console.error('❌ Failed to move patient - no patient ID returned');
             toast.error('Failed to move patient to main table. Please check console for details.');

@@ -26,20 +26,69 @@ export interface ConsentFullArchFormData {
   arch_type?: string;
   upper_jaw?: string;
   lower_jaw?: string;
+  treatment_description_initials?: string;
+
+  // Material Risks
+  risks_understood?: boolean;
+  material_risks_initials?: string;
+
+  // Sedation & Anesthesia Consent
+  escort_name?: string;
+  escort_phone?: string;
+  medications_disclosed?: boolean;
+  decline_iv_sedation?: boolean;
+  sedation_initials?: string;
+  iv_sedation_fee?: string;
+  iv_sedation_covered?: string;
 
   // Planned Drugs (boolean flags)
   midazolam?: boolean;
   fentanyl?: boolean;
   ketamine?: boolean;
   dexamethasone?: boolean;
-  
+
+  // Financial Disclosure
+  surgical_extractions_count?: string;
+  surgical_extractions_fee?: string;
+  surgical_extractions_covered?: string;
+  implant_fixtures_count?: string;
+  implant_fixtures_fee?: string;
+  implant_fixtures_covered?: string;
+  zirconia_bridge_fee?: string;
+  zirconia_bridge_covered?: string;
+  financial_initials?: string;
+
+  // Photo/Video Authorization
+  internal_record_keeping?: string;
+  professional_education?: string;
+  marketing_social_media?: string;
+  photo_video_initials?: string;
+
+  // HIPAA Email/SMS Authorization
+  hipaa_email_sms?: boolean;
+  hipaa_email?: string;
+  hipaa_phone?: string;
+
+  // Opioid Consent
+  opioid_initials?: string;
+  smallest_opioid_supply?: boolean;
+
+  // Patient Acknowledgment & Authorization
+  acknowledgment_read?: boolean;
+  acknowledgment_outcome?: boolean;
+  acknowledgment_authorize?: boolean;
+
   // Signatures
-  patient_signature?: string;
-  patient_signature_date?: string;
+  surgeon_name?: string;
   surgeon_signature?: string;
   surgeon_date?: string;
+  surgeon_time?: string;
+  patient_signature?: string;
+  patient_signature_date?: string;
+  witness_name?: string;
   witness_signature?: string;
   witness_signature_date?: string;
+  final_initials?: string;
 }
 
 /**
@@ -413,6 +462,20 @@ export function convertFormDataToDatabase(
     // Treatment Description Initials
     treatment_description_initials: formData.treatmentDescriptionInitials || '',
 
+    // Material Risks
+    risks_understood: formData.risksUnderstood ?? false,
+    material_risks_initials: formData.materialRisksInitials || '',
+
+    // Sedation & Anesthesia Consent
+    escort_name: formData.escortName || '',
+    escort_phone: formData.escortPhone || '',
+    medications_disclosed: formData.medicationsDisclosed ?? false,
+    decline_iv_sedation: formData.declineIVSedation ?? false,
+    sedation_initials: formData.sedationInitials || '',
+
+    iv_sedation_fee: formData.ivSedation?.fee || '',
+    iv_sedation_covered: formData.ivSedation?.covered || '',
+
     // Planned Drugs
     midazolam: formData.plannedDrugs?.midazolam ?? formData.midazolam ?? false,
     fentanyl: formData.plannedDrugs?.fentanyl ?? formData.fentanyl ?? false,
@@ -426,13 +489,48 @@ export function convertFormDataToDatabase(
     alternatives_removable_overdentures_initials: formData.alternativesInitials?.removableOverdentures || '',
     alternatives_zygomatic_implants_initials: formData.alternativesInitials?.zygomaticImplants || '',
 
+    // Financial Disclosure
+    surgical_extractions_count: formData.surgicalExtractions?.count || '',
+    surgical_extractions_fee: formData.surgicalExtractions?.fee || '',
+    surgical_extractions_covered: formData.surgicalExtractions?.covered || '',
+    implant_fixtures_count: formData.implantFixtures?.count || '',
+    implant_fixtures_fee: formData.implantFixtures?.fee || '',
+    implant_fixtures_covered: formData.implantFixtures?.covered || '',
+    zirconia_bridge_fee: formData.zirconiabridge?.fee || '',
+    zirconia_bridge_covered: formData.zirconiabridge?.covered || '',
+    financial_initials: formData.financialInitials || '',
+
+    // Photo/Video Authorization
+    internal_record_keeping: formData.internalRecordKeeping || '',
+    professional_education: formData.professionalEducation || '',
+    marketing_social_media: formData.marketingSocialMedia || '',
+    photo_video_initials: formData.photoVideoInitials || '',
+
+    // HIPAA Email/SMS Authorization
+    hipaa_email_sms: formData.hipaaEmailSms ?? false,
+    hipaa_email: formData.hipaaEmail || '',
+    hipaa_phone: formData.hipaaPhone || '',
+
+    // Opioid Consent
+    opioid_initials: formData.opioidInitials || '',
+    smallest_opioid_supply: formData.smallestOpioidSupply ?? false,
+
+    // Patient Acknowledgment & Authorization
+    acknowledgment_read: formData.acknowledgmentRead ?? false,
+    acknowledgment_outcome: formData.acknowledgmentOutcome ?? false,
+    acknowledgment_authorize: formData.acknowledgmentAuthorize ?? false,
+
     // Signatures
+    surgeon_name: formData.surgeonName || '',
+    surgeon_signature: formData.surgeonSignature || '',
+    surgeon_date: formData.surgeonDate ? formData.surgeonDate.split('T')[0] : null,
+    surgeon_time: formData.surgeonDate ? formData.surgeonDate.split('T')[1] : null,
     patient_signature: formData.patientSignature || '',
     patient_signature_date: validateDate(formData.patientSignatureDate),
-    surgeon_signature: formData.surgeonSignature || '',
-    surgeon_date: validateDate(formData.surgeonDate),
+    witness_name: formData.witnessName || '',
     witness_signature: formData.witnessSignature || '',
     witness_signature_date: validateDate(formData.witnessSignatureDate),
+    final_initials: formData.finalInitials || '',
 
     // Always include form_data as backup (required field)
     form_data: formData,
@@ -446,6 +544,67 @@ export function convertFormDataToDatabase(
  */
 export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any {
   console.log('🔄 Converting database data to form format:', dbData);
+  console.log('🔍 Risks data from database:', {
+    risks_understood: dbData.risks_understood,
+    material_risks_initials: dbData.material_risks_initials
+  });
+  console.log('🔍 Sedation data from database:', {
+    escort_name: dbData.escort_name,
+    escort_phone: dbData.escort_phone,
+    medications_disclosed: dbData.medications_disclosed,
+    decline_iv_sedation: dbData.decline_iv_sedation,
+    sedation_initials: dbData.sedation_initials,
+
+    iv_sedation_fee: dbData.iv_sedation_fee,
+    iv_sedation_covered: dbData.iv_sedation_covered
+  });
+  console.log('🔍 Financial data from database:', {
+    surgical_extractions_count: dbData.surgical_extractions_count,
+    surgical_extractions_fee: dbData.surgical_extractions_fee,
+    surgical_extractions_covered: dbData.surgical_extractions_covered,
+    implant_fixtures_count: dbData.implant_fixtures_count,
+    implant_fixtures_fee: dbData.implant_fixtures_fee,
+    implant_fixtures_covered: dbData.implant_fixtures_covered,
+    zirconia_bridge_fee: dbData.zirconia_bridge_fee,
+    zirconia_bridge_covered: dbData.zirconia_bridge_covered,
+    financial_initials: dbData.financial_initials
+  });
+  console.log('🔍 Media data from database:', {
+    internal_record_keeping: dbData.internal_record_keeping,
+    professional_education: dbData.professional_education,
+    marketing_social_media: dbData.marketing_social_media,
+    photo_video_initials: dbData.photo_video_initials
+  });
+  console.log('🔍 HIPAA data from database:', {
+    hipaa_email_sms: dbData.hipaa_email_sms,
+    hipaa_email: dbData.hipaa_email,
+    hipaa_phone: dbData.hipaa_phone
+  });
+  console.log('🔍 Opioid data from database:', {
+    opioid_initials: dbData.opioid_initials,
+    smallest_opioid_supply: dbData.smallest_opioid_supply
+  });
+  console.log('🔍 Final section data from database:', {
+    surgeon_name: dbData.surgeon_name,
+    surgeon_signature: dbData.surgeon_signature,
+    surgeon_date: dbData.surgeon_date,
+    surgeon_time: dbData.surgeon_time,
+    patient_signature: dbData.patient_signature,
+    patient_signature_date: dbData.patient_signature_date,
+    witness_name: dbData.witness_name,
+    witness_signature: dbData.witness_signature,
+    witness_signature_date: dbData.witness_signature_date,
+    final_initials: dbData.final_initials
+  });
+  console.log('🔍 Acknowledgment data from database:', {
+    acknowledgment_read: dbData.acknowledgment_read,
+    acknowledgment_outcome: dbData.acknowledgment_outcome,
+    acknowledgment_authorize: dbData.acknowledgment_authorize
+  });
+  console.log('🔍 Date/Time data from database:', {
+    consent_date: dbData.consent_date,
+    consent_time: dbData.consent_time
+  });
 
   const converted = {
     id: dbData.id,
@@ -507,11 +666,63 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     // Treatment Description Initials
     treatmentDescriptionInitials: dbData.treatment_description_initials || '',
 
+    // Material Risks
+    risksUnderstood: dbData.risks_understood ?? false,
+    materialRisksInitials: dbData.material_risks_initials || '',
+
+    // Sedation & Anesthesia Consent
+    escortName: dbData.escort_name || '',
+    escortPhone: dbData.escort_phone || '',
+    medicationsDisclosed: dbData.medications_disclosed ?? false,
+    declineIVSedation: dbData.decline_iv_sedation ?? false,
+    sedationInitials: dbData.sedation_initials || '',
+    ivSedation: {
+      fee: dbData.iv_sedation_fee || '',
+      covered: dbData.iv_sedation_covered || ''
+    },
+
     // Planned Drugs
     midazolam: dbData.midazolam ?? false,
     fentanyl: dbData.fentanyl ?? false,
     ketamine: dbData.ketamine ?? false,
     dexamethasone: dbData.dexamethasone ?? false,
+
+    // Financial Disclosure
+    surgicalExtractions: {
+      count: dbData.surgical_extractions_count || '',
+      fee: dbData.surgical_extractions_fee || '',
+      covered: dbData.surgical_extractions_covered || ''
+    },
+    implantFixtures: {
+      count: dbData.implant_fixtures_count || '',
+      fee: dbData.implant_fixtures_fee || '',
+      covered: dbData.implant_fixtures_covered || ''
+    },
+    zirconiabridge: {
+      fee: dbData.zirconia_bridge_fee || '',
+      covered: dbData.zirconia_bridge_covered || ''
+    },
+    financialInitials: dbData.financial_initials || '',
+
+    // Photo/Video Authorization
+    internalRecordKeeping: dbData.internal_record_keeping || '',
+    professionalEducation: dbData.professional_education || '',
+    marketingSocialMedia: dbData.marketing_social_media || '',
+    photoVideoInitials: dbData.photo_video_initials || '',
+
+    // HIPAA Email/SMS Authorization
+    hipaaEmailSms: dbData.hipaa_email_sms ?? false,
+    hipaaEmail: dbData.hipaa_email || '',
+    hipaaPhone: dbData.hipaa_phone || '',
+
+    // Opioid Consent
+    opioidInitials: dbData.opioid_initials || '',
+    smallestOpioidSupply: dbData.smallest_opioid_supply ?? false,
+
+    // Patient Acknowledgment & Authorization
+    acknowledgmentRead: dbData.acknowledgment_read ?? false,
+    acknowledgmentOutcome: dbData.acknowledgment_outcome ?? false,
+    acknowledgmentAuthorize: dbData.acknowledgment_authorize ?? false,
 
     // Alternatives Initials
     alternativesNoTreatmentInitials: dbData.alternatives_no_treatment_initials || '',
@@ -521,16 +732,80 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     alternativesZygomaticImplantsInitials: dbData.alternatives_zygomatic_implants_initials || '',
 
     // Signatures
+    surgeonName: dbData.surgeon_name || '',
+    surgeonSignature: dbData.surgeon_signature || '',
+    surgeonDate: (dbData.surgeon_date && dbData.surgeon_time)
+      ? `${dbData.surgeon_date}T${dbData.surgeon_time}`
+      : dbData.surgeon_date || '',
     patientSignature: dbData.patient_signature || '',
     patientSignatureDate: dbData.patient_signature_date || '',
-    surgeonSignature: dbData.surgeon_signature || '',
-    surgeonDate: dbData.surgeon_date || '',
+    witnessName: dbData.witness_name || '',
     witnessSignature: dbData.witness_signature || '',
     witnessSignatureDate: dbData.witness_signature_date || '',
+    finalInitials: dbData.final_initials || '',
 
     status: dbData.status || 'draft'
   };
 
   console.log('✅ Converted form data:', converted);
+  console.log('🔍 Converted risks data:', {
+    risksUnderstood: converted.risksUnderstood,
+    materialRisksInitials: converted.materialRisksInitials
+  });
+  console.log('🔍 Converted sedation data:', {
+    escortName: converted.escortName,
+    escortPhone: converted.escortPhone,
+    medicationsDisclosed: converted.medicationsDisclosed,
+    declineIVSedation: converted.declineIVSedation,
+    sedationInitials: converted.sedationInitials,
+
+    ivSedation: converted.ivSedation
+  });
+  console.log('🔍 Converted financial data:', {
+    surgicalExtractions: converted.surgicalExtractions,
+    implantFixtures: converted.implantFixtures,
+    zirconiabridge: converted.zirconiabridge,
+    financialInitials: converted.financialInitials
+  });
+  console.log('🔍 Converted media data:', {
+    internalRecordKeeping: converted.internalRecordKeeping,
+    professionalEducation: converted.professionalEducation,
+    marketingSocialMedia: converted.marketingSocialMedia,
+    photoVideoInitials: converted.photoVideoInitials
+  });
+  console.log('🔍 Converted HIPAA data:', {
+    hipaaEmailSms: converted.hipaaEmailSms,
+    hipaaEmail: converted.hipaaEmail,
+    hipaaPhone: converted.hipaaPhone
+  });
+  console.log('🔍 Converted opioid data:', {
+    opioidInitials: converted.opioidInitials,
+    smallestOpioidSupply: converted.smallestOpioidSupply
+  });
+  console.log('🔍 Converted final section data:', {
+    surgeonName: converted.surgeonName,
+    surgeonSignature: converted.surgeonSignature,
+    surgeonDate: converted.surgeonDate,
+    patientSignature: converted.patientSignature,
+    patientSignatureDate: converted.patientSignatureDate,
+    witnessName: converted.witnessName,
+    witnessSignature: converted.witnessSignature,
+    witnessSignatureDate: converted.witnessSignatureDate,
+    finalInitials: converted.finalInitials
+  });
+  console.log('🔍 Surgeon datetime conversion:', {
+    originalSurgeonDate: converted.surgeonDate,
+    splitDate: converted.surgeonDate ? converted.surgeonDate.split('T')[0] : null,
+    splitTime: converted.surgeonDate ? converted.surgeonDate.split('T')[1] : null
+  });
+  console.log('🔍 Converted acknowledgment data:', {
+    acknowledgmentRead: converted.acknowledgmentRead,
+    acknowledgmentOutcome: converted.acknowledgmentOutcome,
+    acknowledgmentAuthorize: converted.acknowledgmentAuthorize
+  });
+  console.log('🔍 Converted date/time data:', {
+    consentDate: converted.consentDate,
+    consentTime: converted.consentTime
+  });
   return converted;
 }
