@@ -3,8 +3,8 @@ Context
 Create a patient-friendly enrollment form for a 3-year care package that includes supplies and maintenance for dental implant patients. The form must balance legal requirements with clear communication, encouraging enrollment while being transparent about costs and obligations. The care package is required for warranty coverage.
 Business Requirements
 Practice: New York Dental Implants
-Total Cost: $2,100 ($350 every 6 months)
-Duration: 3 years (6 packages total)
+Total Cost: $3,450 ($345 every 3 months)
+Duration: 3 years (10 packages total)
 Enrollment Deadline: One-week post-op visit
 Key Benefit: Required for 3-year warranty coverage
 Document Structure
@@ -25,7 +25,7 @@ Green box (#d4edda background, #28a745 border)
 ✅ Title with checkmark
 Benefits with green checkmarks:
 Full 3-year warranty coverage
-All supplies included ($2,400+ value)
+All supplies included ($3,800+ value)
 Priority scheduling
 80% lower complication rate
 Free adjustments & repairs
@@ -40,14 +40,18 @@ Higher risk of problems
 Pay full price for repairs
 4. Payment Schedule Box
 Style: Blue info box (#e3f2fd background, #2196f3 border) Icon: 💳 Content:
-Total Investment: $2,100 (6 payments of $350)
-Grid showing 6 payment boxes:
-Payment #1: $350 - Due at enrollment
-Payment #2: $350 - Month 6
-Payment #3: $350 - Month 12
-Payment #4: $350 - Month 18
-Payment #5: $350 - Month 24
-Payment #6: $350 - Month 30
+Total Investment: $3,450 (10 payments of $345)
+Grid showing 10 payment boxes:
+Payment #1: $345 - Due at enrollment
+Payment #2: $345 - Month 3
+Payment #3: $345 - Month 6
+Payment #4: $345 - Month 9
+Payment #5: $345 - Month 12
+Payment #6: $345 - Month 15
+Payment #7: $345 - Month 18
+Payment #8: $345 - Month 21
+Payment #9: $345 - Month 24
+Payment #10: $345 - Month 27
 5. Package Contents Section
 Icon: 📦 Title: "What's Included in Each Package" Format: Grid of items with icons
 💧 12 bottles of chlorhexidine rinse
@@ -57,7 +61,7 @@ Icon: 📦 Title: "What's Included in Each Package" Format: Grid of items with i
 🧵 Super-floss
 🖌️ Interproximal brushes
 6. Timeline Visual
-Icon: 📅 Title: "Your Care Package Timeline" Format: Horizontal timeline with 6 circles
+Icon: 📅 Title: "Your Care Package Timeline" Format: Horizontal timeline with 10 circles
 Each circle shows package number and delivery time
 Connected by lines to show progression
 Blue circles with package icon

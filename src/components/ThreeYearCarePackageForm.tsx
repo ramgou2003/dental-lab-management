@@ -246,12 +246,16 @@ export function ThreeYearCarePackageForm({
   };
 
   const paymentSchedule = [
-    { payment: 1, amount: 350, due: "Due at enrollment" },
-    { payment: 2, amount: 350, due: "Month 6" },
-    { payment: 3, amount: 350, due: "Month 12" },
-    { payment: 4, amount: 350, due: "Month 18" },
-    { payment: 5, amount: 350, due: "Month 24" },
-    { payment: 6, amount: 350, due: "Month 30" }
+    { payment: 1, amount: 345, due: "Due at enrollment" },
+    { payment: 2, amount: 345, due: "Month 3" },
+    { payment: 3, amount: 345, due: "Month 6" },
+    { payment: 4, amount: 345, due: "Month 9" },
+    { payment: 5, amount: 345, due: "Month 12" },
+    { payment: 6, amount: 345, due: "Month 15" },
+    { payment: 7, amount: 345, due: "Month 18" },
+    { payment: 8, amount: 345, due: "Month 21" },
+    { payment: 9, amount: 345, due: "Month 24" },
+    { payment: 10, amount: 345, due: "Month 27" }
   ];
 
   const packageContents = [
@@ -385,7 +389,7 @@ export function ThreeYearCarePackageForm({
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4" />
-                  All supplies included ($2,400+ value)
+                  All supplies included ($3,800+ value)
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4" />
@@ -449,7 +453,7 @@ export function ThreeYearCarePackageForm({
           <CardContent>
             <div className="mb-4">
               <p className="text-lg font-semibold text-blue-800">
-                Total Investment: $2,100 (6 payments of $350)
+                Total Investment: $3,450 (10 payments of $345)
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -500,15 +504,15 @@ export function ThreeYearCarePackageForm({
           </CardHeader>
           <CardContent>
             <div className="relative">
-              <div className="flex justify-between items-center">
-                {Array.from({ length: 6 }, (_, i) => (
+              <div className="flex justify-between items-center flex-wrap gap-2">
+                {Array.from({ length: 10 }, (_, i) => (
                   <div key={i} className="flex flex-col items-center relative z-10">
-                    <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mb-2">
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mb-2 text-sm">
                       {i + 1}
                     </div>
                     <div className="text-xs text-center text-gray-600">
                       Package {i + 1}<br />
-                      Month {i * 6 || 'Enrollment'}
+                      Month {i * 3 || 'Enrollment'}
                     </div>
                   </div>
                 ))}
