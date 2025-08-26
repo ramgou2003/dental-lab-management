@@ -503,19 +503,45 @@ export function ThreeYearCarePackageForm({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="relative">
-              <div className="flex justify-between items-center flex-wrap gap-2">
-                {Array.from({ length: 10 }, (_, i) => (
-                  <div key={i} className="flex flex-col items-center relative z-10">
-                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mb-2 text-sm">
-                      {i + 1}
+            <div className="space-y-6">
+              {/* First row - Packages 1-5 */}
+              <div className="relative">
+                <div className="flex justify-between items-center">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div key={i} className="flex flex-col items-center relative z-10">
+                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mb-2">
+                        {i + 1}
+                      </div>
+                      <div className="text-xs text-center text-gray-600 max-w-[80px]">
+                        <div className="font-medium">Package {i + 1}</div>
+                        <div>{i === 0 ? 'Month Enrollment' : `Month ${i * 3}`}</div>
+                      </div>
                     </div>
-                    <div className="text-xs text-center text-gray-600">
-                      Package {i + 1}<br />
-                      Month {i * 3 || 'Enrollment'}
+                  ))}
+                </div>
+                {/* Connection line for first row */}
+                <div className="absolute top-6 left-6 right-6 h-0.5 bg-blue-300 -z-10"></div>
+              </div>
+
+              {/* Second row - Packages 6-10 */}
+              <div className="relative">
+                <div className="flex justify-between items-center">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <div key={i + 5} className="flex flex-col items-center relative z-10">
+                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mb-2">
+                        {i + 6}
+                      </div>
+                      <div className="text-xs text-center text-gray-600 max-w-[80px]">
+                        <div className="font-medium">Package {i + 6}</div>
+                        <div>Month {(i + 5) * 3}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                {/* Connection line for second row */}
+                <div className="absolute top-6 left-6 right-6 h-0.5 bg-blue-300 -z-10"></div>
+              </div>
+            </div>
               </div>
               {/* Connecting line */}
               <div className="absolute top-6 left-6 right-6 h-0.5 bg-blue-300 z-0"></div>
