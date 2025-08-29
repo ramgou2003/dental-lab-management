@@ -4,7 +4,10 @@ export interface PatientInfo {
   lastName: string;
   gender: 'male' | 'female' | 'prefer-not-to-answer';
   dateOfBirth: Date;
-  height?: string;
+  height?: {
+    feet: string;
+    inches: string;
+  };
   weight?: string;
   bmi?: number;
   address: {
@@ -37,7 +40,7 @@ export interface MedicalHistory {
     acidReflux: boolean;
     cancer: { has: boolean; type?: string };
     depressionAnxiety: boolean;
-    diabetes: { has: boolean; type?: '1' | '2' };
+    diabetes: { has: boolean; type?: '1' | '2'; a1cLevel?: string };
     heartDisease: boolean;
     periodontalDisease: boolean;
     substanceAbuse: boolean;

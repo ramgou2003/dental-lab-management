@@ -55,14 +55,14 @@ export function FinancialAgreementForm({
     // Payment & Balance Terms
     patientPaymentToday: "",
     remainingBalance: "",
-    balanceDueDate: "",
+    remainingPaymentPlan: "",
     paymentTermsInitials: "",
 
     // Non-Refundable & Lab Fees
     labFeeInitials: "",
 
     // Warranty & Care Package
-    carePackageFee: "",
+    carePackageFee: "3450.00",
     carePackageElection: "" as "enroll" | "defer" | "",
     warrantyInitials: "",
 
@@ -86,8 +86,8 @@ export function FinancialAgreementForm({
     witnessSignatureTime: new Date().toTimeString().slice(0, 5),
 
     // Office Use Only
-    scannedToChart: false,
-    countersignedByManager: false,
+    downloadedToDentraAssent: false,
+    confirmedByStaffInitials: "",
   });
 
   // Treatment options with CDT and CPT codes
@@ -143,12 +143,12 @@ export function FinancialAgreementForm({
 
       patientPaymentToday: initialData.patient_payment_today != null ? String(initialData.patient_payment_today) : "",
       remainingBalance: initialData.remaining_balance != null ? String(initialData.remaining_balance) : "",
-      balanceDueDate: initialData.balance_due_date || "",
+      remainingPaymentPlan: initialData.remaining_payment_plan || "",
       paymentTermsInitials: initialData.payment_terms_initials || "",
 
       labFeeInitials: initialData.lab_fee_initials || "",
 
-      carePackageFee: initialData.care_package_fee != null ? String(initialData.care_package_fee) : "",
+      carePackageFee: initialData.care_package_fee != null ? String(initialData.care_package_fee) : "3450.00",
       carePackageElection: (initialData.care_package_election || "") as any,
       warrantyInitials: initialData.warranty_initials || "",
 
@@ -168,8 +168,8 @@ export function FinancialAgreementForm({
       witnessSignatureDate: initialData.witness_signature_date || prev.witnessSignatureDate,
       witnessSignatureTime: initialData.witness_signature_time || prev.witnessSignatureTime,
 
-      scannedToChart: !!initialData.scanned_to_chart,
-      countersignedByManager: !!initialData.countersigned_by_manager,
+      downloadedToDentraAssent: !!initialData.downloaded_to_dentra_assent,
+      confirmedByStaffInitials: initialData.confirmed_by_staff_initials || "",
     }));
   }, [isEditing, initialData]);
 
@@ -199,11 +199,36 @@ export function FinancialAgreementForm({
     setFormData(prev => {
       const updatedData = { ...prev, [field]: value };
 
-      // Calculate remaining balance when patient payment or total cost changes
-      if (field === 'patientPaymentToday' || field === 'totalCostOfTreatment') {
-        const totalCost = parseFloat(updatedData.totalCostOfTreatment) || 0;
+      // Calculate total cost including care package when care package election changes
+      if (field === 'carePackageElection' || field === 'carePackageFee' || field === 'totalCostOfTreatment') {
+        let baseTotalCost = parseFloat(updatedData.totalCostOfTreatment) || 0;
+        const carePackageFee = parseFloat(updatedData.carePackageFee) || 0;
+
+        // Add care package fee to total if enrolled
+        let finalTotalCost = baseTotalCost;
+        if (updatedData.carePackageElection === 'enroll') {
+          finalTotalCost = baseTotalCost + carePackageFee;
+        }
+
+        // Calculate remaining balance
         const patientPayment = parseFloat(updatedData.patientPaymentToday) || 0;
-        const remainingBalance = Math.max(0, totalCost - patientPayment);
+        const remainingBalance = Math.max(0, finalTotalCost - patientPayment);
+        updatedData.remainingBalance = remainingBalance.toFixed(2);
+      }
+
+      // Calculate remaining balance when patient payment changes
+      else if (field === 'patientPaymentToday') {
+        let baseTotalCost = parseFloat(updatedData.totalCostOfTreatment) || 0;
+        const carePackageFee = parseFloat(updatedData.carePackageFee) || 0;
+
+        // Add care package fee to total if enrolled
+        let finalTotalCost = baseTotalCost;
+        if (updatedData.carePackageElection === 'enroll') {
+          finalTotalCost = baseTotalCost + carePackageFee;
+        }
+
+        const patientPayment = parseFloat(updatedData.patientPaymentToday) || 0;
+        const remainingBalance = Math.max(0, finalTotalCost - patientPayment);
         updatedData.remainingBalance = remainingBalance.toFixed(2);
       }
 
@@ -233,9 +258,15 @@ export function FinancialAgreementForm({
 
         updatedData.totalCostOfTreatment = totalCost;
 
-        // Also recalculate remaining balance
+        // Also recalculate remaining balance including care package
+        const carePackageFee = parseFloat(updatedData.carePackageFee) || 0;
+        let finalTotalCost = parseFloat(totalCost);
+        if (updatedData.carePackageElection === 'enroll') {
+          finalTotalCost += carePackageFee;
+        }
+
         const patientPayment = parseFloat(updatedData.patientPaymentToday) || 0;
-        const remainingBalance = Math.max(0, parseFloat(totalCost) - patientPayment);
+        const remainingBalance = Math.max(0, finalTotalCost - patientPayment);
         updatedData.remainingBalance = remainingBalance.toFixed(2);
       }
 
@@ -262,9 +293,15 @@ export function FinancialAgreementForm({
         }, 0)
         .toFixed(2);
 
-      // Recalculate remaining balance
+      // Recalculate remaining balance including care package
+      const carePackageFee = parseFloat(prev.carePackageFee) || 0;
+      let finalTotalCost = parseFloat(totalCost);
+      if (prev.carePackageElection === 'enroll') {
+        finalTotalCost += carePackageFee;
+      }
+
       const patientPayment = parseFloat(prev.patientPaymentToday) || 0;
-      const remainingBalance = Math.max(0, parseFloat(totalCost) - patientPayment);
+      const remainingBalance = Math.max(0, finalTotalCost - patientPayment);
 
       return {
         ...prev,
@@ -531,116 +568,12 @@ export function FinancialAgreementForm({
           </CardContent>
         </Card>
 
-        {/* 2. Payment & Balance Terms */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
-              <DollarSign className="h-5 w-5" />
-              2. Payment & Balance Terms
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="patientPaymentToday" className="text-sm font-semibold">Patient Payment Today</Label>
-                <Input
-                  id="patientPaymentToday"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.patientPaymentToday}
-                  onChange={(e) => handleInputChange('patientPaymentToday', e.target.value)}
-                  readOnly={readOnly}
-                />
-              </div>
-              <div>
-                <Label htmlFor="remainingBalance" className="text-sm font-semibold flex items-center gap-2">
-                  Remaining Balance
-                  <span className="text-xs text-gray-500 font-normal">(Auto-calculated)</span>
-                </Label>
-                <Input
-                  id="remainingBalance"
-                  type="text"
-                  value={formData.remainingBalance ? `$${formData.remainingBalance}` : '$0.00'}
-                  readOnly
-                  className="bg-blue-50 border-blue-200 text-blue-800 cursor-not-allowed font-medium"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-sm font-semibold mb-2 block">Balance Due Date</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Payment Terms Dropdown */}
-                <div>
-                  <Label className="text-xs text-gray-600 mb-1 block">Payment terms:</Label>
-                  <Select
-                    onValueChange={(value) => {
-                      if (value === 'custom') {
-                        // Don't change the date, just allow custom input
-                        return;
-                      }
-                      const days = parseInt(value);
-                      const dueDate = new Date();
-                      dueDate.setDate(dueDate.getDate() + days);
-                      handleInputChange('balanceDueDate', dueDate.toISOString().split('T')[0]);
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose terms..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="15">Net 15 Days</SelectItem>
-                      <SelectItem value="30">1 Month (30 days)</SelectItem>
-                      <SelectItem value="90">3 Months (90 days)</SelectItem>
-                      <SelectItem value="180">6 Months (180 days)</SelectItem>
-                      <SelectItem value="custom">Custom Date</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Due Date Input */}
-                <div>
-                  <Label className="text-xs text-gray-600 mb-1 block">Due date:</Label>
-                  <Input
-                    id="balanceDueDate"
-                    type="date"
-                    value={formData.balanceDueDate}
-                    onChange={(e) => handleInputChange('balanceDueDate', e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="space-y-2 text-sm text-blue-800">
-                <p><strong>Late Payment Penalty:</strong> A $100 will be charged on any unpaid balance.</p>
-                <p><strong>Credit Reporting:</strong> I authorize referral of any unpaid balance to collections and credit bureaus if I default.</p>
-              </div>
-              <div className="flex justify-end mt-3">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="paymentTermsInitials" className="text-sm whitespace-nowrap">Patient initials:</Label>
-                  <Input
-                    id="paymentTermsInitials"
-                    placeholder="___"
-                    value={formData.paymentTermsInitials}
-                    onChange={(e) => handleInputChange('paymentTermsInitials', e.target.value)}
-                    className="w-16 text-center"
-                    maxLength={3}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 3. Non-Refundable & Lab Fees */}
+        {/* 2. Non-Refundable & Lab Fees */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
               <AlertTriangle className="h-5 w-5" />
-              3. Non-Refundable & Lab Fees
+              2. Non-Refundable & Lab Fees
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -675,7 +608,7 @@ export function FinancialAgreementForm({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
               <Shield className="h-5 w-5" />
-              4. Warranty & Care Package Conditions
+              3. Warranty & Care Package Conditions
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -729,6 +662,124 @@ export function FinancialAgreementForm({
                     placeholder="___"
                     value={formData.warrantyInitials}
                     onChange={(e) => handleInputChange('warrantyInitials', e.target.value)}
+                    className="w-16 text-center"
+                    maxLength={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. Payment & Balance Terms */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <DollarSign className="h-5 w-5" />
+              4. Payment & Balance Terms
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="patientPaymentToday" className="text-sm font-semibold">Patient Payment Today</Label>
+                <Input
+                  id="patientPaymentToday"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.patientPaymentToday}
+                  onChange={(e) => handleInputChange('patientPaymentToday', e.target.value)}
+                  readOnly={readOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="remainingBalance" className="text-sm font-semibold flex items-center gap-2">
+                  Remaining Balance
+                  <span className="text-xs text-gray-500 font-normal">(Auto-calculated)</span>
+                </Label>
+                <Input
+                  id="remainingBalance"
+                  type="text"
+                  value={formData.remainingBalance ? `$${formData.remainingBalance}` : '$0.00'}
+                  readOnly
+                  className="bg-blue-50 border-blue-200 text-blue-800 cursor-not-allowed font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Cost Breakdown Summary */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Payment Calculation Summary</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Base Treatment Cost:</span>
+                  <span className="font-medium">${formData.totalCostOfTreatment || '0.00'}</span>
+                </div>
+                {formData.carePackageElection === 'enroll' && (
+                  <div className="flex justify-between text-blue-600">
+                    <span>+ Care Package Fee:</span>
+                    <span className="font-medium">+${formData.carePackageFee || '0.00'}</span>
+                  </div>
+                )}
+                <div className="border-t border-gray-300 pt-2 flex justify-between font-semibold">
+                  <span>Total Amount Due:</span>
+                  <span>
+                    ${(() => {
+                      const baseCost = parseFloat(formData.totalCostOfTreatment) || 0;
+                      const carePackageFee = parseFloat(formData.carePackageFee) || 0;
+                      const totalCost = formData.carePackageElection === 'enroll'
+                        ? baseCost + carePackageFee
+                        : baseCost;
+                      return totalCost.toFixed(2);
+                    })()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-green-600">
+                  <span>- Payment Today:</span>
+                  <span className="font-medium">-${formData.patientPaymentToday || '0.00'}</span>
+                </div>
+                <div className="border-t border-gray-300 pt-2 flex justify-between font-bold text-lg">
+                  <span>Remaining Balance:</span>
+                  <span className="text-blue-600">${formData.remainingBalance || '0.00'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Remaining Payment Plan */}
+            <div>
+              <Label htmlFor="remainingPaymentPlan" className="text-sm font-semibold">Remaining Payment Plan</Label>
+              <Select
+                value={formData.remainingPaymentPlan}
+                onValueChange={(value) => handleInputChange('remainingPaymentPlan', value)}
+                disabled={readOnly}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select payment plan..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="twice-a-month">Twice A Month</SelectItem>
+                  <SelectItem value="twice-a-month-by-pay-cycle">Twice A Month By Pay Cycle</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="twice-a-year">Twice A Year</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="space-y-2 text-sm text-blue-800">
+                <p><strong>Late Payment Penalty:</strong> A $100 will be charged on any unpaid balance.</p>
+                <p><strong>Credit Reporting:</strong> I authorize referral of any unpaid balance to collections and credit bureaus if I default.</p>
+              </div>
+              <div className="flex justify-end mt-3">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="paymentTermsInitials" className="text-sm whitespace-nowrap">Patient initials:</Label>
+                  <Input
+                    id="paymentTermsInitials"
+                    placeholder="___"
+                    value={formData.paymentTermsInitials}
+                    onChange={(e) => handleInputChange('paymentTermsInitials', e.target.value)}
                     className="w-16 text-center"
                     maxLength={3}
                   />
@@ -997,21 +1048,25 @@ export function FinancialAgreementForm({
           <CardContent className="pt-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="font-semibold text-blue-800 mb-2">Office Use Only:</h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <SimpleCheckbox
-                  id="scannedToChart"
-                  checked={formData.scannedToChart || false}
-                  onCheckedChange={(checked) => handleInputChange('scannedToChart', checked)}
+                  id="downloadedToDentraAssent"
+                  checked={formData.downloadedToDentraAssent || false}
+                  onCheckedChange={(checked) => handleInputChange('downloadedToDentraAssent', checked)}
                 >
-                  Scanned to chart
+                  Downloaded to Dentra Assent
                 </SimpleCheckbox>
-                <SimpleCheckbox
-                  id="countersignedByManager"
-                  checked={formData.countersignedByManager || false}
-                  onCheckedChange={(checked) => handleInputChange('countersignedByManager', checked)}
-                >
-                  Countersigned by Finance Manager
-                </SimpleCheckbox>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="confirmedByStaffInitials" className="text-sm whitespace-nowrap">Confirmed by (Staff Initial):</Label>
+                  <Input
+                    id="confirmedByStaffInitials"
+                    placeholder="___"
+                    value={formData.confirmedByStaffInitials}
+                    onChange={(e) => handleInputChange('confirmedByStaffInitials', e.target.value)}
+                    className="w-16 text-center"
+                    maxLength={3}
+                  />
+                </div>
               </div>
             </div>
           </CardContent>

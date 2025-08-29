@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,8 +80,14 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
         onNestedInputChange('criticalConditions', 'none', false);
       }
       
-      if (key === 'cancer' || key === 'diabetes') {
+      if (key === 'cancer') {
         onNestedInputChange('criticalConditions', key, { has: checked, type: '' });
+      } else if (key === 'diabetes') {
+        onNestedInputChange('criticalConditions', key, {
+          has: checked,
+          type: formData.criticalConditions.diabetes?.type || undefined,
+          a1cLevel: formData.criticalConditions.diabetes?.a1cLevel || undefined
+        });
       } else {
         onNestedInputChange('criticalConditions', key, checked);
       }
@@ -146,21 +152,21 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {criticalConditions.map((condition) => (
-              <div key={condition.key} className="flex items-center space-x-2">
-                <Checkbox
-                  id={condition.key}
-                  checked={
-                    condition.key === 'cancer' || condition.key === 'diabetes'
-                      ? (formData.criticalConditions[condition.key as keyof typeof formData.criticalConditions] as any)?.has || false
-                      : formData.criticalConditions[condition.key as keyof typeof formData.criticalConditions] as boolean || false
-                  }
-                  onCheckedChange={(checked) => handleCriticalConditionChange(condition.key, checked as boolean)}
-                />
-                <Label htmlFor={condition.key} className={`text-sm ${condition.critical ? 'font-semibold text-red-700' : ''}`}>
+              <SimpleCheckbox
+                key={condition.key}
+                id={condition.key}
+                checked={
+                  condition.key === 'cancer' || condition.key === 'diabetes'
+                    ? (formData.criticalConditions[condition.key as keyof typeof formData.criticalConditions] as any)?.has || false
+                    : formData.criticalConditions[condition.key as keyof typeof formData.criticalConditions] as boolean || false
+                }
+                onCheckedChange={(checked) => handleCriticalConditionChange(condition.key, checked as boolean)}
+              >
+                <span className={`text-sm ${condition.critical ? 'font-semibold text-red-700' : ''}`}>
                   {condition.label}
                   {condition.critical && <span className="text-red-500 ml-1">⚠️</span>}
-                </Label>
-              </div>
+                </span>
+              </SimpleCheckbox>
             ))}
           </div>
 
@@ -182,27 +188,63 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
             </div>
           )}
 
-          {/* Diabetes Type */}
+          {/* Diabetes Type and A1C Level */}
           {formData.criticalConditions.diabetes?.has && (
             <div className="mt-4">
-              <Label htmlFor="diabetesType" className="text-sm font-semibold">
-                Type of Diabetes
-              </Label>
-              <Select 
-                value={formData.criticalConditions.diabetes.type || ''} 
-                onValueChange={(value) => onNestedInputChange('criticalConditions', 'diabetes', { 
-                  has: true, 
-                  type: value as '1' | '2'
-                })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select diabetes type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Type 1</SelectItem>
-                  <SelectItem value="2">Type 2</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="diabetesType" className="text-sm font-semibold">
+                    Type of Diabetes
+                  </Label>
+                  <Select
+                    value={formData.criticalConditions.diabetes.type || ''}
+                    onValueChange={(value) => onNestedInputChange('criticalConditions', 'diabetes', {
+                      has: true,
+                      type: value as '1' | '2',
+                      a1cLevel: formData.criticalConditions.diabetes.a1cLevel || ''
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select diabetes type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Type 1</SelectItem>
+                      <SelectItem value="2">Type 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* A1C Level for Type 2 Diabetes */}
+                {formData.criticalConditions.diabetes.type === '2' && (
+                  <div>
+                    <Label htmlFor="a1cLevel" className="text-sm font-semibold">
+                      Last Hemoglobin A1C Level (%)
+                    </Label>
+                    <Input
+                      id="a1cLevel"
+                      type="number"
+                      step="0.1"
+                      min="4"
+                      max="15"
+                      value={formData.criticalConditions.diabetes.a1cLevel || ''}
+                      onChange={(e) => onNestedInputChange('criticalConditions', 'diabetes', {
+                        has: true,
+                        type: formData.criticalConditions.diabetes.type,
+                        a1cLevel: e.target.value
+                      })}
+                      placeholder="e.g., 7.2"
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Helper text for A1C ranges - only show when Type 2 is selected */}
+              {formData.criticalConditions.diabetes.type === '2' && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Normal range: 4.0-5.6% | Pre-diabetes: 5.7-6.4% | Diabetes: 6.5% or higher
+                </p>
+              )}
             </div>
           )}
 
@@ -220,15 +262,14 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
           </div>
 
           {/* None Checkbox */}
-          <div className="flex items-center space-x-2 pt-2 border-t">
-            <Checkbox
+          <div className="pt-2 border-t">
+            <SimpleCheckbox
               id="noCriticalConditions"
               checked={formData.criticalConditions.none}
               onCheckedChange={(checked) => handleCriticalConditionChange('none', checked as boolean)}
-            />
-            <Label htmlFor="noCriticalConditions" className="text-sm font-medium">
+            >
               None of the above apply to me
-            </Label>
+            </SimpleCheckbox>
           </div>
         </CardContent>
       </Card>
@@ -252,16 +293,14 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {systemConditions.respiratory.map((condition) => (
-                <div key={condition} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`respiratory-${condition}`}
-                    checked={formData.systemSpecific.respiratory?.includes(condition) || false}
-                    onCheckedChange={(checked) => handleSystemConditionChange('respiratory', condition, checked as boolean)}
-                  />
-                  <Label htmlFor={`respiratory-${condition}`} className="text-sm">
-                    {condition}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={condition}
+                  id={`respiratory-${condition}`}
+                  checked={formData.systemSpecific.respiratory?.includes(condition) || false}
+                  onCheckedChange={(checked) => handleSystemConditionChange('respiratory', condition, checked as boolean)}
+                >
+                  {condition}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
@@ -276,16 +315,14 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {systemConditions.cardiovascular.map((condition) => (
-                <div key={condition} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`cardiovascular-${condition}`}
-                    checked={formData.systemSpecific.cardiovascular?.includes(condition) || false}
-                    onCheckedChange={(checked) => handleSystemConditionChange('cardiovascular', condition, checked as boolean)}
-                  />
-                  <Label htmlFor={`cardiovascular-${condition}`} className="text-sm">
-                    {condition}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={condition}
+                  id={`cardiovascular-${condition}`}
+                  checked={formData.systemSpecific.cardiovascular?.includes(condition) || false}
+                  onCheckedChange={(checked) => handleSystemConditionChange('cardiovascular', condition, checked as boolean)}
+                >
+                  {condition}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
@@ -300,16 +337,14 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {systemConditions.gastrointestinal.map((condition) => (
-                <div key={condition} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`gastrointestinal-${condition}`}
-                    checked={formData.systemSpecific.gastrointestinal?.includes(condition) || false}
-                    onCheckedChange={(checked) => handleSystemConditionChange('gastrointestinal', condition, checked as boolean)}
-                  />
-                  <Label htmlFor={`gastrointestinal-${condition}`} className="text-sm">
-                    {condition}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={condition}
+                  id={`gastrointestinal-${condition}`}
+                  checked={formData.systemSpecific.gastrointestinal?.includes(condition) || false}
+                  onCheckedChange={(checked) => handleSystemConditionChange('gastrointestinal', condition, checked as boolean)}
+                >
+                  {condition}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
@@ -324,16 +359,14 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {systemConditions.neurological.map((condition) => (
-                <div key={condition} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`neurological-${condition}`}
-                    checked={formData.systemSpecific.neurological?.includes(condition) || false}
-                    onCheckedChange={(checked) => handleSystemConditionChange('neurological', condition, checked as boolean)}
-                  />
-                  <Label htmlFor={`neurological-${condition}`} className="text-sm">
-                    {condition}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={condition}
+                  id={`neurological-${condition}`}
+                  checked={formData.systemSpecific.neurological?.includes(condition) || false}
+                  onCheckedChange={(checked) => handleSystemConditionChange('neurological', condition, checked as boolean)}
+                >
+                  {condition}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
@@ -348,16 +381,14 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {systemConditions.endocrineRenal.map((condition) => (
-                <div key={condition} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`endocrineRenal-${condition}`}
-                    checked={formData.systemSpecific.endocrineRenal?.includes(condition) || false}
-                    onCheckedChange={(checked) => handleSystemConditionChange('endocrineRenal', condition, checked as boolean)}
-                  />
-                  <Label htmlFor={`endocrineRenal-${condition}`} className="text-sm">
-                    {condition}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={condition}
+                  id={`endocrineRenal-${condition}`}
+                  checked={formData.systemSpecific.endocrineRenal?.includes(condition) || false}
+                  onCheckedChange={(checked) => handleSystemConditionChange('endocrineRenal', condition, checked as boolean)}
+                >
+                  {condition}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
@@ -375,16 +406,14 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {additionalConditions.map((condition) => (
-              <div key={condition} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`additional-${condition}`}
-                  checked={formData.additionalConditions?.includes(condition) || false}
-                  onCheckedChange={(checked) => handleAdditionalConditionChange(condition, checked as boolean)}
-                />
-                <Label htmlFor={`additional-${condition}`} className="text-sm">
-                  {condition}
-                </Label>
-              </div>
+              <SimpleCheckbox
+                key={condition}
+                id={`additional-${condition}`}
+                checked={formData.additionalConditions?.includes(condition) || false}
+                onCheckedChange={(checked) => handleAdditionalConditionChange(condition, checked as boolean)}
+              >
+                {condition}
+              </SimpleCheckbox>
             ))}
           </div>
         </CardContent>
@@ -399,16 +428,13 @@ export function Section2MedicalHistory({ formData, onInputChange, onNestedInputC
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="hasRecentChanges"
-              checked={formData.recentHealthChanges.hasChanges}
-              onCheckedChange={(checked) => onNestedInputChange('recentHealthChanges', 'hasChanges', checked)}
-            />
-            <Label htmlFor="hasRecentChanges" className="text-sm font-medium">
-              I have experienced recent changes in my health
-            </Label>
-          </div>
+          <SimpleCheckbox
+            id="hasRecentChanges"
+            checked={formData.recentHealthChanges.hasChanges}
+            onCheckedChange={(checked) => onNestedInputChange('recentHealthChanges', 'hasChanges', checked)}
+          >
+            I have experienced recent changes in my health
+          </SimpleCheckbox>
 
           {formData.recentHealthChanges.hasChanges && (
             <div>

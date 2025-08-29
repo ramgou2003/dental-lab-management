@@ -259,14 +259,44 @@ export function PatientPacketDialog({
 
   if (showPacketViewer && selectedPacket) {
     return (
-      <Dialog open={showPacketViewer} onOpenChange={() => {}}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-0">
+      <Dialog
+        open={showPacketViewer}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowPacketViewer(false);
+            setIsEditMode(false);
+            setEditingPacketId(null);
+          }
+        }}
+        modal={true}
+      >
+        <DialogContent
+          className="max-w-6xl max-h-[95vh] overflow-y-auto p-0 [&>button]:hidden"
+          onPointerDownOutside={(e) => {
+            setShowPacketViewer(false);
+            setIsEditMode(false);
+            setEditingPacketId(null);
+          }}
+        >
           <div className="p-6">
             {isEditMode ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b pb-4 pr-8">
                   <h2 className="text-xl font-semibold">Edit Patient Packet</h2>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    <button
+                      onClick={() => {
+                        setShowPacketViewer(false);
+                        setIsEditMode(false);
+                        setEditingPacketId(null);
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                      type="button"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                     <Button
                       variant="outline"
                       onClick={handleCancelEdit}
@@ -291,6 +321,7 @@ export function PatientPacketDialog({
                     key={`edit-${editingPacketId}-${Date.now()}`}
                     initialData={selectedPacket}
                     onSubmit={handleSavePacket}
+                    onCancel={handleCancelEdit}
                     submitButtonText="Save Changes"
                   />
                 ) : (
@@ -306,14 +337,29 @@ export function PatientPacketDialog({
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b pb-4 pr-8">
                   <h2 className="text-xl font-semibold">Patient Packet Details</h2>
-                  <Button
-                    onClick={handleEditPacket}
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Edit3 className="h-4 w-4" />
-                    Edit
-                  </Button>
+                  <div className="flex gap-2 items-center">
+                    <Button
+                      onClick={handleEditPacket}
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                      Edit
+                    </Button>
+                    <button
+                      onClick={() => {
+                        setShowPacketViewer(false);
+                        setIsEditMode(false);
+                        setEditingPacketId(null);
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                      type="button"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <FilledPatientPacketViewer
                   formData={selectedPacket}

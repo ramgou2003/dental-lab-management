@@ -26,7 +26,11 @@ export function convertFormDataToDatabase(
       : formData.dateOfBirth
         ? new Date(formData.dateOfBirth).toISOString().split('T')[0]
         : undefined,
-    height: formData.height,
+    height: formData.height && formData.height.feet && formData.height.inches
+      ? `${(parseInt(formData.height.feet) * 12) + parseInt(formData.height.inches)}`
+      : formData.height && typeof formData.height === 'string'
+      ? formData.height
+      : undefined,
     weight: formData.weight,
     bmi: formData.bmi,
     address_street: formData.address?.street,
@@ -111,9 +115,14 @@ export function convertDatabaseToFormData(dbData: NewPatientPacketDB): NewPatien
     lastName: dbData.last_name || '',
     gender: dbData.gender || 'prefer-not-to-answer',
     dateOfBirth: dbData.date_of_birth ? new Date(dbData.date_of_birth) : new Date(),
-    height: dbData.height || '',
+    height: dbData.height
+      ? {
+          feet: Math.floor(parseInt(dbData.height) / 12).toString(),
+          inches: (parseInt(dbData.height) % 12).toString()
+        }
+      : { feet: '', inches: '' },
     weight: dbData.weight || '',
-    bmi: dbData.bmi || 0,
+    bmi: dbData.bmi || undefined,
     address: {
       street: dbData.address_street || '',
       city: dbData.address_city || '',
@@ -142,7 +151,7 @@ export function convertDatabaseToFormData(dbData: NewPatientPacketDB): NewPatien
       acidReflux: false,
       cancer: { has: false },
       depressionAnxiety: false,
-      diabetes: { has: false },
+      diabetes: { has: false, type: undefined, a1cLevel: undefined },
       heartDisease: false,
       periodontalDisease: false,
       substanceAbuse: false,

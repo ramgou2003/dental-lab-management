@@ -139,7 +139,7 @@ export async function createThankYouPreSurgeryForm(
       .from('thank_you_pre_surgery_forms')
       .insert([{
         ...formData,
-        status: 'submitted' // Set status to submitted for regular form submissions
+        status: 'completed' // Set status to completed for regular form submissions
       }])
       .select()
       .single();

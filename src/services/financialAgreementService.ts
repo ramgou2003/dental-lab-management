@@ -26,7 +26,7 @@ export interface FinancialAgreementData {
   // Section 2: Payment & Balance Terms
   patient_payment_today?: number;
   remaining_balance?: number;
-  balance_due_date?: string;
+  remaining_payment_plan?: string;
   payment_terms_initials?: string;
   
   // Section 3: Non-Refundable & Lab Fees
@@ -57,8 +57,8 @@ export interface FinancialAgreementData {
   witness_signature_time?: string;
   
   // Section 8: Office Use Only
-  scanned_to_chart?: boolean;
-  countersigned_by_manager?: boolean;
+  downloaded_to_dentra_assent?: boolean;
+  confirmed_by_staff_initials?: string;
   
   // Status and Metadata
   status?: 'draft' | 'completed' | 'signed' | 'executed';
@@ -99,7 +99,7 @@ export function convertFormDataToDatabase(formData: any, patientId?: string, lea
     // Section 2: Payment & Balance Terms
     patient_payment_today: formData.patientPaymentToday ? parseFloat(formData.patientPaymentToday) : null,
     remaining_balance: formData.remainingBalance ? parseFloat(formData.remainingBalance) : null,
-    balance_due_date: formData.balanceDueDate || null,
+    remaining_payment_plan: formData.remainingPaymentPlan || null,
     payment_terms_initials: formData.paymentTermsInitials || null,
     
     // Section 3: Non-Refundable & Lab Fees
@@ -130,8 +130,8 @@ export function convertFormDataToDatabase(formData: any, patientId?: string, lea
     witness_signature_time: formData.witnessSignatureTime || null,
     
     // Section 8: Office Use Only
-    scanned_to_chart: formData.scannedToChart || false,
-    countersigned_by_manager: formData.countersignedByManager || false,
+    downloaded_to_dentra_assent: formData.downloadedToDentraAssent || false,
+    confirmed_by_staff_initials: formData.confirmedByStaffInitials || null,
     
     // Status and Metadata
     status: 'draft',

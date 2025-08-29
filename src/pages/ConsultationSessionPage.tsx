@@ -1995,11 +1995,36 @@ const ConsultationSessionPage = () => {
       </div>
 
       {/* New Patient Packet Form Dialog - Same as used in Patient Profile Forms tab */}
-      <Dialog open={showNewPatientPacketDialog} onOpenChange={(open) => {
-        setShowNewPatientPacketDialog(open);
-      }}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          {appointmentData && (
+      <Dialog
+        open={showNewPatientPacketDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowNewPatientPacketDialog(false);
+          }
+        }}
+        modal={true}
+      >
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0 [&>button]:hidden" onPointerDownOutside={(e) => {
+          setShowNewPatientPacketDialog(false);
+        }}>
+          {/* Custom Header with Close Button */}
+          <div className="flex items-center justify-between p-4 border-b bg-white sticky top-0 z-10">
+            <h2 className="text-lg font-semibold">New Patient Packet</h2>
+            <button
+              onClick={() => {
+                setShowNewPatientPacketDialog(false);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              type="button"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="p-6">
+            {appointmentData && (
             <NewPatientPacketForm
               patientName={appointmentData.patient_name || 'Unknown Patient'}
               patientDateOfBirth={
@@ -2014,6 +2039,7 @@ const ConsultationSessionPage = () => {
               }
               showWelcomeHeader={false}
               submitButtonText="Save Patient Packet"
+              onCancel={() => setShowNewPatientPacketDialog(false)}
               onSubmit={async (formData) => {
                 console.log('Patient packet submitted from consultation:', formData);
 
@@ -2130,11 +2156,9 @@ const ConsultationSessionPage = () => {
                   toast.error('Failed to save patient packet. Please try again.');
                 }
               }}
-              onCancel={() => {
-                setShowNewPatientPacketDialog(false);
-              }}
             />
           )}
+          </div>
         </DialogContent>
       </Dialog>
 

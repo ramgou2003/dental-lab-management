@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -189,16 +189,14 @@ export function Section3AllergiesMeds({ formData, onInputChange, onNestedInputCh
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {dentalAllergies.map((allergy) => (
-                <div key={allergy} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`dental-${allergy}`}
-                    checked={formData.allergies.dentalRelated?.includes(allergy) || false}
-                    onCheckedChange={(checked) => handleAllergyChange('dentalRelated', allergy, checked as boolean)}
-                  />
-                  <Label htmlFor={`dental-${allergy}`} className="text-sm">
-                    {allergy}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={allergy}
+                  id={`dental-${allergy}`}
+                  checked={formData.allergies.dentalRelated?.includes(allergy) || false}
+                  onCheckedChange={(checked) => handleAllergyChange('dentalRelated', allergy, checked as boolean)}
+                >
+                  {allergy}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
@@ -213,48 +211,44 @@ export function Section3AllergiesMeds({ formData, onInputChange, onNestedInputCh
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {medicationAllergies.map((allergy) => (
-                <div key={allergy} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`medication-${allergy}`}
-                    checked={formData.allergies.medications?.includes(allergy) || false}
-                    onCheckedChange={(checked) => handleAllergyChange('medications', allergy, checked as boolean)}
-                  />
-                  <Label htmlFor={`medication-${allergy}`} className="text-sm">
-                    {allergy}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={allergy}
+                  id={`medication-${allergy}`}
+                  checked={formData.allergies.medications?.includes(allergy) || false}
+                  onCheckedChange={(checked) => handleAllergyChange('medications', allergy, checked as boolean)}
+                >
+                  {allergy}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
 
-          {/* Other Allergies */}
+          {/* Other Allergies & Foods */}
           <div>
             <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center">
                 <AlertTriangle className="h-3 w-3 text-yellow-600" />
               </div>
-              Other Allergies
+              Other Allergies & Foods
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {otherAllergies.map((allergy) => (
-                <div key={allergy} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`other-${allergy}`}
-                    checked={formData.allergies.other?.includes(allergy) || false}
-                    onCheckedChange={(checked) => handleAllergyChange('other', allergy, checked as boolean)}
-                  />
-                  <Label htmlFor={`other-${allergy}`} className="text-sm">
-                    {allergy}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={allergy}
+                  id={`other-${allergy}`}
+                  checked={formData.allergies.other?.includes(allergy) || false}
+                  onCheckedChange={(checked) => handleAllergyChange('other', allergy, checked as boolean)}
+                >
+                  {allergy}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
 
-          {/* Food Allergies */}
+          {/* Any other Allergies */}
           <div>
             <Label htmlFor="foodAllergies" className="text-sm font-semibold">
-              Food Allergies (please specify)
+              Any other Allergies (please specify)
             </Label>
             <Input
               id="foodAllergies"
@@ -265,15 +259,14 @@ export function Section3AllergiesMeds({ formData, onInputChange, onNestedInputCh
           </div>
 
           {/* No Allergies */}
-          <div className="flex items-center space-x-2 pt-2 border-t">
-            <Checkbox
+          <div className="pt-2 border-t">
+            <SimpleCheckbox
               id="noAllergies"
               checked={formData.allergies.none}
               onCheckedChange={handleNoAllergiesChange}
-            />
-            <Label htmlFor="noAllergies" className="text-sm font-medium">
+            >
               I have no known allergies
-            </Label>
+            </SimpleCheckbox>
           </div>
         </CardContent>
       </Card>
@@ -300,16 +293,14 @@ export function Section3AllergiesMeds({ formData, onInputChange, onNestedInputCh
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {emergencyMedications.map((medication) => (
-                <div key={medication} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`emergency-${medication}`}
-                    checked={formData.currentMedications.emergency?.includes(medication) || false}
-                    onCheckedChange={(checked) => handleMedicationChange('emergency', medication, checked as boolean)}
-                  />
-                  <Label htmlFor={`emergency-${medication}`} className="text-sm">
-                    {medication}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={medication}
+                  id={`emergency-${medication}`}
+                  checked={formData.currentMedications.emergency?.includes(medication) || false}
+                  onCheckedChange={(checked) => handleMedicationChange('emergency', medication, checked as boolean)}
+                >
+                  {medication}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
@@ -324,16 +315,14 @@ export function Section3AllergiesMeds({ formData, onInputChange, onNestedInputCh
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {boneMedications.map((medication) => (
-                <div key={medication} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`bone-${medication}`}
-                    checked={formData.currentMedications.boneOsteoporosis?.includes(medication) || false}
-                    onCheckedChange={(checked) => handleMedicationChange('boneOsteoporosis', medication, checked as boolean)}
-                  />
-                  <Label htmlFor={`bone-${medication}`} className="text-sm">
-                    {medication}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={medication}
+                  id={`bone-${medication}`}
+                  checked={formData.currentMedications.boneOsteoporosis?.includes(medication) || false}
+                  onCheckedChange={(checked) => handleMedicationChange('boneOsteoporosis', medication, checked as boolean)}
+                >
+                  {medication}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
@@ -348,16 +337,14 @@ export function Section3AllergiesMeds({ formData, onInputChange, onNestedInputCh
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {specializedMedications.map((medication) => (
-                <div key={medication} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`specialized-${medication}`}
-                    checked={formData.currentMedications.specialized?.includes(medication) || false}
-                    onCheckedChange={(checked) => handleMedicationChange('specialized', medication, checked as boolean)}
-                  />
-                  <Label htmlFor={`specialized-${medication}`} className="text-sm">
-                    {medication}
-                  </Label>
-                </div>
+                <SimpleCheckbox
+                  key={medication}
+                  id={`specialized-${medication}`}
+                  checked={formData.currentMedications.specialized?.includes(medication) || false}
+                  onCheckedChange={(checked) => handleMedicationChange('specialized', medication, checked as boolean)}
+                >
+                  {medication}
+                </SimpleCheckbox>
               ))}
             </div>
           </div>
@@ -377,15 +364,14 @@ export function Section3AllergiesMeds({ formData, onInputChange, onNestedInputCh
           </div>
 
           {/* No Medications */}
-          <div className="flex items-center space-x-2 pt-2 border-t">
-            <Checkbox
+          <div className="pt-2 border-t">
+            <SimpleCheckbox
               id="noMedications"
               checked={formData.currentMedications.none}
               onCheckedChange={handleNoMedicationsChange}
-            />
-            <Label htmlFor="noMedications" className="text-sm font-medium">
+            >
               I am not currently taking any medications
-            </Label>
+            </SimpleCheckbox>
           </div>
         </CardContent>
       </Card>

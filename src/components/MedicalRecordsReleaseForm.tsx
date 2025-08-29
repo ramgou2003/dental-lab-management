@@ -1,13 +1,13 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SignatureDialog } from "@/components/SignatureDialog";
-import { FileText, User, Calendar, Building2, Shield, Phone, Mail } from "lucide-react";
+import { SignaturePreview } from "@/components/SignaturePreview";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
+import { FileText, User, Clock, CheckCircle, AlertCircle, Edit } from "lucide-react";
 
 interface MedicalRecordsReleaseFormProps {
   onSubmit: (formData: any) => void;
@@ -17,6 +17,10 @@ interface MedicalRecordsReleaseFormProps {
   initialData?: any;
   isEditing?: boolean;
   readOnly?: boolean;
+  onAutoSave?: (formData: any) => void;
+  autoSaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  autoSaveMessage?: string;
+  lastSavedTime?: string;
 }
 
 export function MedicalRecordsReleaseForm({
@@ -26,85 +30,92 @@ export function MedicalRecordsReleaseForm({
   patientDateOfBirth = "",
   initialData = null,
   isEditing = false,
-  readOnly = false
+  readOnly = false,
+  onAutoSave,
+  autoSaveStatus = 'idle',
+  autoSaveMessage = '',
+  lastSavedTime = ''
 }: MedicalRecordsReleaseFormProps) {
-  const [formData, setFormData] = useState({
-    // Patient Information
-    patientName: initialData?.patient_name || patientName,
-    dateOfBirth: initialData?.date_of_birth || patientDateOfBirth || "",
-    address: initialData?.address || "",
-    city: initialData?.city || "",
-    state: initialData?.state || "",
-    zipCode: initialData?.zip_code || "",
-    phone: initialData?.phone || "",
-    email: initialData?.email || "",
+  const [formData, setFormData] = useState(() => {
+    // Extract first and last names from patientName if not provided in initialData
+    let firstName = initialData?.first_name || "";
+    let lastName = initialData?.last_name || "";
 
-    // Release Information
-    dateOfRequest: initialData?.date_of_request || new Date().toISOString().split('T')[0],
-    recordsFromDate: initialData?.records_from_date || "",
-    recordsToDate: initialData?.records_to_date || "",
+    // If we don't have first/last names but have patientName, try to extract them
+    if (!firstName && !lastName && patientName) {
+      const nameParts = patientName.trim().split(' ');
+      if (nameParts.length >= 2) {
+        firstName = nameParts[0];
+        lastName = nameParts.slice(1).join(' '); // Handle multiple last names
+      } else if (nameParts.length === 1) {
+        firstName = nameParts[0];
+      }
+    }
 
-    // Records to Release (checkboxes)
-    recordTypes: {
-      completeRecord: initialData?.complete_record || false,
-      xrays: initialData?.xrays || false,
-      labResults: initialData?.lab_results || false,
-      consultationNotes: initialData?.consultation_notes || false,
-      treatmentPlans: initialData?.treatment_plans || false,
-      surgicalReports: initialData?.surgical_reports || false,
-      prescriptions: initialData?.prescriptions || false,
-      photographs: initialData?.photographs || false,
-      models: initialData?.models || false,
-      other: initialData?.other_records || false
-    },
-    otherRecordsDescription: initialData?.other_records_description || "",
-
-    // Release To Information
-    releaseToName: initialData?.release_to_name || "",
-    releaseToTitle: initialData?.release_to_title || "",
-    releaseToOrganization: initialData?.release_to_organization || "",
-    releaseToAddress: initialData?.release_to_address || "",
-    releaseToCity: initialData?.release_to_city || "",
-    releaseToState: initialData?.release_to_state || "",
-    releaseToZipCode: initialData?.release_to_zip_code || "",
-    releaseToPhone: initialData?.release_to_phone || "",
-    releaseToFax: initialData?.release_to_fax || "",
-
-    // Purpose of Release
-    purposeOfRelease: initialData?.purpose_of_release || "",
-
-    // Authorization Details
-    authorizationExpiration: initialData?.authorization_expiration || "",
-    rightToRevoke: initialData?.right_to_revoke !== undefined ? initialData.right_to_revoke : true,
-    copyToPatient: initialData?.copy_to_patient || false,
-
-    // Signatures
-    patientSignature: initialData?.patient_signature || "",
-    patientSignatureDate: initialData?.patient_signature_date || new Date().toISOString().split('T')[0],
-    witnessSignature: initialData?.witness_signature || "",
-    witnessSignatureDate: initialData?.witness_signature_date || new Date().toISOString().split('T')[0],
-    witnessName: initialData?.witness_name || ""
+    return {
+      firstName,
+      lastName,
+      dateOfBirth: initialData?.date_of_birth || patientDateOfBirth || "",
+      patientName: initialData?.patient_name || patientName,
+      signatureDate: initialData?.signature_date || new Date().toISOString().split('T')[0],
+      signatureTime: initialData?.signature_time || new Date().toTimeString().slice(0, 5),
+      patientSignature: initialData?.patient_signature || "",
+      hasAgreed: initialData?.has_agreed || false
+    };
   });
 
-  // Signature dialog states
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
-  const [showWitnessSignatureDialog, setShowWitnessSignatureDialog] = useState(false);
+  const [hasFormData, setHasFormData] = useState(false);
+
+  // Auto-save effect with debouncing
+  useEffect(() => {
+    if (!onAutoSave || readOnly) return;
+
+    // Check if form has meaningful data
+    const hasMeaningfulData = formData.firstName || formData.lastName || formData.patientSignature;
+    setHasFormData(hasMeaningfulData);
+
+    const timeoutId = setTimeout(() => {
+      // Only auto-save if there's meaningful data
+      if (hasMeaningfulData) {
+        onAutoSave(formData);
+      }
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, onAutoSave, readOnly]);
+
+  // Sync patient name when first/last name changes
+  useEffect(() => {
+    if (formData.firstName && formData.lastName && !formData.patientName) {
+      setFormData(prev => ({
+        ...prev,
+        patientName: `${formData.firstName} ${formData.lastName}`
+      }));
+    }
+  }, [formData.firstName, formData.lastName, formData.patientName]);
+
+
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
 
-  const handleRecordTypeChange = (recordType: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      recordTypes: {
-        ...prev.recordTypes,
-        [recordType]: checked
+      // Auto-sync patient name when first or last name changes
+      if (field === 'firstName' || field === 'lastName') {
+        const firstName = field === 'firstName' ? value : prev.firstName;
+        const lastName = field === 'lastName' ? value : prev.lastName;
+        if (firstName && lastName) {
+          newData.patientName = `${firstName} ${lastName}`;
+        } else if (firstName) {
+          newData.patientName = firstName;
+        } else if (lastName) {
+          newData.patientName = lastName;
+        }
       }
-    }));
+
+      return newData;
+    });
   };
 
   const handlePatientSignatureSave = (signature: string) => {
@@ -112,49 +123,103 @@ export function MedicalRecordsReleaseForm({
     setShowPatientSignatureDialog(false);
   };
 
-  const handleWitnessSignatureSave = (signature: string) => {
-    handleInputChange('witnessSignature', signature);
-    setShowWitnessSignatureDialog(false);
+  const handlePatientSignatureClear = () => {
+    handleInputChange('patientSignature', '');
+  };
+
+  const handleSyncCurrentDateTime = () => {
+    const now = new Date();
+    const currentDate = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().slice(0, 5);
+    setFormData(prev => ({ ...prev, signatureDate: currentDate, signatureTime: currentTime }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const submissionData = { ...formData, status: 'completed' };
+    console.log('🔄 Submitting Medical Records Release form data:', submissionData);
+    onSubmit(submissionData);
   };
 
-  // Check if any record types are selected
-  const hasSelectedRecords = Object.values(formData.recordTypes).some(Boolean);
-
   return (
-    <div className="max-w-5xl mx-auto">
-      <DialogHeader className="mb-6">
-        <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-          <FileText className="h-6 w-6" />
-          Medical Records Release Authorization
-        </DialogTitle>
-        <p className="text-sm text-gray-600 mt-2">Authorization for Release of Protected Health Information</p>
-      </DialogHeader>
+    <div className="flex flex-col h-full w-full">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center gap-2">
+                <FileText className="h-6 w-6" />
+                Medical Records Release Authorization
+              </DialogTitle>
+              <p className="text-sm text-gray-600 mt-2">Simplified Form – Effective 08/2025</p>
+            </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Patient Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
-              <User className="h-5 w-5" />
-              Patient Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="patientName">Patient Name *</Label>
-                <Input
-                  id="patientName"
-                  value={formData.patientName}
-                  onChange={(e) => handleInputChange('patientName', e.target.value)}
-                  placeholder="Full legal name"
-                  required
-                />
+            {/* Auto-save Status Indicator */}
+            {onAutoSave && !readOnly && (hasFormData || autoSaveStatus === 'error') && (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
+                autoSaveStatus === 'error'
+                  ? 'bg-red-50 text-red-700 border border-red-200'
+                  : autoSaveStatus === 'saved'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'bg-green-50 text-green-700 border border-green-200'
+              }`}>
+                {autoSaveStatus === 'error' ? (
+                  <AlertCircle className="h-3 w-3 text-red-600" />
+                ) : autoSaveStatus === 'saved' ? (
+                  <CheckCircle className="h-3 w-3 text-blue-600" />
+                ) : (
+                  <div className="animate-spin rounded-full h-3 w-3 border-2 border-green-200 border-t-green-600"></div>
+                )}
+                <span className="font-medium">
+                  {autoSaveStatus === 'error'
+                    ? autoSaveMessage
+                    : autoSaveStatus === 'saved'
+                    ? `Saved ${lastSavedTime}`
+                    : 'Auto-saving changes...'}
+                </span>
+              </div>
+            )}
+          </div>
+        </DialogHeader>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-0">
+          <Card className="rounded-none border-l-0 border-r-0 border-t-0">
+            <CardHeader className="px-6">
+              <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+                <User className="h-5 w-5" />
+                Patient Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 px-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    placeholder="First name"
+                    required
+                    readOnly={readOnly}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    placeholder="Last name"
+                    required
+                    readOnly={readOnly}
+                    className="w-full"
+                  />
+                </div>
               </div>
               <div>
                 <Label htmlFor="dateOfBirth">Date of Birth *</Label>
@@ -164,463 +229,188 @@ export function MedicalRecordsReleaseForm({
                   value={formData.dateOfBirth}
                   onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                   required
+                  readOnly={readOnly}
+                  className="w-full"
                 />
               </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="address">Address *</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => handleInputChange('address', e.target.value)}
-                placeholder="Street address"
-                required
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">State *</Label>
-                <Input
-                  id="state"
-                  value={formData.state}
-                  onChange={(e) => handleInputChange('state', e.target.value)}
-                  placeholder="CA"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="zipCode">ZIP Code *</Label>
-                <Input
-                  id="zipCode"
-                  value={formData.zipCode}
-                  onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="patient@email.com"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Records Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
-              <Calendar className="h-5 w-5" />
-              Records to be Released
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="recordsFromDate">Records From Date</Label>
-                <Input
-                  id="recordsFromDate"
-                  type="date"
-                  value={formData.recordsFromDate}
-                  onChange={(e) => handleInputChange('recordsFromDate', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="recordsToDate">Records To Date</Label>
-                <Input
-                  id="recordsToDate"
-                  type="date"
-                  value={formData.recordsToDate}
-                  onChange={(e) => handleInputChange('recordsToDate', e.target.value)}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label className="text-sm font-semibold mb-3 block">Select Records to Release *</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[
-                  { key: 'completeRecord', label: 'Complete Medical Record' },
-                  { key: 'xrays', label: 'X-rays/Radiographs' },
-                  { key: 'labResults', label: 'Laboratory Results' },
-                  { key: 'consultationNotes', label: 'Consultation Notes' },
-                  { key: 'treatmentPlans', label: 'Treatment Plans' },
-                  { key: 'surgicalReports', label: 'Surgical Reports' },
-                  { key: 'prescriptions', label: 'Prescription Records' },
-                  { key: 'photographs', label: 'Clinical Photographs' },
-                  { key: 'models', label: 'Dental Models/Impressions' },
-                  { key: 'other', label: 'Other (specify below)' }
-                ].map((record) => (
-                  <div key={record.key} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={record.key}
-                      checked={formData.recordTypes[record.key as keyof typeof formData.recordTypes]}
-                      onCheckedChange={(checked) => handleRecordTypeChange(record.key, checked as boolean)}
-                    />
-                    <Label htmlFor={record.key} className="text-sm font-normal">
-                      {record.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {formData.recordTypes.other && (
-              <div>
-                <Label htmlFor="otherRecordsDescription">Other Records Description</Label>
-                <Textarea
-                  id="otherRecordsDescription"
-                  value={formData.otherRecordsDescription}
-                  onChange={(e) => handleInputChange('otherRecordsDescription', e.target.value)}
-                  placeholder="Please specify other records to be released..."
-                  rows={3}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Release To Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
-              <Building2 className="h-5 w-5" />
-              Release Records To
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="releaseToName">Contact Person Name *</Label>
-                <Input
-                  id="releaseToName"
-                  value={formData.releaseToName}
-                  onChange={(e) => handleInputChange('releaseToName', e.target.value)}
-                  placeholder="Dr. John Smith"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="releaseToTitle">Title</Label>
-                <Input
-                  id="releaseToTitle"
-                  value={formData.releaseToTitle}
-                  onChange={(e) => handleInputChange('releaseToTitle', e.target.value)}
-                  placeholder="DDS, Oral Surgeon"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="releaseToOrganization">Organization/Practice Name *</Label>
-              <Input
-                id="releaseToOrganization"
-                value={formData.releaseToOrganization}
-                onChange={(e) => handleInputChange('releaseToOrganization', e.target.value)}
-                placeholder="ABC Dental Practice"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="releaseToAddress">Address *</Label>
-              <Input
-                id="releaseToAddress"
-                value={formData.releaseToAddress}
-                onChange={(e) => handleInputChange('releaseToAddress', e.target.value)}
-                placeholder="Street address"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
-                <Label htmlFor="releaseToCity">City *</Label>
-                <Input
-                  id="releaseToCity"
-                  value={formData.releaseToCity}
-                  onChange={(e) => handleInputChange('releaseToCity', e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="releaseToState">State *</Label>
-                <Input
-                  id="releaseToState"
-                  value={formData.releaseToState}
-                  onChange={(e) => handleInputChange('releaseToState', e.target.value)}
-                  placeholder="CA"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="releaseToZipCode">ZIP Code *</Label>
-                <Input
-                  id="releaseToZipCode"
-                  value={formData.releaseToZipCode}
-                  onChange={(e) => handleInputChange('releaseToZipCode', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="releaseToPhone">Phone Number</Label>
-                <Input
-                  id="releaseToPhone"
-                  value={formData.releaseToPhone}
-                  onChange={(e) => handleInputChange('releaseToPhone', e.target.value)}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-              <div>
-                <Label htmlFor="releaseToFax">Fax Number</Label>
-                <Input
-                  id="releaseToFax"
-                  value={formData.releaseToFax}
-                  onChange={(e) => handleInputChange('releaseToFax', e.target.value)}
-                  placeholder="(555) 123-4568"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Purpose and Authorization */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
-              <Shield className="h-5 w-5" />
-              Purpose and Authorization Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="purposeOfRelease">Purpose of Release *</Label>
-              <Textarea
-                id="purposeOfRelease"
-                value={formData.purposeOfRelease}
-                onChange={(e) => handleInputChange('purposeOfRelease', e.target.value)}
-                placeholder="Continuing care, consultation, insurance claim, legal proceedings, etc."
-                rows={3}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="authorizationExpiration">Authorization Expiration Date</Label>
-              <Input
-                id="authorizationExpiration"
-                type="date"
-                value={formData.authorizationExpiration}
-                onChange={(e) => handleInputChange('authorizationExpiration', e.target.value)}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                If no date is specified, this authorization will expire one year from the date signed.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="rightToRevoke"
-                  checked={formData.rightToRevoke}
-                  onCheckedChange={(checked) => handleInputChange('rightToRevoke', checked)}
-                />
-                <Label htmlFor="rightToRevoke" className="text-sm">
-                  I understand that I have the right to revoke this authorization at any time by providing written notice to the practice.
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="copyToPatient"
-                  checked={formData.copyToPatient}
-                  onCheckedChange={(checked) => handleInputChange('copyToPatient', checked)}
-                />
-                <Label htmlFor="copyToPatient" className="text-sm">
-                  I would like to receive a copy of the released records.
-                </Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Signatures */}
-        <Card>
-          <CardHeader>
+        <Card className="rounded-none border-l-0 border-r-0 border-t-0">
+          <CardHeader className="px-6">
             <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
               <FileText className="h-5 w-5" />
-              Signatures
+              Authorization Content
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Patient Signature */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-semibold">Patient Signature *</Label>
-                {formData.patientSignature && formData.patientSignature.length > 0 ? (
-                  <div className="mt-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                    <img
-                      src={formData.patientSignature}
-                      alt="Patient Signature"
-                      className="max-h-16 mx-auto"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowPatientSignatureDialog(true)}
-                      className="w-full mt-2"
-                    >
-                      Update Signature
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowPatientSignatureDialog(true)}
-                    className="w-full mt-2"
-                  >
-                    Sign Here
-                  </Button>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="patientSignatureDate">Date *</Label>
-                <Input
-                  id="patientSignatureDate"
-                  type="date"
-                  value={formData.patientSignatureDate}
-                  onChange={(e) => handleInputChange('patientSignatureDate', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Witness Signature */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="witnessName">Witness Name</Label>
-                <Input
-                  id="witnessName"
-                  value={formData.witnessName}
-                  onChange={(e) => handleInputChange('witnessName', e.target.value)}
-                  placeholder="Witness full name"
-                />
-              </div>
-
-              <div>
-                <Label className="text-sm font-semibold">Witness Signature</Label>
-                {formData.witnessSignature && formData.witnessSignature.length > 0 ? (
-                  <div className="mt-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                    <img
-                      src={formData.witnessSignature}
-                      alt="Witness Signature"
-                      className="max-h-16 mx-auto"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowWitnessSignatureDialog(true)}
-                      className="w-full mt-2"
-                    >
-                      Update Signature
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowWitnessSignatureDialog(true)}
-                    className="w-full mt-2"
-                  >
-                    Sign Here
-                  </Button>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="witnessSignatureDate">Date</Label>
-                <Input
-                  id="witnessSignatureDate"
-                  type="date"
-                  value={formData.witnessSignatureDate}
-                  onChange={(e) => handleInputChange('witnessSignatureDate', e.target.value)}
-                />
+          <CardContent className="px-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800 leading-relaxed">
+                By signing this form, I authorize you to release confidential health information about me, by releasing a copy of my medical records, or a summary or narrative of my protected health information, to the physician/person/facility/entity listed:
+              </p>
+              <div className="mt-4 p-3 bg-white border border-blue-300 rounded">
+                <p className="text-sm font-medium text-blue-900">
+                  Germain Jean-Charles DDS PC<br />
+                  344 N Main Street,<br />
+                  Canandaigua, NY<br />
+                  14424
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Form Actions */}
-        <div className="flex justify-end gap-4 pt-6">
+        <Card className="rounded-none border-l-0 border-r-0 border-t-0 border-b-0">
+          <CardHeader className="px-6">
+            <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+              <Edit className="h-5 w-5" />
+              Signature
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 px-6">
+            {/* Agreement Checkbox */}
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <SimpleCheckbox
+                id="agreement"
+                checked={formData.hasAgreed || false}
+                onCheckedChange={(checked) => handleInputChange('hasAgreed', checked)}
+              >
+                <span className="text-sm text-blue-800 font-medium">
+                  I have read, understood, and agreed to all terms above.
+                </span>
+              </SimpleCheckbox>
+            </div>
+
+            {/* Signature Section - Horizontal Layout */}
+            <div className="p-4 border border-gray-200 rounded-lg">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Patient Full Name */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Patient Full Name (print)</Label>
+                  <Input
+                    value={formData.patientName || (formData.firstName && formData.lastName ? `${formData.firstName} ${formData.lastName}` : '')}
+                    onChange={(e) => handleInputChange('patientName', e.target.value)}
+                    placeholder="Full patient name"
+                    className="bg-gray-50"
+                    readOnly={readOnly}
+                  />
+                </div>
+
+                {/* Date/Time */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Date/Time</Label>
+                  <div className="space-y-2">
+                    <Input
+                      type="date"
+                      value={formData.signatureDate}
+                      onChange={(e) => handleInputChange('signatureDate', e.target.value)}
+                      className="bg-gray-50"
+                      readOnly={readOnly}
+                    />
+                    <div className="relative">
+                      <Input
+                        type="time"
+                        value={formData.signatureTime}
+                        onChange={(e) => handleInputChange('signatureTime', e.target.value)}
+                        className="bg-gray-50 pr-32"
+                        readOnly={readOnly}
+                      />
+                      {!readOnly && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSyncCurrentDateTime}
+                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 px-2 flex items-center gap-1 border border-blue-300 bg-white hover:bg-blue-50 text-blue-600 text-xs rounded"
+                          title="Set current date and time"
+                        >
+                          <Clock className="h-3 w-3" />
+                          Current Date & Time
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Signature */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Signature *</Label>
+                  {formData.patientSignature ? (
+                    <div className="border border-gray-300 rounded-lg p-2 bg-white min-h-[80px] flex items-center justify-center relative">
+                      <img
+                        src={formData.patientSignature}
+                        alt="Patient Signature"
+                        className="max-h-16 max-w-full object-contain"
+                      />
+                      {!readOnly && (
+                        <div className="absolute top-1 right-1 flex gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowPatientSignatureDialog(true)}
+                            className="h-6 w-6 p-0 hover:bg-blue-100"
+                            title="Edit signature"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handlePatientSignatureClear}
+                            className="h-6 w-6 p-0 hover:bg-red-100 text-red-600"
+                            title="Clear signature"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowPatientSignatureDialog(true)}
+                      className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
+                      disabled={readOnly}
+                    >
+                      <Edit className="h-4 w-4" />
+                      Sign Here
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        </form>
+      </div>
+
+      {/* Fixed Footer */}
+      <div className="flex-shrink-0 bg-white border-t border-gray-200 py-4 px-6">
+        <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {readOnly ? 'Close' : 'Cancel'}
           </Button>
-          {!readOnly ? (
+          {!readOnly && (
             <Button
-              type="submit"
+              onClick={handleSubmit}
               className="bg-blue-600 hover:bg-blue-700"
-              disabled={!hasSelectedRecords || !formData.patientSignature}
+              disabled={!formData.patientSignature || !formData.hasAgreed}
             >
-              {isEditing ? 'Update Medical Records Release' : 'Save Medical Records Release'}
-            </Button>
-          ) : (
-            <Button type="button" disabled className="bg-gray-400 text-white">
-              View Only
+              {isEditing ? 'Update Medical Records Release' : 'Submit'}
             </Button>
           )}
         </div>
-      </form>
+      </div>
 
-      {/* Signature Dialogs */}
       <SignatureDialog
         isOpen={showPatientSignatureDialog}
         onClose={() => setShowPatientSignatureDialog(false)}
         onSave={handlePatientSignatureSave}
         title="Patient Signature"
         currentSignature={formData.patientSignature}
-      />
-
-      <SignatureDialog
-        isOpen={showWitnessSignatureDialog}
-        onClose={() => setShowWitnessSignatureDialog(false)}
-        onSave={handleWitnessSignatureSave}
-        title="Witness Signature"
-        currentSignature={formData.witnessSignature}
       />
     </div>
   );

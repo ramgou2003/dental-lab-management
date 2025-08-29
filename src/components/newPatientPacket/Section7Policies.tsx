@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -103,22 +103,20 @@ export function Section7Policies({ formData, onInputChange, onNestedInputChange 
           {policyAcknowledgments.map((policy) => (
             <Card key={policy.key} className="border-gray-200">
               <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    id={policy.key}
-                    checked={formData.acknowledgments[policy.key as keyof typeof formData.acknowledgments] || false}
-                    onCheckedChange={(checked) => handleAcknowledgmentChange(policy.key, checked as boolean)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <Label htmlFor={policy.key} className="text-sm font-semibold text-gray-900 cursor-pointer">
+                <SimpleCheckbox
+                  id={policy.key}
+                  checked={formData.acknowledgments[policy.key as keyof typeof formData.acknowledgments] || false}
+                  onCheckedChange={(checked) => handleAcknowledgmentChange(policy.key, checked as boolean)}
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">
                       {policy.title}
-                    </Label>
+                    </div>
                     <p className="text-sm text-gray-600 mt-1">
                       {policy.description}
                     </p>
                   </div>
-                </div>
+                </SimpleCheckbox>
               </CardContent>
             </Card>
           ))}
@@ -134,17 +132,14 @@ export function Section7Policies({ formData, onInputChange, onNestedInputChange 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="wantsFinancialInfo"
-              checked={formData.wantsFinancialInfo}
-              onCheckedChange={(checked) => onInputChange('wantsFinancialInfo', checked)}
-            />
-            <Label htmlFor="wantsFinancialInfo" className="text-sm">
-              I would like to receive detailed information about treatment costs, payment options, 
-              and financing plans before beginning treatment.
-            </Label>
-          </div>
+          <SimpleCheckbox
+            id="wantsFinancialInfo"
+            checked={formData.wantsFinancialInfo}
+            onCheckedChange={(checked) => onInputChange('wantsFinancialInfo', checked)}
+          >
+            I would like to receive detailed information about treatment costs, payment options,
+            and financing plans before beginning treatment.
+          </SimpleCheckbox>
         </CardContent>
       </Card>
 

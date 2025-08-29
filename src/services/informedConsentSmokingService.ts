@@ -219,7 +219,43 @@ export async function autoSaveInformedConsentSmokingForm(
       console.log('✅ Informed consent smoking form auto-saved successfully:', data);
       return { data, error: null };
     } else {
-      // Create new record - always start as draft
+      // Before creating a new form, check if there's already a draft form for this patient
+      console.log('🔍 Checking for existing draft forms for patient:', patientId);
+      const { data: existingDrafts, error: checkError } = await supabase
+        .from('informed_consent_smoking_forms')
+        .select('id')
+        .eq('patient_id', patientId)
+        .eq('status', 'draft')
+        .limit(1);
+
+      if (checkError) {
+        console.error('Error checking for existing drafts:', checkError);
+        // Continue with creation if check fails
+      } else if (existingDrafts && existingDrafts.length > 0) {
+        // Update the existing draft instead of creating a new one
+        const existingDraftId = existingDrafts[0].id;
+        console.log('📝 Found existing draft, updating instead of creating new:', existingDraftId);
+        dbData.status = 'draft';
+        const { data, error } = await supabase
+          .from('informed_consent_smoking_forms')
+          .update({
+            ...dbData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingDraftId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('❌ Error updating existing draft:', error);
+          return { data: null, error };
+        }
+
+        console.log('✅ Updated existing draft successfully:', data);
+        return { data, error: null };
+      }
+
+      // Create new record only if no draft exists - always start as draft
       dbData.status = 'draft';
       console.log('📝 Creating new informed consent smoking form draft');
       const { data, error } = await supabase

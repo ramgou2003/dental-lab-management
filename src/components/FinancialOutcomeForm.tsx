@@ -18,18 +18,17 @@ interface FinancialOutcomeData {
 
   // Financial Information (only if accepted)
   treatmentCost: string;
-  globalTreatmentValue: string;
-  
+
   // Financing Options
   financingOptions: {
     yesApproved: boolean;
     noNotApproved: boolean;
     didNotApply: boolean;
   };
-  
+
   // Financing Not Approved Details
   financingNotApprovedReason: string;
-  
+
   // Additional Notes
   outcomeNotes: string;
   followupDate?: string;
@@ -59,7 +58,6 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
   const [formData, setFormData] = useState<FinancialOutcomeData>({
     treatmentDecision: '',
     treatmentCost: '',
-    globalTreatmentValue: '',
     financingOptions: {
       yesApproved: false,
       noNotApproved: false,
@@ -102,7 +100,6 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
           const formDataToSet = {
             treatmentDecision: data.treatment_decision || '',
             treatmentCost: data.treatment_cost ? data.treatment_cost.toString() : '',
-            globalTreatmentValue: data.global_treatment_value ? data.global_treatment_value.toString() : '',
             financingOptions: data.financing_options || formData.financingOptions,
             financingNotApprovedReason: data.financing_not_approved_reason || '',
             outcomeNotes: data.financial_notes || '',
@@ -154,7 +151,6 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
         patient_name: patientName || 'Unknown Patient',
         treatment_decision: formData.treatmentDecision,
         treatment_cost: formData.treatmentCost ? parseFloat(formData.treatmentCost) : null,
-        global_treatment_value: formData.globalTreatmentValue ? parseFloat(formData.globalTreatmentValue) : null,
         financing_options: formData.financingOptions,
         financing_not_approved_reason: formData.financingNotApprovedReason,
         financial_notes: formData.outcomeNotes,
@@ -400,32 +396,16 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="treatmentCost">Treatment Cost ($)</Label>
-                  <Input
-                    id="treatmentCost"
-                    type="number"
-                    step="0.01"
-                    value={formData.treatmentCost}
-                    onChange={(e) => setFormData(prev => ({ ...prev, treatmentCost: e.target.value }))}
-                    placeholder="Enter treatment cost"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="globalTreatmentValue">Global Treatment Value ($)</Label>
-                  <Input
-                    id="globalTreatmentValue"
-                    type="number"
-                    step="0.01"
-                    value={formData.globalTreatmentValue}
-                    onChange={(e) => setFormData(prev => ({ ...prev, globalTreatmentValue: e.target.value }))}
-                    placeholder="Enter global treatment value"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Total value including all treatment phases
-                  </p>
-                </div>
+              <div>
+                <Label htmlFor="treatmentCost">Treatment Cost ($)</Label>
+                <Input
+                  id="treatmentCost"
+                  type="number"
+                  step="0.01"
+                  value={formData.treatmentCost}
+                  onChange={(e) => setFormData(prev => ({ ...prev, treatmentCost: e.target.value }))}
+                  placeholder="Enter treatment cost"
+                />
               </div>
             </CardContent>
           </Card>

@@ -25,7 +25,7 @@ import { FinancialAgreementDialog } from "@/components/FinancialAgreementDialog"
 import { supabase } from "@/integrations/supabase/client";
 import { FinalDesignApprovalDialog } from "@/components/FinalDesignApprovalDialog";
 import { NewPatientPacketForm } from "@/components/NewPatientPacketForm";
-import { MedicalRecordsReleaseForm } from "@/components/MedicalRecordsReleaseForm";
+import { MedicalRecordsReleaseDialog } from "@/components/MedicalRecordsReleaseDialog";
 import { InformedConsentSmokingDialog } from "@/components/InformedConsentSmokingDialog";
 import { ThankYouPreSurgeryDialog } from "@/components/ThankYouPreSurgeryDialog";
 import { ThreeYearCarePackageDialog } from "@/components/ThreeYearCarePackageDialog";
@@ -4927,6 +4927,10 @@ export function PatientProfilePage() {
                               } else if (selectedAdminFormType === 'final-design-approval') {
                                 setShowFinalDesignApprovalForm(true);
                               } else if (selectedAdminFormType === 'medical-records-release') {
+                                // Reset editing states for new form
+                                setEditingMedicalRecordsReleaseForm(null);
+                                setIsEditingMedicalRecordsReleaseForm(false);
+                                setIsViewingMedicalRecordsReleaseForm(false);
                                 setShowMedicalRecordsReleaseForm(true);
                               } else if (selectedAdminFormType === 'new-patient-packet') {
                                 setShowNewPatientPacketForm(true);
@@ -5202,7 +5206,7 @@ export function PatientProfilePage() {
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             Consent Full Arch Form
@@ -5210,10 +5214,10 @@ export function PatientProfilePage() {
                                         </div>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                                           form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                          form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                                         }`}>
                                           {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                           form.status === 'completed' ? 'Completed' : 'Draft'}
                                         </span>
                                       </div>
 
@@ -5329,7 +5333,7 @@ export function PatientProfilePage() {
                                       <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
-                                            form.status === 'signed' ? 'bg-green-500' :
+                                            form.status === 'completed' ? 'bg-green-500' :
                                             form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
@@ -5337,18 +5341,21 @@ export function PatientProfilePage() {
                                           </span>
                                         </div>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
+                                          form.status === 'completed' ? 'bg-green-100 text-green-700' :
                                           form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
                                         }`}>
-                                          {form.status === 'signed' ? 'Signed' :
+                                          {form.status === 'completed' ? 'Completed' :
                                            form.status === 'submitted' ? 'Submitted' : 'Draft'}
                                         </span>
                                       </div>
 
-                                      {/* Submitted Date */}
+                                      {/* Date */}
                                       <div className="mb-3">
                                         <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="text-gray-500">
+                                            {form.status === 'completed' ? 'Completed on:' :
+                                             form.status === 'submitted' ? 'Submitted on:' : 'Created on:'}
+                                          </span>
                                           <span className="font-medium text-gray-700">
                                             {new Date(form.created_at).toLocaleDateString('en-US', {
                                               year: 'numeric',
@@ -5433,7 +5440,7 @@ export function PatientProfilePage() {
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             Informed Consent - Nicotine Use Form
@@ -5441,10 +5448,10 @@ export function PatientProfilePage() {
                                         </div>
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                           form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
-                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                          form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
                                         }`}>
                                           {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                           form.status === 'completed' ? 'Completed' : 'Draft'}
                                         </span>
                                       </div>
 
@@ -5452,7 +5459,8 @@ export function PatientProfilePage() {
                                       <div className="mb-3">
                                         <div className="flex items-center justify-between text-xs">
                                           <span className="text-gray-500">
-                                            {form.status === 'draft' ? 'Created on:' : 'Submitted on:'}
+                                            {form.status === 'draft' ? 'Created on:' :
+                                             form.status === 'signed' ? 'Signed on:' : 'Completed on:'}
                                           </span>
                                           <span className="font-medium text-gray-700">
                                             {new Date(form.created_at).toLocaleDateString('en-US', {
@@ -5562,7 +5570,7 @@ export function PatientProfilePage() {
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             Final Design Approval Form
@@ -5570,10 +5578,10 @@ export function PatientProfilePage() {
                                         </div>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                                           form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                          form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                                         }`}>
                                           {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                           form.status === 'completed' ? 'Completed' : 'Draft'}
                                         </span>
                                       </div>
 
@@ -5713,7 +5721,7 @@ export function PatientProfilePage() {
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             Thank You & Pre-Surgery Form
@@ -5721,10 +5729,10 @@ export function PatientProfilePage() {
                                         </div>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                                           form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                          form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                                         }`}>
                                           {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                           form.status === 'completed' ? 'Completed' : 'Draft'}
                                         </span>
                                       </div>
 
@@ -5840,7 +5848,7 @@ export function PatientProfilePage() {
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             3-Year Care Package Enrollment Agreement
@@ -5850,10 +5858,10 @@ export function PatientProfilePage() {
                                         {/* Status Badge */}
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                           form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
-                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                          form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
                                         }`}>
                                           {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                           form.status === 'completed' ? 'Completed' : 'Draft'}
                                         </span>
                                       </div>
 
@@ -5861,7 +5869,8 @@ export function PatientProfilePage() {
                                       <div className="mb-3">
                                         <div className="flex items-center justify-between text-xs">
                                           <span className="text-gray-500">
-                                            {form.status === 'draft' ? 'Created on:' : 'Submitted on:'}
+                                            {form.status === 'draft' ? 'Created on:' :
+                                             form.status === 'signed' ? 'Signed on:' : 'Completed on:'}
                                           </span>
                                           <span className="font-medium text-gray-700">
                                             {form.created_at ? new Date(form.created_at).toLocaleDateString('en-US', {
@@ -5954,9 +5963,9 @@ export function PatientProfilePage() {
                                           Draft
                                         </span>
                                       )}
-                                      {form.status === 'submitted' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                                          Submitted
+                                      {form.status === 'completed' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                          Completed
                                         </span>
                                       )}
                                       {form.status === 'signed' && (
@@ -6085,9 +6094,9 @@ export function PatientProfilePage() {
                                           Draft
                                         </span>
                                       )}
-                                      {form.status === 'submitted' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                                          Submitted
+                                      {form.status === 'completed' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                          Completed
                                         </span>
                                       )}
                                       {form.status === 'signed' && (
@@ -13462,144 +13471,107 @@ export function PatientProfilePage() {
       )}
 
       {/* Medical Records Release Form Dialog */}
-      <Dialog open={showMedicalRecordsReleaseForm} onOpenChange={(open) => {
-        setShowMedicalRecordsReleaseForm(open);
-        if (!open) {
-          setIsViewingMedicalRecordsReleaseForm(false);
-          setIsEditingMedicalRecordsReleaseForm(false);
-          setEditingMedicalRecordsReleaseForm(null);
-        }
-      }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          {patient && (
-            <MedicalRecordsReleaseForm
-              patientName={patient.full_name}
-              patientDateOfBirth={patient.date_of_birth}
-              initialData={editingMedicalRecordsReleaseForm}
-              isEditing={isEditingMedicalRecordsReleaseForm}
-              readOnly={isViewingMedicalRecordsReleaseForm}
-              onSubmit={async (formData) => {
-                try {
-                  // Map form data to database columns
-                  const payload: any = {
-                    patient_id: patient.id,
-                    status: 'signed',
+      {patient && (
+        <MedicalRecordsReleaseDialog
+          isOpen={showMedicalRecordsReleaseForm}
+          onClose={() => {
+            setShowMedicalRecordsReleaseForm(false);
+            setSelectedAdminFormType("");
+            setEditingMedicalRecordsReleaseForm(null);
+            setIsEditingMedicalRecordsReleaseForm(false);
+            setIsViewingMedicalRecordsReleaseForm(false);
+          }}
+          onSubmit={async (formData) => {
+            try {
+              console.log('📝 Received form data in PatientProfilePage:', formData);
 
-                    // Patient Information
-                    patient_name: formData.patientName,
-                    date_of_birth: formData.dateOfBirth,
-                    address: formData.address,
-                    city: formData.city,
-                    state: formData.state,
-                    zip_code: formData.zipCode,
-                    phone: formData.phone,
-                    email: formData.email,
+              // Map form data to database columns for the new simplified structure
+              const payload: any = {
+                patient_id: patient.id,
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                date_of_birth: formData.dateOfBirth,
+                patient_name: formData.patientName || (formData.firstName && formData.lastName ? `${formData.firstName} ${formData.lastName}` : ''),
+                signature_date: formData.signatureDate,
+                signature_time: formData.signatureTime,
+                has_agreed: formData.hasAgreed || false,
+                patient_signature: formData.patientSignature,
+                status: 'completed'
+              };
 
-                    // Release Information
-                    date_of_request: formData.dateOfRequest,
-                    records_from_date: formData.recordsFromDate,
-                    records_to_date: formData.recordsToDate,
+              console.log('💾 Payload to be saved to Supabase:', payload);
 
-                    // Records to Release
-                    complete_record: formData.recordTypes?.completeRecord || false,
-                    xrays: formData.recordTypes?.xrays || false,
-                    lab_results: formData.recordTypes?.labResults || false,
-                    consultation_notes: formData.recordTypes?.consultationNotes || false,
-                    treatment_plans: formData.recordTypes?.treatmentPlans || false,
-                    surgical_reports: formData.recordTypes?.surgicalReports || false,
-                    prescriptions: formData.recordTypes?.prescriptions || false,
-                    photographs: formData.recordTypes?.photographs || false,
-                    models: formData.recordTypes?.models || false,
-                    other_records: formData.recordTypes?.other || false,
-                    other_records_description: formData.otherRecordsDescription,
+              let data, error;
 
-                    // Release To Information
-                    release_to_name: formData.releaseToName,
-                    release_to_title: formData.releaseToTitle,
-                    release_to_organization: formData.releaseToOrganization,
-                    release_to_address: formData.releaseToAddress,
-                    release_to_city: formData.releaseToCity,
-                    release_to_state: formData.releaseToState,
-                    release_to_zip_code: formData.releaseToZipCode,
-                    release_to_phone: formData.releaseToPhone,
-                    release_to_fax: formData.releaseToFax,
+              // Check if we have a form ID to update (either from editing or auto-save)
+              const formIdToUpdate = formData.id || (isEditingMedicalRecordsReleaseForm && editingMedicalRecordsReleaseForm?.id);
 
-                    // Purpose and Authorization
-                    purpose_of_release: formData.purposeOfRelease,
-                    authorization_expiration: formData.authorizationExpiration,
-                    right_to_revoke: formData.rightToRevoke,
-                    copy_to_patient: formData.copyToPatient,
+              if (formIdToUpdate) {
+                // Update existing form (either from auto-save draft or editing)
+                console.log('📝 Updating existing form with ID:', formIdToUpdate);
+                const result = await supabase
+                  .from('medical_records_release_forms')
+                  .update(payload)
+                  .eq('id', formIdToUpdate)
+                  .select()
+                  .single();
+                data = result.data;
+                error = result.error;
+              } else {
+                // Create new form (should rarely happen now)
+                console.log('🆕 Creating new form');
+                const result = await supabase
+                  .from('medical_records_release_forms')
+                  .insert([payload])
+                  .select()
+                  .single();
+                data = result.data;
+                error = result.error;
+              }
 
-                    // Signatures
-                    patient_signature: formData.patientSignature,
-                    patient_signature_date: formData.patientSignatureDate,
-                    witness_signature: formData.witnessSignature,
-                    witness_signature_date: formData.witnessSignatureDate,
-                    witness_name: formData.witnessName,
+              if (error) {
+                console.error('❌ Supabase error:', error);
+                throw error;
+              }
 
-                    // Keep form_data as backup
-                    form_data: formData
-                  };
+              console.log('✅ Medical records release form saved:', data?.id);
+              toast({
+                title: 'Success',
+                description: `Medical records release form ${isEditingMedicalRecordsReleaseForm ? 'updated' : 'saved'} successfully!`
+              });
 
-                  let data, error;
+              setShowMedicalRecordsReleaseForm(false);
+              setSelectedAdminFormType("");
+              setEditingMedicalRecordsReleaseForm(null);
+              setIsEditingMedicalRecordsReleaseForm(false);
+              setIsViewingMedicalRecordsReleaseForm(false);
 
-                  if (isEditingMedicalRecordsReleaseForm && editingMedicalRecordsReleaseForm) {
-                    // Update existing form
-                    const result = await supabase
-                      .from('medical_records_release_forms')
-                      .update(payload)
-                      .eq('id', editingMedicalRecordsReleaseForm.id)
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  } else {
-                    // Create new form
-                    const result = await supabase
-                      .from('medical_records_release_forms')
-                      .insert([payload])
-                      .select()
-                      .single();
-                    data = result.data;
-                    error = result.error;
-                  }
-
-                  if (error) throw error;
-
-                  console.log('✅ Medical records release form saved:', data?.id);
-                  toast({
-                    title: 'Success',
-                    description: `Medical records release form ${isEditingMedicalRecordsReleaseForm ? 'updated' : 'saved'} successfully!`
-                  });
-
-                  setShowMedicalRecordsReleaseForm(false);
-                  setSelectedAdminFormType("");
-                  setEditingMedicalRecordsReleaseForm(null);
-                  setIsEditingMedicalRecordsReleaseForm(false);
-                  setIsViewingMedicalRecordsReleaseForm(false);
-
-                  // Refresh the forms list
-                  await fetchMedicalRecordsReleaseForms();
-                } catch (error: any) {
-                  console.error('❌ Error saving medical records release form:', error);
-                  toast({
-                    title: 'Save failed',
-                    description: 'Could not save medical records release form. See console for details.',
-                    variant: 'destructive'
-                  });
-                }
-              }}
-              onCancel={() => {
-                setShowMedicalRecordsReleaseForm(false);
-                setSelectedAdminFormType("");
-                setEditingMedicalRecordsReleaseForm(null);
-                setIsEditingMedicalRecordsReleaseForm(false);
-                setIsViewingMedicalRecordsReleaseForm(false);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+              // Refresh the forms list
+              await fetchMedicalRecordsReleaseForms();
+            } catch (error: any) {
+              console.error('❌ Error saving medical records release form:', error);
+              toast({
+                title: 'Save failed',
+                description: 'Could not save medical records release form. See console for details.',
+                variant: 'destructive'
+              });
+            }
+          }}
+          patientName={patient.full_name}
+          patientDateOfBirth={patient.date_of_birth}
+          patientId={patient.id}
+          initialData={editingMedicalRecordsReleaseForm ? {
+            ...editingMedicalRecordsReleaseForm,
+            first_name: editingMedicalRecordsReleaseForm.first_name || patient.first_name,
+            last_name: editingMedicalRecordsReleaseForm.last_name || patient.last_name
+          } : {
+            first_name: patient.first_name,
+            last_name: patient.last_name
+          }}
+          isEditing={isEditingMedicalRecordsReleaseForm}
+          isViewing={isViewingMedicalRecordsReleaseForm}
+        />
+      )}
 
       {/* New Patient Packet Form Dialog */}
       <Dialog open={showNewPatientPacketForm} onOpenChange={(open) => {
@@ -13726,7 +13698,7 @@ export function PatientProfilePage() {
             // Map form data to database columns
             const payload: any = {
               patient_id: patient.id,
-              status: formData.status || 'submitted',
+              status: 'completed',
 
               // Patient Information
               first_name: formData.firstName,
@@ -13756,29 +13728,23 @@ export function PatientProfilePage() {
 
             let data, error;
 
-            if (isEditingInformedConsentSmokingForm && editingInformedConsentSmokingForm) {
-              // Update existing form (will mark as submitted)
+            // Check if we have a form ID to update (either from editing or auto-save)
+            const formIdToUpdate = formData.id || (isEditingInformedConsentSmokingForm && editingInformedConsentSmokingForm?.id);
+
+            if (formIdToUpdate) {
+              // Update existing form (either from auto-save draft or editing)
+              console.log('📝 Updating existing informed consent smoking form with ID:', formIdToUpdate);
               const { updateInformedConsentSmokingForm } = await import("@/services/informedConsentSmokingService");
-              const result = await updateInformedConsentSmokingForm(editingInformedConsentSmokingForm.id, payload);
+              const result = await updateInformedConsentSmokingForm(formIdToUpdate, payload);
               data = result.data;
               error = result.error;
             } else {
-              // Check if there's an existing draft for this patient
-              const existingDrafts = informedConsentSmokingForms.filter(form => form.status === 'draft');
-
-              if (existingDrafts.length > 0) {
-                // Update the existing draft to submitted
-                const { updateInformedConsentSmokingForm } = await import("@/services/informedConsentSmokingService");
-                const result = await updateInformedConsentSmokingForm(existingDrafts[0].id, payload);
-                data = result.data;
-                error = result.error;
-              } else {
-                // Create new form (will mark as submitted)
-                const { createInformedConsentSmokingForm } = await import("@/services/informedConsentSmokingService");
-                const result = await createInformedConsentSmokingForm(payload);
-                data = result.data;
-                error = result.error;
-              }
+              // Create new form (should rarely happen now)
+              console.log('🆕 Creating new informed consent smoking form');
+              const { createInformedConsentSmokingForm } = await import("@/services/informedConsentSmokingService");
+              const result = await createInformedConsentSmokingForm(payload);
+              data = result.data;
+              error = result.error;
             }
 
             if (error) throw error;

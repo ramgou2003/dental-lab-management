@@ -503,48 +503,33 @@ export function ThreeYearCarePackageForm({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {/* First row - Packages 1-5 */}
-              <div className="relative">
-                <div className="flex justify-between items-center">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <div key={i} className="flex flex-col items-center relative z-10">
-                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mb-2">
+            <div className="relative">
+              {/* Single row timeline with all 10 packages */}
+              <div className="relative px-8 py-6">
+                <div className="flex justify-between items-start relative">
+                  {Array.from({ length: 10 }, (_, i) => (
+                    <div key={i} className="flex flex-col items-center relative">
+                      {/* Connecting line segment - only show for first 9 circles */}
+                      {i < 9 && (
+                        <div className="absolute top-6 left-6 w-full h-0.5 bg-blue-400 z-0"></div>
+                      )}
+                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mb-2 shadow-lg text-sm relative z-10">
                         {i + 1}
                       </div>
-                      <div className="text-xs text-center text-gray-600 max-w-[80px]">
-                        <div className="font-medium">Package {i + 1}</div>
-                        <div>{i === 0 ? 'Month Enrollment' : `Month ${i * 3}`}</div>
+                      <div className="text-xs text-center text-gray-600 max-w-[70px]">
+                        <div className="font-semibold text-blue-800">Package {i + 1}</div>
+                        <div className="text-gray-500">{i === 0 ? 'Enrollment' : `Month ${i * 3}`}</div>
                       </div>
                     </div>
                   ))}
                 </div>
-                {/* Connection line for first row */}
-                <div className="absolute top-6 left-6 right-6 h-0.5 bg-blue-300 -z-10"></div>
               </div>
 
-              {/* Second row - Packages 6-10 */}
-              <div className="relative">
-                <div className="flex justify-between items-center">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <div key={i + 5} className="flex flex-col items-center relative z-10">
-                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mb-2">
-                        {i + 6}
-                      </div>
-                      <div className="text-xs text-center text-gray-600 max-w-[80px]">
-                        <div className="font-medium">Package {i + 6}</div>
-                        <div>Month {(i + 5) * 3}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Connection line for second row */}
-                <div className="absolute top-6 left-6 right-6 h-0.5 bg-blue-300 -z-10"></div>
+              {/* Timeline description */}
+              <div className="text-center text-sm text-gray-600 bg-blue-50 p-4 rounded-lg mt-4">
+                <p className="font-medium text-blue-800">Your 3-Year Care Journey</p>
+                <p>Receive a comprehensive care package every 3 months to maintain your dental implants</p>
               </div>
-            </div>
-              </div>
-              {/* Connecting line */}
-              <div className="absolute top-6 left-6 right-6 h-0.5 bg-blue-300 z-0"></div>
             </div>
           </CardContent>
         </Card>
@@ -735,7 +720,7 @@ export function ThreeYearCarePackageForm({
                   <Mail className="h-4 w-4 text-green-600" />
                   <div>
                     <div className="text-xs text-green-600">Email</div>
-                    <div className="text-sm font-medium">support@nydentalimplants.com</div>
+                    <div className="text-sm font-medium">contact@nysdentalimplants.com</div>
                   </div>
                 </div>
               </div>
@@ -754,17 +739,23 @@ export function ThreeYearCarePackageForm({
           <CardContent className="space-y-4">
             <div className="space-y-3">
               <div className="flex items-start space-x-3 p-4 border border-green-300 rounded-lg bg-green-50">
-                <input
-                  type="radio"
-                  id="enroll"
-                  name="enrollmentChoice"
-                  value="enroll"
-                  checked={formData.enrollmentChoice === 'enroll'}
-                  onChange={(e) => handleInputChange('enrollmentChoice', e.target.value)}
-                  className="mt-1"
-                />
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                    formData.enrollmentChoice === 'enroll'
+                      ? 'bg-green-100 border-2 border-green-500'
+                      : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                  }`}
+                  onClick={() => handleInputChange('enrollmentChoice', 'enroll')}
+                >
+                  {formData.enrollmentChoice === 'enroll' && (
+                    <Check className="h-3 w-3 text-green-600" />
+                  )}
+                </div>
                 <div className="flex-1">
-                  <Label htmlFor="enroll" className="text-sm font-medium cursor-pointer">
+                  <Label
+                    className="text-sm font-medium cursor-pointer"
+                    onClick={() => handleInputChange('enrollmentChoice', 'enroll')}
+                  >
                     <strong>ENROLL NOW</strong> - Protect investment, activate warranty
                   </Label>
                   <p className="text-xs text-green-700 mt-1">
@@ -774,17 +765,23 @@ export function ThreeYearCarePackageForm({
               </div>
 
               <div className="flex items-start space-x-3 p-4 border border-red-300 rounded-lg bg-red-50">
-                <input
-                  type="radio"
-                  id="defer"
-                  name="enrollmentChoice"
-                  value="defer"
-                  checked={formData.enrollmentChoice === 'defer'}
-                  onChange={(e) => handleInputChange('enrollmentChoice', e.target.value)}
-                  className="mt-1"
-                />
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                    formData.enrollmentChoice === 'defer'
+                      ? 'bg-red-100 border-2 border-red-500'
+                      : 'border-2 border-gray-300 bg-white hover:border-red-300'
+                  }`}
+                  onClick={() => handleInputChange('enrollmentChoice', 'defer')}
+                >
+                  {formData.enrollmentChoice === 'defer' && (
+                    <Check className="h-3 w-3 text-red-600" />
+                  )}
+                </div>
                 <div className="flex-1">
-                  <Label htmlFor="defer" className="text-sm font-medium cursor-pointer">
+                  <Label
+                    className="text-sm font-medium cursor-pointer"
+                    onClick={() => handleInputChange('enrollmentChoice', 'defer')}
+                  >
                     <strong>DEFER ENROLLMENT</strong> - Decline coverage, $150 reinstatement fee later
                   </Label>
                   <p className="text-xs text-red-700 mt-1">

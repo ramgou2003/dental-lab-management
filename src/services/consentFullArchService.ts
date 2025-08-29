@@ -85,6 +85,7 @@ export interface ConsentFullArchFormData {
   surgeon_time?: string;
   patient_signature?: string;
   patient_signature_date?: string;
+  patient_signature_time?: string;
   witness_name?: string;
   witness_signature?: string;
   witness_signature_date?: string;
@@ -203,7 +204,7 @@ export async function createConsentForm(
       .from('consent_full_arch_forms')
       .insert([{
         ...formData,
-        status: 'submitted' // Set status to submitted for regular form submissions
+        status: 'completed' // Set status to completed for regular form submissions
       }])
       .select()
       .single();
@@ -406,7 +407,7 @@ export function convertFormDataToDatabase(
     patient_id: patientId || formData.patient_id,
     patient_name: formData.patientName || '',
     chart_number: formData.chartNumber || '',
-    consent_date: validateDate(formData.consentDate) || new Date().toISOString().split('T')[0],
+    consent_date: validateDate(formData.date) || new Date().toISOString().split('T')[0],
     consent_time: validateTime(formData.consentTime),
 
     // Patient & Interpreter Information
@@ -527,6 +528,7 @@ export function convertFormDataToDatabase(
     surgeon_time: formData.surgeonDate ? formData.surgeonDate.split('T')[1] : null,
     patient_signature: formData.patientSignature || '',
     patient_signature_date: validateDate(formData.patientSignatureDate),
+    patient_signature_time: formData.patientSignatureTime || '',
     witness_name: formData.witnessName || '',
     witness_signature: formData.witnessSignature || '',
     witness_signature_date: validateDate(formData.witnessSignatureDate),
@@ -610,7 +612,7 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     id: dbData.id,
     patientName: dbData.patient_name || '',
     chartNumber: dbData.chart_number || '',
-    consentDate: dbData.consent_date || '',
+    date: dbData.consent_date || '',
     consentTime: dbData.consent_time || '',
 
     // Patient & Interpreter Information
@@ -739,6 +741,7 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
       : dbData.surgeon_date || '',
     patientSignature: dbData.patient_signature || '',
     patientSignatureDate: dbData.patient_signature_date || '',
+    patientSignatureTime: dbData.patient_signature_time || '',
     witnessName: dbData.witness_name || '',
     witnessSignature: dbData.witness_signature || '',
     witnessSignatureDate: dbData.witness_signature_date || '',
@@ -804,7 +807,7 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     acknowledgmentAuthorize: converted.acknowledgmentAuthorize
   });
   console.log('🔍 Converted date/time data:', {
-    consentDate: converted.consentDate,
+    date: converted.date,
     consentTime: converted.consentTime
   });
   return converted;

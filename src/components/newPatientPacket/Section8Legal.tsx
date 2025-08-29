@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
@@ -124,31 +124,27 @@ export function Section8Legal({ formData, onInputChange, onNestedInputChange }: 
 
           {/* HIPAA Acknowledgments */}
           <div className="space-y-4">
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="receivedNotice"
-                checked={formData.hipaaAcknowledgment.receivedNotice}
-                onCheckedChange={(checked) => handleHipaaAcknowledgmentChange('receivedNotice', checked as boolean)}
-                className="mt-1"
-              />
-              <Label htmlFor="receivedNotice" className="text-sm">
-                <strong>I acknowledge that I have received</strong> or will receive a copy of this practice's 
+            <SimpleCheckbox
+              id="receivedNotice"
+              checked={formData.hipaaAcknowledgment.receivedNotice}
+              onCheckedChange={(checked) => handleHipaaAcknowledgmentChange('receivedNotice', checked as boolean)}
+            >
+              <span className="text-sm">
+                <strong>I acknowledge that I have received</strong> or will receive a copy of this practice's
                 Notice of Privacy Practices, which describes how my health information may be used and disclosed.
-              </Label>
-            </div>
+              </span>
+            </SimpleCheckbox>
 
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="understandsRights"
-                checked={formData.hipaaAcknowledgment.understandsRights}
-                onCheckedChange={(checked) => handleHipaaAcknowledgmentChange('understandsRights', checked as boolean)}
-                className="mt-1"
-              />
-              <Label htmlFor="understandsRights" className="text-sm">
-                <strong>I understand my rights</strong> regarding my protected health information, including 
+            <SimpleCheckbox
+              id="understandsRights"
+              checked={formData.hipaaAcknowledgment.understandsRights}
+              onCheckedChange={(checked) => handleHipaaAcknowledgmentChange('understandsRights', checked as boolean)}
+            >
+              <span className="text-sm">
+                <strong>I understand my rights</strong> regarding my protected health information, including
                 my right to request restrictions, access my records, and file complaints.
-              </Label>
-            </div>
+              </span>
+            </SimpleCheckbox>
           </div>
         </CardContent>
       </Card>

@@ -78,9 +78,12 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
     lastName: patientName.split(' ').slice(1).join(' ') || "",
     gender: patientGender as 'male' | 'female' | 'prefer-not-to-answer' || 'prefer-not-to-answer',
     dateOfBirth: patientDateOfBirth ? new Date(patientDateOfBirth) : new Date(),
-    height: "",
+    height: {
+      feet: "",
+      inches: ""
+    },
     weight: "",
-    bmi: 0,
+    bmi: undefined,
     address: {
       street: "",
       city: "",
@@ -109,7 +112,7 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
       acidReflux: false,
       cancer: { has: false, type: "" },
       depressionAnxiety: false,
-      diabetes: { has: false, type: undefined },
+      diabetes: { has: false, type: undefined, a1cLevel: undefined },
       heartDisease: false,
       periodontalDisease: false,
       substanceAbuse: false,
@@ -376,6 +379,9 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
       return;
     }
 
+    // For now, let's disable auto-loading of drafts to ensure clean forms
+    // TODO: Re-enable this feature later if needed
+    /*
     const draft = localStorage.getItem('dentalFormDraft');
     if (draft) {
       try {
@@ -406,6 +412,10 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
         localStorage.removeItem('dentalFormDraft');
       }
     }
+    */
+
+    // Clear any existing draft to ensure clean form
+    localStorage.removeItem('dentalFormDraft');
   }, [patientName, patientDateOfBirth, patientGender, initialData]);
 
   const handleInputChange = (field: string, value: any) => {
@@ -425,21 +435,140 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
     }));
   };
 
+  const scrollToFormTop = () => {
+    // Force scroll to absolute top - targeting dialog containers specifically
+
+    // 1. Scroll the main window
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    // 2. Find and scroll the dialog content container (this is the key!)
+    const dialogContent = document.querySelector('[data-radix-dialog-content]');
+    if (dialogContent && dialogContent instanceof HTMLElement) {
+      dialogContent.scrollTop = 0;
+    }
+
+    // 3. Also target any overflow-y-auto containers (dialog uses this class)
+    const scrollableContainers = document.querySelectorAll('.overflow-y-auto, .overflow-auto');
+    scrollableContainers.forEach(container => {
+      if (container instanceof HTMLElement) {
+        container.scrollTop = 0;
+      }
+    });
+
+    // 4. Target any max-h containers that might be scrollable
+    const maxHeightContainers = document.querySelectorAll('[class*="max-h-"]');
+    maxHeightContainers.forEach(container => {
+      if (container instanceof HTMLElement && container.scrollHeight > container.clientHeight) {
+        container.scrollTop = 0;
+      }
+    });
+
+    // 5. Multiple timeouts to ensure it works after React renders
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      const dialogContent = document.querySelector('[data-radix-dialog-content]');
+      if (dialogContent && dialogContent instanceof HTMLElement) {
+        dialogContent.scrollTop = 0;
+      }
+      document.querySelectorAll('.overflow-y-auto, .overflow-auto').forEach(el => {
+        if (el instanceof HTMLElement) el.scrollTop = 0;
+      });
+    }, 1);
+
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      const dialogContent = document.querySelector('[data-radix-dialog-content]');
+      if (dialogContent && dialogContent instanceof HTMLElement) {
+        dialogContent.scrollTop = 0;
+      }
+      document.querySelectorAll('.overflow-y-auto, .overflow-auto').forEach(el => {
+        if (el instanceof HTMLElement) el.scrollTop = 0;
+      });
+    }, 50);
+
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      const dialogContent = document.querySelector('[data-radix-dialog-content]');
+      if (dialogContent && dialogContent instanceof HTMLElement) {
+        dialogContent.scrollTop = 0;
+      }
+      document.querySelectorAll('.overflow-y-auto, .overflow-auto').forEach(el => {
+        if (el instanceof HTMLElement) el.scrollTop = 0;
+      });
+    }, 150);
+  };
+
   const handleNext = () => {
     if (activeSection < totalSections) {
+      // Immediate scroll targeting dialog content
+      window.scrollTo(0, 0);
+      const dialogContent = document.querySelector('[data-radix-dialog-content]');
+      if (dialogContent && dialogContent instanceof HTMLElement) {
+        dialogContent.scrollTop = 0;
+      }
+
+      // Call full scroll function
+      scrollToFormTop();
+
+      // Change section
       setActiveSection(activeSection + 1);
     }
   };
 
   const handlePrevious = () => {
     if (activeSection > 1) {
+      // Immediate scroll targeting dialog content
+      window.scrollTo(0, 0);
+      const dialogContent = document.querySelector('[data-radix-dialog-content]');
+      if (dialogContent && dialogContent instanceof HTMLElement) {
+        dialogContent.scrollTop = 0;
+      }
+
+      // Call full scroll function
+      scrollToFormTop();
+
+      // Change section
       setActiveSection(activeSection - 1);
     }
   };
 
   const handleSectionClick = (sectionId: number) => {
+    // Immediate scroll targeting dialog content
+    window.scrollTo(0, 0);
+    const dialogContent = document.querySelector('[data-radix-dialog-content]');
+    if (dialogContent && dialogContent instanceof HTMLElement) {
+      dialogContent.scrollTop = 0;
+    }
+
+    // Call full scroll function
+    scrollToFormTop();
+
+    // Change section
     setActiveSection(sectionId);
   };
+
+  // Ensure form always shows from the top when section changes
+  useEffect(() => {
+    // Use a small delay to ensure the new section content has rendered
+    const timer = setTimeout(() => {
+      scrollToFormTop();
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [activeSection]);
+
+  // Auto-sync patient name to signature section
+  useEffect(() => {
+    const fullName = `${formData.firstName || ''} ${formData.lastName || ''}`.trim();
+    if (fullName && !formData.patientNameSignature) {
+      setFormData(prev => ({
+        ...prev,
+        patientNameSignature: fullName
+      }));
+    }
+  }, [formData.firstName, formData.lastName]);
 
   const handleSubmit = () => {
     // Clear draft on successful submission
@@ -457,9 +586,12 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
       lastName: patientName.split(' ').slice(1).join(' ') || "",
       gender: patientGender as 'male' | 'female' | 'prefer-not-to-answer' || 'prefer-not-to-answer',
       dateOfBirth: patientDateOfBirth ? new Date(patientDateOfBirth) : new Date(),
-      height: "",
+      height: {
+        feet: "",
+        inches: ""
+      },
       weight: "",
-      bmi: 0,
+      bmi: undefined,
       address: {
         street: "",
         city: "",
@@ -482,7 +614,7 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
         acidReflux: false,
         cancer: { has: false, type: "" },
         depressionAnxiety: false,
-        diabetes: { has: false, type: undefined },
+        diabetes: { has: false, type: undefined, a1cLevel: undefined },
         heartDisease: false,
         periodontalDisease: false,
         substanceAbuse: false,
@@ -603,7 +735,7 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
   const currentSection = sections.find(s => s.id === activeSection);
 
   return (
-    <div className="w-full">
+    <div id="patient-packet-form" className="w-full">
       {/* Logo and Greeting Section - Only show on public links */}
       {showWelcomeHeader && (
         <div className="text-center mb-8">
@@ -713,7 +845,7 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
       </Card>
 
       {/* Form Content */}
-      <div className="min-h-[600px]">
+      <div id="form-content" className="min-h-[600px]">
         {activeSection === 1 && (
           <Section1PatientInfo
             formData={formData}

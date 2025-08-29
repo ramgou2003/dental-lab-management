@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
 import { Badge } from "@/components/ui/badge";
 import { User, Phone, Mail, MapPin, Heart, AlertCircle } from "lucide-react";
 import { NewPatientFormData } from "@/types/newPatientPacket";
@@ -14,29 +15,47 @@ interface Section1PatientInfoProps {
 }
 
 export function Section1PatientInfo({ formData, onInputChange, onNestedInputChange }: Section1PatientInfoProps) {
-  
-  // Calculate BMI when height and weight change
-  const calculateBMI = () => {
-    if (formData.height && formData.weight) {
-      const heightInInches = parseFloat(formData.height);
-      const weightInPounds = parseFloat(formData.weight);
-      
-      if (heightInInches > 0 && weightInPounds > 0) {
-        const bmi = (weightInPounds / (heightInInches * heightInInches)) * 703;
-        onInputChange('bmi', Math.round(bmi * 10) / 10);
-      }
+
+  // Calculate BMI with specific values
+  const calculateBMI = (heightFeet?: string, heightInches?: string, weight?: string) => {
+    const feet = parseFloat(heightFeet || formData.height?.feet || '0');
+    const inches = parseFloat(heightInches || formData.height?.inches || '0');
+    const weightInPounds = parseFloat(weight || formData.weight || '0');
+    const totalHeightInInches = (feet * 12) + inches;
+
+    if (totalHeightInInches > 0 && weightInPounds > 0 && !isNaN(totalHeightInInches) && !isNaN(weightInPounds)) {
+      const bmi = (weightInPounds / (totalHeightInInches * totalHeightInInches)) * 703;
+      onInputChange('bmi', Math.round(bmi * 10) / 10);
+    } else {
+      // Clear BMI if inputs are invalid or empty
+      onInputChange('bmi', undefined);
     }
   };
 
-  const handleHeightChange = (value: string) => {
-    onInputChange('height', value);
-    setTimeout(calculateBMI, 100);
+  const handleHeightFeetChange = (value: string) => {
+    onNestedInputChange('height', 'feet', value);
+    // Calculate BMI with the new feet value
+    calculateBMI(value, formData.height?.inches, formData.weight);
+  };
+
+  const handleHeightInchesChange = (value: string) => {
+    onNestedInputChange('height', 'inches', value);
+    // Calculate BMI with the new inches value
+    calculateBMI(formData.height?.feet, value, formData.weight);
   };
 
   const handleWeightChange = (value: string) => {
     onInputChange('weight', value);
-    setTimeout(calculateBMI, 100);
+    // Calculate BMI with the new weight value
+    calculateBMI(formData.height?.feet, formData.height?.inches, value);
   };
+
+  // Recalculate BMI when form data changes (for cases like loading saved data)
+  useEffect(() => {
+    if (formData.height?.feet && formData.height?.inches && formData.weight) {
+      calculateBMI();
+    }
+  }, [formData.height?.feet, formData.height?.inches, formData.weight]);
 
   return (
     <div className="space-y-6">
@@ -140,20 +159,41 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
           </div>
 
           {/* Physical Measurements */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="height" className="text-sm font-semibold">
-                Height (inches)
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
+              <Label className="text-sm font-semibold">
+                Height (feet and inches)
               </Label>
-              <Input
-                id="height"
-                type="number"
-                value={formData.height}
-                onChange={(e) => handleHeightChange(e.target.value)}
-                placeholder="e.g., 68"
-                min="36"
-                max="96"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Input
+                    id="heightFeet"
+                    type="number"
+                    value={formData.height?.feet || ''}
+                    onChange={(e) => handleHeightFeetChange(e.target.value)}
+                    placeholder="Feet"
+                    min="3"
+                    max="8"
+                  />
+                  <Label htmlFor="heightFeet" className="text-xs text-gray-500 mt-1 block">
+                    Feet
+                  </Label>
+                </div>
+                <div>
+                  <Input
+                    id="heightInches"
+                    type="number"
+                    value={formData.height?.inches || ''}
+                    onChange={(e) => handleHeightInchesChange(e.target.value)}
+                    placeholder="Inches"
+                    min="0"
+                    max="11"
+                  />
+                  <Label htmlFor="heightInches" className="text-xs text-gray-500 mt-1 block">
+                    Inches
+                  </Label>
+                </div>
+              </div>
             </div>
             <div>
               <Label htmlFor="weight" className="text-sm font-semibold">
@@ -162,7 +202,7 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
               <Input
                 id="weight"
                 type="number"
-                value={formData.weight}
+                value={formData.weight || ''}
                 onChange={(e) => handleWeightChange(e.target.value)}
                 placeholder="e.g., 150"
                 min="50"
@@ -175,7 +215,7 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
               </Label>
               <Input
                 id="bmi"
-                value={formData.bmi ? formData.bmi.toString() : ''}
+                value={formData.bmi !== undefined ? formData.bmi.toString() : ''}
                 readOnly
                 className="bg-gray-50"
                 placeholder="Auto-calculated"
@@ -345,20 +385,37 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="hasPCP"
-              checked={formData.primaryCarePhysician?.hasPCP || false}
-              onCheckedChange={(checked) => 
-                onNestedInputChange('primaryCarePhysician', 'hasPCP', checked)
-              }
-            />
-            <Label htmlFor="hasPCP" className="text-sm font-medium">
-              I have a primary care physician
+          <div>
+            <Label className="text-sm font-semibold mb-3 block">
+              Do you have a primary care physician?
             </Label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => onNestedInputChange('primaryCarePhysician', 'hasPCP', true)}
+                className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                  formData.primaryCarePhysician?.hasPCP === true
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => onNestedInputChange('primaryCarePhysician', 'hasPCP', false)}
+                className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                  formData.primaryCarePhysician?.hasPCP === false
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                No
+              </button>
+            </div>
           </div>
 
-          {formData.primaryCarePhysician?.hasPCP && (
+          {formData.primaryCarePhysician?.hasPCP === true && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               <div>
                 <Label htmlFor="pcpName" className="text-sm font-semibold">

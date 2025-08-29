@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -191,16 +191,14 @@ export function Section4OralHealth({ formData, onInputChange, onNestedInputChang
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {previousSolutions.map((solution) => (
-              <div key={solution} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`solution-${solution}`}
-                  checked={formData.previousSolutions?.includes(solution) || false}
-                  onCheckedChange={(checked) => handlePreviousSolutionChange(solution, checked as boolean)}
-                />
-                <Label htmlFor={`solution-${solution}`} className="text-sm">
-                  {solution}
-                </Label>
-              </div>
+              <SimpleCheckbox
+                key={solution}
+                id={`solution-${solution}`}
+                checked={formData.previousSolutions?.includes(solution) || false}
+                onCheckedChange={(checked) => handlePreviousSolutionChange(solution, checked as boolean)}
+              >
+                {solution}
+              </SimpleCheckbox>
             ))}
           </div>
         </CardContent>
@@ -219,46 +217,37 @@ export function Section4OralHealth({ formData, onInputChange, onNestedInputChang
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="facialOralPain"
-                checked={formData.currentSymptoms.facialOralPain}
-                onCheckedChange={(checked) => handleSymptomChange('facialOralPain', checked as boolean)}
-              />
-              <Label htmlFor="facialOralPain" className="text-sm">
-                Facial or oral pain
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="jawPainOpening"
-                checked={formData.currentSymptoms.jawPainOpening}
-                onCheckedChange={(checked) => handleSymptomChange('jawPainOpening', checked as boolean)}
-              />
-              <Label htmlFor="jawPainOpening" className="text-sm">
-                Jaw pain when opening mouth
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="jawClicking"
-                checked={formData.currentSymptoms.jawClicking}
-                onCheckedChange={(checked) => handleSymptomChange('jawClicking', checked as boolean)}
-              />
-              <Label htmlFor="jawClicking" className="text-sm">
-                Jaw clicking or popping
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="digestiveProblems"
-                checked={formData.currentSymptoms.digestiveProblems}
-                onCheckedChange={(checked) => handleSymptomChange('digestiveProblems', checked as boolean)}
-              />
-              <Label htmlFor="digestiveProblems" className="text-sm">
-                Digestive problems related to chewing
-              </Label>
-            </div>
+            <SimpleCheckbox
+              id="facialOralPain"
+              checked={formData.currentSymptoms.facialOralPain}
+              onCheckedChange={(checked) => handleSymptomChange('facialOralPain', checked as boolean)}
+            >
+              Facial or oral pain
+            </SimpleCheckbox>
+
+            <SimpleCheckbox
+              id="jawPainOpening"
+              checked={formData.currentSymptoms.jawPainOpening}
+              onCheckedChange={(checked) => handleSymptomChange('jawPainOpening', checked as boolean)}
+            >
+              Jaw pain when opening mouth
+            </SimpleCheckbox>
+
+            <SimpleCheckbox
+              id="jawClicking"
+              checked={formData.currentSymptoms.jawClicking}
+              onCheckedChange={(checked) => handleSymptomChange('jawClicking', checked as boolean)}
+            >
+              Jaw clicking or popping
+            </SimpleCheckbox>
+
+            <SimpleCheckbox
+              id="digestiveProblems"
+              checked={formData.currentSymptoms.digestiveProblems}
+              onCheckedChange={(checked) => handleSymptomChange('digestiveProblems', checked as boolean)}
+            >
+              Digestive problems related to chewing
+            </SimpleCheckbox>
           </div>
 
           {/* Symptom Duration */}
@@ -300,48 +289,40 @@ export function Section4OralHealth({ formData, onInputChange, onNestedInputChang
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="bleedingBruising"
-                checked={formData.healingIssues.bleedingBruising}
-                onCheckedChange={(checked) => handleHealingIssueChange('bleedingBruising', checked as boolean)}
-              />
-              <Label htmlFor="bleedingBruising" className="text-sm">
-                Excessive bleeding or bruising
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="delayedHealing"
-                checked={formData.healingIssues.delayedHealing}
-                onCheckedChange={(checked) => handleHealingIssueChange('delayedHealing', checked as boolean)}
-              />
-              <Label htmlFor="delayedHealing" className="text-sm">
-                Delayed healing after dental procedures
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="recurrentInfections"
-                checked={formData.healingIssues.recurrentInfections}
-                onCheckedChange={(checked) => handleHealingIssueChange('recurrentInfections', checked as boolean)}
-              />
-              <Label htmlFor="recurrentInfections" className="text-sm">
-                Recurrent infections in mouth
-              </Label>
-            </div>
+            <SimpleCheckbox
+              id="bleedingBruising"
+              checked={formData.healingIssues.bleedingBruising}
+              onCheckedChange={(checked) => handleHealingIssueChange('bleedingBruising', checked as boolean)}
+            >
+              Excessive bleeding or bruising
+            </SimpleCheckbox>
+
+            <SimpleCheckbox
+              id="delayedHealing"
+              checked={formData.healingIssues.delayedHealing}
+              onCheckedChange={(checked) => handleHealingIssueChange('delayedHealing', checked as boolean)}
+            >
+              Delayed healing after dental procedures
+            </SimpleCheckbox>
+
+            <SimpleCheckbox
+              id="recurrentInfections"
+              checked={formData.healingIssues.recurrentInfections}
+              onCheckedChange={(checked) => handleHealingIssueChange('recurrentInfections', checked as boolean)}
+            >
+              Recurrent infections in mouth
+            </SimpleCheckbox>
           </div>
 
           {/* None Option */}
-          <div className="flex items-center space-x-2 pt-2 border-t">
-            <Checkbox
+          <div className="pt-2 border-t">
+            <SimpleCheckbox
               id="noHealingIssues"
               checked={formData.healingIssues.none}
               onCheckedChange={(checked) => handleHealingIssueChange('none', checked as boolean)}
-            />
-            <Label htmlFor="noHealingIssues" className="text-sm font-medium">
+            >
               I have not experienced any healing issues
-            </Label>
+            </SimpleCheckbox>
           </div>
         </CardContent>
       </Card>

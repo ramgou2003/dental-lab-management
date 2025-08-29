@@ -168,111 +168,131 @@ export function ConsultationFormDialog({
   const progress = (activeSection / sections.length) * 100;
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
-        <div className="w-full space-y-6 p-6">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <Stethoscope className="h-6 w-6 text-blue-600" />
-            </div>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              Consultation Form
-            </DialogTitle>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Section {activeSection} of {sections.length}</span>
-              <span>{Math.round(progress)}% Complete</span>
-            </div>
-            <Progress value={progress} className="h-2" />
-          </div>
-
-          {/* Section Navigation */}
-          <div className="flex gap-2 justify-center overflow-x-auto">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              const isActive = activeSection === section.id;
-              const isCompleted = activeSection > section.id;
-
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => handleSectionClick(section.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                    isActive
-                      ? "bg-blue-50 text-blue-600 border border-blue-200"
-                      : isCompleted
-                      ? "bg-green-50 text-green-600 border border-green-200"
-                      : "text-gray-600 hover:bg-gray-50 border border-transparent"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{section.shortName}</span>
-                  {isCompleted && <CheckCircle className="h-3 w-3" />}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Current Section Content */}
-          <Card className="min-h-[500px]">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3">
-                <currentSection.icon className="h-6 w-6 text-blue-600" />
-                <div>
-                  <h2 className="text-xl font-semibold">{currentSection.title}</h2>
-                  <p className="text-sm text-gray-600 font-normal">{currentSection.description}</p>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        onClose();
+      }
+    }}>
+      <DialogContent className="max-w-4xl max-h-[95vh] p-0 [&>button]:hidden flex flex-col">
+        <div className="flex flex-col h-full max-h-[90vh]">
+          {/* Fixed Header */}
+          <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6 space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Stethoscope className="h-6 w-6 text-blue-600" />
                 </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {renderCurrentSection()}
-            </CardContent>
-          </Card>
+                <DialogTitle className="text-2xl font-bold text-gray-900">
+                  Consultation Form
+                </DialogTitle>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                type="button"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-          {/* Footer Navigation */}
-          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={activeSection === 1}
-              className="flex items-center gap-2"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Section {activeSection} of {sections.length}</span>
+                <span>{Math.round(progress)}% Complete</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
 
-            <div className="flex gap-2">
-              {activeSection < sections.length ? (
-                <Button
-                  onClick={handleNext}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleComplete}
-                  disabled={isCompleting}
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                >
-                  {isCompleting ? (
-                    <>
-                      <Save className="h-4 w-4 animate-spin" />
-                      Completing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4" />
-                      Complete Consultation
-                    </>
-                  )}
-                </Button>
-              )}
+            {/* Section Navigation */}
+            <div className="flex gap-2 justify-center overflow-x-auto">
+              {sections.map((section) => {
+                const Icon = section.icon;
+                const isActive = activeSection === section.id;
+                const isCompleted = activeSection > section.id;
+
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => handleSectionClick(section.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      isActive
+                        ? "bg-blue-50 text-blue-600 border border-blue-200"
+                        : isCompleted
+                        ? "bg-green-50 text-green-600 border border-green-200"
+                        : "text-gray-600 hover:bg-gray-50 border border-transparent"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{section.shortName}</span>
+                    {isCompleted && <CheckCircle className="h-3 w-3" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Scrollable Content Area */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <Card className="h-full">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3">
+                  <currentSection.icon className="h-6 w-6 text-blue-600" />
+                  <div>
+                    <h2 className="text-xl font-semibold">{currentSection.title}</h2>
+                    <p className="text-sm text-gray-600 font-normal">{currentSection.description}</p>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {renderCurrentSection()}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 bg-white border-t border-gray-200 p-6">
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={activeSection === 1}
+                className="flex items-center gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+
+              <div className="flex gap-2">
+                {activeSection < sections.length ? (
+                  <Button
+                    onClick={handleNext}
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleComplete}
+                    disabled={isCompleting}
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                  >
+                    {isCompleting ? (
+                      <>
+                        <Save className="h-4 w-4 animate-spin" />
+                        Completing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4" />
+                        Complete Consultation
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

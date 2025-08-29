@@ -71,6 +71,13 @@ export function ConsentFullArchForm({
     return stepIndex < getCurrentStepIndex();
   };
 
+  // Scroll to top helper function
+  const scrollToTop = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  };
+
   // Navigation functions
   const getCurrentArrayIndex = () => {
     return steps.findIndex(step => step.id === activeTab);
@@ -80,6 +87,7 @@ export function ConsentFullArchForm({
     const currentIndex = getCurrentArrayIndex();
     if (currentIndex < steps.length - 1) {
       setActiveTab(steps[currentIndex + 1].id);
+      scrollToTop();
     }
   };
 
@@ -87,6 +95,7 @@ export function ConsentFullArchForm({
     const currentIndex = getCurrentArrayIndex();
     if (currentIndex > 0) {
       setActiveTab(steps[currentIndex - 1].id);
+      scrollToTop();
     }
   };
 
@@ -100,7 +109,7 @@ export function ConsentFullArchForm({
       // Patient & Interpreter Information
       patientName: initialData?.patientName || patientName || "",
       chartNumber: initialData?.chartNumber || "",
-      consentDate: initialData?.consentDate || today,
+      date: initialData?.date || today,
       consentTime: initialData?.consentTime || "",
       primaryLanguage: initialData?.primaryLanguage || "english",
       otherLanguageText: initialData?.otherLanguageText || "",
@@ -139,6 +148,7 @@ export function ConsentFullArchForm({
       // Signatures
       patientSignature: initialData?.patientSignature || "",
       patientSignatureDate: initialData?.patientSignatureDate || today,
+      patientSignatureTime: initialData?.patientSignatureTime || "",
       surgeonSignature: initialData?.surgeonSignature || "",
       surgeonDate: initialData?.surgeonDate || today,
       witnessSignature: initialData?.witnessSignature || "",
@@ -273,7 +283,7 @@ export function ConsentFullArchForm({
         acknowledgmentAuthorize: initialData.acknowledgmentAuthorize
       });
       console.log('🔍 Date/Time data from initialData:', {
-        consentDate: initialData.consentDate,
+        date: initialData.date,
         consentTime: initialData.consentTime
       });
 
@@ -284,7 +294,7 @@ export function ConsentFullArchForm({
         // Patient & Interpreter Information
         patientName: initialData.patientName || prev.patientName || "",
         chartNumber: initialData.chartNumber || prev.chartNumber || "",
-        consentDate: initialData.consentDate || prev.consentDate || today,
+        date: initialData.date || prev.date || today,
         consentTime: initialData.consentTime || prev.consentTime || "",
         primaryLanguage: initialData.primaryLanguage || prev.primaryLanguage || "english",
         otherLanguageText: initialData.otherLanguageText || prev.otherLanguageText || "",
@@ -379,6 +389,7 @@ export function ConsentFullArchForm({
         surgeonDate: initialData.surgeonDate || prev.surgeonDate || today,
         patientSignature: initialData.patientSignature || prev.patientSignature || "",
         patientSignatureDate: initialData.patientSignatureDate || prev.patientSignatureDate || today,
+        patientSignatureTime: initialData.patientSignatureTime || prev.patientSignatureTime || "",
         witnessName: initialData.witnessName || prev.witnessName || "",
         witnessSignature: initialData.witnessSignature || prev.witnessSignature || "",
         witnessSignatureDate: initialData.witnessSignatureDate || prev.witnessSignatureDate || today,
@@ -433,7 +444,7 @@ export function ConsentFullArchForm({
                    // Include consent acknowledgments
                    formData.acknowledgmentRead || formData.acknowledgmentOutcome || formData.acknowledgmentAuthorize ||
                    // Include other important fields
-                   formData.chartNumber || formData.consentDate || formData.consentTime;
+                   formData.chartNumber || formData.date || formData.consentTime;
 
     setHasFormData(hasData);
 
@@ -483,7 +494,7 @@ export function ConsentFullArchForm({
           acknowledgmentAuthorize: formData.acknowledgmentAuthorize
         },
         dateTimeData: {
-          consentDate: formData.consentDate,
+          date: formData.date,
           consentTime: formData.consentTime
         }
       });
@@ -593,6 +604,7 @@ export function ConsentFullArchForm({
 
     patientSignature: initialData?.patientSignature || "",
     patientSignatureDate: initialData?.patientSignatureDate || new Date().toISOString().split('T')[0],
+    patientSignatureTime: initialData?.patientSignatureTime || "",
     witnessName: initialData?.witnessName || "",
     witnessSignature: initialData?.witnessSignature || "",
     witnessSignatureDate: initialData?.witnessSignatureDate || new Date().toISOString().split('T')[0],
@@ -740,7 +752,7 @@ export function ConsentFullArchForm({
     const submissionData = {
       patient_name: formData.patientName,
       chart_number: formData.chartNumber,
-      consent_date: isValidDate(formData.consentDate) ? formData.consentDate : currentDate,
+      consent_date: isValidDate(formData.date) ? formData.date : currentDate,
       consent_time: validateTime(formData.consentTime),
 
       // Patient & Interpreter Information
@@ -860,6 +872,7 @@ export function ConsentFullArchForm({
       surgeon_date: isValidDate(formData.surgeonDate) ? formData.surgeonDate : currentDate,
       patient_signature: formData.patientSignature,
       patient_signature_date: isValidDate(formData.patientSignatureDate) ? formData.patientSignatureDate : currentDate,
+      patient_signature_time: formData.patientSignatureTime || '',
       witness_name: formData.witnessName,
       witness_signature: formData.witnessSignature,
       witness_signature_date: isValidDate(formData.witnessSignatureDate) ? formData.witnessSignatureDate : currentDate,
@@ -911,7 +924,10 @@ export function ConsentFullArchForm({
               <div className="relative flex items-center justify-center pb-2">
                 <button
                   type="button"
-                  onClick={() => setActiveTab(step.id)}
+                  onClick={() => {
+                    setActiveTab(step.id);
+                    scrollToTop();
+                  }}
                   className={`text-sm font-medium cursor-pointer hover:text-blue-700 transition-colors ${
                     activeTab === step.id ? 'text-blue-600' :
                     isStepCompleted(step.id) ? 'text-blue-600' : 'text-gray-400'
@@ -1335,14 +1351,20 @@ export function ConsentFullArchForm({
                             <Label htmlFor="upperImplants" className="text-sm font-medium text-gray-700">
                               # Implants
                             </Label>
-                            <Input
-                              id="upperImplants"
-                              type="number"
+                            <Select
                               value={formData.upperImplants}
-                              onChange={(e) => setFormData(prev => ({ ...prev, upperImplants: e.target.value }))}
-                              placeholder="Number of implants"
-                              className="h-10"
-                            />
+                              onValueChange={(value) => setFormData(prev => ({ ...prev, upperImplants: value }))}
+                            >
+                              <SelectTrigger className="h-10">
+                                <SelectValue placeholder="Select implant type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="All on 4">All on 4</SelectItem>
+                                <SelectItem value="All on 6">All on 6</SelectItem>
+                                <SelectItem value="All on X">All on X</SelectItem>
+                                <SelectItem value="All on X with Remote Anchorage">All on X with Remote Anchorage</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
 
@@ -1491,14 +1513,20 @@ export function ConsentFullArchForm({
                             <Label htmlFor="lowerImplants" className="text-sm font-medium text-gray-700">
                               # Implants
                             </Label>
-                            <Input
-                              id="lowerImplants"
-                              type="number"
+                            <Select
                               value={formData.lowerImplants}
-                              onChange={(e) => setFormData(prev => ({ ...prev, lowerImplants: e.target.value }))}
-                              placeholder="Number of implants"
-                              className="h-10"
-                            />
+                              onValueChange={(value) => setFormData(prev => ({ ...prev, lowerImplants: value }))}
+                            >
+                              <SelectTrigger className="h-10">
+                                <SelectValue placeholder="Select implant type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="All on 4">All on 4</SelectItem>
+                                <SelectItem value="All on 6">All on 6</SelectItem>
+                                <SelectItem value="All on X">All on X</SelectItem>
+                                <SelectItem value="All on X with Remote Anchorage">All on X with Remote Anchorage</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
 
@@ -1663,14 +1691,20 @@ export function ConsentFullArchForm({
                                 <Label htmlFor="upperImplants" className="text-sm font-medium text-gray-700">
                                   # Implants
                                 </Label>
-                                <Input
-                                  id="upperImplants"
-                                  type="number"
+                                <Select
                                   value={formData.upperImplants}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, upperImplants: e.target.value }))}
-                                  placeholder="Number of implants"
-                                  className="h-10"
-                                />
+                                  onValueChange={(value) => setFormData(prev => ({ ...prev, upperImplants: value }))}
+                                >
+                                  <SelectTrigger className="h-10">
+                                    <SelectValue placeholder="Select implant type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="All on 4">All on 4</SelectItem>
+                                    <SelectItem value="All on 6">All on 6</SelectItem>
+                                    <SelectItem value="All on X">All on X</SelectItem>
+                                    <SelectItem value="All on X with Remote Anchorage">All on X with Remote Anchorage</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
 
@@ -1815,14 +1849,20 @@ export function ConsentFullArchForm({
                                 <Label htmlFor="lowerImplants" className="text-sm font-medium text-gray-700">
                                   # Implants
                                 </Label>
-                                <Input
-                                  id="lowerImplants"
-                                  type="number"
+                                <Select
                                   value={formData.lowerImplants}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, lowerImplants: e.target.value }))}
-                                  placeholder="Number of implants"
-                                  className="h-10"
-                                />
+                                  onValueChange={(value) => setFormData(prev => ({ ...prev, lowerImplants: value }))}
+                                >
+                                  <SelectTrigger className="h-10">
+                                    <SelectValue placeholder="Select implant type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="All on 4">All on 4</SelectItem>
+                                    <SelectItem value="All on 6">All on 6</SelectItem>
+                                    <SelectItem value="All on X">All on X</SelectItem>
+                                    <SelectItem value="All on X with Remote Anchorage">All on X with Remote Anchorage</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
 
@@ -2592,7 +2632,7 @@ export function ConsentFullArchForm({
                   Financial Disclosure & Surprise-Bill Notice
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6 w-full">
+              <CardContent className="space-y-6">
                 {/* Treatment Cost Breakdown */}
                 <Card className="border-2 border-blue-100 bg-blue-50/30">
                   <CardHeader className="pb-4">
@@ -2649,41 +2689,45 @@ export function ConsentFullArchForm({
                             <div className="md:col-span-2">
                               <div className="space-y-1">
                                 <Label className="text-xs text-gray-600">Covered by insurance?</Label>
-                                <div className="flex gap-4">
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="surgicalExtractionsYes"
-                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                                      checked={formData.surgicalExtractions.covered === "yes"}
-                                      onCheckedChange={(checked) => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          surgicalExtractions: {
-                                            ...prev.surgicalExtractions,
-                                            covered: checked ? "yes" : ""
-                                          }
-                                        }));
-                                      }}
-                                    />
-                                    <Label htmlFor="surgicalExtractionsYes" className="text-sm cursor-pointer">Yes</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="surgicalExtractionsNo"
-                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                                      checked={formData.surgicalExtractions.covered === "no"}
-                                      onCheckedChange={(checked) => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          surgicalExtractions: {
-                                            ...prev.surgicalExtractions,
-                                            covered: checked ? "no" : ""
-                                          }
-                                        }));
-                                      }}
-                                    />
-                                    <Label htmlFor="surgicalExtractionsNo" className="text-sm cursor-pointer">No</Label>
-                                  </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant={formData.surgicalExtractions.covered === 'yes' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className={`h-8 px-3 text-xs ${
+                                      formData.surgicalExtractions.covered === 'yes'
+                                        ? 'bg-green-600 hover:bg-green-700 border-green-600 text-white'
+                                        : 'border-green-300 text-green-700 hover:bg-green-50'
+                                    }`}
+                                    onClick={() => setFormData(prev => ({
+                                      ...prev,
+                                      surgicalExtractions: {
+                                        ...prev.surgicalExtractions,
+                                        covered: prev.surgicalExtractions.covered === 'yes' ? '' : 'yes'
+                                      }
+                                    }))}
+                                  >
+                                    Yes
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={formData.surgicalExtractions.covered === 'no' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className={`h-8 px-3 text-xs ${
+                                      formData.surgicalExtractions.covered === 'no'
+                                        ? 'bg-red-600 hover:bg-red-700 border-red-600 text-white'
+                                        : 'border-red-300 text-red-700 hover:bg-red-50'
+                                    }`}
+                                    onClick={() => setFormData(prev => ({
+                                      ...prev,
+                                      surgicalExtractions: {
+                                        ...prev.surgicalExtractions,
+                                        covered: prev.surgicalExtractions.covered === 'no' ? '' : 'no'
+                                      }
+                                    }))}
+                                  >
+                                    No
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -2735,41 +2779,45 @@ export function ConsentFullArchForm({
                             <div className="md:col-span-2">
                               <div className="space-y-1">
                                 <Label className="text-xs text-gray-600">Covered by insurance?</Label>
-                                <div className="flex gap-4">
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="implantFixturesYes"
-                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                                      checked={formData.implantFixtures.covered === "yes"}
-                                      onCheckedChange={(checked) => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          implantFixtures: {
-                                            ...prev.implantFixtures,
-                                            covered: checked ? "yes" : ""
-                                          }
-                                        }));
-                                      }}
-                                    />
-                                    <Label htmlFor="implantFixturesYes" className="text-sm cursor-pointer">Yes</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="implantFixturesNo"
-                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                                      checked={formData.implantFixtures.covered === "no"}
-                                      onCheckedChange={(checked) => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          implantFixtures: {
-                                            ...prev.implantFixtures,
-                                            covered: checked ? "no" : ""
-                                          }
-                                        }));
-                                      }}
-                                    />
-                                    <Label htmlFor="implantFixturesNo" className="text-sm cursor-pointer">No</Label>
-                                  </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant={formData.implantFixtures.covered === 'yes' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className={`h-8 px-3 text-xs ${
+                                      formData.implantFixtures.covered === 'yes'
+                                        ? 'bg-green-600 hover:bg-green-700 border-green-600 text-white'
+                                        : 'border-green-300 text-green-700 hover:bg-green-50'
+                                    }`}
+                                    onClick={() => setFormData(prev => ({
+                                      ...prev,
+                                      implantFixtures: {
+                                        ...prev.implantFixtures,
+                                        covered: prev.implantFixtures.covered === 'yes' ? '' : 'yes'
+                                      }
+                                    }))}
+                                  >
+                                    Yes
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={formData.implantFixtures.covered === 'no' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className={`h-8 px-3 text-xs ${
+                                      formData.implantFixtures.covered === 'no'
+                                        ? 'bg-red-600 hover:bg-red-700 border-red-600 text-white'
+                                        : 'border-red-300 text-red-700 hover:bg-red-50'
+                                    }`}
+                                    onClick={() => setFormData(prev => ({
+                                      ...prev,
+                                      implantFixtures: {
+                                        ...prev.implantFixtures,
+                                        covered: prev.implantFixtures.covered === 'no' ? '' : 'no'
+                                      }
+                                    }))}
+                                  >
+                                    No
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -2818,41 +2866,45 @@ export function ConsentFullArchForm({
                             <div className="md:col-span-2">
                               <div className="space-y-1">
                                 <Label className="text-xs text-gray-600">Covered by insurance?</Label>
-                                <div className="flex gap-4">
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="zirconiabridgeYes"
-                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                                      checked={formData.zirconiabridge.covered === "yes"}
-                                      onCheckedChange={(checked) => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          zirconiabridge: {
-                                            ...prev.zirconiabridge,
-                                            covered: checked ? "yes" : ""
-                                          }
-                                        }));
-                                      }}
-                                    />
-                                    <Label htmlFor="zirconiabridgeYes" className="text-sm cursor-pointer">Yes</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="zirconiabridgeNo"
-                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                                      checked={formData.zirconiabridge.covered === "no"}
-                                      onCheckedChange={(checked) => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          zirconiabridge: {
-                                            ...prev.zirconiabridge,
-                                            covered: checked ? "no" : ""
-                                          }
-                                        }));
-                                      }}
-                                    />
-                                    <Label htmlFor="zirconiabridgeNo" className="text-sm cursor-pointer">No</Label>
-                                  </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant={formData.zirconiabridge.covered === 'yes' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className={`h-8 px-3 text-xs ${
+                                      formData.zirconiabridge.covered === 'yes'
+                                        ? 'bg-green-600 hover:bg-green-700 border-green-600 text-white'
+                                        : 'border-green-300 text-green-700 hover:bg-green-50'
+                                    }`}
+                                    onClick={() => setFormData(prev => ({
+                                      ...prev,
+                                      zirconiabridge: {
+                                        ...prev.zirconiabridge,
+                                        covered: prev.zirconiabridge.covered === 'yes' ? '' : 'yes'
+                                      }
+                                    }))}
+                                  >
+                                    Yes
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={formData.zirconiabridge.covered === 'no' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className={`h-8 px-3 text-xs ${
+                                      formData.zirconiabridge.covered === 'no'
+                                        ? 'bg-red-600 hover:bg-red-700 border-red-600 text-white'
+                                        : 'border-red-300 text-red-700 hover:bg-red-50'
+                                    }`}
+                                    onClick={() => setFormData(prev => ({
+                                      ...prev,
+                                      zirconiabridge: {
+                                        ...prev.zirconiabridge,
+                                        covered: prev.zirconiabridge.covered === 'no' ? '' : 'no'
+                                      }
+                                    }))}
+                                  >
+                                    No
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -2901,41 +2953,45 @@ export function ConsentFullArchForm({
                             <div className="md:col-span-2">
                               <div className="space-y-1">
                                 <Label className="text-xs text-gray-600">Covered by insurance?</Label>
-                                <div className="flex gap-4">
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="ivSedationYes"
-                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                                      checked={formData.ivSedation.covered === "yes"}
-                                      onCheckedChange={(checked) => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          ivSedation: {
-                                            ...prev.ivSedation,
-                                            covered: checked ? "yes" : ""
-                                          }
-                                        }));
-                                      }}
-                                    />
-                                    <Label htmlFor="ivSedationYes" className="text-sm cursor-pointer">Yes</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="ivSedationNo"
-                                      className="h-4 w-4 border-2 border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                                      checked={formData.ivSedation.covered === "no"}
-                                      onCheckedChange={(checked) => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          ivSedation: {
-                                            ...prev.ivSedation,
-                                            covered: checked ? "no" : ""
-                                          }
-                                        }));
-                                      }}
-                                    />
-                                    <Label htmlFor="ivSedationNo" className="text-sm cursor-pointer">No</Label>
-                                  </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant={formData.ivSedation.covered === 'yes' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className={`h-8 px-3 text-xs ${
+                                      formData.ivSedation.covered === 'yes'
+                                        ? 'bg-green-600 hover:bg-green-700 border-green-600 text-white'
+                                        : 'border-green-300 text-green-700 hover:bg-green-50'
+                                    }`}
+                                    onClick={() => setFormData(prev => ({
+                                      ...prev,
+                                      ivSedation: {
+                                        ...prev.ivSedation,
+                                        covered: prev.ivSedation.covered === 'yes' ? '' : 'yes'
+                                      }
+                                    }))}
+                                  >
+                                    Yes
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={formData.ivSedation.covered === 'no' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className={`h-8 px-3 text-xs ${
+                                      formData.ivSedation.covered === 'no'
+                                        ? 'bg-red-600 hover:bg-red-700 border-red-600 text-white'
+                                        : 'border-red-300 text-red-700 hover:bg-red-50'
+                                    }`}
+                                    onClick={() => setFormData(prev => ({
+                                      ...prev,
+                                      ivSedation: {
+                                        ...prev.ivSedation,
+                                        covered: prev.ivSedation.covered === 'no' ? '' : 'no'
+                                      }
+                                    }))}
+                                  >
+                                    No
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -3910,33 +3966,107 @@ export function ConsentFullArchForm({
 
                 <Separator />
 
-                <div className="flex flex-col items-end space-y-3">
-                  <div className="flex items-center justify-center">
-                    {formData.patientSignature ? (
-                      <SignaturePreview
-                        signature={formData.patientSignature}
-                        onEdit={() => handleSignatureDialogOpen('patientSignature')}
-                        onClear={() => handleSignatureClear('patientSignature')}
-                        className="w-64 h-16 border border-gray-300 rounded-md"
-                      />
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleSignatureDialogOpen('patientSignature')}
-                        className="w-64 h-16 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Sign Here
-                      </Button>
-                    )}
-                  </div>
-                  <div className="w-64 border-t border-gray-300 pt-2">
-                    <div className="flex items-center justify-center">
-                      <Label className="text-sm font-semibold">Patient Signature</Label>
+                {/* Patient Signature Section */}
+                <Card className="border-2 border-blue-100 bg-blue-50/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-lg text-blue-700">
+                      <Edit className="h-5 w-5" />
+                      Patient Signature & Acknowledgment
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Left Side - Patient Information Fields */}
+                      <div className="space-y-6">
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="patientSignatureName" className="text-sm font-medium text-gray-700">
+                              Patient Name
+                            </Label>
+                            <Input
+                              id="patientSignatureName"
+                              value={formData.patientName}
+                              onChange={(e) => handleInputChange('patientName', e.target.value)}
+                              className="mt-1"
+                              placeholder="Enter patient full name"
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="patientSignatureDate" className="text-sm font-medium text-gray-700">
+                                Date
+                              </Label>
+                              <Input
+                                id="patientSignatureDate"
+                                type="date"
+                                value={formData.patientSignatureDate}
+                                onChange={(e) => handleInputChange('patientSignatureDate', e.target.value)}
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="patientSignatureTime" className="text-sm font-medium text-gray-700">
+                                Time
+                              </Label>
+                              <div className="flex gap-2 mt-1">
+                                <Input
+                                  id="patientSignatureTime"
+                                  type="time"
+                                  value={formData.patientSignatureTime || ''}
+                                  onChange={(e) => handleInputChange('patientSignatureTime', e.target.value)}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const now = new Date();
+                                    const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+                                    handleInputChange('patientSignatureTime', currentTime);
+                                  }}
+                                  className="px-3 text-xs"
+                                >
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  Now
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Side - Signature Area */}
+                      <div className="flex flex-col justify-center items-center space-y-4">
+                        <div className="flex items-center justify-center">
+                          {formData.patientSignature ? (
+                            <SignaturePreview
+                              signature={formData.patientSignature}
+                              onEdit={() => handleSignatureDialogOpen('patientSignature')}
+                              onClear={() => handleSignatureClear('patientSignature')}
+                              className="w-80 h-20 border border-gray-300 rounded-md"
+                            />
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleSignatureDialogOpen('patientSignature')}
+                              className="w-80 h-20 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                            >
+                              <Edit className="h-4 w-4" />
+                              Click to Sign
+                            </Button>
+                          )}
+                        </div>
+                        <div className="w-80 border-t border-gray-300 pt-2">
+                          <div className="flex items-center justify-center">
+                            <Label className="text-sm font-semibold">Patient Signature</Label>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </CardContent>
             </Card>
             </div>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { InformedConsentSmokingForm } from "@/components/InformedConsentSmokingForm";
-import { autoSaveInformedConsentSmokingForm } from "@/services/informedConsentSmokingService";
+import { MedicalRecordsReleaseForm } from "@/components/MedicalRecordsReleaseForm";
+import { autoSaveMedicalRecordsReleaseForm } from "@/services/medicalRecordsReleaseService";
 
-interface InformedConsentSmokingDialogProps {
+interface MedicalRecordsReleaseDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (formData: any) => void;
@@ -14,9 +14,10 @@ interface InformedConsentSmokingDialogProps {
   newPatientPacketId?: string;
   initialData?: any;
   isEditing?: boolean;
+  isViewing?: boolean;
 }
 
-export function InformedConsentSmokingDialog({
+export function MedicalRecordsReleaseDialog({
   isOpen,
   onClose,
   onSubmit,
@@ -27,18 +28,15 @@ export function InformedConsentSmokingDialog({
   newPatientPacketId,
   initialData,
   isEditing = false,
-}: InformedConsentSmokingDialogProps) {
+  isViewing = false,
+}: MedicalRecordsReleaseDialogProps) {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [autoSaveMessage, setAutoSaveMessage] = useState('');
   const [lastSavedTime, setLastSavedTime] = useState('');
   const [savedFormId, setSavedFormId] = useState<string | undefined>(initialData?.id);
 
   const handleAutoSave = async (formData: any) => {
-    if (!formData.firstName && !formData.lastName && !formData.nicotineUse &&
-        !formData.understandsNicotineEffects && !formData.understandsRisks &&
-        !formData.understandsTimeline && !formData.understandsInsurance &&
-        !formData.offeredResources && !formData.takesResponsibility &&
-        !formData.patientSignature) {
+    if (!formData.firstName && !formData.lastName && !formData.patientSignature) {
       return; // Don't auto-save empty forms
     }
 
@@ -48,7 +46,7 @@ export function InformedConsentSmokingDialog({
       return;
     }
 
-    console.log('🚀 Starting auto-save for informed consent smoking form:', {
+    console.log('🚀 Starting auto-save for form data:', {
       firstName: formData.firstName,
       lastName: formData.lastName,
       hasSignature: !!formData.patientSignature,
@@ -59,9 +57,9 @@ export function InformedConsentSmokingDialog({
     setAutoSaveMessage('');
 
     try {
-      const { data, error } = await autoSaveInformedConsentSmokingForm(
+      const { data, error } = await autoSaveMedicalRecordsReleaseForm(
         formData,
-        patientId,
+        patientId!,
         leadId,
         newPatientPacketId,
         savedFormId
@@ -113,7 +111,7 @@ export function InformedConsentSmokingDialog({
       status: 'completed',
       id: savedFormId || initialData?.id // Include the form ID for updating
     };
-    console.log('🚀 Submitting informed consent smoking form with ID:', submissionData.id);
+    console.log('🚀 Submitting with form ID:', submissionData.id);
     onSubmit(submissionData);
   };
 
@@ -132,20 +130,21 @@ export function InformedConsentSmokingDialog({
       setAutoSaveMessage('');
       setLastSavedTime('');
       setSavedFormId(initialData?.id);
+      console.log('🔧 Dialog opened - savedFormId set to:', initialData?.id || 'undefined');
     }
   }, [isOpen, initialData?.id]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <InformedConsentSmokingForm
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
+        <MedicalRecordsReleaseForm
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           patientName={patientName}
           patientDateOfBirth={patientDateOfBirth}
           initialData={initialData}
           isEditing={isEditing}
-          readOnly={false}
+          readOnly={isViewing}
           onAutoSave={handleAutoSave}
           autoSaveStatus={autoSaveStatus}
           autoSaveMessage={autoSaveMessage}

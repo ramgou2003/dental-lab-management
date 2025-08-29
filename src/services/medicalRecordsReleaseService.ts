@@ -5,61 +5,21 @@ export interface MedicalRecordsReleaseFormData {
   patient_id: string;
   lead_id?: string;
   new_patient_packet_id?: string;
-  
-  // Patient Information
-  patient_name?: string;
+
+  // Patient Information (simplified)
+  first_name?: string;
+  last_name?: string;
   date_of_birth?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
-  phone?: string;
-  email?: string;
-  
-  // Release Information
-  date_of_request?: string;
-  records_from_date?: string;
-  records_to_date?: string;
-  
-  // Records to Release (checkboxes)
-  complete_record?: boolean;
-  xrays?: boolean;
-  lab_results?: boolean;
-  consultation_notes?: boolean;
-  treatment_plans?: boolean;
-  surgical_reports?: boolean;
-  prescriptions?: boolean;
-  photographs?: boolean;
-  models?: boolean;
-  other_records?: boolean;
-  other_records_description?: string;
-  
-  // Release To Information
-  release_to_name?: string;
-  release_to_title?: string;
-  release_to_organization?: string;
-  release_to_address?: string;
-  release_to_city?: string;
-  release_to_state?: string;
-  release_to_zip_code?: string;
-  release_to_phone?: string;
-  release_to_fax?: string;
-  
-  // Purpose of Release
-  purpose_of_release?: string;
-  
-  // Authorization Details
-  authorization_expiration?: string;
-  right_to_revoke?: boolean;
-  copy_to_patient?: boolean;
-  
-  // Signatures
+  patient_name?: string;
+
+  // Date and Time with EST sync
+  signature_date?: string;
+  signature_time?: string;
+
+  // Agreement and Signatures
+  has_agreed?: boolean;
   patient_signature?: string;
-  patient_signature_date?: string;
-  witness_signature?: string;
-  witness_signature_date?: string;
-  witness_name?: string;
-  
+
   // Status and Metadata
   status: 'draft' | 'submitted' | 'signed' | 'void';
   form_version?: string;
@@ -69,13 +29,13 @@ export interface MedicalRecordsReleaseFormData {
   signed_at?: string;
   created_by?: string;
   updated_by?: string;
-  
+
   // Public Link Support
   public_link_id?: string;
   public_link_status?: 'active' | 'inactive' | 'expired';
   public_link_expires_at?: string;
   is_public_submission?: boolean;
-  
+
   // Backup JSONB field
   form_data?: any;
 }
@@ -207,18 +167,84 @@ export async function deleteMedicalRecordsReleaseForm(id: string): Promise<{ err
 }
 
 /**
+ * Auto-save medical records release form (create or update)
+ */
+export async function autoSaveMedicalRecordsReleaseForm(
+  formData: any,
+  patientId: string,
+  leadId?: string,
+  newPatientPacketId?: string,
+  existingFormId?: string
+): Promise<{ data: any | null; error: any }> {
+  try {
+    // Prepare the data for saving
+    const saveData = {
+      patient_id: patientId,
+      lead_id: leadId || null,
+      new_patient_packet_id: newPatientPacketId || null,
+      first_name: formData.firstName || '',
+      last_name: formData.lastName || '',
+      date_of_birth: formData.dateOfBirth || null,
+      patient_name: formData.patientName || '',
+      signature_date: formData.signatureDate || null,
+      signature_time: formData.signatureTime || null,
+      has_agreed: formData.hasAgreed || false,
+      patient_signature: formData.patientSignature || '',
+      status: 'draft' // Always save as draft for auto-save
+    };
+
+    console.log('🔄 Auto-saving medical records release form with payload:', saveData);
+    console.log('🆔 Existing form ID:', existingFormId);
+
+    if (existingFormId) {
+      // Update existing form
+      console.log('📝 Updating existing form with ID:', existingFormId);
+      return await updateMedicalRecordsReleaseForm(existingFormId, saveData);
+    } else {
+      // Before creating a new form, check if there's already a draft form for this patient
+      console.log('🔍 Checking for existing draft forms for patient:', patientId);
+      const { data: existingDrafts, error: checkError } = await supabase
+        .from('medical_records_release_forms')
+        .select('id')
+        .eq('patient_id', patientId)
+        .eq('status', 'draft')
+        .limit(1);
+
+      if (checkError) {
+        console.error('Error checking for existing drafts:', checkError);
+        // Continue with creation if check fails
+      } else if (existingDrafts && existingDrafts.length > 0) {
+        // Update the existing draft instead of creating a new one
+        const existingDraftId = existingDrafts[0].id;
+        console.log('📝 Found existing draft, updating instead of creating new:', existingDraftId);
+        return await updateMedicalRecordsReleaseForm(existingDraftId, saveData);
+      }
+
+      // Create new form only if no draft exists
+      console.log('🆕 Creating new form');
+      return await createMedicalRecordsReleaseForm(saveData);
+    }
+  } catch (error) {
+    console.error('Error in autoSaveMedicalRecordsReleaseForm:', error);
+    return { data: null, error };
+  }
+}
+
+/**
  * Format medical records release form for display
  */
 export function formatMedicalRecordsReleaseFormForDisplay(form: MedicalRecordsReleaseFormData) {
+  const patientName = form.patient_name || (form.first_name && form.last_name ? `${form.first_name} ${form.last_name}` : 'Unknown Patient');
+
   return {
     id: form.id,
-    title: `Medical Records Release - ${form.patient_name || 'Unknown Patient'}`,
-    subtitle: form.release_to_organization ? `To: ${form.release_to_organization}` : '',
-    date: form.date_of_request || form.created_at?.split('T')[0],
+    title: `Medical Records Release - ${patientName}`,
+    subtitle: 'Authorization for Release of Protected Health Information',
+    date: form.signature_date || form.created_at?.split('T')[0],
     status: form.status,
-    purpose: form.purpose_of_release,
-    hasSignatures: !!(form.patient_signature || form.witness_signature),
-    expirationDate: form.authorization_expiration,
+    hasSignatures: !!form.patient_signature,
+    signatureDate: form.signature_date,
+    signatureTime: form.signature_time,
     createdAt: form.created_at
   };
 }

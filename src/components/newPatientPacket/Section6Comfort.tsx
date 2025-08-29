@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -138,16 +138,14 @@ export function Section6Comfort({ formData, onInputChange, onNestedInputChange }
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {anxietyControlOptions.map((option) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`anxiety-${option}`}
-                  checked={formData.anxietyControl?.includes(option) || false}
-                  onCheckedChange={(checked) => handlePreferenceChange('anxietyControl', option, checked as boolean)}
-                />
-                <Label htmlFor={`anxiety-${option}`} className="text-sm">
-                  {option}
-                </Label>
-              </div>
+              <SimpleCheckbox
+                key={option}
+                id={`anxiety-${option}`}
+                checked={formData.anxietyControl?.includes(option) || false}
+                onCheckedChange={(checked) => handlePreferenceChange('anxietyControl', option, checked as boolean)}
+              >
+                {option}
+              </SimpleCheckbox>
             ))}
           </div>
         </CardContent>
@@ -167,16 +165,14 @@ export function Section6Comfort({ formData, onInputChange, onNestedInputChange }
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {painInjectionOptions.map((option) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`pain-${option}`}
-                  checked={formData.painInjection?.includes(option) || false}
-                  onCheckedChange={(checked) => handlePreferenceChange('painInjection', option, checked as boolean)}
-                />
-                <Label htmlFor={`pain-${option}`} className="text-sm">
-                  {option}
-                </Label>
-              </div>
+              <SimpleCheckbox
+                key={option}
+                id={`pain-${option}`}
+                checked={formData.painInjection?.includes(option) || false}
+                onCheckedChange={(checked) => handlePreferenceChange('painInjection', option, checked as boolean)}
+              >
+                {option}
+              </SimpleCheckbox>
             ))}
           </div>
         </CardContent>
@@ -196,16 +192,14 @@ export function Section6Comfort({ formData, onInputChange, onNestedInputChange }
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {communicationOptions.map((option) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`communication-${option}`}
-                  checked={formData.communication?.includes(option) || false}
-                  onCheckedChange={(checked) => handlePreferenceChange('communication', option, checked as boolean)}
-                />
-                <Label htmlFor={`communication-${option}`} className="text-sm">
-                  {option}
-                </Label>
-              </div>
+              <SimpleCheckbox
+                key={option}
+                id={`communication-${option}`}
+                checked={formData.communication?.includes(option) || false}
+                onCheckedChange={(checked) => handlePreferenceChange('communication', option, checked as boolean)}
+              >
+                {option}
+              </SimpleCheckbox>
             ))}
           </div>
         </CardContent>
@@ -225,16 +219,14 @@ export function Section6Comfort({ formData, onInputChange, onNestedInputChange }
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {sensorySensitivitiesOptions.map((option) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`sensory-${option}`}
-                  checked={formData.sensorySensitivities?.includes(option) || false}
-                  onCheckedChange={(checked) => handlePreferenceChange('sensorySensitivities', option, checked as boolean)}
-                />
-                <Label htmlFor={`sensory-${option}`} className="text-sm">
-                  {option}
-                </Label>
-              </div>
+              <SimpleCheckbox
+                key={option}
+                id={`sensory-${option}`}
+                checked={formData.sensorySensitivities?.includes(option) || false}
+                onCheckedChange={(checked) => handlePreferenceChange('sensorySensitivities', option, checked as boolean)}
+              >
+                {option}
+              </SimpleCheckbox>
             ))}
           </div>
         </CardContent>
@@ -254,16 +246,14 @@ export function Section6Comfort({ formData, onInputChange, onNestedInputChange }
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {physicalComfortOptions.map((option) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`physical-${option}`}
-                  checked={formData.physicalComfort?.includes(option) || false}
-                  onCheckedChange={(checked) => handlePreferenceChange('physicalComfort', option, checked as boolean)}
-                />
-                <Label htmlFor={`physical-${option}`} className="text-sm">
-                  {option}
-                </Label>
-              </div>
+              <SimpleCheckbox
+                key={option}
+                id={`physical-${option}`}
+                checked={formData.physicalComfort?.includes(option) || false}
+                onCheckedChange={(checked) => handlePreferenceChange('physicalComfort', option, checked as boolean)}
+              >
+                {option}
+              </SimpleCheckbox>
             ))}
           </div>
         </CardContent>
@@ -283,16 +273,14 @@ export function Section6Comfort({ formData, onInputChange, onNestedInputChange }
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {servicePreferencesOptions.map((option) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`service-${option}`}
-                  checked={formData.servicePreferences?.includes(option) || false}
-                  onCheckedChange={(checked) => handlePreferenceChange('servicePreferences', option, checked as boolean)}
-                />
-                <Label htmlFor={`service-${option}`} className="text-sm">
-                  {option}
-                </Label>
-              </div>
+              <SimpleCheckbox
+                key={option}
+                id={`service-${option}`}
+                checked={formData.servicePreferences?.includes(option) || false}
+                onCheckedChange={(checked) => handlePreferenceChange('servicePreferences', option, checked as boolean)}
+              >
+                {option}
+              </SimpleCheckbox>
             ))}
           </div>
         </CardContent>

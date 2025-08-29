@@ -128,10 +128,10 @@ export function ThreeYearCarePackageDialog({
         throw new Error('Patient name is required');
       }
 
-      // Update status to submitted when submitting
+      // Update status to completed when submitting
       const submissionData = {
         ...formData,
-        status: 'submitted'
+        status: 'completed'
       };
 
       console.log('📝 Submission data with status:', JSON.stringify(submissionData, null, 2));

@@ -40,7 +40,7 @@ export const partialPaymentAgreementService = {
       .from('partial_payment_agreement_forms')
       .insert([{
         ...formData,
-        status: 'submitted' // Set status to submitted for regular form submissions
+        status: 'completed' // Set status to completed for regular form submissions
       }])
       .select()
       .single();

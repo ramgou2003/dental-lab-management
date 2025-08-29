@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SimpleCheckbox } from "@/components/SimpleCheckbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -142,22 +142,20 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
           {attestationItems.map((item) => (
             <Card key={item.key} className="border-gray-200">
               <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <Checkbox
-                    id={item.key}
-                    checked={formData?.patientAttestation ? (formData.patientAttestation[item.key as keyof typeof formData.patientAttestation] || false) : false}
-                    onCheckedChange={(checked) => handleAttestationChange(item.key, checked as boolean)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <Label htmlFor={item.key} className="text-sm font-semibold text-gray-900 cursor-pointer">
+                <SimpleCheckbox
+                  id={item.key}
+                  checked={formData?.patientAttestation ? (formData.patientAttestation[item.key as keyof typeof formData.patientAttestation] || false) : false}
+                  onCheckedChange={(checked) => handleAttestationChange(item.key, checked as boolean)}
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">
                       {item.title}
-                    </Label>
+                    </div>
                     <p className="text-sm text-gray-600 mt-1">
                       {item.description}
                     </p>
                   </div>
-                </div>
+                </SimpleCheckbox>
               </CardContent>
             </Card>
           ))}
@@ -175,84 +173,93 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
             Please provide your printed name and signature to complete the form.
           </p>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Printed Name */}
-          <div>
-            <Label htmlFor="patientNameSignature" className="text-sm font-semibold">
-              <span className="text-red-500">*</span> Patient Name (Print)
-            </Label>
-            <Input
-              id="patientNameSignature"
-              value={formData?.patientNameSignature || ''}
-              onChange={(e) => onInputChange('patientNameSignature', e.target.value)}
-              placeholder="Please print your full legal name"
-              required
-            />
-          </div>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Side - Name and Date */}
+            <div className="space-y-6">
+              {/* Printed Name */}
+              <div>
+                <Label htmlFor="patientNameSignature" className="text-sm font-semibold">
+                  <span className="text-red-500">*</span> Patient Name (Print)
+                </Label>
+                <Input
+                  id="patientNameSignature"
+                  value={formData?.patientNameSignature || ''}
+                  onChange={(e) => onInputChange('patientNameSignature', e.target.value)}
+                  placeholder="Auto-filled from patient information"
+                  required
+                  className="bg-gray-50"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Auto-filled from Section 1. You can edit if needed.
+                </p>
+              </div>
 
-          {/* Digital Signature */}
-          <div>
-            <Label className="text-sm font-semibold">
-              <span className="text-red-500">*</span> Patient Signature
-            </Label>
-            <div className="mt-2">
-              {formData?.signature && formData.signature.length > 0 ? (
-                <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-green-800">Signature Captured</span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSignatureClear}
-                      className="text-red-600 border-red-300 hover:bg-red-50"
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                  <img
-                    src={formData?.signature || ''}
-                    alt="Patient Signature"
-                    className="max-w-full h-20 border border-gray-300 rounded bg-white"
-                  />
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowSignatureDialog(true)}
-                  className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30 flex items-center justify-center gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  Click to Sign
-                </Button>
-              )}
+              {/* Date */}
+              <div>
+                <Label htmlFor="signatureDate" className="text-sm font-semibold">
+                  <span className="text-red-500">*</span> Date
+                </Label>
+                <Input
+                  id="signatureDate"
+                  type="date"
+                  value={(() => {
+                    try {
+                      if (formData?.date) {
+                        const date = formData.date instanceof Date ? formData.date : new Date(formData.date);
+                        return date.toISOString().split('T')[0];
+                      }
+                      return new Date().toISOString().split('T')[0];
+                    } catch (error) {
+                      console.error('Error formatting date:', error);
+                      return new Date().toISOString().split('T')[0];
+                    }
+                  })()}
+                  onChange={(e) => onInputChange('date', new Date(e.target.value))}
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Date */}
-          <div>
-            <Label htmlFor="signatureDate" className="text-sm font-semibold">
-              <span className="text-red-500">*</span> Date
-            </Label>
-            <Input
-              id="signatureDate"
-              type="date"
-              value={(() => {
-                try {
-                  if (formData?.date) {
-                    const date = formData.date instanceof Date ? formData.date : new Date(formData.date);
-                    return date.toISOString().split('T')[0];
-                  }
-                  return new Date().toISOString().split('T')[0];
-                } catch (error) {
-                  console.error('Error formatting date:', error);
-                  return new Date().toISOString().split('T')[0];
-                }
-              })()}
-              onChange={(e) => onInputChange('date', new Date(e.target.value))}
-              required
-            />
+            {/* Right Side - Digital Signature */}
+            <div>
+              <Label className="text-sm font-semibold">
+                <span className="text-red-500">*</span> Patient Signature
+              </Label>
+              <div className="mt-2">
+                {formData?.signature && formData.signature.length > 0 ? (
+                  <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-green-800">Signature Captured</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSignatureClear}
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                    <img
+                      src={formData?.signature || ''}
+                      alt="Patient Signature"
+                      className="max-w-full h-20 border border-gray-300 rounded bg-white"
+                    />
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowSignatureDialog(true)}
+                    className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30 flex items-center justify-center gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Click to Sign
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
