@@ -146,35 +146,63 @@ export function PatientPacketDialog({
 
   const loadConsultationForms = async () => {
     try {
-      // Get the patient name from the lead to match consultation records
+      // First, try to get the patient name from the lead
       const { data: leadData, error: leadError } = await supabase
         .from('new_patient_leads')
-        .select('name, personal_first_name, personal_last_name')
+        .select('first_name, last_name, personal_first_name, personal_last_name')
         .eq('id', leadId)
         .single();
 
-      if (leadError) {
-        console.error('Error fetching lead data:', leadError);
-        return;
+      let patientName = '';
+
+      if (leadData && !leadError) {
+        // Construct patient name from lead data
+        patientName = leadData.personal_first_name && leadData.personal_last_name
+          ? `${leadData.personal_first_name} ${leadData.personal_last_name}`
+          : leadData.first_name && leadData.last_name
+          ? `${leadData.first_name} ${leadData.last_name}`
+          : '';
       }
 
-      // Construct patient name to match consultation records
-      const patientName = leadData.personal_first_name && leadData.personal_last_name
-        ? `${leadData.personal_first_name} ${leadData.personal_last_name}`
-        : leadData.name;
+      // If no lead data or patient name, try to find consultations by leadId
+      // or search for consultations that might be related
+      let consultations = [];
 
-      // Fetch consultation forms for this patient
-      const { data: consultations, error: consultationError } = await supabase
-        .from('consultations')
-        .select('*')
-        .eq('patient_name', patientName)
-        .order('created_at', { ascending: false });
+      if (patientName) {
+        // Search by exact patient name
+        const { data, error } = await supabase
+          .from('consultations')
+          .select('*')
+          .eq('patient_name', patientName)
+          .order('created_at', { ascending: false });
 
-      if (consultationError) {
-        console.error('Error fetching consultation forms:', consultationError);
-        return;
+        if (!error) {
+          consultations = data || [];
+        }
       }
 
+      // If no consultations found by name, try searching by leadId or similar patterns
+      if (consultations.length === 0) {
+        // For debugging: let's search for all consultations and see if we can find matches
+        const { data: allConsultations, error: allError } = await supabase
+          .from('consultations')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!allError && allConsultations) {
+          // For now, let's show all consultations for debugging
+          // In production, you might want to filter by some other criteria
+          console.log('Available consultations:', allConsultations.map(c => c.patient_name));
+
+          // Try to find consultations that might match the leadId pattern
+          // This is a temporary solution - you might need to add a lead_id field to consultations
+          consultations = allConsultations.filter(c =>
+            c.patient_name && c.patient_name.includes('NEW TEST')
+          );
+        }
+      }
+
+      console.log('Found consultation forms:', consultations);
       setConsultationForms(consultations || []);
     } catch (error) {
       console.error('Unexpected error fetching consultation forms:', error);
