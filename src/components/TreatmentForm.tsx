@@ -5,8 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { MultiSelect } from '@/components/ui/multi-select';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, FileText, CheckSquare, Stethoscope } from 'lucide-react';
+import { Save, FileText, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -16,7 +15,6 @@ interface TreatmentFormData {
     archType: 'upper' | 'lower' | 'dual' | '';
     upperTreatment: string[];
     lowerTreatment: string[];
-    surgicalRevision: string;
   };
   additionalInformation: string;
 }
@@ -47,7 +45,6 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
       archType: '',
       upperTreatment: [],
       lowerTreatment: [],
-      surgicalRevision: '',
     },
     additionalInformation: ''
   });
@@ -101,10 +98,6 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
                   ? [treatmentRecommendations.lowerTreatment]
                   : [];
               }
-              // Ensure surgical revision field exists
-              if (treatmentRecommendations.surgicalRevision === undefined) {
-                treatmentRecommendations.surgicalRevision = '';
-              }
             } else {
               // Old format - migrate to new format
               console.log('🔄 TreatmentForm: Migrating old format to new arch-based format');
@@ -112,7 +105,6 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
                 archType: '',
                 upperTreatment: [],
                 lowerTreatment: [],
-                surgicalRevision: '',
               };
             }
           }
@@ -244,7 +236,6 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
         // Reset treatments when arch type changes
         upperTreatment: [],
         lowerTreatment: [],
-        surgicalRevision: '',
       }
     };
     setFormData(newData);
@@ -263,18 +254,6 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
     onDataChange?.(newData);
   };
 
-  const handleSurgicalRevisionChange = (value: string) => {
-    const newData = {
-      ...formData,
-      treatmentRecommendations: {
-        ...formData.treatmentRecommendations,
-        surgicalRevision: value
-      }
-    };
-    setFormData(newData);
-    onDataChange?.(newData);
-  };
-
   const treatmentOptions = [
     'NO TREATMENT',
     'FULL ARCH FIXED',
@@ -283,17 +262,12 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
     'SINGLE IMPLANT',
     'MULTIPLE IMPLANTS',
     'EXTRACTION',
-    'EXTRACTION AND GRAFT'
-  ];
-
-  const surgicalRevisionOptions = [
-    'NO REVISION NEEDED',
-    'MINOR REVISION',
-    'MAJOR REVISION',
-    'BONE GRAFT REVISION',
-    'SOFT TISSUE REVISION',
-    'IMPLANT REVISION',
-    'COMPLETE REVISION'
+    'EXTRACTION AND GRAFT',
+    'SURGICAL REVISION',
+    'TRANSITIONAL SMILE APPLIANCE',
+    'SINUS LIFT',
+    'LATERAL WINDOW SINUS LIFT',
+    'ALL ON X WITH REMOTE ANCHORAGE'
   ];
 
   return (
@@ -446,33 +420,6 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
                   placeholder="Select lower treatment types"
                   className="w-full"
                 />
-              </div>
-            </div>
-          )}
-
-          {/* Surgical Revision - Show for all arch types when arch is selected */}
-          {formData.treatmentRecommendations.archType && (
-            <div className="space-y-3 pt-4 border-t border-gray-200">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <Label className="text-base font-medium text-gray-900">Surgical Revision</Label>
-              </div>
-              <div>
-                <Select
-                  value={formData.treatmentRecommendations.surgicalRevision}
-                  onValueChange={handleSurgicalRevisionChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select surgical revision type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {surgicalRevisionOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           )}

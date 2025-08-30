@@ -22,7 +22,8 @@ import {
   Clock,
   User,
   ExternalLink,
-  Edit3
+  Edit3,
+  Stethoscope
 } from "lucide-react";
 import { FilledPatientPacketViewer } from "@/components/FilledPatientPacketViewer";
 import { NewPatientPacketForm, NewPatientPacketFormRef } from "@/components/NewPatientPacketForm";
@@ -50,6 +51,7 @@ export function PatientPacketDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [patientPackets, setPatientPackets] = useState<any[]>([]);
+  const [consultationForms, setConsultationForms] = useState<any[]>([]);
   const [selectedPacket, setSelectedPacket] = useState<any>(null);
   const [showPacketViewer, setShowPacketViewer] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -60,6 +62,7 @@ export function PatientPacketDialog({
   useEffect(() => {
     if (open) {
       checkPacketStatus();
+      loadConsultationForms();
     }
   }, [open, leadId]);
 
@@ -127,17 +130,54 @@ export function PatientPacketDialog({
     setIsCheckingStatus(true);
     try {
       const { data, error } = await getPatientPacketsByLeadId(leadId);
-      
+
       if (error) {
         console.error('Error fetching patient packets:', error);
         return;
       }
-      
+
       setPatientPackets(data || []);
     } catch (error) {
       console.error('Unexpected error fetching patient packets:', error);
     } finally {
       setIsCheckingStatus(false);
+    }
+  };
+
+  const loadConsultationForms = async () => {
+    try {
+      // Get the patient name from the lead to match consultation records
+      const { data: leadData, error: leadError } = await supabase
+        .from('new_patient_leads')
+        .select('name, personal_first_name, personal_last_name')
+        .eq('id', leadId)
+        .single();
+
+      if (leadError) {
+        console.error('Error fetching lead data:', leadError);
+        return;
+      }
+
+      // Construct patient name to match consultation records
+      const patientName = leadData.personal_first_name && leadData.personal_last_name
+        ? `${leadData.personal_first_name} ${leadData.personal_last_name}`
+        : leadData.name;
+
+      // Fetch consultation forms for this patient
+      const { data: consultations, error: consultationError } = await supabase
+        .from('consultations')
+        .select('*')
+        .eq('patient_name', patientName)
+        .order('created_at', { ascending: false });
+
+      if (consultationError) {
+        console.error('Error fetching consultation forms:', consultationError);
+        return;
+      }
+
+      setConsultationForms(consultations || []);
+    } catch (error) {
+      console.error('Unexpected error fetching consultation forms:', error);
     }
   };
 
@@ -510,6 +550,56 @@ export function PatientPacketDialog({
                       variant="outline"
                       size="sm"
                       onClick={() => openPacketViewer(packet)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Form
+                    </Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Consultation Forms Section */}
+          {consultationForms.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4" />
+                  Consultation Forms ({consultationForms.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {consultationForms.map((consultation, index) => (
+                  <div key={consultation.id || index} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Stethoscope className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">
+                          Consultation #{index + 1}
+                        </p>
+                        <p className="text-xs text-blue-600">
+                          {consultation.consultation_date
+                            ? new Date(consultation.consultation_date).toLocaleDateString()
+                            : new Date(consultation.created_at).toLocaleDateString()
+                          }
+                        </p>
+                        <p className="text-xs text-blue-500">
+                          Status: {consultation.consultation_status || 'In Progress'}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // For now, show a toast with consultation details
+                        // Later this can be expanded to show a consultation viewer
+                        toast.info(`Consultation form from ${consultation.consultation_date
+                          ? new Date(consultation.consultation_date).toLocaleDateString()
+                          : new Date(consultation.created_at).toLocaleDateString()
+                        }`);
+                      }}
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       View Form
