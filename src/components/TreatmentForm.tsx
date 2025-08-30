@@ -84,6 +84,20 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
               // New format - use as is
               console.log('📊 TreatmentForm: Using new arch-based format');
               treatmentRecommendations = data.treatment_recommendations;
+
+              // Convert string values to arrays if needed (migration support)
+              if (typeof treatmentRecommendations.upperTreatment === 'string') {
+                console.log('🔄 Converting upperTreatment from string to array');
+                treatmentRecommendations.upperTreatment = treatmentRecommendations.upperTreatment
+                  ? [treatmentRecommendations.upperTreatment]
+                  : [];
+              }
+              if (typeof treatmentRecommendations.lowerTreatment === 'string') {
+                console.log('🔄 Converting lowerTreatment from string to array');
+                treatmentRecommendations.lowerTreatment = treatmentRecommendations.lowerTreatment
+                  ? [treatmentRecommendations.lowerTreatment]
+                  : [];
+              }
             } else {
               // Old format - migrate to new format
               console.log('🔄 TreatmentForm: Migrating old format to new arch-based format');

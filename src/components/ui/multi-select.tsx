@@ -24,19 +24,22 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Ensure value is always an array (safety measure for migration)
+  const safeValue = Array.isArray(value) ? value : [];
+
   const handleToggleOption = (option: string) => {
     if (disabled) return;
-    
-    const newValue = value.includes(option)
-      ? value.filter(v => v !== option)
-      : [...value, option];
-    
+
+    const newValue = safeValue.includes(option)
+      ? safeValue.filter(v => v !== option)
+      : [...safeValue, option];
+
     onChange(newValue);
   };
 
   const handleRemoveOption = (option: string) => {
     if (disabled) return;
-    onChange(value.filter(v => v !== option));
+    onChange(safeValue.filter(v => v !== option));
   };
 
   const handleClearAll = () => {
@@ -54,17 +57,17 @@ export function MultiSelect({
         disabled={disabled}
         className={cn(
           "w-full justify-between text-left font-normal",
-          value.length === 0 && "text-muted-foreground"
+          safeValue.length === 0 && "text-muted-foreground"
         )}
       >
         <div className="flex flex-wrap gap-1 flex-1">
-          {value.length === 0 ? (
+          {safeValue.length === 0 ? (
             <span>{placeholder}</span>
           ) : (
             <span className="text-sm">
-              {value.length === 1 
-                ? value[0] 
-                : `${value.length} option${value.length > 1 ? 's' : ''} selected`
+              {safeValue.length === 1
+                ? safeValue[0]
+                : `${safeValue.length} option${safeValue.length > 1 ? 's' : ''} selected`
               }
             </span>
           )}
@@ -77,9 +80,9 @@ export function MultiSelect({
       </Button>
 
       {/* Selected Items Display */}
-      {value.length > 0 && (
+      {safeValue.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
-          {value.map((item) => (
+          {safeValue.map((item) => (
             <div
               key={item}
               className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-md"
@@ -96,7 +99,7 @@ export function MultiSelect({
               )}
             </div>
           ))}
-          {!disabled && value.length > 1 && (
+          {!disabled && safeValue.length > 1 && (
             <button
               type="button"
               onClick={handleClearAll}
@@ -116,7 +119,7 @@ export function MultiSelect({
               <div key={option} className="flex items-center space-x-2">
                 <Checkbox
                   id={`option-${option}`}
-                  checked={value.includes(option)}
+                  checked={safeValue.includes(option)}
                   onCheckedChange={() => handleToggleOption(option)}
                   disabled={disabled}
                 />
@@ -131,7 +134,7 @@ export function MultiSelect({
           </div>
           
           {/* Footer Actions */}
-          {value.length > 0 && !disabled && (
+          {safeValue.length > 0 && !disabled && (
             <div className="border-t border-gray-200 p-2">
               <Button
                 type="button"
