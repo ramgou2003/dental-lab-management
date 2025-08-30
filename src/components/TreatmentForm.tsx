@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { Save, FileText, CheckSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -13,8 +13,8 @@ interface TreatmentFormData {
   clinicalAssessment: string;
   treatmentRecommendations: {
     archType: 'upper' | 'lower' | 'dual' | '';
-    upperTreatment: string;
-    lowerTreatment: string;
+    upperTreatment: string[];
+    lowerTreatment: string[];
   };
   additionalInformation: string;
 }
@@ -43,8 +43,8 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
     clinicalAssessment: '',
     treatmentRecommendations: {
       archType: '',
-      upperTreatment: '',
-      lowerTreatment: '',
+      upperTreatment: [],
+      lowerTreatment: [],
     },
     additionalInformation: ''
   });
@@ -89,8 +89,8 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
               console.log('🔄 TreatmentForm: Migrating old format to new arch-based format');
               treatmentRecommendations = {
                 archType: '',
-                upperTreatment: '',
-                lowerTreatment: '',
+                upperTreatment: [],
+                lowerTreatment: [],
               };
             }
           }
@@ -220,20 +220,20 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
         ...formData.treatmentRecommendations,
         archType,
         // Reset treatments when arch type changes
-        upperTreatment: '',
-        lowerTreatment: '',
+        upperTreatment: [],
+        lowerTreatment: [],
       }
     };
     setFormData(newData);
     onDataChange?.(newData);
   };
 
-  const handleTreatmentChange = (type: 'upper' | 'lower', treatment: string) => {
+  const handleTreatmentChange = (type: 'upper' | 'lower', treatments: string[]) => {
     const newData = {
       ...formData,
       treatmentRecommendations: {
         ...formData.treatmentRecommendations,
-        [type === 'upper' ? 'upperTreatment' : 'lowerTreatment']: treatment
+        [type === 'upper' ? 'upperTreatment' : 'lowerTreatment']: treatments
       }
     };
     setFormData(newData);
@@ -338,21 +338,13 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
                   <Label className="text-base font-medium text-gray-900">Upper Arch Treatment</Label>
                 </div>
                 <div>
-                  <Select
+                  <MultiSelect
+                    options={treatmentOptions}
                     value={formData.treatmentRecommendations.upperTreatment}
-                    onValueChange={(value) => handleTreatmentChange('upper', value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select upper treatment type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {treatmentOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(value) => handleTreatmentChange('upper', value)}
+                    placeholder="Select upper treatment types"
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -363,21 +355,13 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
                   <Label className="text-base font-medium text-gray-900">Lower Arch Treatment</Label>
                 </div>
                 <div>
-                  <Select
+                  <MultiSelect
+                    options={treatmentOptions}
                     value={formData.treatmentRecommendations.lowerTreatment}
-                    onValueChange={(value) => handleTreatmentChange('lower', value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select lower treatment type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {treatmentOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(value) => handleTreatmentChange('lower', value)}
+                    placeholder="Select lower treatment types"
+                    className="w-full"
+                  />
                 </div>
               </div>
             </div>
@@ -391,21 +375,13 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
                 <Label className="text-base font-medium text-gray-900">Upper Arch Treatment</Label>
               </div>
               <div>
-                <Select
+                <MultiSelect
+                  options={treatmentOptions}
                   value={formData.treatmentRecommendations.upperTreatment}
-                  onValueChange={(value) => handleTreatmentChange('upper', value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select upper treatment type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {treatmentOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(value) => handleTreatmentChange('upper', value)}
+                  placeholder="Select upper treatment types"
+                  className="w-full"
+                />
               </div>
             </div>
           )}
@@ -418,21 +394,13 @@ export const TreatmentForm = React.forwardRef<TreatmentFormRef, TreatmentFormPro
                 <Label className="text-base font-medium text-gray-900">Lower Arch Treatment</Label>
               </div>
               <div>
-                <Select
+                <MultiSelect
+                  options={treatmentOptions}
                   value={formData.treatmentRecommendations.lowerTreatment}
-                  onValueChange={(value) => handleTreatmentChange('lower', value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select lower treatment type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {treatmentOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(value) => handleTreatmentChange('lower', value)}
+                  placeholder="Select lower treatment types"
+                  className="w-full"
+                />
               </div>
             </div>
           )}

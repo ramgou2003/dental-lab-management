@@ -15,8 +15,8 @@ interface TreatmentDialogProps {
 
 export interface TreatmentData {
   archType: string;
-  upperTreatment: string;
-  lowerTreatment: string;
+  upperTreatment: string[];
+  lowerTreatment: string[];
   upperSurgeryDate: string;
   lowerSurgeryDate: string;
 }
@@ -35,8 +35,8 @@ const treatmentOptions = [
 export function TreatmentDialog({ isOpen, onClose, onSubmit, initialData }: TreatmentDialogProps) {
   const [formData, setFormData] = useState<TreatmentData>({
     archType: initialData?.archType || "",
-    upperTreatment: initialData?.upperTreatment || "",
-    lowerTreatment: initialData?.lowerTreatment || "",
+    upperTreatment: initialData?.upperTreatment || [],
+    lowerTreatment: initialData?.lowerTreatment || [],
     upperSurgeryDate: initialData?.upperSurgeryDate || "",
     lowerSurgeryDate: initialData?.lowerSurgeryDate || ""
   });

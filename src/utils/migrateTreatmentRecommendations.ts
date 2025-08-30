@@ -42,8 +42,8 @@ export async function migrateTreatmentRecommendations(): Promise<void> {
         // Convert old format to new format
         const newRecommendations = {
           archType: '',
-          upperTreatment: '',
-          lowerTreatment: '',
+          upperTreatment: [],
+          lowerTreatment: [],
         };
 
         // Update the consultation record
