@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ConsentFullArchForm } from "@/components/ConsentFullArchForm";
-import { autoSaveConsentFullArchForm } from "@/services/consentFullArchService";
+import { autoSaveConsentFullArchForm, convertDatabaseToFormData } from "@/services/consentFullArchService";
 
 interface ConsentFullArchDialogProps {
   isOpen: boolean;
@@ -33,7 +33,7 @@ export function ConsentFullArchDialog({
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [autoSaveMessage, setAutoSaveMessage] = useState('');
   const [lastSavedTime, setLastSavedTime] = useState('');
-  const [savedFormId, setSavedFormId] = useState<string | undefined>(initialData?.id);
+  const [savedFormId, setSavedFormId] = useState<string | undefined>(undefined);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Update savedFormId when initialData changes
@@ -102,50 +102,33 @@ export function ConsentFullArchDialog({
     try {
       console.log('🚀 Form submission started with data:', formData);
 
-      // Set status to completed when form is submitted
+      // Set status to submitted when form is submitted
       const submissionData = {
         ...formData,
-        status: 'completed'
+        status: 'submitted'
       };
 
       console.log('📝 Submission data with status:', submissionData);
       console.log('🔍 savedFormId at submission:', savedFormId);
       console.log('🔍 isEditing at submission:', isEditing);
 
-      if (savedFormId) {
-        console.log('✅ Updating existing form with ID:', savedFormId);
-        // Update existing form with submitted status
-        const { data, error } = await autoSaveConsentFullArchForm(
-          submissionData,
-          patientId,
-          leadId,
-          newPatientPacketId,
-          savedFormId
-        );
+      // Always try to use the savedFormId first, but if it's not available,
+      // the autoSaveConsentFullArchForm function will find the existing draft
+      const { data, error } = await autoSaveConsentFullArchForm(
+        submissionData,
+        patientId,
+        leadId,
+        newPatientPacketId,
+        savedFormId // This will be used if available, otherwise the function will find the existing draft
+      );
 
-        if (error) {
-          console.error('Error submitting form:', error);
-          throw error;
-        }
-
-        onSubmit(data);
-      } else {
-        console.log('🆕 Creating new form (no savedFormId)');
-        // Create new form with submitted status
-        const { data, error } = await autoSaveConsentFullArchForm(
-          submissionData,
-          patientId,
-          leadId,
-          newPatientPacketId
-        );
-
-        if (error) {
-          console.error('Error submitting form:', error);
-          throw error;
-        }
-
-        onSubmit(data);
+      if (error) {
+        console.error('Error submitting form:', error);
+        throw error;
       }
+
+      console.log('✅ Form submitted successfully:', data);
+      onSubmit(data);
     } catch (error) {
       console.error('Error submitting Consent Full Arch form:', error);
       throw error;
@@ -161,12 +144,15 @@ export function ConsentFullArchDialog({
     onClose();
   };
 
-  // Debug logging
+  // Debug logging and data conversion
+  const [convertedInitialData, setConvertedInitialData] = useState(null);
+
   useEffect(() => {
     console.log('🔍 ConsentFullArchDialog - initialData:', initialData);
     console.log('🔍 ConsentFullArchDialog - isEditing:', isEditing);
     console.log('🔍 ConsentFullArchDialog - isViewing:', isViewing);
     console.log('🔍 ConsentFullArchDialog - savedFormId:', savedFormId);
+
     if (initialData) {
       console.log('📋 ConsentFullArchDialog - initialData fields:', {
         id: initialData.id,
@@ -175,6 +161,22 @@ export function ConsentFullArchDialog({
         patientSignature: initialData.patientSignature
       });
       console.log('📋 ConsentFullArchDialog - ALL initialData keys:', Object.keys(initialData));
+
+      // Check if data needs conversion from database format
+      if (initialData.patient_name && !initialData.patientName) {
+        console.log('🔄 Converting database format to form format');
+        const converted = convertDatabaseToFormData(initialData);
+        console.log('✅ Converted data:', converted);
+        setConvertedInitialData(converted);
+        setSavedFormId(converted.id);
+      } else {
+        console.log('✅ Data already in form format');
+        setConvertedInitialData(initialData);
+        setSavedFormId(initialData.id);
+      }
+    } else {
+      setConvertedInitialData(null);
+      setSavedFormId(undefined);
     }
   }, [initialData, isEditing, isViewing, savedFormId]);
 
@@ -198,7 +200,7 @@ export function ConsentFullArchDialog({
           onCancel={handleCancel}
           patientName={patientName}
           patientDateOfBirth={patientDateOfBirth}
-          initialData={initialData}
+          initialData={convertedInitialData}
           isEditing={isEditing}
           readOnly={isViewing}
           onAutoSave={handleAutoSave}

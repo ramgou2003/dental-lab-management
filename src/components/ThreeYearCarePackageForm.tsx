@@ -56,6 +56,7 @@ export function ThreeYearCarePackageForm({
   setAutoSaveStatus,
   setAutoSaveMessage
 }: ThreeYearCarePackageFormProps) {
+  const readOnly = isViewing;
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
   const [showWitnessSignatureDialog, setShowWitnessSignatureDialog] = useState(false);
 
@@ -171,7 +172,7 @@ export function ThreeYearCarePackageForm({
 
   // Auto-save effect with debouncing
   useEffect(() => {
-    if (!onAutoSave) return;
+    if (!onAutoSave || readOnly) return;
 
     // Check if form has meaningful data
     const hasData = formData.patientName || formData.enrollmentChoice ||
@@ -196,40 +197,52 @@ export function ThreeYearCarePackageForm({
     }, 2000); // 2 second debounce
 
     return () => clearTimeout(timeoutId);
-  }, [formData, onAutoSave]);
+  }, [formData, onAutoSave, readOnly]);
 
   const handleInputChange = (field: string, value: any) => {
-    console.log(`🔄 Form field changed: ${field} = ${value}`);
-    setFormData(prev => {
-      const newData = {
-        ...prev,
-        [field]: value
-      };
-      console.log('📝 Updated form data:', { [field]: value, patientName: newData.patientName });
-      return newData;
-    });
+    if (!readOnly) {
+      console.log(`🔄 Form field changed: ${field} = ${value}`);
+      setFormData(prev => {
+        const newData = {
+          ...prev,
+          [field]: value
+        };
+        console.log('📝 Updated form data:', { [field]: value, patientName: newData.patientName });
+        return newData;
+      });
+    }
   };
 
   const handlePatientSignatureSave = (signatureData: string) => {
-    handleInputChange('patientSignature', signatureData);
-    setShowPatientSignatureDialog(false);
+    if (!readOnly) {
+      handleInputChange('patientSignature', signatureData);
+      setShowPatientSignatureDialog(false);
+    }
   };
 
   const handlePatientSignatureClear = () => {
-    handleInputChange('patientSignature', '');
+    if (!readOnly) {
+      handleInputChange('patientSignature', '');
+    }
   };
 
   const handleWitnessSignatureSave = (signatureData: string) => {
-    handleInputChange('witnessSignature', signatureData);
-    setShowWitnessSignatureDialog(false);
+    if (!readOnly) {
+      handleInputChange('witnessSignature', signatureData);
+      setShowWitnessSignatureDialog(false);
+    }
   };
 
   const handleWitnessSignatureClear = () => {
-    handleInputChange('witnessSignature', '');
+    if (!readOnly) {
+      handleInputChange('witnessSignature', '');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (readOnly) return;
     console.log('🚀 3-Year Care Package form handleSubmit called');
     console.log('🔍 Current formData:', JSON.stringify(formData, null, 2));
     console.log('🔍 Patient name:', formData.patientName);
@@ -335,6 +348,7 @@ export function ThreeYearCarePackageForm({
                   onChange={(e) => handleInputChange('patientName', e.target.value)}
                   placeholder="Enter patient name"
                   required
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -345,6 +359,7 @@ export function ThreeYearCarePackageForm({
                   value={formData.dateOfBirth}
                   onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -355,6 +370,7 @@ export function ThreeYearCarePackageForm({
                   value={formData.enrollmentDate}
                   onChange={(e) => handleInputChange('enrollmentDate', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -365,6 +381,7 @@ export function ThreeYearCarePackageForm({
                   value={formData.enrollmentTime}
                   onChange={(e) => handleInputChange('enrollmentTime', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -546,12 +563,14 @@ export function ThreeYearCarePackageForm({
             <div className="space-y-3">
               <div className="flex items-start space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.chlorhexidineRinse
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('chlorhexidineRinse', !formData.chlorhexidineRinse)}
+                  onClick={readOnly ? undefined : () => handleInputChange('chlorhexidineRinse', !formData.chlorhexidineRinse)}
                 >
                   {formData.chlorhexidineRinse && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -559,8 +578,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-yellow-800"
-                    onClick={() => handleInputChange('chlorhexidineRinse', !formData.chlorhexidineRinse)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('chlorhexidineRinse', !formData.chlorhexidineRinse)}
                   >
                     <strong>Rinse with chlorhexidine:</strong>
                     <br />
@@ -573,12 +592,14 @@ export function ThreeYearCarePackageForm({
 
               <div className="flex items-start space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.waterFlosser
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('waterFlosser', !formData.waterFlosser)}
+                  onClick={readOnly ? undefined : () => handleInputChange('waterFlosser', !formData.waterFlosser)}
                 >
                   {formData.waterFlosser && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -586,8 +607,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-yellow-800"
-                    onClick={() => handleInputChange('waterFlosser', !formData.waterFlosser)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('waterFlosser', !formData.waterFlosser)}
                   >
                     <strong>Use water flosser:</strong>
                     <br />
@@ -600,12 +621,14 @@ export function ThreeYearCarePackageForm({
 
               <div className="flex items-start space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.electricToothbrush
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('electricToothbrush', !formData.electricToothbrush)}
+                  onClick={readOnly ? undefined : () => handleInputChange('electricToothbrush', !formData.electricToothbrush)}
                 >
                   {formData.electricToothbrush && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -613,8 +636,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-yellow-800"
-                    onClick={() => handleInputChange('electricToothbrush', !formData.electricToothbrush)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('electricToothbrush', !formData.electricToothbrush)}
                   >
                     <strong>Brush twice daily:</strong>
                     <br />
@@ -627,12 +650,14 @@ export function ThreeYearCarePackageForm({
 
               <div className="flex items-start space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.attendCheckups
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('attendCheckups', !formData.attendCheckups)}
+                  onClick={readOnly ? undefined : () => handleInputChange('attendCheckups', !formData.attendCheckups)}
                 >
                   {formData.attendCheckups && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -640,8 +665,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-yellow-800"
-                    onClick={() => handleInputChange('attendCheckups', !formData.attendCheckups)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('attendCheckups', !formData.attendCheckups)}
                   >
                     <strong>Attend all check-ups:</strong>
                     <br />
@@ -740,12 +765,14 @@ export function ThreeYearCarePackageForm({
             <div className="space-y-3">
               <div className="flex items-start space-x-3 p-4 border border-green-300 rounded-lg bg-green-50">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.enrollmentChoice === 'enroll'
                       ? 'bg-green-100 border-2 border-green-500'
-                      : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('enrollmentChoice', 'enroll')}
+                  onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'enroll')}
                 >
                   {formData.enrollmentChoice === 'enroll' && (
                     <Check className="h-3 w-3 text-green-600" />
@@ -753,8 +780,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer"
-                    onClick={() => handleInputChange('enrollmentChoice', 'enroll')}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                    onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'enroll')}
                   >
                     <strong>ENROLL NOW</strong> - Protect investment, activate warranty
                   </Label>
@@ -766,12 +793,14 @@ export function ThreeYearCarePackageForm({
 
               <div className="flex items-start space-x-3 p-4 border border-red-300 rounded-lg bg-red-50">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.enrollmentChoice === 'defer'
                       ? 'bg-red-100 border-2 border-red-500'
-                      : 'border-2 border-gray-300 bg-white hover:border-red-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-red-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('enrollmentChoice', 'defer')}
+                  onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'defer')}
                 >
                   {formData.enrollmentChoice === 'defer' && (
                     <Check className="h-3 w-3 text-red-600" />
@@ -779,8 +808,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer"
-                    onClick={() => handleInputChange('enrollmentChoice', 'defer')}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
+                    onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'defer')}
                   >
                     <strong>DEFER ENROLLMENT</strong> - Decline coverage, $150 reinstatement fee later
                   </Label>
@@ -811,6 +840,7 @@ export function ThreeYearCarePackageForm({
                   onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
                   className="w-full mt-1 p-2 border border-gray-300 rounded-md"
                   required
+                  disabled={readOnly}
                 >
                   <option value="">Choose payment method...</option>
                   <option value="credit-card">Credit/Debit Cards (Visa, MC, Amex, Discover)</option>
@@ -836,12 +866,14 @@ export function ThreeYearCarePackageForm({
             <div className="space-y-3">
               <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.cancellationPolicy
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('cancellationPolicy', !formData.cancellationPolicy)}
+                  onClick={readOnly ? undefined : () => handleInputChange('cancellationPolicy', !formData.cancellationPolicy)}
                 >
                   {formData.cancellationPolicy && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -849,8 +881,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-gray-800"
-                    onClick={() => handleInputChange('cancellationPolicy', !formData.cancellationPolicy)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('cancellationPolicy', !formData.cancellationPolicy)}
                   >
                     I understand the cancellation policy
                   </Label>
@@ -859,12 +891,14 @@ export function ThreeYearCarePackageForm({
 
               <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.governingLaw
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('governingLaw', !formData.governingLaw)}
+                  onClick={readOnly ? undefined : () => handleInputChange('governingLaw', !formData.governingLaw)}
                 >
                   {formData.governingLaw && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -872,8 +906,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-gray-800"
-                    onClick={() => handleInputChange('governingLaw', !formData.governingLaw)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('governingLaw', !formData.governingLaw)}
                   >
                     I agree to New York governing law
                   </Label>
@@ -882,12 +916,14 @@ export function ThreeYearCarePackageForm({
 
               <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.arbitrationClause
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('arbitrationClause', !formData.arbitrationClause)}
+                  onClick={readOnly ? undefined : () => handleInputChange('arbitrationClause', !formData.arbitrationClause)}
                 >
                   {formData.arbitrationClause && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -895,8 +931,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-gray-800"
-                    onClick={() => handleInputChange('arbitrationClause', !formData.arbitrationClause)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('arbitrationClause', !formData.arbitrationClause)}
                   >
                     I agree to arbitration clause
                   </Label>
@@ -905,12 +941,14 @@ export function ThreeYearCarePackageForm({
 
               <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.hipaaConsent
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('hipaaConsent', !formData.hipaaConsent)}
+                  onClick={readOnly ? undefined : () => handleInputChange('hipaaConsent', !formData.hipaaConsent)}
                 >
                   {formData.hipaaConsent && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -918,8 +956,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-gray-800"
-                    onClick={() => handleInputChange('hipaaConsent', !formData.hipaaConsent)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('hipaaConsent', !formData.hipaaConsent)}
                   >
                     I provide HIPAA consent
                   </Label>
@@ -930,12 +968,14 @@ export function ThreeYearCarePackageForm({
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.ageConfirmation
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('ageConfirmation', !formData.ageConfirmation)}
+                  onClick={readOnly ? undefined : () => handleInputChange('ageConfirmation', !formData.ageConfirmation)}
                 >
                   {formData.ageConfirmation && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -943,8 +983,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-blue-800"
-                    onClick={() => handleInputChange('ageConfirmation', !formData.ageConfirmation)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('ageConfirmation', !formData.ageConfirmation)}
                   >
                     I confirm I am 18+ years old and understand this document in English
                   </Label>
@@ -965,12 +1005,14 @@ export function ThreeYearCarePackageForm({
             <div className="mb-6">
               <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.acknowledgmentRead
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
+                  onClick={readOnly ? undefined : () => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
                 >
                   {formData.acknowledgmentRead && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -978,8 +1020,8 @@ export function ThreeYearCarePackageForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-gray-800"
-                    onClick={() => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
                   >
                     <span className="text-red-500">*</span> I acknowledge that I have read and understand this 3-Year Care Package Enrollment Agreement.
                     I understand the benefits, requirements, and consequences outlined above.
@@ -1002,6 +1044,7 @@ export function ThreeYearCarePackageForm({
                     onChange={(e) => handleInputChange('witnessName', e.target.value)}
                     placeholder="Print witness name"
                     className="mt-1"
+                    disabled={readOnly}
                   />
                 </div>
 
@@ -1014,6 +1057,7 @@ export function ThreeYearCarePackageForm({
                     value={formData.witnessSignatureDate}
                     onChange={(e) => handleInputChange('witnessSignatureDate', e.target.value)}
                     className="mt-1"
+                    disabled={readOnly}
                   />
                 </div>
 
@@ -1025,15 +1069,17 @@ export function ThreeYearCarePackageForm({
                       <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-green-800">Witness Signature Captured</span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleWitnessSignatureClear}
-                            className="text-red-600 border-red-300 hover:bg-red-50"
-                          >
-                            Clear
-                          </Button>
+                          {!readOnly && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleWitnessSignatureClear}
+                              className="text-red-600 border-red-300 hover:bg-red-50"
+                            >
+                              Clear
+                            </Button>
+                          )}
                         </div>
                         <img
                           src={formData.witnessSignature}
@@ -1045,11 +1091,12 @@ export function ThreeYearCarePackageForm({
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setShowWitnessSignatureDialog(true)}
+                        onClick={readOnly ? undefined : () => setShowWitnessSignatureDialog(true)}
                         className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30 flex items-center justify-center gap-2"
+                        disabled={readOnly}
                       >
                         <Edit className="h-4 w-4" />
-                        Click to Sign (Witness)
+                        {readOnly ? 'No Witness Signature' : 'Click to Sign (Witness)'}
                       </Button>
                     )}
                   </div>
@@ -1078,6 +1125,7 @@ export function ThreeYearCarePackageForm({
                     placeholder="Print patient name"
                     className="mt-1"
                     required
+                    disabled={readOnly}
                   />
                 </div>
 
@@ -1093,6 +1141,7 @@ export function ThreeYearCarePackageForm({
                     onChange={(e) => handleInputChange('patientSignatureDate', e.target.value)}
                     className="mt-1"
                     required
+                    disabled={readOnly}
                   />
                 </div>
 
@@ -1106,15 +1155,17 @@ export function ThreeYearCarePackageForm({
                       <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-green-800">Signature Captured</span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handlePatientSignatureClear}
-                            className="text-red-600 border-red-300 hover:bg-red-50"
-                          >
-                            Clear
-                          </Button>
+                          {!readOnly && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handlePatientSignatureClear}
+                              className="text-red-600 border-red-300 hover:bg-red-50"
+                            >
+                              Clear
+                            </Button>
+                          )}
                         </div>
                         <img
                           src={formData.patientSignature}
@@ -1126,11 +1177,12 @@ export function ThreeYearCarePackageForm({
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setShowPatientSignatureDialog(true)}
+                        onClick={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
                         className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30 flex items-center justify-center gap-2"
+                        disabled={readOnly}
                       >
                         <Edit className="h-4 w-4" />
-                        Click to Sign
+                        {readOnly ? 'No Patient Signature' : 'Click to Sign'}
                       </Button>
                     )}
                   </div>
@@ -1159,6 +1211,7 @@ export function ThreeYearCarePackageForm({
                   onChange={(e) => handleInputChange('staffProcessedBy', e.target.value)}
                   placeholder="Staff member name"
                   className="mt-1"
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -1171,6 +1224,7 @@ export function ThreeYearCarePackageForm({
                   value={formData.staffProcessedDate || ''}
                   onChange={(e) => handleInputChange('staffProcessedDate', e.target.value)}
                   className="mt-1"
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -1182,25 +1236,29 @@ export function ThreeYearCarePackageForm({
             Cancel
           </Button>
           <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-            Submit
+            {isEditing ? 'Update Form' : 'Submit'}
           </Button>
         </div>
       </form>
 
       {/* Signature Dialogs */}
-      <SignatureDialog
-        isOpen={showPatientSignatureDialog}
-        onClose={() => setShowPatientSignatureDialog(false)}
-        onSave={handlePatientSignatureSave}
-        title="Patient Signature"
-      />
+      {!readOnly && (
+        <>
+          <SignatureDialog
+            isOpen={showPatientSignatureDialog}
+            onClose={() => setShowPatientSignatureDialog(false)}
+            onSave={handlePatientSignatureSave}
+            title="Patient Signature"
+          />
 
-      <SignatureDialog
-        isOpen={showWitnessSignatureDialog}
-        onClose={() => setShowWitnessSignatureDialog(false)}
-        onSave={handleWitnessSignatureSave}
-        title="Witness Signature"
-      />
+          <SignatureDialog
+            isOpen={showWitnessSignatureDialog}
+            onClose={() => setShowWitnessSignatureDialog(false)}
+            onSave={handleWitnessSignatureSave}
+            title="Witness Signature"
+          />
+        </>
+      )}
     </div>
   );
 }

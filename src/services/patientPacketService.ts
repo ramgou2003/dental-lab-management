@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { NewPatientFormData } from '@/types/newPatientPacket';
 import { NewPatientPacketDB, PatientPacketSummary } from '@/types/supabasePatientPacket';
 import { convertFormDataToDatabase, convertDatabaseToFormData } from '@/utils/patientPacketConverter';
@@ -60,11 +60,30 @@ export async function updatePatientPacket(
   submissionSource: 'public' | 'internal' = 'public'
 ): Promise<{ data: NewPatientPacketDB | null; error: any }> {
   try {
+    // Check current status first to ensure we don't violate the completed rule
+    const { data: currentPacket } = await supabase
+      .from('new_patient_packets')
+      .select('form_status')
+      .eq('id', packetId)
+      .single();
+
+    const currentStatus = currentPacket?.form_status;
+    console.log('� Manual update - current status:', currentStatus);
+
     const dbData = convertFormDataToDatabase(formData, undefined, undefined, submissionSource);
     // Remove IDs from update data since they shouldn't change
     delete dbData.patient_id;
     delete dbData.lead_id;
-    
+
+    // ABSOLUTE RULE: If already completed, keep completed. Otherwise, set to completed.
+    if (currentStatus === 'completed') {
+      dbData.form_status = 'completed';
+      console.log('🔒 Manual update preserving completed status');
+    } else {
+      dbData.form_status = 'completed';
+      console.log('🔒 Manual update setting to completed');
+    }
+
     const { data, error } = await supabase
       .from('new_patient_packets')
       .update(dbData)
@@ -81,6 +100,92 @@ export async function updatePatientPacket(
     return { data, error: null };
   } catch (error) {
     console.error('Unexpected error updating patient packet:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Auto-save patient packet (preserves completed status, follows Financial Agreement pattern)
+ */
+export async function autoSavePatientPacket(
+  packetId: string,
+  formData: NewPatientFormData,
+  submissionSource: 'public' | 'internal' = 'public'
+): Promise<{ data: NewPatientPacketDB | null; error: any }> {
+  try {
+    console.log('🔄 Auto-saving patient packet:', packetId);
+
+    // Check current status before converting (to preserve it)
+    console.log('� Checking current status of patient packet:', packetId);
+    const { data: currentPacket, error: fetchError } = await supabase
+      .from('new_patient_packets')
+      .select('form_status')
+      .eq('id', packetId)
+      .single();
+
+    if (fetchError) {
+      console.error('❌ Error fetching current packet status:', fetchError);
+      return { data: null, error: fetchError };
+    }
+
+    // Get the current status to preserve it - NEVER change completed to draft
+    const currentStatus = currentPacket?.form_status;
+    console.log('� Current packet status from DB:', currentStatus);
+
+    // ABSOLUTE RULE: If form is completed, it NEVER goes back to draft
+    let finalStatus: 'completed' | 'draft';
+    if (currentStatus === 'completed') {
+      finalStatus = 'completed';
+      console.log('🔒 ABSOLUTE RULE: COMPLETED FORM STAYS COMPLETED FOREVER');
+    } else {
+      finalStatus = 'draft';
+      console.log('🔄 Form is draft, keeping as draft');
+    }
+
+    console.log('🎯 Final status (NEVER changes completed to draft):', finalStatus);
+
+    // Convert form data WITHOUT status
+    const dbData = convertFormDataToDatabase(formData, undefined, undefined, submissionSource);
+    // Remove IDs from update data since they shouldn't change
+    delete dbData.patient_id;
+    delete dbData.lead_id;
+
+    // ABSOLUTE RULE: Set status - completed forms NEVER become draft
+    dbData.form_status = finalStatus;
+
+    console.log('📝 Final dbData form_status after setting:', dbData.form_status);
+    console.log('🎯 About to update packet', packetId, 'with status:', dbData.form_status);
+
+    // ABSOLUTE SAFETY CHECK: NEVER allow completed to change to anything else
+    if (currentStatus === 'completed' && dbData.form_status !== 'completed') {
+      console.error('🚨🚨🚨 ABSOLUTE VIOLATION: Trying to change completed form to', dbData.form_status);
+      console.error('🚨🚨🚨 COMPLETED FORMS NEVER CHANGE STATUS! Aborting update.');
+      console.error('🚨🚨🚨 Current status:', currentStatus, '→ Attempted status:', dbData.form_status);
+      return { data: null, error: new Error('VIOLATION: Completed forms cannot change status') };
+    }
+
+    // DOUBLE CHECK: Ensure completed forms stay completed
+    if (currentStatus === 'completed') {
+      dbData.form_status = 'completed';
+      console.log('🔒🔒🔒 DOUBLE SAFETY: Forcing completed status to stay completed');
+    }
+
+    const { data, error } = await supabase
+      .from('new_patient_packets')
+      .update(dbData)
+      .eq('id', packetId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error auto-saving patient packet:', error);
+      return { data: null, error };
+    }
+
+    console.log('✅ Patient packet auto-saved successfully with preserved status:', data.form_status);
+    return { data, error: null };
+  } catch (error) {
+    console.error('❌ Unexpected error auto-saving patient packet:', error);
     return { data: null, error };
   }
 }
@@ -183,15 +288,23 @@ export async function getPatientPacketsByConsultationPatientId(consultationPatie
  */
 export async function getPatientPacketSummary(packetId: string): Promise<{ data: PatientPacketSummary | null; error: any }> {
   try {
+    // TODO: Fix RPC function call when Supabase types are updated
+    // const { data, error } = await supabase
+    //   .rpc('get_patient_packet_summary', { packet_id: packetId });
+
+    // For now, return basic packet data
     const { data, error } = await supabase
-      .rpc('get_patient_packet_summary', { packet_id: packetId });
+      .from('new_patient_packets')
+      .select('*')
+      .eq('id', packetId)
+      .single();
 
     if (error) {
       console.error('Error fetching patient packet summary:', error);
       return { data: null, error };
     }
 
-    return { data: data?.[0] || null, error: null };
+    return { data: data as any, error: null };
   } catch (error) {
     console.error('Unexpected error fetching patient packet summary:', error);
     return { data: null, error };
@@ -203,8 +316,15 @@ export async function getPatientPacketSummary(packetId: string): Promise<{ data:
  */
 export async function completePatientPacket(packetId: string): Promise<{ success: boolean; error: any }> {
   try {
+    // TODO: Fix RPC function call when Supabase types are updated
+    // const { data, error } = await supabase
+    //   .rpc('complete_patient_packet', { packet_id: packetId });
+
+    // For now, update the status directly
     const { data, error } = await supabase
-      .rpc('complete_patient_packet', { packet_id: packetId });
+      .from('new_patient_packets')
+      .update({ form_status: 'completed' })
+      .eq('id', packetId);
 
     if (error) {
       console.error('Error completing patient packet:', error);

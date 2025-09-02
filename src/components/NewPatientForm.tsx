@@ -27,7 +27,7 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
     state: '',
     zipCode: '',
     gender: 'male',
-    status: 'New patient'
+    status: 'ACTIVE'
   });
 
   const [errors, setErrors] = useState({

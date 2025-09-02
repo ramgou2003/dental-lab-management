@@ -14,6 +14,7 @@ interface InformedConsentSmokingDialogProps {
   newPatientPacketId?: string;
   initialData?: any;
   isEditing?: boolean;
+  readOnly?: boolean;
 }
 
 export function InformedConsentSmokingDialog({
@@ -27,6 +28,7 @@ export function InformedConsentSmokingDialog({
   newPatientPacketId,
   initialData,
   isEditing = false,
+  readOnly = false,
 }: InformedConsentSmokingDialogProps) {
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [autoSaveMessage, setAutoSaveMessage] = useState('');
@@ -145,11 +147,11 @@ export function InformedConsentSmokingDialog({
           patientDateOfBirth={patientDateOfBirth}
           initialData={initialData}
           isEditing={isEditing}
-          readOnly={false}
-          onAutoSave={handleAutoSave}
-          autoSaveStatus={autoSaveStatus}
-          autoSaveMessage={autoSaveMessage}
-          lastSavedTime={lastSavedTime}
+          readOnly={readOnly}
+          onAutoSave={readOnly ? undefined : handleAutoSave}
+          autoSaveStatus={readOnly ? 'idle' : autoSaveStatus}
+          autoSaveMessage={readOnly ? '' : autoSaveMessage}
+          lastSavedTime={readOnly ? '' : lastSavedTime}
         />
       </DialogContent>
     </Dialog>

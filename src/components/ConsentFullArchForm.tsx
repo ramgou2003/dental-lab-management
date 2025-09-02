@@ -154,43 +154,43 @@ export function ConsentFullArchForm({
       witnessSignature: initialData?.witnessSignature || "",
       witnessSignatureDate: initialData?.witnessSignatureDate || today,
 
-      // Legacy nested objects for form compatibility (to prevent undefined errors)
-      sedationPlan: {
-        localOnly: initialData?.sedationLocalOnly ?? false,
-        nitrous: initialData?.sedationNitrous ?? false,
-        ivConscious: initialData?.sedationIvConscious ?? false,
-        generalHospital: initialData?.sedationGeneralHospital ?? false
+      // Nested objects for form compatibility - use correct object structure
+      sedationPlan: initialData?.sedationPlan || {
+        localOnly: false,
+        nitrous: false,
+        ivConscious: false,
+        generalHospital: false
       },
-      plannedDrugs: {
-        midazolam: initialData?.midazolam ?? false,
-        fentanyl: initialData?.fentanyl ?? false,
-        ketamine: initialData?.ketamine ?? false,
-        dexamethasone: initialData?.dexamethasone ?? false
+      plannedDrugs: initialData?.plannedDrugs || {
+        midazolam: false,
+        fentanyl: false,
+        ketamine: false,
+        dexamethasone: false
       },
-      upperGraftMaterial: {
-        allograft: initialData?.upperGraftAllograft ?? false,
-        xenograft: initialData?.upperGraftXenograft ?? false,
-        autograft: initialData?.upperGraftAutograft ?? false
+      upperGraftMaterial: initialData?.upperGraftMaterial || {
+        allograft: false,
+        xenograft: false,
+        autograft: false
       },
-      upperProsthesis: {
-        zirconia: initialData?.upperProsthesisZirconia ?? false,
-        overdenture: initialData?.upperProsthesisOverdenture ?? false
+      upperProsthesis: initialData?.upperProsthesis || {
+        zirconia: false,
+        overdenture: false
       },
-      lowerGraftMaterial: {
-        allograft: initialData?.lowerGraftAllograft ?? false,
-        xenograft: initialData?.lowerGraftXenograft ?? false,
-        autograft: initialData?.lowerGraftAutograft ?? false
+      lowerGraftMaterial: initialData?.lowerGraftMaterial || {
+        allograft: false,
+        xenograft: false,
+        autograft: false
       },
-      lowerProsthesis: {
-        zirconia: initialData?.lowerProsthesisZirconia ?? false,
-        overdenture: initialData?.lowerProsthesisOverdenture ?? false
+      lowerProsthesis: initialData?.lowerProsthesis || {
+        zirconia: false,
+        overdenture: false
       },
-      alternativesInitials: {
-        noTreatment: initialData?.alternativesNoTreatmentInitials || "",
-        conventionalDentures: initialData?.alternativesConventionalDenturesInitials || "",
-        segmentedExtraction: initialData?.alternativesSegmentedExtractionInitials || "",
-        removableOverdentures: initialData?.alternativesRemovableOverdenturesInitials || "",
-        zygomaticImplants: initialData?.alternativesZygomaticImplantsInitials || ""
+      alternativesInitials: initialData?.alternativesInitials || {
+        noTreatment: "",
+        conventionalDentures: "",
+        segmentedExtraction: "",
+        removableOverdentures: "",
+        zygomaticImplants: ""
       },
       surgicalExtractions: {
         count: "",
@@ -285,6 +285,12 @@ export function ConsentFullArchForm({
       console.log('🔍 Date/Time data from initialData:', {
         date: initialData.date,
         consentTime: initialData.consentTime
+      });
+      console.log('🔍 Treatment section data from initialData:', {
+        sedationPlan: initialData.sedationPlan,
+        upperGraftMaterial: initialData.upperGraftMaterial,
+        upperProsthesis: initialData.upperProsthesis,
+        treatmentDescriptionInitials: initialData.treatmentDescriptionInitials
       });
 
       const today = new Date().toISOString().split('T')[0];
@@ -382,6 +388,57 @@ export function ConsentFullArchForm({
         acknowledgmentRead: initialData.acknowledgmentRead ?? prev.acknowledgmentRead ?? false,
         acknowledgmentOutcome: initialData.acknowledgmentOutcome ?? prev.acknowledgmentOutcome ?? false,
         acknowledgmentAuthorize: initialData.acknowledgmentAuthorize ?? prev.acknowledgmentAuthorize ?? false,
+
+        // Nested Objects - Upper Arch Graft Material
+        upperGraftMaterial: initialData.upperGraftMaterial || prev.upperGraftMaterial || {
+          allograft: false,
+          xenograft: false,
+          autograft: false
+        },
+
+        // Nested Objects - Upper Arch Prosthesis
+        upperProsthesis: initialData.upperProsthesis || prev.upperProsthesis || {
+          zirconia: false,
+          overdenture: false
+        },
+
+        // Nested Objects - Lower Arch Graft Material
+        lowerGraftMaterial: initialData.lowerGraftMaterial || prev.lowerGraftMaterial || {
+          allograft: false,
+          xenograft: false,
+          autograft: false
+        },
+
+        // Nested Objects - Lower Arch Prosthesis
+        lowerProsthesis: initialData.lowerProsthesis || prev.lowerProsthesis || {
+          zirconia: false,
+          overdenture: false
+        },
+
+        // Nested Objects - Sedation Plan
+        sedationPlan: initialData.sedationPlan || prev.sedationPlan || {
+          localOnly: false,
+          nitrous: false,
+          ivConscious: false,
+          generalHospital: false
+        },
+
+        // Nested Objects - Planned Drugs
+        plannedDrugs: initialData.plannedDrugs || prev.plannedDrugs || {
+          midazolam: false,
+          fentanyl: false,
+          ketamine: false,
+          dexamethasone: false
+        },
+
+        // Nested Objects - Alternatives Initials
+        alternativesInitials: initialData.alternativesInitials || prev.alternativesInitials || {
+          noTreatment: "",
+          conventionalDentures: "",
+          segmentedExtraction: "",
+          removableOverdentures: "",
+          zygomaticImplants: ""
+        },
 
         // Signatures
         surgeonName: initialData.surgeonName || prev.surgeonName || "",
@@ -709,6 +766,11 @@ export function ConsentFullArchForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Only allow submission on the final step
+    if (!isLastStep) {
+      return;
+    }
+
     // Validation
     if (!formData.patientName) {
       toast.error('Please enter patient name');
@@ -748,142 +810,20 @@ export function ConsentFullArchForm({
       return null;
     };
 
-    // Convert form data to match service interface
+    // Pass the raw form data - let the service handle the conversion
+    // This ensures consistency between auto-save and submit
     const submissionData = {
-      patient_name: formData.patientName,
-      chart_number: formData.chartNumber,
-      consent_date: isValidDate(formData.date) ? formData.date : currentDate,
-      consent_time: validateTime(formData.consentTime),
-
-      // Patient & Interpreter Information
-      primary_language: formData.primaryLanguage,
-      other_language_text: formData.otherLanguageText,
-      interpreter_required: formData.interpreterRequired,
-      interpreter_name: formData.interpreterName,
-      interpreter_credential: formData.interpreterCredential,
-      patient_info_initials: formData.patientInfoInitials,
-
-      // Treatment Description
-      arch_type: formData.archType,
-      upper_jaw: formData.upperJaw,
-      lower_jaw: formData.lowerJaw,
-
-      // Upper Arch Treatment Details
-      upper_teeth_regions: formData.upperTeethRegions,
-      upper_implants: formData.upperImplants,
-      upper_same_day_load: formData.upperSameDayLoad,
-
-      // Lower Arch Treatment Details
-      lower_teeth_regions: formData.lowerTeethRegions,
-      lower_implants: formData.lowerImplants,
-      lower_same_day_load: formData.lowerSameDayLoad,
-
-      // ASA Physical Status
-      asa_physical_status: formData.asaPhysicalStatus,
-
-      // Treatment Description Initials
-      treatment_description_initials: formData.treatmentDescriptionInitials,
-
-      // Upper Arch Graft Material
-      upper_graft_allograft: formData.upperGraftMaterial.allograft,
-      upper_graft_xenograft: formData.upperGraftMaterial.xenograft,
-      upper_graft_autograft: formData.upperGraftMaterial.autograft,
-
-      // Upper Arch Prosthesis
-      upper_prosthesis_zirconia: formData.upperProsthesis.zirconia,
-      upper_prosthesis_overdenture: formData.upperProsthesis.overdenture,
-
-      // Lower Arch Graft Material
-      lower_graft_allograft: formData.lowerGraftMaterial.allograft,
-      lower_graft_xenograft: formData.lowerGraftMaterial.xenograft,
-      lower_graft_autograft: formData.lowerGraftMaterial.autograft,
-
-      // Lower Arch Prosthesis
-      lower_prosthesis_zirconia: formData.lowerProsthesis.zirconia,
-      lower_prosthesis_overdenture: formData.lowerProsthesis.overdenture,
-
-      // Sedation Plan
-      sedation_local_only: formData.sedationPlan.localOnly,
-      sedation_nitrous: formData.sedationPlan.nitrous,
-      sedation_iv_conscious: formData.sedationPlan.ivConscious,
-      sedation_general_hospital: formData.sedationPlan.generalHospital,
-
-      // Planned Drugs
-      midazolam: formData.plannedDrugs.midazolam,
-      fentanyl: formData.plannedDrugs.fentanyl,
-      ketamine: formData.plannedDrugs.ketamine,
-      dexamethasone: formData.plannedDrugs.dexamethasone,
-
-      // Alternatives Initials
-      alternatives_no_treatment_initials: formData.alternativesInitials.noTreatment,
-      alternatives_conventional_dentures_initials: formData.alternativesInitials.conventionalDentures,
-      alternatives_segmented_extraction_initials: formData.alternativesInitials.segmentedExtraction,
-      alternatives_removable_overdentures_initials: formData.alternativesInitials.removableOverdentures,
-      alternatives_zygomatic_implants_initials: formData.alternativesInitials.zygomaticImplants,
-
-      // Material Risks
-      risks_understood: formData.risksUnderstood,
-      material_risks_initials: formData.materialRisksInitials,
-
-      // Sedation & Anesthesia Consent
-      escort_name: formData.escortName,
-      escort_phone: formData.escortPhone,
-      medications_disclosed: formData.medicationsDisclosed,
-      decline_iv_sedation: formData.declineIVSedation,
-      sedation_initials: formData.sedationInitials,
-
-      iv_sedation_fee: formData.ivSedation.fee,
-      iv_sedation_covered: formData.ivSedation.covered,
-
-      // Financial Disclosure
-      surgical_extractions_count: formData.surgicalExtractions.count,
-      surgical_extractions_fee: formData.surgicalExtractions.fee,
-      surgical_extractions_covered: formData.surgicalExtractions.covered,
-      implant_fixtures_count: formData.implantFixtures.count,
-      implant_fixtures_fee: formData.implantFixtures.fee,
-      implant_fixtures_covered: formData.implantFixtures.covered,
-      zirconia_bridge_fee: formData.zirconiabridge.fee,
-      zirconia_bridge_covered: formData.zirconiabridge.covered,
-      financial_initials: formData.financialInitials,
-
-      // Photo/Video Authorization
-      internal_record_keeping: formData.internalRecordKeeping,
-      professional_education: formData.professionalEducation,
-      marketing_social_media: formData.marketingSocialMedia,
-      photo_video_initials: formData.photoVideoInitials,
-
-      // HIPAA Email/SMS Authorization
-      hipaa_email_sms: formData.hipaaEmailSms,
-      hipaa_email: formData.hipaaEmail,
-      hipaa_phone: formData.hipaaPhone,
-
-      // Opioid Consent
-      opioid_initials: formData.opioidInitials,
-      smallest_opioid_supply: formData.smallestOpioidSupply,
-
-      // Patient Acknowledgment & Authorization
-      acknowledgment_read: formData.acknowledgmentRead,
-      acknowledgment_outcome: formData.acknowledgmentOutcome,
-      acknowledgment_authorize: formData.acknowledgmentAuthorize,
-
-      // Signatures
-      surgeon_name: formData.surgeonName,
-      surgeon_signature: formData.surgeonSignature,
-      surgeon_date: isValidDate(formData.surgeonDate) ? formData.surgeonDate : currentDate,
-      patient_signature: formData.patientSignature,
-      patient_signature_date: isValidDate(formData.patientSignatureDate) ? formData.patientSignatureDate : currentDate,
-      patient_signature_time: formData.patientSignatureTime || '',
-      witness_name: formData.witnessName,
-      witness_signature: formData.witnessSignature,
-      witness_signature_date: isValidDate(formData.witnessSignatureDate) ? formData.witnessSignatureDate : currentDate,
-      final_initials: formData.finalInitials
+      ...formData,
+      // Ensure dates are properly formatted or use current date as fallback
+      date: isValidDate(formData.date) ? formData.date : currentDate,
+      consentTime: validateTime(formData.consentTime) || formData.consentTime
     };
 
     onSubmit(submissionData);
     toast.success('Consent Packet for Full Arch Surgery form submitted successfully');
   };
 
-  return (
+  const formContent = (
     <div className="h-[80vh] flex flex-col">
       {/* Fixed Header - Full Width */}
       <DialogHeader className="flex-shrink-0 w-full px-6 pt-6 pb-4 border-b">
@@ -928,7 +868,7 @@ export function ConsentFullArchForm({
                     setActiveTab(step.id);
                     scrollToTop();
                   }}
-                  className={`text-sm font-medium cursor-pointer hover:text-blue-700 transition-colors ${
+                  className={`navigation-button text-sm font-medium cursor-pointer hover:text-blue-700 transition-colors ${
                     activeTab === step.id ? 'text-blue-600' :
                     isStepCompleted(step.id) ? 'text-blue-600' : 'text-gray-400'
                   }`}
@@ -4080,7 +4020,7 @@ export function ConsentFullArchForm({
             variant="outline"
             onClick={goToPreviousStep}
             disabled={isFirstStep}
-            className="flex items-center gap-2 px-4 py-2"
+            className="navigation-button flex items-center gap-2 px-4 py-2"
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
@@ -4091,7 +4031,7 @@ export function ConsentFullArchForm({
               !readOnly ? (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2">
                   <CheckCircle className="h-4 w-4" />
-                  Submit
+                  {isEditing ? 'Update' : 'Submit'}
                 </Button>
               ) : (
                 <Button type="button" disabled className="bg-gray-400 text-white flex items-center gap-2 px-4 py-2">
@@ -4102,8 +4042,12 @@ export function ConsentFullArchForm({
             ) : (
               <Button
                 type="button"
-                onClick={goToNextStep}
-                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  goToNextStep();
+                }}
+                className="navigation-button bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2"
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -4127,6 +4071,84 @@ export function ConsentFullArchForm({
       </div> {/* Close content container */}
     </div>
   );
+
+  // Return with readOnly wrapper if needed
+  if (readOnly) {
+    return (
+      <div className="preview-form">
+        <style>{`
+          /* Disable interactions but keep original styling */
+          .preview-form input,
+          .preview-form textarea,
+          .preview-form select,
+          .preview-form button[type="button"]:not(.navigation-button),
+          .preview-form [role="button"]:not(.navigation-button),
+          .preview-form [data-radix-collection-item],
+          .preview-form [role="combobox"],
+          .preview-form [data-radix-select-trigger],
+          .preview-form [data-radix-popover-trigger] {
+            pointer-events: none !important;
+            cursor: default !important;
+          }
+
+          /* Keep navigation buttons functional */
+          .preview-form .navigation-button {
+            pointer-events: auto !important;
+            cursor: pointer !important;
+          }
+
+          /* Disable form submission and editing buttons */
+          .preview-form button:not(.navigation-button) {
+            pointer-events: none !important;
+            cursor: default !important;
+          }
+
+          /* Disable checkboxes and radio buttons interactions but keep styling */
+          .preview-form input[type="checkbox"],
+          .preview-form input[type="radio"],
+          .preview-form [role="checkbox"],
+          .preview-form [role="radio"] {
+            pointer-events: none !important;
+            cursor: default !important;
+          }
+
+          /* Disable custom checkbox/radio elements with onClick handlers */
+          .preview-form div[onclick],
+          .preview-form p[onclick],
+          .preview-form span[onclick],
+          .preview-form .cursor-pointer:not(.navigation-button) {
+            pointer-events: none !important;
+            cursor: default !important;
+          }
+
+          /* Disable dropdown interactions */
+          .preview-form [data-radix-select-content],
+          .preview-form [data-radix-select-item],
+          .preview-form [data-radix-popover-content] {
+            pointer-events: none !important;
+          }
+
+          /* Disable signature areas */
+          .preview-form canvas,
+          .preview-form .signature-pad {
+            pointer-events: none !important;
+            cursor: default !important;
+          }
+
+          /* Disable all clickable elements that might have event handlers */
+          .preview-form [data-radix-checkbox-root],
+          .preview-form [data-radix-radio-root],
+          .preview-form [data-state] {
+            pointer-events: none !important;
+            cursor: default !important;
+          }
+        `}</style>
+        {formContent}
+      </div>
+    );
+  }
+
+  return formContent;
 
   // Helper functions for signature dialogs
   function getSignatureTitle(key: string): string {

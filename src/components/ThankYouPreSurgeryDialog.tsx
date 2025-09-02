@@ -102,10 +102,10 @@ export function ThankYouPreSurgeryDialog({
     try {
       console.log('🚀 Form submission started with data:', formData);
 
-      // Set status to completed when form is submitted
+      // Set status to submitted when form is submitted
       const submissionData = {
         ...formData,
-        status: 'completed'
+        status: 'submitted'
       };
 
       console.log('📝 Submission data with status:', submissionData);

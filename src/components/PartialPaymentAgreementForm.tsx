@@ -105,6 +105,62 @@ export function PartialPaymentAgreementForm({
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [showPatientSignatureDialog, setShowPatientSignatureDialog] = useState(false);
 
+  // Update form data when initialData changes (for editing mode)
+  useEffect(() => {
+    if (initialData && isEditing) {
+      console.log('🔄 Updating form data with initialData for editing:', initialData);
+
+      const today = new Date().toISOString().split('T')[0];
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 1);
+      const oneYearFromNow = futureDate.toISOString().split('T')[0];
+
+      const updatedFormData = {
+        // Agreement Details
+        agreementDate: initialData.agreementDate || today,
+        providerLicenseNumber: initialData.providerLicenseNumber || "",
+
+        // Patient Information
+        firstName: initialData.firstName || patientName.split(' ')[0] || "",
+        lastName: initialData.lastName || patientName.split(' ').slice(1).join(' ') || "",
+        address: initialData.address || "",
+        email: initialData.email || "",
+        phone: initialData.phone || "",
+
+        // Payment Details
+        paymentAmount: initialData.paymentAmount || "",
+        paymentDate: initialData.paymentDate || today,
+        estimatedTotalCost: initialData.estimatedTotalCost || "",
+        remainingBalance: initialData.remainingBalance || "",
+        finalPaymentDueDate: initialData.finalPaymentDueDate || oneYearFromNow,
+
+        // Treatment Selection
+        selectedTreatments: initialData.selectedTreatments || [],
+
+        // Patient Acknowledgments
+        readAndUnderstood: initialData.readAndUnderstood ?? false,
+        understandRefundPolicy: initialData.understandRefundPolicy ?? false,
+        understandFullPaymentRequired: initialData.understandFullPaymentRequired ?? false,
+        agreeNoDisputes: initialData.agreeNoDisputes ?? false,
+        understandOneYearValidity: initialData.understandOneYearValidity ?? false,
+        understandNoCashPayments: initialData.understandNoCashPayments ?? false,
+        enteringVoluntarily: initialData.enteringVoluntarily ?? false,
+
+        // Signatures
+        patientFullName: initialData.patientFullName || patientName || "",
+        patientSignature: initialData.patientSignature || "",
+        patientSignatureDate: initialData.patientSignatureDate || today,
+        providerRepName: initialData.providerRepresentativeName || "Dr. Smith",
+        providerRepTitle: initialData.providerRepresentativeTitle || "Practice Manager",
+        practiceSignatureDate: initialData.practiceSignatureDate || today
+      };
+
+      console.log('✅ Setting updated form data:', updatedFormData);
+      setFormData(updatedFormData);
+      setIsFormInitialized(true);
+    }
+  }, [initialData, isEditing, patientName]);
+
   // Treatment options
   const treatmentOptions = [
     "Wisdom Teeth Extraction",
@@ -220,27 +276,35 @@ export function PartialPaymentAgreementForm({
   }, [formData, onAutoSave, isFormInitialized]);
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    if (!readOnly) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handleTreatmentChange = (treatment: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedTreatments: checked 
-        ? [...prev.selectedTreatments, treatment]
-        : prev.selectedTreatments.filter(t => t !== treatment)
-    }));
+    if (!readOnly) {
+      setFormData(prev => ({
+        ...prev,
+        selectedTreatments: checked
+          ? [...prev.selectedTreatments, treatment]
+          : prev.selectedTreatments.filter(t => t !== treatment)
+      }));
+    }
   };
 
   const handlePatientSignatureSave = (signatureData: string) => {
-    setFormData(prev => ({ ...prev, patientSignature: signatureData }));
+    if (!readOnly) {
+      setFormData(prev => ({ ...prev, patientSignature: signatureData }));
+    }
   };
 
   const handlePatientSignatureClear = () => {
-    setFormData(prev => ({ ...prev, patientSignature: "" }));
+    if (!readOnly) {
+      setFormData(prev => ({ ...prev, patientSignature: "" }));
+    }
   };
 
   const calculateRemainingBalance = () => {
@@ -262,7 +326,9 @@ export function PartialPaymentAgreementForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (readOnly) return;
+
     // Validation
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
       toast.error('Please fill in all required patient information fields');
@@ -661,10 +727,12 @@ export function PartialPaymentAgreementForm({
                       {treatmentOptions.map((treatment, index) => (
                         <div key={index} className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                           <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                            className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                              readOnly ? 'cursor-default' : 'cursor-pointer'
+                            } transition-colors ${
                               formData.selectedTreatments.includes(treatment)
                                 ? 'bg-blue-100'
-                                : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                                : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                             }`}
                             onClick={() => !readOnly && handleTreatmentChange(treatment, !formData.selectedTreatments.includes(treatment))}
                           >
@@ -674,7 +742,7 @@ export function PartialPaymentAgreementForm({
                           </div>
                           <div className="flex-1">
                             <Label
-                              className="text-sm font-medium cursor-pointer text-blue-800"
+                              className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
                               onClick={() => !readOnly && handleTreatmentChange(treatment, !formData.selectedTreatments.includes(treatment))}
                             >
                               {treatment}
@@ -769,10 +837,12 @@ export function PartialPaymentAgreementForm({
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.readAndUnderstood
                             ? 'bg-green-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('readAndUnderstood', !formData.readAndUnderstood)}
                       >
@@ -782,7 +852,7 @@ export function PartialPaymentAgreementForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                           onClick={() => !readOnly && handleInputChange('readAndUnderstood', !formData.readAndUnderstood)}
                         >
                           I have read and understood all terms of this agreement
@@ -792,10 +862,12 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.understandRefundPolicy
                             ? 'bg-green-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('understandRefundPolicy', !formData.understandRefundPolicy)}
                       >
@@ -805,7 +877,7 @@ export function PartialPaymentAgreementForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                           onClick={() => !readOnly && handleInputChange('understandRefundPolicy', !formData.understandRefundPolicy)}
                         >
                           I understand the refund policy and exceptions
@@ -815,10 +887,12 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.understandFullPaymentRequired
                             ? 'bg-green-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('understandFullPaymentRequired', !formData.understandFullPaymentRequired)}
                       >
@@ -828,7 +902,7 @@ export function PartialPaymentAgreementForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                           onClick={() => !readOnly && handleInputChange('understandFullPaymentRequired', !formData.understandFullPaymentRequired)}
                         >
                           I understand that full payment is required before treatment begins
@@ -838,10 +912,12 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.agreeNoDisputes
                             ? 'bg-green-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('agreeNoDisputes', !formData.agreeNoDisputes)}
                       >
@@ -851,7 +927,7 @@ export function PartialPaymentAgreementForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                           onClick={() => !readOnly && handleInputChange('agreeNoDisputes', !formData.agreeNoDisputes)}
                         >
                           I agree not to dispute legitimate charges
@@ -861,10 +937,12 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.understandOneYearValidity
                             ? 'bg-green-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('understandOneYearValidity', !formData.understandOneYearValidity)}
                       >
@@ -874,7 +952,7 @@ export function PartialPaymentAgreementForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                           onClick={() => !readOnly && handleInputChange('understandOneYearValidity', !formData.understandOneYearValidity)}
                         >
                           I understand the one-year validity period
@@ -884,10 +962,12 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.understandNoCashPayments
                             ? 'bg-green-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('understandNoCashPayments', !formData.understandNoCashPayments)}
                       >
@@ -897,7 +977,7 @@ export function PartialPaymentAgreementForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                           onClick={() => !readOnly && handleInputChange('understandNoCashPayments', !formData.understandNoCashPayments)}
                         >
                           I understand that no cash payments are accepted
@@ -907,10 +987,12 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.enteringVoluntarily
                             ? 'bg-green-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('enteringVoluntarily', !formData.enteringVoluntarily)}
                       >
@@ -920,7 +1002,7 @@ export function PartialPaymentAgreementForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
                           onClick={() => !readOnly && handleInputChange('enteringVoluntarily', !formData.enteringVoluntarily)}
                         >
                           I am entering this agreement voluntarily
@@ -1014,20 +1096,21 @@ export function PartialPaymentAgreementForm({
                           {formData.patientSignature ? (
                             <SignaturePreview
                               signature={formData.patientSignature}
-                              onEdit={() => setShowPatientSignatureDialog(true)}
-                              onClear={handlePatientSignatureClear}
+                              onEdit={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
+                              onClear={readOnly ? undefined : handlePatientSignatureClear}
                               label="Patient Signature"
+                              readOnly={readOnly}
                             />
                           ) : (
                             <Button
                               type="button"
                               variant="outline"
-                              onClick={() => setShowPatientSignatureDialog(true)}
+                              onClick={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
                               className="w-64 h-20 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
                               disabled={readOnly}
                             >
                               <Edit className="h-4 w-4" />
-                              Sign Here
+                              {readOnly ? 'No Signature' : 'Sign Here'}
                             </Button>
                           )}
                         </div>
@@ -1065,7 +1148,7 @@ export function PartialPaymentAgreementForm({
               </Button>
               {!readOnly ? (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  Submit
+                  {isEditing ? 'Update Form' : 'Submit'}
                 </Button>
               ) : (
                 <Button type="button" disabled className="bg-gray-400 text-white">
@@ -1078,13 +1161,15 @@ export function PartialPaymentAgreementForm({
       </div>
 
       {/* Signature Dialog */}
-      <SignatureDialog
-        isOpen={showPatientSignatureDialog}
-        onClose={() => setShowPatientSignatureDialog(false)}
-        onSave={handlePatientSignatureSave}
-        title="Patient Signature"
-        currentSignature={formData.patientSignature}
-      />
+      {!readOnly && (
+        <SignatureDialog
+          isOpen={showPatientSignatureDialog}
+          onClose={() => setShowPatientSignatureDialog(false)}
+          onSave={handlePatientSignatureSave}
+          title="Patient Signature"
+          currentSignature={formData.patientSignature}
+        />
+      )}
     </div>
   );
 }

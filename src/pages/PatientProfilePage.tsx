@@ -22,19 +22,22 @@ import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { TreatmentDialog, TreatmentData } from "@/components/TreatmentDialog";
 import { ConsentFullArchDialog } from "@/components/ConsentFullArchDialog";
 import { FinancialAgreementDialog } from "@/components/FinancialAgreementDialog";
+import { FinancialAgreementPreview } from "@/components/FinancialAgreementPreview";
 import { supabase } from "@/integrations/supabase/client";
 import { FinalDesignApprovalDialog } from "@/components/FinalDesignApprovalDialog";
 import { NewPatientPacketForm } from "@/components/NewPatientPacketForm";
+import { NewPatientPacketPreview } from "@/components/NewPatientPacketPreview";
 import { MedicalRecordsReleaseDialog } from "@/components/MedicalRecordsReleaseDialog";
 import { InformedConsentSmokingDialog } from "@/components/InformedConsentSmokingDialog";
 import { ThankYouPreSurgeryDialog } from "@/components/ThankYouPreSurgeryDialog";
 import { ThreeYearCarePackageDialog } from "@/components/ThreeYearCarePackageDialog";
 import { FiveYearWarrantyDialog } from "@/components/FiveYearWarrantyDialog";
 import { PartialPaymentAgreementDialog } from "@/components/PartialPaymentAgreementDialog";
-import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
+import { ConsultationViewer } from "@/components/ConsultationViewer";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
 import { usePatientAppointments } from "@/hooks/usePatientAppointments";
+import { usePermissions } from "@/hooks/usePermissions";
 import { LabScript } from "@/hooks/useLabScripts";
 import { ManufacturingItem } from "@/hooks/useManufacturingItems";
 import { useReportCards } from "@/hooks/useReportCards";
@@ -69,8 +72,7 @@ import {
   Edit2,
   Trash2,
   X,
-  AlertTriangle,
-  Printer
+  AlertTriangle
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -173,6 +175,9 @@ export function PatientProfilePage() {
   const { deliveryItems, loading: deliveryItemsLoading, updateDeliveryStatus } = useDeliveryItems();
   const { toast } = useToast();
 
+  // Permission checks for admin functionality
+  const { isAdminUser } = usePermissions();
+
   // Filter report cards for this specific patient
   const patientReportCards = reportCards.filter(card => {
     // Check if the report card's lab script belongs to this patient
@@ -246,6 +251,10 @@ export function PatientProfilePage() {
   const [showFinancialAgreementForm, setShowFinancialAgreementForm] = useState(false);
   const [showFinalDesignApprovalForm, setShowFinalDesignApprovalForm] = useState(false);
   const [showNewPatientPacketForm, setShowNewPatientPacketForm] = useState(false);
+  const [showNewPatientPacketPreview, setShowNewPatientPacketPreview] = useState(false);
+  const [selectedPatientPacketForPreview, setSelectedPatientPacketForPreview] = useState<any>(null);
+  const [showFinancialAgreementPreview, setShowFinancialAgreementPreview] = useState(false);
+  const [selectedFinancialAgreementForPreview, setSelectedFinancialAgreementForPreview] = useState<any>(null);
   const [showMedicalRecordsReleaseForm, setShowMedicalRecordsReleaseForm] = useState(false);
   const [showInformedConsentSmokingForm, setShowInformedConsentSmokingForm] = useState(false);
   const [showThankYouPreSurgeryForm, setShowThankYouPreSurgeryForm] = useState(false);
@@ -284,12 +293,7 @@ export function PatientProfilePage() {
   const [showDeletePartialPaymentAgreementFormConfirm, setShowDeletePartialPaymentAgreementFormConfirm] = useState(false);
   const [partialPaymentAgreementFormToDelete, setPartialPaymentAgreementFormToDelete] = useState<any | null>(null);
 
-  // Print Preview States
-  const [showPrintPreview, setShowPrintPreview] = useState(false);
-  const [printFormData, setPrintFormData] = useState<any>(null);
-  const [printFormType, setPrintFormType] = useState<string>('');
-  const [printPatientName, setPrintPatientName] = useState<string>('');
-  const [printPatientDOB, setPrintPatientDOB] = useState<string>('');
+
 
   // State for Patient Packets
   const [patientPackets, setPatientPackets] = useState<any[]>([]);
@@ -298,6 +302,12 @@ export function PatientProfilePage() {
   const [isEditingPatientPacket, setIsEditingPatientPacket] = useState(false);
   const [showDeletePacketConfirm, setShowDeletePacketConfirm] = useState(false);
   const [packetToDelete, setPacketToDelete] = useState<any | null>(null);
+
+  // State for Consultation Forms
+  const [consultationForms, setConsultationForms] = useState<any[]>([]);
+  const [loadingConsultationForms, setLoadingConsultationForms] = useState(false);
+  const [selectedConsultation, setSelectedConsultation] = useState<any | null>(null);
+  const [showConsultationViewer, setShowConsultationViewer] = useState(false);
 
   // State for Financial Agreement Forms
   const [financialAgreements, setFinancialAgreements] = useState<any[]>([]);
@@ -699,6 +709,13 @@ export function PatientProfilePage() {
     }
   }, [patientId]);
 
+  // Fetch consultation forms when patient data is loaded
+  useEffect(() => {
+    if (patient) {
+      fetchConsultationForms();
+    }
+  }, [patient]);
+
   const fetchPatientData = async () => {
     try {
       const { data, error } = await supabase
@@ -783,6 +800,53 @@ export function PatientProfilePage() {
     } finally {
       setLoadingPatientPackets(false);
     }
+  };
+
+  const fetchConsultationForms = async () => {
+    if (!patient) return;
+
+    try {
+      setLoadingConsultationForms(true);
+
+      // Construct patient name to match consultation records
+      const patientName = patient.first_name && patient.last_name
+        ? `${patient.first_name} ${patient.last_name}`
+        : patient.name || '';
+
+      if (!patientName) {
+        console.log('No patient name available for consultation lookup');
+        return;
+      }
+
+      // Fetch consultation forms for this patient
+      const { data: consultations, error: consultationError } = await supabase
+        .from('consultations')
+        .select('*')
+        .eq('patient_name', patientName)
+        .order('created_at', { ascending: false });
+
+      if (consultationError) {
+        console.error('Error fetching consultation forms:', consultationError);
+        return;
+      }
+
+      console.log('Found consultation forms for patient:', patientName, consultations);
+      setConsultationForms(consultations || []);
+    } catch (error) {
+      console.error('Unexpected error fetching consultation forms:', error);
+    } finally {
+      setLoadingConsultationForms(false);
+    }
+  };
+
+  const handleViewConsultation = (consultation: any) => {
+    setSelectedConsultation(consultation);
+    setShowConsultationViewer(true);
+  };
+
+  const handleCloseConsultationViewer = () => {
+    setShowConsultationViewer(false);
+    setSelectedConsultation(null);
   };
 
   const fetchFinancialAgreements = async () => {
@@ -1289,96 +1353,7 @@ export function PatientProfilePage() {
     }
   };
 
-  // Print handler functions
-  const handlePrintNewPatientPacket = (packet: any) => {
-    console.log('Print New Patient Packet:', packet);
-    if (!packet) {
-      console.error('No packet data provided');
-      return;
-    }
-    setPrintFormData(packet);
-    setPrintFormType('New Patient Packet');
-    setPrintPatientName(`${packet.first_name || ''} ${packet.last_name || ''}`.trim() || 'Unknown Patient');
-    setPrintPatientDOB(packet.date_of_birth || '');
-    setShowPrintPreview(true);
-  };
 
-  const handlePrintFinancialAgreement = (agreement: any) => {
-    console.log('Print Financial Agreement:', agreement);
-    if (!agreement) {
-      console.error('No agreement data provided');
-      return;
-    }
-    setPrintFormData(agreement);
-    setPrintFormType('Financial Agreement');
-    setPrintPatientName(agreement.patient_name || 'Unknown Patient');
-    setPrintPatientDOB(agreement.date_of_birth || '');
-    setShowPrintPreview(true);
-  };
-
-  const handlePrintConsentForm = (form: any) => {
-    console.log('Print Consent Form:', form);
-    setPrintFormData(form);
-    setPrintFormType('Consent Full Arch Form');
-    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
-    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
-    setShowPrintPreview(true);
-  };
-
-  const handlePrintMedicalRecordsReleaseForm = (form: any) => {
-    console.log('Print Medical Records Release Form:', form);
-    setPrintFormData(form);
-    setPrintFormType('Medical Records Release Form');
-    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
-    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
-    setShowPrintPreview(true);
-  };
-
-  const handlePrintInformedConsentSmokingForm = (form: any) => {
-    console.log('Print Informed Consent Smoking Form:', form);
-    setPrintFormData(form);
-    setPrintFormType('Informed Consent - Nicotine Use Form');
-    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
-    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
-    setShowPrintPreview(true);
-  };
-
-  const handlePrintFinalDesignApprovalForm = (form: any) => {
-    console.log('Print Final Design Approval Form:', form);
-    setPrintFormData(form);
-    setPrintFormType('Final Design Approval Form');
-    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
-    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
-    setShowPrintPreview(true);
-  };
-
-  const handlePrintThankYouPreSurgeryForm = (form: any) => {
-    console.log('Print Thank You Pre-Surgery Form:', form);
-    setPrintFormData(form);
-    setPrintFormType('Thank You & Pre-Surgery Form');
-    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
-    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
-    setShowPrintPreview(true);
-  };
-
-  const handlePrintThreeYearCarePackageForm = (form: any) => {
-    console.log('Print 3-Year Care Package Form:', form);
-    setPrintFormData(form);
-    setPrintFormType('3-Year Care Package Enrollment Agreement');
-    setPrintPatientName(form.patient_name || patient?.full_name || 'Unknown Patient');
-    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
-    setShowPrintPreview(true);
-  };
-
-  const handlePrintFiveYearWarrantyForm = (form: FiveYearWarrantyFormData) => {
-    console.log('Print 5-Year Warranty Form:', form);
-    const formattedData = formatFiveYearWarrantyFormForDisplay(form);
-    setPrintFormData(formattedData);
-    setPrintFormType('five-year-warranty');
-    setPrintPatientName(`${form.first_name} ${form.last_name}` || patient?.full_name || 'Unknown Patient');
-    setPrintPatientDOB(form.date_of_birth || patient?.date_of_birth || '');
-    setShowPrintPreview(true);
-  };
 
 
 
@@ -1667,8 +1642,15 @@ export function PatientProfilePage() {
   };
 
   const handleViewPatientPacket = (packet: any) => {
-    // For now, just edit - we can add a view-only mode later
-    handleEditPatientPacket(packet);
+    // Store the selected packet and show preview
+    setSelectedPatientPacketForPreview(packet);
+    setShowNewPatientPacketPreview(true);
+  };
+
+  const handleViewFinancialAgreement = (agreement: any) => {
+    // Store the selected agreement and show preview
+    setSelectedFinancialAgreementForPreview(agreement);
+    setShowFinancialAgreementPreview(true);
   };
 
   const handleDeletePatientPacket = (packet: any) => {
@@ -5026,41 +5008,33 @@ export function PatientProfilePage() {
                                   </div>
 
                                   <div className="flex items-center gap-1">
-                                    {/* Print button */}
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handlePrintNewPatientPacket(packet);
-                                      }}
-                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                      title="Print patient packet"
-                                    >
-                                      <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                    </button>
+                                    {/* Edit button - visible to all users if draft, only admins if completed */}
+                                    {(packet.form_status === 'draft' || isAdminUser()) && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditPatientPacket(packet);
+                                        }}
+                                        className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                        title="Edit patient packet"
+                                      >
+                                        <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                      </button>
+                                    )}
 
-                                    {/* Edit button */}
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEditPatientPacket(packet);
-                                      }}
-                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                      title="Edit patient packet"
-                                    >
-                                      <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                    </button>
-
-                                    {/* Delete button */}
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeletePatientPacket(packet);
-                                      }}
-                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                      title="Delete patient packet"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                    </button>
+                                    {/* Delete button - only visible to admins */}
+                                    {isAdminUser() && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeletePatientPacket(packet);
+                                        }}
+                                        className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                        title="Delete patient packet"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -5070,12 +5044,7 @@ export function PatientProfilePage() {
                               <div
                                 key={agreement.id}
                                 className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                onClick={() => {
-                                  setEditingFinancialAgreement(agreement);
-                                  setIsEditingFinancialAgreement(false);
-                                  setIsViewingFinancialAgreement(true);
-                                  setShowFinancialAgreementForm(true);
-                                }}
+                                onClick={() => handleViewFinancialAgreement(agreement)}
                               >
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
@@ -5122,41 +5091,36 @@ export function PatientProfilePage() {
                                   </div>
 
                                   <div className="flex items-center gap-1">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handlePrintFinancialAgreement(agreement);
-                                      }}
-                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                      title="Print financial agreement"
-                                    >
-                                      <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                    </button>
+                                    {/* Edit button - visible to all users if draft, only admins if completed */}
+                                    {(agreement.status === 'draft' || isAdminUser()) && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingFinancialAgreement(agreement);
+                                          setIsEditingFinancialAgreement(true);
+                                          setShowFinancialAgreementForm(true);
+                                        }}
+                                        className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                        title="Edit financial agreement"
+                                      >
+                                        <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                      </button>
+                                    )}
 
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingFinancialAgreement(agreement);
-                                        setIsEditingFinancialAgreement(true);
-                                        setShowFinancialAgreementForm(true);
-                                      }}
-                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                      title="Edit financial agreement"
-                                    >
-                                      <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                    </button>
-
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setFinancialAgreementToDelete(agreement);
-                                        setShowDeleteFinancialAgreementConfirm(true);
-                                      }}
-                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                      title="Delete financial agreement"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                    </button>
+                                    {/* Delete button - only visible to admins */}
+                                    {isAdminUser() && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setFinancialAgreementToDelete(agreement);
+                                          setShowDeleteFinancialAgreementConfirm(true);
+                                        }}
+                                        className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                        title="Delete financial agreement"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -5206,7 +5170,7 @@ export function PatientProfilePage() {
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                            form.status === 'submitted' ? 'bg-green-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             Consent Full Arch Form
@@ -5214,10 +5178,10 @@ export function PatientProfilePage() {
                                         </div>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                                           form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                          form.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                                         }`}>
                                           {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'completed' ? 'Completed' : 'Draft'}
+                                           form.status === 'submitted' ? 'Completed' : 'Draft'}
                                         </span>
                                       </div>
 
@@ -5245,67 +5209,62 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handlePrintConsentForm(form);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Print consent form"
-                                          >
-                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
+                                          {/* Edit button - visible to all users if draft, only admins if completed */}
+                                          {(form.status === 'draft' || isAdminUser()) && (
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  console.log('✏️ Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                  // Fetch fresh data from Supabase
+                                                  const freshData = await getConsentForm(form.id);
+                                                  console.log('📥 Fresh data from Supabase:', freshData);
 
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                console.log('✏️ Edit button clicked - Fetching fresh data for form ID:', form.id);
-                                                // Fetch fresh data from Supabase
-                                                const freshData = await getConsentForm(form.id);
-                                                console.log('📥 Fresh data from Supabase:', freshData);
-
-                                                if (freshData.data) {
-                                                  const formattedData = formatConsentFormForDisplay(freshData.data);
-                                                  console.log('✅ Formatted fresh data for edit:', formattedData);
-                                                  setSelectedConsentForm(formattedData);
-                                                  setIsEditingConsentForm(true);
-                                                  setIsViewingConsentForm(false);
-                                                  setShowConsentFullArchForm(true);
-                                                } else {
-                                                  console.error('❌ No data found for form ID:', form.id);
+                                                  if (freshData.data) {
+                                                    const formattedData = formatConsentFormForDisplay(freshData.data);
+                                                    console.log('✅ Formatted fresh data for edit:', formattedData);
+                                                    setSelectedConsentForm(formattedData);
+                                                    setIsEditingConsentForm(true);
+                                                    setIsViewingConsentForm(false);
+                                                    setShowConsentFullArchForm(true);
+                                                  } else {
+                                                    console.error('❌ No data found for form ID:', form.id);
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Could not load form data. Please try again.",
+                                                      variant: "destructive",
+                                                    });
+                                                  }
+                                                } catch (error) {
+                                                  console.error('❌ Error fetching form data for edit:', error);
                                                   toast({
                                                     title: "Error",
-                                                    description: "Could not load form data. Please try again.",
+                                                    description: "Failed to load form data. Please try again.",
                                                     variant: "destructive",
                                                   });
                                                 }
-                                              } catch (error) {
-                                                console.error('❌ Error fetching form data for edit:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to load form data. Please try again.",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Edit consent form"
-                                          >
-                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                          </button>
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit consent form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
 
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setConsentFormToDelete(form);
-                                              setShowDeleteConsentFormConfirm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Delete consent form"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                          </button>
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setConsentFormToDelete(form);
+                                                setShowDeleteConsentFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete consent form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -5376,42 +5335,37 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handlePrintMedicalRecordsReleaseForm(form);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Print medical records release form"
-                                          >
-                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
+                                          {/* Edit button - visible to all users if draft, only admins if completed */}
+                                          {(form.status === 'draft' || isAdminUser()) && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditingMedicalRecordsReleaseForm(form);
+                                                setIsEditingMedicalRecordsReleaseForm(true);
+                                                setIsViewingMedicalRecordsReleaseForm(false);
+                                                setShowMedicalRecordsReleaseForm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit medical records release form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
 
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setEditingMedicalRecordsReleaseForm(form);
-                                              setIsEditingMedicalRecordsReleaseForm(true);
-                                              setIsViewingMedicalRecordsReleaseForm(false);
-                                              setShowMedicalRecordsReleaseForm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Edit medical records release form"
-                                          >
-                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                          </button>
-
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setMedicalRecordsReleaseFormToDelete(form);
-                                              setShowDeleteMedicalRecordsReleaseFormConfirm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Delete medical records release form"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                          </button>
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setMedicalRecordsReleaseFormToDelete(form);
+                                                setShowDeleteMedicalRecordsReleaseFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete medical records release form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -5482,42 +5436,37 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handlePrintInformedConsentSmokingForm(form);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Print informed consent smoking form"
-                                          >
-                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
+                                          {/* Edit button - visible to all users if draft, only admins if completed */}
+                                          {(form.status === 'draft' || isAdminUser()) && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditingInformedConsentSmokingForm(form);
+                                                setIsEditingInformedConsentSmokingForm(true);
+                                                setIsViewingInformedConsentSmokingForm(false);
+                                                setShowInformedConsentSmokingForm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit informed consent smoking form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
 
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setEditingInformedConsentSmokingForm(form);
-                                              setIsEditingInformedConsentSmokingForm(true);
-                                              setIsViewingInformedConsentSmokingForm(false);
-                                              setShowInformedConsentSmokingForm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Edit informed consent smoking form"
-                                          >
-                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                          </button>
-
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setInformedConsentSmokingFormToDelete(form);
-                                              setShowDeleteInformedConsentSmokingFormConfirm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Delete informed consent smoking form"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                          </button>
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setInformedConsentSmokingFormToDelete(form);
+                                                setShowDeleteInformedConsentSmokingFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete informed consent smoking form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -5609,66 +5558,61 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handlePrintFinalDesignApprovalForm(form);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Print final design approval form"
-                                          >
-                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
+                                          {/* Edit button - visible to all users if draft, only admins if completed */}
+                                          {(form.status === 'draft' || isAdminUser()) && (
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                  // Fetch fresh data from Supabase
+                                                  const freshData = await getFinalDesignApprovalForm(form.id);
+                                                  console.log('📥 Fresh data from Supabase:', freshData);
 
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
-                                                // Fetch fresh data from Supabase
-                                                const freshData = await getFinalDesignApprovalForm(form.id);
-                                                console.log('📥 Fresh data from Supabase:', freshData);
-
-                                                if (freshData.data) {
-                                                  const formattedData = formatFinalDesignApprovalFormForDisplay(freshData.data);
-                                                  console.log('✅ Formatted fresh data:', formattedData);
-                                                  setSelectedFinalDesignApprovalForm(formattedData);
-                                                  setIsEditingFinalDesignApprovalForm(true);
-                                                  setShowFinalDesignApprovalForm(true);
-                                                } else {
-                                                  console.error('❌ No data found for form ID:', form.id);
+                                                  if (freshData.data) {
+                                                    const formattedData = formatFinalDesignApprovalFormForDisplay(freshData.data);
+                                                    console.log('✅ Formatted fresh data:', formattedData);
+                                                    setSelectedFinalDesignApprovalForm(formattedData);
+                                                    setIsEditingFinalDesignApprovalForm(true);
+                                                    setShowFinalDesignApprovalForm(true);
+                                                  } else {
+                                                    console.error('❌ No data found for form ID:', form.id);
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Could not load form data. Please try again.",
+                                                      variant: "destructive",
+                                                    });
+                                                  }
+                                                } catch (error) {
+                                                  console.error('❌ Error fetching form data:', error);
                                                   toast({
                                                     title: "Error",
-                                                    description: "Could not load form data. Please try again.",
+                                                    description: "Failed to load form data. Please try again.",
                                                     variant: "destructive",
                                                   });
                                                 }
-                                              } catch (error) {
-                                                console.error('❌ Error fetching form data:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to load form data. Please try again.",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Edit final design approval form"
-                                          >
-                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                          </button>
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit final design approval form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
 
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setFinalDesignApprovalFormToDelete(form);
-                                              setShowDeleteFinalDesignApprovalFormConfirm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Delete final design approval form"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                          </button>
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setFinalDesignApprovalFormToDelete(form);
+                                                setShowDeleteFinalDesignApprovalFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete final design approval form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -5721,7 +5665,7 @@ export function PatientProfilePage() {
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                            form.status === 'submitted' ? 'bg-green-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             Thank You & Pre-Surgery Form
@@ -5729,10 +5673,10 @@ export function PatientProfilePage() {
                                         </div>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                                           form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                          form.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                                         }`}>
                                           {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'completed' ? 'Completed' : 'Draft'}
+                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
                                         </span>
                                       </div>
 
@@ -5760,66 +5704,61 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handlePrintThankYouPreSurgeryForm(form);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Print thank you pre-surgery form"
-                                          >
-                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
+                                          {/* Edit button - visible to all users if draft, only admins if completed */}
+                                          {(form.status === 'draft' || isAdminUser()) && (
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                  // Fetch fresh data from Supabase
+                                                  const freshData = await getThankYouPreSurgeryForm(form.id);
+                                                  console.log('📥 Fresh data from Supabase:', freshData);
 
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
-                                                // Fetch fresh data from Supabase
-                                                const freshData = await getThankYouPreSurgeryForm(form.id);
-                                                console.log('📥 Fresh data from Supabase:', freshData);
-
-                                                if (freshData.data) {
-                                                  const formattedData = formatThankYouPreSurgeryFormForDisplay(freshData.data);
-                                                  console.log('✅ Formatted fresh data:', formattedData);
-                                                  setSelectedThankYouPreSurgeryForm(formattedData);
-                                                  setIsEditingThankYouPreSurgeryForm(true);
-                                                  setShowThankYouPreSurgeryForm(true);
-                                                } else {
-                                                  console.error('❌ No data found for form ID:', form.id);
+                                                  if (freshData.data) {
+                                                    const formattedData = formatThankYouPreSurgeryFormForDisplay(freshData.data);
+                                                    console.log('✅ Formatted fresh data:', formattedData);
+                                                    setSelectedThankYouPreSurgeryForm(formattedData);
+                                                    setIsEditingThankYouPreSurgeryForm(true);
+                                                    setShowThankYouPreSurgeryForm(true);
+                                                  } else {
+                                                    console.error('❌ No data found for form ID:', form.id);
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Could not load form data. Please try again.",
+                                                      variant: "destructive",
+                                                    });
+                                                  }
+                                                } catch (error) {
+                                                  console.error('❌ Error fetching form data:', error);
                                                   toast({
                                                     title: "Error",
-                                                    description: "Could not load form data. Please try again.",
+                                                    description: "Failed to load form data. Please try again.",
                                                     variant: "destructive",
                                                   });
                                                 }
-                                              } catch (error) {
-                                                console.error('❌ Error fetching form data:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to load form data. Please try again.",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Edit thank you pre-surgery form"
-                                          >
-                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                          </button>
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit thank you pre-surgery form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
 
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setThankYouPreSurgeryFormToDelete(form);
-                                              setShowDeleteThankYouPreSurgeryFormConfirm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Delete thank you pre-surgery form"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                          </button>
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setThankYouPreSurgeryFormToDelete(form);
+                                                setShowDeleteThankYouPreSurgeryFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete thank you pre-surgery form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -5892,42 +5831,37 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handlePrintThreeYearCarePackageForm(form);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Print 3-Year Care Package form"
-                                          >
-                                            <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
+                                          {/* Edit button - visible to all users if draft, only admins if completed */}
+                                          {(form.status === 'draft' || isAdminUser()) && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedThreeYearCarePackageForm(form);
+                                                setIsEditingThreeYearCarePackageForm(true);
+                                                setIsViewingThreeYearCarePackageForm(false);
+                                                setShowThreeYearCarePackageForm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit 3-Year Care Package form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
 
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setSelectedThreeYearCarePackageForm(form);
-                                              setIsEditingThreeYearCarePackageForm(true);
-                                              setIsViewingThreeYearCarePackageForm(false);
-                                              setShowThreeYearCarePackageForm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Edit 3-Year Care Package form"
-                                          >
-                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                          </button>
-
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setThreeYearCarePackageFormToDelete(form);
-                                              setShowDeleteThreeYearCarePackageFormConfirm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Delete 3-Year Care Package form"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                          </button>
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setThreeYearCarePackageFormToDelete(form);
+                                                setShowDeleteThreeYearCarePackageFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete 3-Year Care Package form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -5999,42 +5933,37 @@ export function PatientProfilePage() {
                                       </div>
 
                                       <div className="flex items-center gap-1">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handlePrintFiveYearWarrantyForm(form);
-                                          }}
-                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                          title="Print 5-Year Warranty form"
-                                        >
-                                          <Printer className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                        </button>
+                                        {/* Edit button - visible to all users if draft, only admins if completed */}
+                                        {((form.status === 'draft' || !form.status) || isAdminUser()) && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedFiveYearWarrantyForm(form);
+                                              setIsEditingFiveYearWarrantyForm(true);
+                                              setIsViewingFiveYearWarrantyForm(false);
+                                              setShowFiveYearWarrantyForm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Edit 5-Year Warranty form"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                          </button>
+                                        )}
 
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedFiveYearWarrantyForm(form);
-                                            setIsEditingFiveYearWarrantyForm(true);
-                                            setIsViewingFiveYearWarrantyForm(false);
-                                            setShowFiveYearWarrantyForm(true);
-                                          }}
-                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                          title="Edit 5-Year Warranty form"
-                                        >
-                                          <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                        </button>
-
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setFiveYearWarrantyFormToDelete(form);
-                                            setShowDeleteFiveYearWarrantyFormConfirm(true);
-                                          }}
-                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                          title="Delete 5-Year Warranty form"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                        </button>
+                                        {/* Delete button - only visible to admins */}
+                                        {isAdminUser() && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setFiveYearWarrantyFormToDelete(form);
+                                              setShowDeleteFiveYearWarrantyFormConfirm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Delete 5-Year Warranty form"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -6132,69 +6061,61 @@ export function PatientProfilePage() {
                                       </div>
 
                                       <div className="flex items-center gap-1">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const formattedData = formatPartialPaymentAgreementFormForDisplay(form);
-                                            setPrintFormData(formattedData);
-                                            setPrintFormType('partial-payment-agreement');
-                                            setPrintPatientName(patient?.full_name || '');
-                                            setPrintPatientDOB(patient?.date_of_birth || '');
-                                            setShowPrintPreview(true);
-                                          }}
-                                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                          title="Print form"
-                                        >
-                                          <Printer className="h-3.5 w-3.5" />
-                                        </button>
-                                        <button
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            try {
-                                              console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
-                                              // Fetch fresh data from Supabase
-                                              const freshData = await partialPaymentAgreementService.getFormById(form.id);
-                                              console.log('📥 Fresh data from Supabase:', freshData);
+                                        {/* Edit button - visible to all users if draft, only admins if completed */}
+                                        {((form.status === 'draft' || !form.status) || isAdminUser()) && (
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                // Fetch fresh data from Supabase
+                                                const freshData = await partialPaymentAgreementService.getFormById(form.id);
+                                                console.log('📥 Fresh data from Supabase:', freshData);
 
-                                              if (freshData) {
-                                                const formattedData = formatPartialPaymentAgreementFormForDisplay(freshData);
-                                                console.log('✅ Formatted fresh data:', formattedData);
-                                                setSelectedPartialPaymentAgreementForm(formattedData);
-                                                setIsEditingPartialPaymentAgreementForm(true);
-                                                setShowPartialPaymentAgreementForm(true);
-                                              } else {
-                                                console.error('❌ No data found for form ID:', form.id);
+                                                if (freshData) {
+                                                  const formattedData = formatPartialPaymentAgreementFormForDisplay(freshData);
+                                                  console.log('✅ Formatted fresh data:', formattedData);
+                                                  setSelectedPartialPaymentAgreementForm(formattedData);
+                                                  setIsEditingPartialPaymentAgreementForm(true);
+                                                  setShowPartialPaymentAgreementForm(true);
+                                                } else {
+                                                  console.error('❌ No data found for form ID:', form.id);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Could not load form data. Please try again.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              } catch (error) {
+                                                console.error('❌ Error fetching form data:', error);
                                                 toast({
                                                   title: "Error",
-                                                  description: "Could not load form data. Please try again.",
+                                                  description: "Failed to load form data. Please try again.",
                                                   variant: "destructive",
                                                 });
                                               }
-                                            } catch (error) {
-                                              console.error('❌ Error fetching form data:', error);
-                                              toast({
-                                                title: "Error",
-                                                description: "Failed to load form data. Please try again.",
-                                                variant: "destructive",
-                                              });
-                                            }
-                                          }}
-                                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                                          title="Edit form"
-                                        >
-                                          <Edit className="h-3.5 w-3.5" />
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setPartialPaymentAgreementFormToDelete(form);
-                                            setShowDeletePartialPaymentAgreementFormConfirm(true);
-                                          }}
-                                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                                          title="Delete form"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                        </button>
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Edit form"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                          </button>
+                                        )}
+
+                                        {/* Delete button - only visible to admins */}
+                                        {isAdminUser() && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setPartialPaymentAgreementFormToDelete(form);
+                                              setShowDeletePartialPaymentAgreementFormConfirm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Delete form"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -6207,6 +6128,159 @@ export function PatientProfilePage() {
                             <Settings className="h-10 w-10 text-gray-300 mx-auto mb-2" />
                             <p className="text-sm font-medium text-gray-500 mb-1">No administrative forms</p>
                             <p className="text-xs text-gray-400">Select a form type and click add to create</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Consultations */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                      <div className="p-1.5 bg-purple-100 rounded-lg">
+                        <Activity className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">Consultations ({consultationForms.length})</h3>
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                      <div className="space-y-3 pb-2">
+                        {/* Consultations List */}
+                        {loadingConsultationForms ? (
+                          <div className="text-center py-6">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                            <p className="text-sm text-gray-500">Loading consultations...</p>
+                          </div>
+                        ) : consultationForms.length > 0 ? (
+                          <div className="space-y-2">
+                            {consultationForms.map((consultation, index) => (
+                              <div
+                                key={consultation.id || index}
+                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-purple-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                onClick={() => handleViewConsultation(consultation)}
+                              >
+                                {/* Header with consultation number */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      Consultation #{index + 1}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Status Badges Row */}
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {/* Consultation Status */}
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                                    consultation.consultation_status === 'completed'
+                                      ? 'bg-green-100 text-green-800 border-green-200'
+                                      : consultation.consultation_status === 'in-progress'
+                                      ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                      : 'bg-gray-100 text-gray-800 border-gray-200'
+                                  }`}>
+                                    {consultation.consultation_status === 'completed' ? 'Completed' :
+                                     consultation.consultation_status === 'in-progress' ? 'In Progress' :
+                                     consultation.consultation_status || 'Pending'}
+                                  </span>
+
+                                  {/* Outcome Status (Treatment Decision) */}
+                                  {consultation.treatment_decision && (
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                                      consultation.treatment_decision === 'accepted'
+                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                        : consultation.treatment_decision === 'declined'
+                                        ? 'bg-red-100 text-red-800 border-red-200'
+                                        : consultation.treatment_decision === 'followup-required'
+                                        ? 'bg-orange-100 text-orange-800 border-orange-200'
+                                        : 'bg-purple-100 text-purple-800 border-purple-200'
+                                    }`}>
+                                      {consultation.treatment_decision === 'accepted' ? 'Treatment Accepted' :
+                                       consultation.treatment_decision === 'declined' ? 'Treatment Declined' :
+                                       consultation.treatment_decision === 'followup-required' ? 'Follow-up Required' :
+                                       consultation.treatment_decision.charAt(0).toUpperCase() + consultation.treatment_decision.slice(1)}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Consultation Date */}
+                                <div className="mb-3">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-500">Consultation Date:</span>
+                                    <span className="font-medium text-gray-700">
+                                      {consultation.consultation_date
+                                        ? new Date(consultation.consultation_date).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                          })
+                                        : new Date(consultation.created_at).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                          })
+                                      }
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Patient Name */}
+                                <div className="mb-2">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-500">Patient:</span>
+                                    <span className="font-medium text-gray-700">
+                                      {consultation.patient_name}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Additional Status Information */}
+                                {(consultation.treatment_plan_approved !== null || consultation.follow_up_required) && (
+                                  <div className="mb-2 space-y-1">
+                                    {consultation.treatment_plan_approved !== null && (
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-500">Treatment Plan:</span>
+                                        <span className={`font-medium ${
+                                          consultation.treatment_plan_approved
+                                            ? 'text-green-700'
+                                            : 'text-red-700'
+                                        }`}>
+                                          {consultation.treatment_plan_approved ? 'Approved' : 'Not Approved'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {consultation.follow_up_required && (
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-500">Follow-up:</span>
+                                        <span className="font-medium text-orange-700">Required</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Action buttons */}
+                                <div className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-gray-100">
+                                  {/* View button */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewConsultation(consultation);
+                                    }}
+                                    className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                    title="View consultation"
+                                  >
+                                    <Eye className="h-3.5 w-3.5 text-gray-400 hover:text-purple-600" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6">
+                            <Activity className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm font-medium text-gray-500 mb-1">No consultations</p>
+                            <p className="text-xs text-gray-400">Consultation forms will appear here when available</p>
                           </div>
                         )}
                       </div>
@@ -13355,42 +13429,11 @@ export function PatientProfilePage() {
           console.log('🔄 Is editing:', isEditingFinancialAgreement);
 
           try {
-            let data, error;
+            // The FinancialAgreementDialog already handles the submission logic correctly
+            // including updating existing auto-saved drafts. The formData passed here
+            // is already the result of that process, so we just need to refresh our list.
 
-            if (isEditingFinancialAgreement && editingFinancialAgreement) {
-              // Update existing financial agreement (will mark as completed)
-              const result = await updateFinancialAgreement(editingFinancialAgreement.id, formData, patient.id);
-              data = result.data;
-              error = result.error;
-            } else {
-              // Check if there's an existing draft for this patient
-              const existingDrafts = financialAgreements.filter(fa => fa.status === 'draft');
-
-              if (existingDrafts.length > 0) {
-                // Update the existing draft to completed
-                const result = await updateFinancialAgreement(existingDrafts[0].id, formData, patient.id);
-                data = result.data;
-                error = result.error;
-              } else {
-                // Create new financial agreement (will mark as completed)
-                const { saveFinancialAgreement } = await import("@/services/financialAgreementService");
-                const result = await saveFinancialAgreement(formData, patient.id);
-                data = result.data;
-                error = result.error;
-              }
-            }
-
-            if (error) {
-              console.error('❌ Error saving financial agreement:', error);
-              toast({
-                title: "Error",
-                description: `Failed to ${isEditingFinancialAgreement ? 'update' : 'save'} financial agreement: ${error.message}`,
-                variant: "destructive",
-              });
-              return;
-            }
-
-            console.log('✅ Financial agreement saved successfully:', data);
+            console.log('✅ Financial agreement saved successfully via dialog');
             setShowFinancialAgreementForm(false);
             setSelectedAdminFormType("");
             setEditingFinancialAgreement(null);
@@ -13405,10 +13448,10 @@ export function PatientProfilePage() {
               description: `Financial agreement ${isEditingFinancialAgreement ? 'updated' : 'saved'} successfully!`,
             });
           } catch (error) {
-            console.error('💥 Unexpected error saving financial agreement:', error);
+            console.error('❌ Error in financial agreement submission handler:', error);
             toast({
               title: "Error",
-              description: "An unexpected error occurred while saving the financial agreement.",
+              description: "Failed to process financial agreement submission",
               variant: "destructive",
             });
           }
@@ -13483,63 +13526,11 @@ export function PatientProfilePage() {
           }}
           onSubmit={async (formData) => {
             try {
-              console.log('📝 Received form data in PatientProfilePage:', formData);
+              // The MedicalRecordsReleaseDialog already handles the submission logic correctly
+              // including updating existing auto-saved drafts. The formData passed here
+              // is already the result of that process, so we just need to refresh our list.
 
-              // Map form data to database columns for the new simplified structure
-              const payload: any = {
-                patient_id: patient.id,
-                first_name: formData.firstName,
-                last_name: formData.lastName,
-                date_of_birth: formData.dateOfBirth,
-                patient_name: formData.patientName || (formData.firstName && formData.lastName ? `${formData.firstName} ${formData.lastName}` : ''),
-                signature_date: formData.signatureDate,
-                signature_time: formData.signatureTime,
-                has_agreed: formData.hasAgreed || false,
-                patient_signature: formData.patientSignature,
-                status: 'completed'
-              };
-
-              console.log('💾 Payload to be saved to Supabase:', payload);
-
-              let data, error;
-
-              // Check if we have a form ID to update (either from editing or auto-save)
-              const formIdToUpdate = formData.id || (isEditingMedicalRecordsReleaseForm && editingMedicalRecordsReleaseForm?.id);
-
-              if (formIdToUpdate) {
-                // Update existing form (either from auto-save draft or editing)
-                console.log('📝 Updating existing form with ID:', formIdToUpdate);
-                const result = await supabase
-                  .from('medical_records_release_forms')
-                  .update(payload)
-                  .eq('id', formIdToUpdate)
-                  .select()
-                  .single();
-                data = result.data;
-                error = result.error;
-              } else {
-                // Create new form (should rarely happen now)
-                console.log('🆕 Creating new form');
-                const result = await supabase
-                  .from('medical_records_release_forms')
-                  .insert([payload])
-                  .select()
-                  .single();
-                data = result.data;
-                error = result.error;
-              }
-
-              if (error) {
-                console.error('❌ Supabase error:', error);
-                throw error;
-              }
-
-              console.log('✅ Medical records release form saved:', data?.id);
-              toast({
-                title: 'Success',
-                description: `Medical records release form ${isEditingMedicalRecordsReleaseForm ? 'updated' : 'saved'} successfully!`
-              });
-
+              console.log('✅ Medical records release form saved successfully via dialog');
               setShowMedicalRecordsReleaseForm(false);
               setSelectedAdminFormType("");
               setEditingMedicalRecordsReleaseForm(null);
@@ -13548,12 +13539,18 @@ export function PatientProfilePage() {
 
               // Refresh the forms list
               await fetchMedicalRecordsReleaseForms();
-            } catch (error: any) {
-              console.error('❌ Error saving medical records release form:', error);
+
+              // Show success message
               toast({
-                title: 'Save failed',
-                description: 'Could not save medical records release form. See console for details.',
-                variant: 'destructive'
+                title: "Success",
+                description: `Medical records release form ${isEditingMedicalRecordsReleaseForm ? 'updated' : 'saved'} successfully!`,
+              });
+            } catch (error) {
+              console.error('❌ Error in medical records release form submission handler:', error);
+              toast({
+                title: "Error",
+                description: "Failed to process medical records release form submission",
+                variant: "destructive",
               });
             }
           }}
@@ -13675,6 +13672,38 @@ export function PatientProfilePage() {
         </DialogContent>
       </Dialog>
 
+      {/* New Patient Packet Preview Dialog */}
+      <Dialog open={showNewPatientPacketPreview} onOpenChange={setShowNewPatientPacketPreview}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New Patient Packet Preview</DialogTitle>
+          </DialogHeader>
+          <NewPatientPacketPreview
+            onClose={() => {
+              setShowNewPatientPacketPreview(false);
+              setSelectedPatientPacketForPreview(null);
+            }}
+            patientData={selectedPatientPacketForPreview}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Financial Agreement Preview Dialog */}
+      <Dialog open={showFinancialAgreementPreview} onOpenChange={setShowFinancialAgreementPreview}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Financial Agreement Preview</DialogTitle>
+          </DialogHeader>
+          <FinancialAgreementPreview
+            onClose={() => {
+              setShowFinancialAgreementPreview(false);
+              setSelectedFinancialAgreementForPreview(null);
+            }}
+            agreementData={selectedFinancialAgreementForPreview}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Informed Consent Form For Smoking Dialog */}
       <InformedConsentSmokingDialog
         isOpen={showInformedConsentSmokingForm}
@@ -13777,6 +13806,7 @@ export function PatientProfilePage() {
         patientId={patient?.id}
         initialData={editingInformedConsentSmokingForm}
         isEditing={isEditingInformedConsentSmokingForm}
+        readOnly={isViewingInformedConsentSmokingForm && !isEditingInformedConsentSmokingForm}
       />
 
       {/* Thank You and Pre-Surgery Form Dialog */}
@@ -14358,16 +14388,13 @@ export function PatientProfilePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Print Preview Dialog */}
-      <PrintPreviewDialog
-        isOpen={showPrintPreview}
-        onClose={() => setShowPrintPreview(false)}
-        formTitle={printFormType}
-        patientName={printPatientName}
-        patientDateOfBirth={printPatientDOB}
-        formId={printFormData?.id ? `${printFormType.replace(/\s+/g, '').substring(0, 3).toUpperCase()}-${String(printFormData.id).padStart(6, '0')}` : ''}
-        formData={printFormData}
-        formType={printFormType}
+
+
+      {/* Consultation Viewer */}
+      <ConsultationViewer
+        consultation={selectedConsultation}
+        isOpen={showConsultationViewer}
+        onClose={handleCloseConsultationViewer}
       />
     </div>
   );

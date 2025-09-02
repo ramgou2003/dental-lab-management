@@ -114,7 +114,7 @@ export function Sidebar({
 
 
   const { signOut, userProfile, loading, userRoles } = useAuth();
-  const { canAccessUserManagement } = usePermissions();
+  const { canAccessUserManagement, isAdminUser } = usePermissions();
 
   // Check if user has doctor role
   const isDentist = userRoles.some(role => role.name === 'dentist');
@@ -288,7 +288,7 @@ export function Sidebar({
       <nav className="flex-1 p-4 px-[9px] space-y-1">
         {navigation.map(item => {
         // Hide admin-only items for non-admin users
-        if (item.adminOnly && !canAccessUserManagement) {
+        if (item.adminOnly && !isAdminUser()) {
           return null;
         }
 

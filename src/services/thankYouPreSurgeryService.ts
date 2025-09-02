@@ -139,7 +139,7 @@ export async function createThankYouPreSurgeryForm(
       .from('thank_you_pre_surgery_forms')
       .insert([{
         ...formData,
-        status: 'completed' // Set status to completed for regular form submissions
+        status: 'submitted' // Set status to submitted for regular form submissions
       }])
       .select()
       .single();
@@ -252,16 +252,20 @@ export async function autoSaveThankYouPreSurgeryForm(
         .eq('id', existingId)
         .single();
 
+      // Use partial update to preserve existing data
+      const partialDbData = convertFormDataToDatabasePartial(formData, patientId);
+
       // Use the status from formData if provided, otherwise preserve current status or set to draft
-      dbData.status = formData.status ||
+      partialDbData.status = formData.status ||
         (currentRecord?.status === 'submitted' ? 'submitted' : 'draft');
 
-      // Update existing record
-      console.log('📝 Updating existing Thank You Pre-Surgery form with status:', dbData.status);
+      // Update existing record with only the changed fields
+      console.log('📝 Updating existing Thank You Pre-Surgery form with status:', partialDbData.status);
+      console.log('📝 Partial update data:', JSON.stringify(partialDbData, null, 2));
       const { data, error } = await supabase
         .from('thank_you_pre_surgery_forms')
         .update({
-          ...dbData,
+          ...partialDbData,
           updated_at: new Date().toISOString()
         })
         .eq('id', existingId)
@@ -292,10 +296,11 @@ export async function autoSaveThankYouPreSurgeryForm(
           if (draftForm) {
             // Update the existing draft instead of creating a new one
             console.log('📝 Updating existing Thank You Pre-Surgery draft:', draftForm.id);
+            const partialDbData = convertFormDataToDatabasePartial(formData, patientId);
             const { data, error } = await supabase
               .from('thank_you_pre_surgery_forms')
               .update({
-                ...dbData,
+                ...partialDbData,
                 status: formData.status || 'draft',
                 updated_at: new Date().toISOString()
               })
@@ -343,6 +348,108 @@ export async function autoSaveThankYouPreSurgeryForm(
     console.error('❌ Error auto-saving Thank You Pre-Surgery form:', error);
     return { data: null, error };
   }
+}
+
+/**
+ * Convert form data to database format for partial updates
+ */
+export function convertFormDataToDatabasePartial(
+  formData: any,
+  patientId?: string
+): Partial<Omit<ThankYouPreSurgeryFormData, 'id' | 'created_at' | 'updated_at'>> {
+  // Helper function to validate and format dates
+  const validateDate = (dateValue: any): string | null => {
+    if (!dateValue) return null;
+    if (typeof dateValue === 'string' && dateValue.trim() === '') return null;
+
+    // Check if it's already in YYYY-MM-DD format
+    if (typeof dateValue === 'string' && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const date = new Date(dateValue);
+      if (!isNaN(date.getTime())) {
+        return dateValue;
+      }
+    }
+
+    // Try to parse and format the date
+    const date = new Date(dateValue);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+
+    return null;
+  };
+
+  const result: Partial<Omit<ThankYouPreSurgeryFormData, 'id' | 'created_at' | 'updated_at'>> = {};
+
+  // Only include fields that have values
+  if (patientId !== undefined) result.patient_id = patientId;
+  if (formData.patientName !== undefined && formData.patientName !== '') result.patient_name = formData.patientName;
+  if (formData.phone !== undefined && formData.phone !== '') result.phone = formData.phone;
+  if (formData.dateOfBirth !== undefined) {
+    const dateValue = validateDate(formData.dateOfBirth);
+    if (dateValue) result.date_of_birth = dateValue;
+  }
+  if (formData.email !== undefined && formData.email !== '') result.email = formData.email;
+  if (formData.treatmentType !== undefined && formData.treatmentType !== '') result.treatment_type = formData.treatmentType;
+  if (formData.formDate !== undefined) {
+    const dateValue = validateDate(formData.formDate);
+    if (dateValue) result.form_date = dateValue;
+  }
+
+  // Medical Screening - include boolean values explicitly
+  if (formData.heartConditions !== undefined) result.heart_conditions = formData.heartConditions;
+  if (formData.bloodThinners !== undefined) result.blood_thinners = formData.bloodThinners;
+  if (formData.diabetes !== undefined) result.diabetes = formData.diabetes;
+  if (formData.highBloodPressure !== undefined) result.high_blood_pressure = formData.highBloodPressure;
+  if (formData.allergies !== undefined) result.allergies = formData.allergies;
+  if (formData.pregnancyNursing !== undefined) result.pregnancy_nursing = formData.pregnancyNursing;
+  if (formData.recentIllness !== undefined) result.recent_illness = formData.recentIllness;
+  if (formData.medicationChanges !== undefined) result.medication_changes = formData.medicationChanges;
+
+  // Timeline Acknowledgments - 3 Days Before
+  if (formData.startMedrol !== undefined) result.start_medrol = formData.startMedrol;
+  if (formData.startAmoxicillin !== undefined) result.start_amoxicillin = formData.startAmoxicillin;
+  if (formData.noAlcohol3Days !== undefined) result.no_alcohol_3days = formData.noAlcohol3Days;
+  if (formData.arrangeRide !== undefined) result.arrange_ride = formData.arrangeRide;
+
+  // Timeline Acknowledgments - Night Before
+  if (formData.takeDiazepam !== undefined) result.take_diazepam = formData.takeDiazepam;
+  if (formData.noFoodAfterMidnight !== undefined) result.no_food_after_midnight = formData.noFoodAfterMidnight;
+  if (formData.noWaterAfter6Am !== undefined) result.no_water_after_6am = formData.noWaterAfter6Am;
+  if (formData.confirmRide !== undefined) result.confirm_ride = formData.confirmRide;
+
+  // Timeline Acknowledgments - Morning Of
+  if (formData.noBreakfast !== undefined) result.no_breakfast = formData.noBreakfast;
+  if (formData.noPills !== undefined) result.no_pills = formData.noPills;
+  if (formData.wearComfortable !== undefined) result.wear_comfortable = formData.wearComfortable;
+  if (formData.arriveOnTime !== undefined) result.arrive_on_time = formData.arriveOnTime;
+
+  // Timeline Acknowledgments - After Surgery
+  if (formData.noAlcohol24Hrs !== undefined) result.no_alcohol_24hrs = formData.noAlcohol24Hrs;
+  if (formData.noDriving24Hrs !== undefined) result.no_driving_24hrs = formData.noDriving24Hrs;
+  if (formData.followInstructions !== undefined) result.follow_instructions = formData.followInstructions;
+  if (formData.callIfConcerns !== undefined) result.call_if_concerns = formData.callIfConcerns;
+
+  // Patient Acknowledgments
+  if (formData.readInstructions !== undefined) result.read_instructions = formData.readInstructions;
+  if (formData.understandMedications !== undefined) result.understand_medications = formData.understandMedications;
+  if (formData.understandSedation !== undefined) result.understand_sedation = formData.understandSedation;
+  if (formData.arrangedTransport !== undefined) result.arranged_transport = formData.arrangedTransport;
+  if (formData.understandRestrictions !== undefined) result.understand_restrictions = formData.understandRestrictions;
+  if (formData.willFollowInstructions !== undefined) result.will_follow_instructions = formData.willFollowInstructions;
+  if (formData.understandEmergency !== undefined) result.understand_emergency = formData.understandEmergency;
+
+  // Signatures
+  if (formData.patientSignature !== undefined && formData.patientSignature !== '') result.patient_signature = formData.patientSignature;
+  if (formData.signatureDate !== undefined) {
+    const dateValue = validateDate(formData.signatureDate);
+    if (dateValue) result.signature_date = dateValue;
+  }
+  if (formData.patientPrintName !== undefined && formData.patientPrintName !== '') result.patient_print_name = formData.patientPrintName;
+
+  if (formData.status !== undefined) result.status = formData.status;
+
+  return result;
 }
 
 /**

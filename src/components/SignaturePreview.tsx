@@ -4,39 +4,46 @@ import { Edit, Trash2 } from "lucide-react";
 
 interface SignaturePreviewProps {
   signature: string;
-  onEdit: () => void;
-  onClear: () => void;
+  onEdit?: () => void;
+  onClear?: () => void;
   label: string;
+  readOnly?: boolean;
 }
 
-export function SignaturePreview({ signature, onEdit, onClear, label }: SignaturePreviewProps) {
+export function SignaturePreview({ signature, onEdit, onClear, label, readOnly = false }: SignaturePreviewProps) {
   return (
     <div className="space-y-2">
       <div className="border border-gray-300 rounded-md p-3 bg-gray-50">
-        <div className="flex justify-end items-center mb-2">
-          <div className="flex gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onEdit}
-              className="h-7 px-2 text-xs"
-            >
-              <Edit className="h-3 w-3 mr-1" />
-              Edit
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClear}
-              className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              Clear
-            </Button>
+        {!readOnly && (
+          <div className="flex justify-end items-center mb-2">
+            <div className="flex gap-1">
+              {onEdit && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onEdit}
+                  className="h-7 px-2 text-xs"
+                >
+                  <Edit className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+              )}
+              {onClear && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onClear}
+                  className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
         
         <div className="bg-white border rounded p-2 min-h-[80px] flex items-center justify-center">
           {signature ? (

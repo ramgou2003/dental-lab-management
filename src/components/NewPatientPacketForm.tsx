@@ -250,6 +250,7 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
     const timeoutId = setTimeout(() => {
       // Only auto-save if there's meaningful data
       if (formData.firstName || formData.lastName || formData.email) {
+        console.log('🔄 Auto-saving patient packet form data');
         onAutoSave(formData);
       }
     }, 2000); // 2 second debounce

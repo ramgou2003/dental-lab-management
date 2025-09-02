@@ -162,7 +162,7 @@ export function FinalDesignApprovalForm({
 
   // Auto-save effect with debouncing
   useEffect(() => {
-    if (!onAutoSave || !isFormInitialized) return;
+    if (!onAutoSave || !isFormInitialized || readOnly) return;
 
     // Check if form has meaningful data
     const hasData = formData.firstName || formData.lastName || formData.treatment ||
@@ -185,43 +185,57 @@ export function FinalDesignApprovalForm({
     }, 2000); // 2 second debounce
 
     return () => clearTimeout(timeoutId);
-  }, [formData, onAutoSave, isFormInitialized]);
+  }, [formData, onAutoSave, isFormInitialized, readOnly]);
 
   const handleInputChange = (field: string, value: any) => {
-    console.log('📝 Input changed:', field, '=', value);
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    if (!readOnly) {
+      console.log('📝 Input changed:', field, '=', value);
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handleTreatmentChange = (treatmentType: string) => {
-    setFormData(prev => ({
-      ...prev,
-      treatment: treatmentType
-    }));
+    if (!readOnly) {
+      setFormData(prev => ({
+        ...prev,
+        treatment: treatmentType
+      }));
+    }
   };
 
   const handlePatientSignatureSave = (signatureData: string) => {
-    setFormData(prev => ({ ...prev, patientSignature: signatureData }));
+    if (!readOnly) {
+      setFormData(prev => ({ ...prev, patientSignature: signatureData }));
+    }
   };
 
   const handlePatientSignatureClear = () => {
-    setFormData(prev => ({ ...prev, patientSignature: "" }));
+    if (!readOnly) {
+      setFormData(prev => ({ ...prev, patientSignature: "" }));
+    }
   };
 
   const handleWitnessSignatureSave = (signatureData: string) => {
-    setFormData(prev => ({ ...prev, witnessSignature: signatureData }));
+    if (!readOnly) {
+      setFormData(prev => ({ ...prev, witnessSignature: signatureData }));
+    }
   };
 
   const handleWitnessSignatureClear = () => {
-    setFormData(prev => ({ ...prev, witnessSignature: "" }));
+    if (!readOnly) {
+      setFormData(prev => ({ ...prev, witnessSignature: "" }));
+    }
   };
 
 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (readOnly) return;
 
     // Validation
     if (!formData.firstName || !formData.lastName) {
@@ -250,40 +264,8 @@ export function FinalDesignApprovalForm({
       return;
     }
 
-    // Ensure dates are properly formatted or use current date as fallback
-    const currentDate = new Date().toISOString().split('T')[0];
-
-    // Validate date format function
-    const isValidDate = (dateString: string) => {
-      if (!dateString) return false;
-      const date = new Date(dateString);
-      return date instanceof Date && !isNaN(date.getTime()) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
-    };
-
-    // Convert form data to match service interface
-    const submissionData = {
-      first_name: formData.firstName,
-      last_name: formData.lastName,
-      date_of_birth: isValidDate(formData.dateOfBirth) ? formData.dateOfBirth : null,
-      date_of_service: isValidDate(formData.dateOfService) ? formData.dateOfService : currentDate,
-      treatment: formData.treatment,
-      material: formData.material,
-      shade_selected: formData.shadeSelected,
-      design_review_acknowledged: formData.designReviewAcknowledged,
-      final_fabrication_approved: formData.finalFabricationApproved,
-      post_approval_changes_understood: formData.postApprovalChangesUnderstood,
-      warranty_reminder_understood: formData.warrantyReminderUnderstood,
-      patient_full_name: formData.patientFullName,
-      patient_signature: formData.patientSignature,
-      patient_signature_date: isValidDate(formData.patientSignatureDate) ? formData.patientSignatureDate : currentDate,
-      witness_name: formData.witnessName,
-      witness_signature: formData.witnessSignature,
-      witness_signature_date: isValidDate(formData.witnessSignatureDate) ? formData.witnessSignatureDate : currentDate,
-      design_added_to_chart: formData.designAddedToChart,
-      fee_agreement_scanned: formData.feeAgreementScanned
-    };
-
-    onSubmit(submissionData);
+    // Pass the original form data to the dialog - let the service handle the conversion
+    onSubmit(formData);
     toast.success('Final Design Approval form submitted successfully');
   };
 
@@ -341,6 +323,7 @@ export function FinalDesignApprovalForm({
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
                   placeholder="Enter first name"
                   required
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -351,6 +334,7 @@ export function FinalDesignApprovalForm({
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
                   placeholder="Enter last name"
                   required
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -362,6 +346,7 @@ export function FinalDesignApprovalForm({
                   onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                   required
                   readOnly={!!patientDateOfBirth}
+                  disabled={readOnly}
                   className={patientDateOfBirth ? "bg-gray-50" : ""}
                 />
               </div>
@@ -373,6 +358,7 @@ export function FinalDesignApprovalForm({
                   value={formData.dateOfService}
                   onChange={(e) => handleInputChange('dateOfService', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -394,7 +380,8 @@ export function FinalDesignApprovalForm({
                 <Button
                   type="button"
                   variant={formData.treatment === "UPPER" ? "default" : "outline"}
-                  onClick={() => handleTreatmentChange('UPPER')}
+                  onClick={readOnly ? undefined : () => handleTreatmentChange('UPPER')}
+                  disabled={readOnly}
                   className={`px-6 py-2 ${
                     formData.treatment === "UPPER"
                       ? 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -406,7 +393,8 @@ export function FinalDesignApprovalForm({
                 <Button
                   type="button"
                   variant={formData.treatment === "LOWER" ? "default" : "outline"}
-                  onClick={() => handleTreatmentChange('LOWER')}
+                  onClick={readOnly ? undefined : () => handleTreatmentChange('LOWER')}
+                  disabled={readOnly}
                   className={`px-6 py-2 ${
                     formData.treatment === "LOWER"
                       ? 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -418,7 +406,8 @@ export function FinalDesignApprovalForm({
                 <Button
                   type="button"
                   variant={formData.treatment === "DUAL" ? "default" : "outline"}
-                  onClick={() => handleTreatmentChange('DUAL')}
+                  onClick={readOnly ? undefined : () => handleTreatmentChange('DUAL')}
+                  disabled={readOnly}
                   className={`px-6 py-2 ${
                     formData.treatment === "DUAL"
                       ? 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -432,7 +421,7 @@ export function FinalDesignApprovalForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="material">Material</Label>
-                <Select value={formData.material} onValueChange={(value) => handleInputChange('material', value)}>
+                <Select value={formData.material} onValueChange={readOnly ? undefined : (value) => handleInputChange('material', value)} disabled={readOnly}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select material" />
                   </SelectTrigger>
@@ -447,7 +436,7 @@ export function FinalDesignApprovalForm({
               </div>
               <div>
                 <Label htmlFor="shadeSelected">Shade Selected</Label>
-                <Select value={formData.shadeSelected} onValueChange={(value) => handleInputChange('shadeSelected', value)}>
+                <Select value={formData.shadeSelected} onValueChange={readOnly ? undefined : (value) => handleInputChange('shadeSelected', value)} disabled={readOnly}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select shade" />
                   </SelectTrigger>
@@ -476,12 +465,14 @@ export function FinalDesignApprovalForm({
             <div className="space-y-4">
               <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.designReviewAcknowledged
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('designReviewAcknowledged', !formData.designReviewAcknowledged)}
+                  onClick={readOnly ? undefined : () => handleInputChange('designReviewAcknowledged', !formData.designReviewAcknowledged)}
                 >
                   {formData.designReviewAcknowledged && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -489,8 +480,8 @@ export function FinalDesignApprovalForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-blue-800"
-                    onClick={() => handleInputChange('designReviewAcknowledged', !formData.designReviewAcknowledged)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('designReviewAcknowledged', !formData.designReviewAcknowledged)}
                   >
                     <span className="text-red-500">*</span> <strong>1. Design Review.</strong> I confirm I have had adequate time to feel, inspect, and try in the proposed final appliance design supplied by the dental office. I understand the shape, contours, occlusion, shade, and materials as presented today.
                   </Label>
@@ -499,12 +490,14 @@ export function FinalDesignApprovalForm({
 
               <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.finalFabricationApproved
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('finalFabricationApproved', !formData.finalFabricationApproved)}
+                  onClick={readOnly ? undefined : () => handleInputChange('finalFabricationApproved', !formData.finalFabricationApproved)}
                 >
                   {formData.finalFabricationApproved && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -512,8 +505,8 @@ export function FinalDesignApprovalForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-blue-800"
-                    onClick={() => handleInputChange('finalFabricationApproved', !formData.finalFabricationApproved)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('finalFabricationApproved', !formData.finalFabricationApproved)}
                   >
                     <span className="text-red-500">*</span> <strong>2. Final Fabrication.</strong> By signing below, I hereby approve the design as‑is and authorize fabrication of my final prosthesis. No further design changes will be made prior to fabrication.
                   </Label>
@@ -522,12 +515,14 @@ export function FinalDesignApprovalForm({
 
               <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.postApprovalChangesUnderstood
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('postApprovalChangesUnderstood', !formData.postApprovalChangesUnderstood)}
+                  onClick={readOnly ? undefined : () => handleInputChange('postApprovalChangesUnderstood', !formData.postApprovalChangesUnderstood)}
                 >
                   {formData.postApprovalChangesUnderstood && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -535,8 +530,8 @@ export function FinalDesignApprovalForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-blue-800"
-                    onClick={() => handleInputChange('postApprovalChangesUnderstood', !formData.postApprovalChangesUnderstood)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('postApprovalChangesUnderstood', !formData.postApprovalChangesUnderstood)}
                   >
                     <span className="text-red-500">*</span> <strong>3. Post‑Approval Changes.</strong> I acknowledge that any modification, adjustment, remake, or replacement requested after this approval (including but not limited to changes in shade, shape, fit, or occlusion) will incur a fixed surcharge of $6,354. This fee is in addition to any standard laboratory, clinical, or warranty costs, and is not covered under the dental office's three‑year warranty.
                   </Label>
@@ -545,12 +540,14 @@ export function FinalDesignApprovalForm({
 
               <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.warrantyReminderUnderstood
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('warrantyReminderUnderstood', !formData.warrantyReminderUnderstood)}
+                  onClick={readOnly ? undefined : () => handleInputChange('warrantyReminderUnderstood', !formData.warrantyReminderUnderstood)}
                 >
                   {formData.warrantyReminderUnderstood && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -558,8 +555,8 @@ export function FinalDesignApprovalForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-blue-800"
-                    onClick={() => handleInputChange('warrantyReminderUnderstood', !formData.warrantyReminderUnderstood)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('warrantyReminderUnderstood', !formData.warrantyReminderUnderstood)}
                   >
                     <span className="text-red-500">*</span> <strong>4. Warranty Reminder.</strong> I understand the three‑year warranty covers defects in materials and workmanship but does not cover patient‑driven design changes.
                   </Label>
@@ -592,6 +589,7 @@ export function FinalDesignApprovalForm({
                       placeholder="Enter witness name"
                       required
                       className="mt-1"
+                      disabled={readOnly}
                     />
                   </div>
                   <div>
@@ -603,6 +601,7 @@ export function FinalDesignApprovalForm({
                       onChange={(e) => handleInputChange('witnessSignatureDate', e.target.value)}
                       required
                       className="mt-1"
+                      disabled={readOnly}
                     />
                   </div>
                 </div>
@@ -613,19 +612,21 @@ export function FinalDesignApprovalForm({
                     {formData.witnessSignature ? (
                       <SignaturePreview
                         signature={formData.witnessSignature}
-                        onEdit={() => setShowWitnessSignatureDialog(true)}
-                        onClear={handleWitnessSignatureClear}
+                        onEdit={readOnly ? undefined : () => setShowWitnessSignatureDialog(true)}
+                        onClear={readOnly ? undefined : handleWitnessSignatureClear}
                         label="Witness Signature"
+                        readOnly={readOnly}
                       />
                     ) : (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setShowWitnessSignatureDialog(true)}
+                        onClick={readOnly ? undefined : () => setShowWitnessSignatureDialog(true)}
                         className="w-64 h-20 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                        disabled={readOnly}
                       >
                         <Edit className="h-4 w-4" />
-                        Sign Here
+                        {readOnly ? 'No Signature' : 'Sign Here'}
                       </Button>
                     )}
                   </div>
@@ -651,6 +652,7 @@ export function FinalDesignApprovalForm({
                       placeholder="Enter patient full name"
                       required
                       className="mt-1"
+                      disabled={readOnly}
                     />
                   </div>
                   <div>
@@ -662,6 +664,7 @@ export function FinalDesignApprovalForm({
                       onChange={(e) => handleInputChange('patientSignatureDate', e.target.value)}
                       required
                       className="mt-1"
+                      disabled={readOnly}
                     />
                   </div>
                 </div>
@@ -672,19 +675,21 @@ export function FinalDesignApprovalForm({
                     {formData.patientSignature ? (
                       <SignaturePreview
                         signature={formData.patientSignature}
-                        onEdit={() => setShowPatientSignatureDialog(true)}
-                        onClear={handlePatientSignatureClear}
+                        onEdit={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
+                        onClear={readOnly ? undefined : handlePatientSignatureClear}
                         label="Patient Signature"
+                        readOnly={readOnly}
                       />
                     ) : (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setShowPatientSignatureDialog(true)}
+                        onClick={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
                         className="w-64 h-20 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
+                        disabled={readOnly}
                       >
                         <Edit className="h-4 w-4" />
-                        Sign Here
+                        {readOnly ? 'No Signature' : 'Sign Here'}
                       </Button>
                     )}
                   </div>
@@ -706,12 +711,14 @@ export function FinalDesignApprovalForm({
             <div className="space-y-4">
               <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.designAddedToChart
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('designAddedToChart', !formData.designAddedToChart)}
+                  onClick={readOnly ? undefined : () => handleInputChange('designAddedToChart', !formData.designAddedToChart)}
                 >
                   {formData.designAddedToChart && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -719,8 +726,8 @@ export function FinalDesignApprovalForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-blue-800"
-                    onClick={() => handleInputChange('designAddedToChart', !formData.designAddedToChart)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('designAddedToChart', !formData.designAddedToChart)}
                   >
                     Design added to patient's chart
                   </Label>
@@ -729,12 +736,14 @@ export function FinalDesignApprovalForm({
 
               <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData.feeAgreementScanned
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange('feeAgreementScanned', !formData.feeAgreementScanned)}
+                  onClick={readOnly ? undefined : () => handleInputChange('feeAgreementScanned', !formData.feeAgreementScanned)}
                 >
                   {formData.feeAgreementScanned && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -742,8 +751,8 @@ export function FinalDesignApprovalForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-blue-800"
-                    onClick={() => handleInputChange('feeAgreementScanned', !formData.feeAgreementScanned)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange('feeAgreementScanned', !formData.feeAgreementScanned)}
                   >
                     Fee agreement scanned to chart
                   </Label>
@@ -767,7 +776,7 @@ export function FinalDesignApprovalForm({
               </Button>
               {!readOnly ? (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  Submit
+                  {isEditing ? 'Update Form' : 'Submit'}
                 </Button>
               ) : (
                 <Button type="button" disabled className="bg-gray-400 text-white">
@@ -780,21 +789,25 @@ export function FinalDesignApprovalForm({
       </div>
 
       {/* Signature Dialogs */}
-      <SignatureDialog
-        isOpen={showPatientSignatureDialog}
-        onClose={() => setShowPatientSignatureDialog(false)}
-        onSave={handlePatientSignatureSave}
-        title="Patient Signature"
-        currentSignature={formData.patientSignature}
-      />
+      {!readOnly && (
+        <>
+          <SignatureDialog
+            isOpen={showPatientSignatureDialog}
+            onClose={() => setShowPatientSignatureDialog(false)}
+            onSave={handlePatientSignatureSave}
+            title="Patient Signature"
+            currentSignature={formData.patientSignature}
+          />
 
-      <SignatureDialog
-        isOpen={showWitnessSignatureDialog}
-        onClose={() => setShowWitnessSignatureDialog(false)}
-        onSave={handleWitnessSignatureSave}
-        title="Witness Signature"
-        currentSignature={formData.witnessSignature}
-      />
+          <SignatureDialog
+            isOpen={showWitnessSignatureDialog}
+            onClose={() => setShowWitnessSignatureDialog(false)}
+            onSave={handleWitnessSignatureSave}
+            title="Witness Signature"
+            currentSignature={formData.witnessSignature}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -225,9 +225,15 @@ export async function autoSaveFinalDesignApprovalForm(
         .eq('id', existingId)
         .single();
 
-      // Use the status from formData if provided, otherwise preserve current status or set to draft
-      dbData.status = formData.status ||
-        (currentRecord?.status === 'submitted' ? 'submitted' : 'draft');
+      // If form data explicitly sets status to completed (from submission), use that
+      // Otherwise preserve completed status, or set to draft for auto-save
+      if (formData.status === 'completed') {
+        dbData.status = 'completed';
+        console.log('📝 Form submission - setting status to completed');
+      } else {
+        dbData.status = currentRecord?.status === 'completed' ? 'completed' : 'draft';
+        console.log('📝 Auto-save - preserving status or setting to draft:', dbData.status);
+      }
 
       // Update existing record
       console.log('📝 Updating existing Final Design Approval form with status:', dbData.status);
@@ -269,7 +275,7 @@ export async function autoSaveFinalDesignApprovalForm(
               .from('final_design_approval_forms')
               .update({
                 ...dbData,
-                status: formData.status || 'draft',
+                status: formData.status === 'completed' ? 'completed' : 'draft',
                 updated_at: new Date().toISOString()
               })
               .eq('id', draftForm.id)
@@ -295,9 +301,14 @@ export async function autoSaveFinalDesignApprovalForm(
         }
       }
 
-      // Create new record only if no existing draft found
-      dbData.status = 'draft';
-      console.log('📝 Creating new Final Design Approval form draft');
+      // Create new record - use completed status if explicitly set, otherwise draft
+      if (formData.status === 'completed') {
+        dbData.status = 'completed';
+        console.log('📝 Creating new Final Design Approval form with completed status');
+      } else {
+        dbData.status = 'draft';
+        console.log('📝 Creating new Final Design Approval form draft');
+      }
       const { data, error } = await supabase
         .from('final_design_approval_forms')
         .insert(dbData)

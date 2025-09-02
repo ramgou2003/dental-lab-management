@@ -165,9 +165,15 @@ export async function autoSavePartialPaymentAgreementForm(
         .eq('id', existingId)
         .single();
 
-      // Use the status from formData if provided, otherwise preserve current status or set to draft
-      dbData.status = formData.status ||
-        (currentRecord?.status === 'submitted' ? 'submitted' : 'draft');
+      // If form data explicitly sets status to completed (from submission), use that
+      // Otherwise preserve completed status, or set to draft for auto-save
+      if (formData.status === 'completed') {
+        dbData.status = 'completed';
+        console.log('📝 Form submission - setting status to completed');
+      } else {
+        dbData.status = currentRecord?.status === 'completed' ? 'completed' : 'draft';
+        console.log('📝 Auto-save - preserving status or setting to draft:', dbData.status);
+      }
 
       // Update existing record
       console.log('📝 Updating existing Partial Payment Agreement form with status:', dbData.status);
@@ -209,7 +215,7 @@ export async function autoSavePartialPaymentAgreementForm(
               .from('partial_payment_agreement_forms')
               .update({
                 ...dbData,
-                status: formData.status || 'draft',
+                status: formData.status === 'completed' ? 'completed' : 'draft',
                 updated_at: new Date().toISOString()
               })
               .eq('id', draftForm.id)
@@ -287,35 +293,49 @@ export function convertFormDataToDatabase(
     return null;
   };
 
+  // Helper function to get value from either camelCase or snake_case
+  const getValue = (camelCase: string, snakeCase: string, defaultValue: any = '') => {
+    const value = formData[camelCase] !== undefined ? formData[camelCase] :
+                  formData[snakeCase] !== undefined ? formData[snakeCase] : defaultValue;
+
+    // Log important fields for debugging
+    if (['firstName', 'first_name', 'paymentAmount', 'payment_amount', 'estimatedTotalCost', 'estimated_total_cost'].includes(camelCase) ||
+        ['firstName', 'first_name', 'paymentAmount', 'payment_amount', 'estimatedTotalCost', 'estimated_total_cost'].includes(snakeCase)) {
+      console.log(`🔍 getValue(${camelCase}, ${snakeCase}): ${value} (from ${formData[camelCase] !== undefined ? 'camelCase' : formData[snakeCase] !== undefined ? 'snakeCase' : 'default'})`);
+    }
+
+    return value;
+  };
+
   return {
     patient_id: patientId,
-    agreement_date: validateDate(formData.agreementDate) || new Date().toISOString().split('T')[0],
-    provider_license_number: formData.providerLicenseNumber || '',
-    first_name: formData.firstName || '',
-    last_name: formData.lastName || '',
-    address: formData.address || '',
-    email: formData.email || '',
-    phone: formData.phone || '',
-    payment_amount: formData.paymentAmount || '',
-    payment_date: validateDate(formData.paymentDate) || new Date().toISOString().split('T')[0],
-    estimated_total_cost: formData.estimatedTotalCost || '',
-    remaining_balance: formData.remainingBalance || '',
-    final_payment_due_date: validateDate(formData.finalPaymentDueDate) || new Date().toISOString().split('T')[0],
-    selected_treatments: formData.selectedTreatments || [],
-    read_and_understood: formData.readAndUnderstood || false,
-    understand_refund_policy: formData.understandRefundPolicy || false,
-    understand_full_payment_required: formData.understandFullPaymentRequired || false,
-    agree_no_disputes: formData.agreeNoDisputes || false,
-    understand_one_year_validity: formData.understandOneYearValidity || false,
-    understand_no_cash_payments: formData.understandNoCashPayments || false,
-    entering_voluntarily: formData.enteringVoluntarily || false,
-    patient_signature: formData.patientSignature || '',
-    patient_signature_date: validateDate(formData.patientSignatureDate),
-    patient_full_name: formData.patientFullName || '',
-    provider_representative_name: formData.providerRepresentativeName || '',
-    provider_representative_title: formData.providerRepresentativeTitle || '',
-    practice_signature_date: validateDate(formData.practiceSignatureDate),
-    status: formData.status || 'draft'
+    agreement_date: validateDate(getValue('agreementDate', 'agreement_date')) || new Date().toISOString().split('T')[0],
+    provider_license_number: getValue('providerLicenseNumber', 'provider_license_number'),
+    first_name: getValue('firstName', 'first_name'),
+    last_name: getValue('lastName', 'last_name'),
+    address: getValue('address', 'address'),
+    email: getValue('email', 'email'),
+    phone: getValue('phone', 'phone'),
+    payment_amount: getValue('paymentAmount', 'payment_amount'),
+    payment_date: validateDate(getValue('paymentDate', 'payment_date')) || new Date().toISOString().split('T')[0],
+    estimated_total_cost: getValue('estimatedTotalCost', 'estimated_total_cost'),
+    remaining_balance: getValue('remainingBalance', 'remaining_balance'),
+    final_payment_due_date: validateDate(getValue('finalPaymentDueDate', 'final_payment_due_date')) || new Date().toISOString().split('T')[0],
+    selected_treatments: getValue('selectedTreatments', 'selected_treatments', []),
+    read_and_understood: getValue('readAndUnderstood', 'read_and_understood', false),
+    understand_refund_policy: getValue('understandRefundPolicy', 'understand_refund_policy', false),
+    understand_full_payment_required: getValue('understandFullPaymentRequired', 'understand_full_payment_required', false),
+    agree_no_disputes: getValue('agreeNoDisputes', 'agree_no_disputes', false),
+    understand_one_year_validity: getValue('understandOneYearValidity', 'understand_one_year_validity', false),
+    understand_no_cash_payments: getValue('understandNoCashPayments', 'understand_no_cash_payments', false),
+    entering_voluntarily: getValue('enteringVoluntarily', 'entering_voluntarily', false),
+    patient_signature: getValue('patientSignature', 'patient_signature'),
+    patient_signature_date: validateDate(getValue('patientSignatureDate', 'patient_signature_date')),
+    patient_full_name: getValue('patientFullName', 'patient_full_name'),
+    provider_representative_name: getValue('providerRepresentativeName', 'provider_representative_name'),
+    provider_representative_title: getValue('providerRepresentativeTitle', 'provider_representative_title'),
+    practice_signature_date: validateDate(getValue('practiceSignatureDate', 'practice_signature_date')),
+    status: getValue('status', 'status', 'draft')
   };
 }
 

@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import { FilledPatientPacketViewer } from "@/components/FilledPatientPacketViewer";
 import { NewPatientPacketForm, NewPatientPacketFormRef } from "@/components/NewPatientPacketForm";
-import { getPatientPacketsByLeadId, getPatientPacket, updatePatientPacket } from "@/services/patientPacketService";
+import { NewPatientPacketPreview } from "@/components/NewPatientPacketPreview";
+import { getPatientPacketsByLeadId, getPatientPacket, updatePatientPacket, autoSavePatientPacket } from "@/services/patientPacketService";
 import { supabase } from "@/integrations/supabase/client";
 import { NewPatientFormData } from "@/types/newPatientPacket";
 
@@ -56,8 +57,14 @@ export function PatientPacketDialog({
   const [showPacketViewer, setShowPacketViewer] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingPacketId, setEditingPacketId] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [isFormReady, setIsFormReady] = useState(false);
   const formRef = useRef<NewPatientPacketFormRef>(null);
+
+  // Auto-save state
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [autoSaveMessage, setAutoSaveMessage] = useState('');
+  const [lastSavedTime, setLastSavedTime] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -230,6 +237,10 @@ export function PatientPacketDialog({
     }
   };
 
+  const openPreview = () => {
+    setShowPreview(true);
+  };
+
   const handleEditPacket = () => {
     setIsFormReady(false);
     setIsEditMode(true);
@@ -242,6 +253,51 @@ export function PatientPacketDialog({
   const handleCancelEdit = () => {
     setIsEditMode(false);
     setIsFormReady(false);
+  };
+
+  const handleAutoSave = async (formData: NewPatientFormData) => {
+    if (!editingPacketId) return;
+
+    try {
+      setAutoSaveStatus('saving');
+      setAutoSaveMessage('Auto-saving changes...');
+
+      const { data, error } = await autoSavePatientPacket(editingPacketId, formData, 'internal');
+
+      if (error) {
+        console.error('Auto-save error:', error);
+        setAutoSaveStatus('error');
+        setAutoSaveMessage('Connection error - unable to save');
+        setTimeout(() => {
+          setAutoSaveStatus('idle');
+          setAutoSaveMessage('');
+        }, 5000);
+        return;
+      }
+
+      setAutoSaveStatus('saved');
+      setAutoSaveMessage('Changes saved');
+      setLastSavedTime(new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }));
+
+      // Reset to idle after 3 seconds
+      setTimeout(() => {
+        setAutoSaveStatus('idle');
+        setAutoSaveMessage('');
+      }, 3000);
+
+    } catch (error) {
+      console.error('Unexpected auto-save error:', error);
+      setAutoSaveStatus('error');
+      setAutoSaveMessage('Auto-save failed');
+      setTimeout(() => {
+        setAutoSaveStatus('idle');
+        setAutoSaveMessage('');
+      }, 5000);
+    }
   };
 
   const handleSavePacket = async (formData: NewPatientFormData) => {
@@ -391,6 +447,10 @@ export function PatientPacketDialog({
                     onSubmit={handleSavePacket}
                     onCancel={handleCancelEdit}
                     submitButtonText="Save Changes"
+                    onAutoSave={handleAutoSave}
+                    autoSaveStatus={autoSaveStatus}
+                    autoSaveMessage={autoSaveMessage}
+                    lastSavedTime={lastSavedTime}
                   />
                 ) : (
                   <div className="flex items-center justify-center py-8">

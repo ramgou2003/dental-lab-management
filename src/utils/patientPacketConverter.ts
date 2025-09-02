@@ -99,10 +99,14 @@ export function convertFormDataToDatabase(
         : new Date().toISOString().split('T')[0], // Default to today if no date provided
     
     // Metadata
-    form_status: 'completed', // Mark as completed when converting for submission
+    form_status: 'completed', // Default status (will be overridden by service functions)
     submission_source: submissionSource,
     submitted_at: new Date().toISOString()
   };
+
+  console.log('🔧 Converter: default form_status =', result.form_status);
+
+  return result;
 }
 
 /**
@@ -257,6 +261,9 @@ export function convertDatabaseToFormData(dbData: NewPatientPacketDB): NewPatien
     },
     patientNameSignature: dbData.patient_name_signature || '',
     signature: dbData.signature_data || '',
-    date: dbData.signature_date ? new Date(dbData.signature_date) : new Date()
+    date: dbData.signature_date ? new Date(dbData.signature_date) : new Date(),
+
+    // Form metadata - preserve the original form status
+    formStatus: dbData.form_status || 'draft'
   };
 }

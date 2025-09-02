@@ -69,7 +69,7 @@ export function InformedConsentSmokingForm({
 
   // Auto-save effect with debouncing
   useEffect(() => {
-    if (!onAutoSave) return;
+    if (!onAutoSave || readOnly) return;
 
     // Check if form has meaningful data
     const hasData = formData.firstName || formData.lastName || formData.nicotineUse ||
@@ -87,34 +87,44 @@ export function InformedConsentSmokingForm({
     }, 2000); // 2 second debounce
 
     return () => clearTimeout(timeoutId);
-  }, [formData, onAutoSave]);
+  }, [formData, onAutoSave, readOnly]);
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    if (!readOnly) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handleCheckboxChange = (field: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: checked
-    }));
+    if (!readOnly) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: checked
+      }));
+    }
   };
 
   const handlePatientSignatureSave = (signature: string) => {
-    handleInputChange('patientSignature', signature);
-    setShowPatientSignatureDialog(false);
+    if (!readOnly) {
+      handleInputChange('patientSignature', signature);
+      setShowPatientSignatureDialog(false);
+    }
   };
 
   const handlePatientSignatureClear = () => {
-    handleInputChange('patientSignature', '');
+    if (!readOnly) {
+      handleInputChange('patientSignature', '');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    if (!readOnly) {
+      onSubmit(formData);
+    }
   };
 
   return (
@@ -162,6 +172,7 @@ export function InformedConsentSmokingForm({
                   value={formData.firstName}
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -171,10 +182,11 @@ export function InformedConsentSmokingForm({
                   value={formData.lastName}
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="dateOfBirth" className="text-sm font-medium">Date of Birth *</Label>
@@ -184,6 +196,7 @@ export function InformedConsentSmokingForm({
                   value={formData.dateOfBirth}
                   onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -191,12 +204,14 @@ export function InformedConsentSmokingForm({
                 <div className="space-y-3">
                   <div className="flex items-start space-x-3">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        readOnly ? 'cursor-default' : 'cursor-pointer'
+                      } transition-colors ${
                         formData.nicotineUse === 'yes'
                           ? 'bg-blue-100'
-                          : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                       }`}
-                      onClick={() => handleInputChange('nicotineUse', 'yes')}
+                      onClick={readOnly ? undefined : () => handleInputChange('nicotineUse', 'yes')}
                     >
                       {formData.nicotineUse === 'yes' && (
                         <Check className="h-3 w-3 text-blue-600" />
@@ -204,8 +219,8 @@ export function InformedConsentSmokingForm({
                     </div>
                     <div className="flex-1">
                       <Label
-                        className="text-sm font-medium cursor-pointer text-blue-800"
-                        onClick={() => handleInputChange('nicotineUse', 'yes')}
+                        className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                        onClick={readOnly ? undefined : () => handleInputChange('nicotineUse', 'yes')}
                       >
                         Yes (includes cigarettes, e-cigarettes, vaping, chewing tobacco, nicotine patches/gum)
                       </Label>
@@ -214,12 +229,14 @@ export function InformedConsentSmokingForm({
 
                   <div className="flex items-start space-x-3">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        readOnly ? 'cursor-default' : 'cursor-pointer'
+                      } transition-colors ${
                         formData.nicotineUse === 'no'
                           ? 'bg-blue-100'
-                          : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                       }`}
-                      onClick={() => handleInputChange('nicotineUse', 'no')}
+                      onClick={readOnly ? undefined : () => handleInputChange('nicotineUse', 'no')}
                     >
                       {formData.nicotineUse === 'no' && (
                         <Check className="h-3 w-3 text-blue-600" />
@@ -227,8 +244,8 @@ export function InformedConsentSmokingForm({
                     </div>
                     <div className="flex-1">
                       <Label
-                        className="text-sm font-medium cursor-pointer text-blue-800"
-                        onClick={() => handleInputChange('nicotineUse', 'no')}
+                        className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                        onClick={readOnly ? undefined : () => handleInputChange('nicotineUse', 'no')}
                       >
                         No
                       </Label>
@@ -417,12 +434,14 @@ export function InformedConsentSmokingForm({
             ].map((item) => (
               <div key={item.key} className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData[item.key as keyof typeof formData]
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleCheckboxChange(item.key, !formData[item.key as keyof typeof formData])}
+                  onClick={readOnly ? undefined : () => handleCheckboxChange(item.key, !formData[item.key as keyof typeof formData])}
                 >
                   {formData[item.key as keyof typeof formData] && (
                     <Check className="h-3 w-3 text-blue-600" />
@@ -430,8 +449,8 @@ export function InformedConsentSmokingForm({
                 </div>
                 <div className="flex-1">
                   <Label
-                    className="text-sm font-medium cursor-pointer text-blue-800"
-                    onClick={() => handleCheckboxChange(item.key, !formData[item.key as keyof typeof formData])}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                    onClick={readOnly ? undefined : () => handleCheckboxChange(item.key, !formData[item.key as keyof typeof formData])}
                   >
                     {item.text}
                   </Label>
@@ -457,6 +476,7 @@ export function InformedConsentSmokingForm({
                   value={formData.signatureDate}
                   onChange={(e) => handleInputChange('signatureDate', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
 
@@ -465,19 +485,21 @@ export function InformedConsentSmokingForm({
                 {formData.patientSignature ? (
                   <SignaturePreview
                     signature={formData.patientSignature}
-                    onEdit={() => setShowPatientSignatureDialog(true)}
-                    onClear={handlePatientSignatureClear}
+                    onEdit={readOnly ? undefined : () => !readOnly && setShowPatientSignatureDialog(true)}
+                    onClear={readOnly ? undefined : handlePatientSignatureClear}
                     label="Patient Signature *"
+                    readOnly={readOnly}
                   />
                 ) : (
                   <div className="space-y-2">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setShowPatientSignatureDialog(true)}
+                      onClick={readOnly ? undefined : () => !readOnly && setShowPatientSignatureDialog(true)}
                       className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                      disabled={readOnly}
                     >
-                      Click to Sign
+                      {readOnly ? 'No Signature' : 'Click to Sign'}
                     </Button>
                     <Separator className="my-2" />
                     <Label className="text-sm font-medium text-center block">Patient Signature *</Label>
@@ -499,12 +521,14 @@ export function InformedConsentSmokingForm({
               <div className="space-y-3">
                 <div className="flex items-start space-x-3">
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      readOnly ? 'cursor-default' : 'cursor-pointer'
+                    } transition-colors ${
                       formData.signedConsent === 'signed'
                         ? 'bg-blue-100'
-                        : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                        : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                     }`}
-                    onClick={() => handleInputChange('signedConsent', 'signed')}
+                    onClick={readOnly ? undefined : () => handleInputChange('signedConsent', 'signed')}
                   >
                     {formData.signedConsent === 'signed' && (
                       <Check className="h-3 w-3 text-blue-600" />
@@ -512,8 +536,8 @@ export function InformedConsentSmokingForm({
                   </div>
                   <div className="flex-1">
                     <Label
-                      className="text-sm font-medium cursor-pointer text-blue-800"
-                      onClick={() => handleInputChange('signedConsent', 'signed')}
+                      className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                      onClick={readOnly ? undefined : () => handleInputChange('signedConsent', 'signed')}
                     >
                       Signed consent form
                     </Label>
@@ -522,12 +546,14 @@ export function InformedConsentSmokingForm({
 
                 <div className="flex items-start space-x-3">
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      readOnly ? 'cursor-default' : 'cursor-pointer'
+                    } transition-colors ${
                       formData.signedConsent === 'refused'
                         ? 'bg-blue-100'
-                        : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                        : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                     }`}
-                    onClick={() => handleInputChange('signedConsent', 'refused')}
+                    onClick={readOnly ? undefined : () => handleInputChange('signedConsent', 'refused')}
                   >
                     {formData.signedConsent === 'refused' && (
                       <Check className="h-3 w-3 text-blue-600" />
@@ -535,8 +561,8 @@ export function InformedConsentSmokingForm({
                   </div>
                   <div className="flex-1">
                     <Label
-                      className="text-sm font-medium cursor-pointer text-blue-800"
-                      onClick={() => handleInputChange('signedConsent', 'refused')}
+                      className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
+                      onClick={readOnly ? undefined : () => handleInputChange('signedConsent', 'refused')}
                     >
                       Refused to sign (document reason in patient chart)
                     </Label>
@@ -553,6 +579,7 @@ export function InformedConsentSmokingForm({
                   value={formData.refusalReason}
                   onChange={(e) => handleInputChange('refusalReason', e.target.value)}
                   placeholder="Document reason for refusal..."
+                  disabled={readOnly}
                 />
               </div>
             )}
@@ -577,13 +604,15 @@ export function InformedConsentSmokingForm({
       </form>
 
       {/* Signature Dialog */}
-      <SignatureDialog
-        isOpen={showPatientSignatureDialog}
-        onClose={() => setShowPatientSignatureDialog(false)}
-        onSave={handlePatientSignatureSave}
-        title="Patient Signature"
-        currentSignature={formData.patientSignature}
-      />
+      {!readOnly && (
+        <SignatureDialog
+          isOpen={showPatientSignatureDialog}
+          onClose={() => setShowPatientSignatureDialog(false)}
+          onSave={handlePatientSignatureSave}
+          title="Patient Signature"
+          currentSignature={formData.patientSignature}
+        />
+      )}
     </div>
   );
 }

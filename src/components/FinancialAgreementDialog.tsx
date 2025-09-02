@@ -81,13 +81,52 @@ export function FinancialAgreementDialog({
     }
   };
 
-  const handleSubmit = (formData: any) => {
-    // Update status to completed when submitting
-    const submissionData = {
-      ...formData,
-      status: 'completed'
-    };
-    onSubmit(submissionData);
+  const handleSubmit = async (formData: any) => {
+    try {
+      // Update status to completed when submitting
+      const submissionData = {
+        ...formData,
+        status: 'completed'
+      };
+
+      if (savedFormId) {
+        console.log('✅ Updating existing Financial Agreement with ID:', savedFormId);
+        // Update existing form with completed status
+        const { data, error } = await autoSaveFinancialAgreement(
+          submissionData,
+          patientId,
+          leadId,
+          newPatientPacketId,
+          savedFormId
+        );
+
+        if (error) {
+          console.error('Error submitting Financial Agreement:', error);
+          throw error;
+        }
+
+        onSubmit(data);
+      } else {
+        console.log('🆕 Creating new Financial Agreement (no savedFormId)');
+        // Create new form with completed status
+        const { data, error } = await autoSaveFinancialAgreement(
+          submissionData,
+          patientId,
+          leadId,
+          newPatientPacketId
+        );
+
+        if (error) {
+          console.error('Error submitting Financial Agreement:', error);
+          throw error;
+        }
+
+        onSubmit(data);
+      }
+    } catch (error) {
+      console.error('Error submitting Financial Agreement:', error);
+      toast.error('Failed to save Financial Agreement');
+    }
   };
 
   const handleCancel = () => {

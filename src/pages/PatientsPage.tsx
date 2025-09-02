@@ -5,7 +5,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/AuthGuard";
 
-import { PatientTabs } from "@/components/PatientTabs";
 import { PatientsTable } from "@/components/PatientsTable";
 import { NewPatientForm } from "@/components/NewPatientForm";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -14,7 +13,6 @@ export function PatientsPage() {
   const navigate = useNavigate();
   const { canCreatePatients } = usePermissions();
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -54,21 +52,11 @@ export function PatientsPage() {
         />
       </div>
       <div className="flex-1 px-4 pt-4">
-
-
-        {/* Patient Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4">
-          <PatientTabs
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
-        </div>
-
         {/* Patients Table - Extended to viewport height */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col table-container-rounded" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col table-container-rounded" style={{ height: 'calc(100vh - 112px)', minHeight: '500px' }}>
           <PatientsTable
             searchTerm={searchTerm}
-            activeTab={activeTab}
+            activeTab="all"
             refreshTrigger={refreshTrigger}
             onViewProfile={handleViewProfile}
           />

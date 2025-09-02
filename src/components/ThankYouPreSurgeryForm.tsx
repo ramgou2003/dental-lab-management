@@ -138,9 +138,10 @@ export function ThankYouPreSurgeryForm({
 
   // Update form data when initialData changes
   useEffect(() => {
-    if (initialData && initialData.id) {
+    if (initialData && (isEditing || readOnly)) {
       console.log('🔄 Updating Thank You Pre-Surgery form data from initialData:', initialData);
       console.log('🔍 isEditing:', isEditing, 'readOnly:', readOnly);
+      console.log('🔍 initialData.id:', initialData.id);
 
       const today = new Date().toISOString().split('T')[0];
 
@@ -205,15 +206,25 @@ export function ThankYouPreSurgeryForm({
 
       // Mark form as initialized after loading initial data
       setIsFormInitialized(true);
-    } else if (!initialData?.id) {
+
+      console.log('✅ Form data updated with initialData. Key fields check:', {
+        patientName: initialData.patientName,
+        treatmentType: initialData.treatmentType,
+        readInstructions: initialData.readInstructions,
+        understandMedications: initialData.understandMedications,
+        patientSignature: initialData.patientSignature,
+        heartConditions: initialData.heartConditions,
+        startMedrol: initialData.startMedrol
+      });
+    } else if (!initialData) {
       // Mark form as initialized for new forms (no initial data)
       setIsFormInitialized(true);
     }
-  }, [initialData?.id, patientName]);
+  }, [initialData, isEditing, readOnly, patientName]);
 
   // Auto-save effect with debouncing
   useEffect(() => {
-    if (!onAutoSave || !isFormInitialized) return;
+    if (!onAutoSave || !isFormInitialized || readOnly) return;
 
     // Check if form has meaningful data
     const hasData = formData.patientName || formData.treatmentType || formData.patientSignature ||
@@ -235,29 +246,37 @@ export function ThankYouPreSurgeryForm({
     }, 2000); // 2 second debounce
 
     return () => clearTimeout(timeoutId);
-  }, [formData, onAutoSave, isFormInitialized]);
+  }, [formData, onAutoSave, isFormInitialized, readOnly]);
 
   const handleInputChange = (field: string, value: any) => {
-    console.log('📝 Input changed:', field, '=', value);
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    if (!readOnly) {
+      console.log('📝 Input changed:', field, '=', value);
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
 
 
   const handlePatientSignatureSave = (signature: string) => {
-    handleInputChange('patientSignature', signature);
-    setShowPatientSignatureDialog(false);
+    if (!readOnly) {
+      handleInputChange('patientSignature', signature);
+      setShowPatientSignatureDialog(false);
+    }
   };
 
   const handlePatientSignatureClear = () => {
-    handleInputChange('patientSignature', '');
+    if (!readOnly) {
+      handleInputChange('patientSignature', '');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (readOnly) return;
 
     // Validation
     if (!formData.patientName) {
@@ -404,6 +423,7 @@ export function ThankYouPreSurgeryForm({
                   value={formData.patientName}
                   onChange={(e) => handleInputChange('patientName', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -413,6 +433,7 @@ export function ThankYouPreSurgeryForm({
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -426,6 +447,7 @@ export function ThankYouPreSurgeryForm({
                   value={formData.dateOfBirth}
                   onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -435,6 +457,7 @@ export function ThankYouPreSurgeryForm({
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
+                  disabled={readOnly}
                 />
               </div>
               <div>
@@ -444,6 +467,7 @@ export function ThankYouPreSurgeryForm({
                   value={formData.treatmentType}
                   onChange={(e) => handleInputChange('treatmentType', e.target.value)}
                   placeholder="e.g., Full Arch Implants"
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -563,20 +587,22 @@ export function ThankYouPreSurgeryForm({
               ].map((item) => (
                 <div key={item.key} className="flex items-start space-x-3">
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      readOnly ? 'cursor-default' : 'cursor-pointer'
+                    } transition-colors ${
                       formData[item.key as keyof typeof formData]
                         ? 'bg-red-100'
-                        : 'border-2 border-gray-300 bg-white hover:border-red-300'
+                        : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-red-300' : ''}`
                     }`}
-                    onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                    onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                   >
                     {formData[item.key as keyof typeof formData] && (
                       <Check className="h-3 w-3 text-red-600" />
                     )}
                   </div>
                   <Label
-                    className="text-sm font-medium cursor-pointer text-red-800"
-                    onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-red-800`}
+                    onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                   >
                     {item.text}
                   </Label>
@@ -619,20 +645,22 @@ export function ThankYouPreSurgeryForm({
                 ].map((item) => (
                   <div key={item.key} className="flex items-start space-x-3">
                     <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        readOnly ? 'cursor-default' : 'cursor-pointer'
+                      } transition-colors ${
                         formData[item.key as keyof typeof formData]
                           ? 'bg-green-100'
-                          : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                       }`}
-                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {formData[item.key as keyof typeof formData] && (
                         <Check className="h-3 w-3 text-green-600" />
                       )}
                     </div>
                     <Label
-                      className="text-sm cursor-pointer text-gray-700"
-                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
+                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {item.text}
                     </Label>
@@ -653,20 +681,22 @@ export function ThankYouPreSurgeryForm({
                 ].map((item) => (
                   <div key={item.key} className="flex items-start space-x-3">
                     <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        readOnly ? 'cursor-default' : 'cursor-pointer'
+                      } transition-colors ${
                         formData[item.key as keyof typeof formData]
                           ? 'bg-green-100'
-                          : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                       }`}
-                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {formData[item.key as keyof typeof formData] && (
                         <Check className="h-3 w-3 text-green-600" />
                       )}
                     </div>
                     <Label
-                      className="text-sm cursor-pointer text-gray-700"
-                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
+                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {item.text}
                     </Label>
@@ -687,20 +717,22 @@ export function ThankYouPreSurgeryForm({
                 ].map((item) => (
                   <div key={item.key} className="flex items-start space-x-3">
                     <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        readOnly ? 'cursor-default' : 'cursor-pointer'
+                      } transition-colors ${
                         formData[item.key as keyof typeof formData]
                           ? 'bg-green-100'
-                          : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                       }`}
-                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {formData[item.key as keyof typeof formData] && (
                         <Check className="h-3 w-3 text-green-600" />
                       )}
                     </div>
                     <Label
-                      className="text-sm cursor-pointer text-gray-700"
-                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
+                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {item.text}
                     </Label>
@@ -714,27 +746,29 @@ export function ThankYouPreSurgeryForm({
               <h4 className="font-semibold text-green-800 mb-3">After Surgery</h4>
               <div className="space-y-2">
                 {[
-                  { key: 'noAlcohol24hrs', text: 'No alcohol for 24 hours' },
-                  { key: 'noDriving24hrs', text: 'No driving for 24 hours' },
+                  { key: 'noAlcohol24Hrs', text: 'No alcohol for 24 hours' },
+                  { key: 'noDriving24Hrs', text: 'No driving for 24 hours' },
                   { key: 'followInstructions', text: 'Follow all post-operative instructions' },
                   { key: 'callIfConcerns', text: 'Call office with any concerns' }
                 ].map((item) => (
                   <div key={item.key} className="flex items-start space-x-3">
                     <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        readOnly ? 'cursor-default' : 'cursor-pointer'
+                      } transition-colors ${
                         formData[item.key as keyof typeof formData]
                           ? 'bg-green-100'
-                          : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                       }`}
-                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {formData[item.key as keyof typeof formData] && (
                         <Check className="h-3 w-3 text-green-600" />
                       )}
                     </div>
                     <Label
-                      className="text-sm cursor-pointer text-gray-700"
-                      onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
+                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                     >
                       {item.text}
                     </Label>
@@ -899,20 +933,22 @@ export function ThankYouPreSurgeryForm({
             ].map((item) => (
               <div key={item.key} className="flex items-start space-x-3">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } transition-colors ${
                     formData[item.key as keyof typeof formData]
                       ? 'bg-blue-100'
-                      : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                   }`}
-                  onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                  onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                 >
                   {formData[item.key as keyof typeof formData] && (
                     <Check className="h-3 w-3 text-blue-600" />
                   )}
                 </div>
                 <Label
-                  className="text-sm font-medium cursor-pointer text-gray-700"
-                  onClick={() => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                  className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
+                  onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                 >
                   {item.text}
                 </Label>
@@ -937,6 +973,7 @@ export function ThankYouPreSurgeryForm({
                   value={formData.signatureDate}
                   onChange={(e) => handleInputChange('signatureDate', e.target.value)}
                   required
+                  disabled={readOnly}
                 />
               </div>
 
@@ -945,19 +982,21 @@ export function ThankYouPreSurgeryForm({
                 {formData.patientSignature ? (
                   <SignaturePreview
                     signature={formData.patientSignature}
-                    onEdit={() => setShowPatientSignatureDialog(true)}
-                    onClear={handlePatientSignatureClear}
+                    onEdit={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
+                    onClear={readOnly ? undefined : handlePatientSignatureClear}
                     label="Patient Signature *"
+                    readOnly={readOnly}
                   />
                 ) : (
                   <div className="space-y-2">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setShowPatientSignatureDialog(true)}
+                      onClick={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
                       className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                      disabled={readOnly}
                     >
-                      Click to Sign
+                      {readOnly ? 'No Signature' : 'Click to Sign'}
                     </Button>
                     <Separator className="my-2" />
                     <Label className="text-sm font-medium text-center block">Patient Signature *</Label>
@@ -973,6 +1012,7 @@ export function ThankYouPreSurgeryForm({
                 value={formData.patientPrintName}
                 onChange={(e) => handleInputChange('patientPrintName', e.target.value)}
                 required
+                disabled={readOnly}
               />
             </div>
           </CardContent>
@@ -985,7 +1025,7 @@ export function ThankYouPreSurgeryForm({
           </Button>
           {!readOnly ? (
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-              Submit
+              {isEditing ? 'Update Form' : 'Submit'}
             </Button>
           ) : (
             <Button type="button" disabled className="bg-gray-400 text-white">
@@ -996,13 +1036,15 @@ export function ThankYouPreSurgeryForm({
       </form>
 
       {/* Signature Dialog */}
-      <SignatureDialog
-        isOpen={showPatientSignatureDialog}
-        onClose={() => setShowPatientSignatureDialog(false)}
-        onSave={handlePatientSignatureSave}
-        title="Patient Signature"
-        currentSignature={formData.patientSignature}
-      />
+      {!readOnly && (
+        <SignatureDialog
+          isOpen={showPatientSignatureDialog}
+          onClose={() => setShowPatientSignatureDialog(false)}
+          onSave={handlePatientSignatureSave}
+          title="Patient Signature"
+          currentSignature={formData.patientSignature}
+        />
+      )}
     </div>
   );
 }

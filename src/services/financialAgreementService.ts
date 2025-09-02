@@ -291,8 +291,15 @@ export async function autoSaveFinancialAgreement(
         return { data: null, error: fetchError };
       }
 
-      // Preserve completed status, otherwise set to draft
-      dbData.status = currentRecord?.status === 'completed' ? 'completed' : 'draft';
+      // If form data explicitly sets status to completed (from submission), use that
+      // Otherwise preserve completed status, or set to draft for auto-save
+      if (formData.status === 'completed') {
+        dbData.status = 'completed';
+        console.log('📝 Form submission - setting status to completed');
+      } else {
+        dbData.status = currentRecord?.status === 'completed' ? 'completed' : 'draft';
+        console.log('📝 Auto-save - preserving status or setting to draft:', dbData.status);
+      }
 
       // Update existing record
       console.log('📝 Updating existing financial agreement with status:', dbData.status);
@@ -311,9 +318,57 @@ export async function autoSaveFinancialAgreement(
       console.log('✅ Financial agreement auto-saved successfully:', data);
       return { data, error: null };
     } else {
-      // Create new record - always start as draft
-      dbData.status = 'draft';
-      console.log('📝 Creating new financial agreement draft');
+      // Before creating a new form, check if there's already a draft form for this patient/lead
+      console.log('🔍 Checking for existing draft financial agreements for patient:', patientId, 'lead:', leadId);
+      const { data: existingDrafts, error: checkError } = await supabase
+        .from('financial_agreements')
+        .select('id')
+        .eq('patient_id', patientId)
+        .eq('status', 'draft')
+        .limit(1);
+
+      if (checkError) {
+        console.error('Error checking for existing drafts:', checkError);
+        // Continue with creation if check fails
+      } else if (existingDrafts && existingDrafts.length > 0) {
+        // Update the existing draft instead of creating a new one
+        const existingDraftId = existingDrafts[0].id;
+        console.log('📝 Found existing draft, updating instead of creating new:', existingDraftId);
+
+        // If form data explicitly sets status to completed (from submission), use that
+        // Otherwise set to draft for auto-save
+        if (formData.status === 'completed') {
+          dbData.status = 'completed';
+          console.log('📝 Form submission - updating existing draft to completed');
+        } else {
+          dbData.status = 'draft';
+          console.log('📝 Auto-save - keeping as draft');
+        }
+
+        const { data, error } = await supabase
+          .from('financial_agreements')
+          .update(dbData)
+          .eq('id', existingDraftId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('❌ Error updating existing draft financial agreement:', error);
+          return { data: null, error };
+        }
+
+        console.log('✅ Financial agreement auto-saved successfully (updated existing draft):', data);
+        return { data, error: null };
+      }
+
+      // Create new record - use completed status if explicitly set, otherwise draft
+      if (formData.status === 'completed') {
+        dbData.status = 'completed';
+        console.log('📝 Creating new financial agreement with completed status');
+      } else {
+        dbData.status = 'draft';
+        console.log('📝 Creating new financial agreement draft');
+      }
       const { data, error } = await supabase
         .from('financial_agreements')
         .insert(dbData)

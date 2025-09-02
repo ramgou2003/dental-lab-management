@@ -171,16 +171,19 @@ export interface Signatures {
 }
 
 // Complete form data interface
-export interface NewPatientFormData extends 
-  PatientInfo, 
-  MedicalHistory, 
-  AllergiesMedications, 
-  OralHealthStatus, 
-  LifestyleFactors, 
-  ComfortPreferences, 
-  OfficePolicies, 
-  LegalDocumentation, 
-  Signatures {}
+export interface NewPatientFormData extends
+  PatientInfo,
+  MedicalHistory,
+  AllergiesMedications,
+  OralHealthStatus,
+  LifestyleFactors,
+  ComfortPreferences,
+  OfficePolicies,
+  LegalDocumentation,
+  Signatures {
+  // Form metadata
+  formStatus?: 'draft' | 'completed' | 'submitted';
+}
 
 // Validation schema types
 export interface ValidationError {

@@ -204,7 +204,7 @@ export async function createConsentForm(
       .from('consent_full_arch_forms')
       .insert([{
         ...formData,
-        status: 'completed' // Set status to completed for regular form submissions
+        status: 'submitted' // Set status to submitted for regular form submissions
       }])
       .select()
       .single();
@@ -296,7 +296,33 @@ export async function autoSaveConsentFullArchForm(
           .limit(5);
 
         if (existingForms && existingForms.length > 0) {
-          // Look for existing draft to update first
+          // If we're submitting (status = 'submitted'), always look for existing draft to update
+          if (formData.status === 'submitted') {
+            const draftForm = existingForms.find(form => form.status === 'draft');
+            if (draftForm) {
+              console.log('📝 Submitting existing Consent Full Arch draft:', draftForm.id);
+              const { data, error } = await supabase
+                .from('consent_full_arch_forms')
+                .update({
+                  ...dbData,
+                  status: 'submitted',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', draftForm.id)
+                .select()
+                .single();
+
+              if (error) {
+                console.error('❌ Error submitting existing Consent Full Arch draft:', error);
+                return { data: null, error };
+              }
+
+              console.log('✅ Consent Full Arch form submitted successfully:', data);
+              return { data, error: null };
+            }
+          }
+
+          // Look for existing draft to update for auto-save
           const draftForm = existingForms.find(form => form.status === 'draft');
           if (draftForm) {
             // Update the existing draft instead of creating a new one
@@ -638,29 +664,39 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     lowerImplants: dbData.lower_implants || '',
     lowerSameDayLoad: dbData.lower_same_day_load || '',
 
-    // Upper Arch Graft Material
-    upperGraftAllograft: dbData.upper_graft_allograft ?? false,
-    upperGraftXenograft: dbData.upper_graft_xenograft ?? false,
-    upperGraftAutograft: dbData.upper_graft_autograft ?? false,
+    // Upper Arch Graft Material (as object)
+    upperGraftMaterial: {
+      allograft: dbData.upper_graft_allograft ?? false,
+      xenograft: dbData.upper_graft_xenograft ?? false,
+      autograft: dbData.upper_graft_autograft ?? false
+    },
 
-    // Upper Arch Prosthesis
-    upperProsthesisZirconia: dbData.upper_prosthesis_zirconia ?? false,
-    upperProsthesisOverdenture: dbData.upper_prosthesis_overdenture ?? false,
+    // Upper Arch Prosthesis (as object)
+    upperProsthesis: {
+      zirconia: dbData.upper_prosthesis_zirconia ?? false,
+      overdenture: dbData.upper_prosthesis_overdenture ?? false
+    },
 
-    // Lower Arch Graft Material
-    lowerGraftAllograft: dbData.lower_graft_allograft ?? false,
-    lowerGraftXenograft: dbData.lower_graft_xenograft ?? false,
-    lowerGraftAutograft: dbData.lower_graft_autograft ?? false,
+    // Lower Arch Graft Material (as object)
+    lowerGraftMaterial: {
+      allograft: dbData.lower_graft_allograft ?? false,
+      xenograft: dbData.lower_graft_xenograft ?? false,
+      autograft: dbData.lower_graft_autograft ?? false
+    },
 
-    // Lower Arch Prosthesis
-    lowerProsthesisZirconia: dbData.lower_prosthesis_zirconia ?? false,
-    lowerProsthesisOverdenture: dbData.lower_prosthesis_overdenture ?? false,
+    // Lower Arch Prosthesis (as object)
+    lowerProsthesis: {
+      zirconia: dbData.lower_prosthesis_zirconia ?? false,
+      overdenture: dbData.lower_prosthesis_overdenture ?? false
+    },
 
-    // Sedation Plan
-    sedationLocalOnly: dbData.sedation_local_only ?? false,
-    sedationNitrous: dbData.sedation_nitrous ?? false,
-    sedationIvConscious: dbData.sedation_iv_conscious ?? false,
-    sedationGeneralHospital: dbData.sedation_general_hospital ?? false,
+    // Sedation Plan (as object)
+    sedationPlan: {
+      localOnly: dbData.sedation_local_only ?? false,
+      nitrous: dbData.sedation_nitrous ?? false,
+      ivConscious: dbData.sedation_iv_conscious ?? false,
+      generalHospital: dbData.sedation_general_hospital ?? false
+    },
 
     // ASA Physical Status
     asaPhysicalStatus: dbData.asa_physical_status || '',
@@ -683,11 +719,13 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
       covered: dbData.iv_sedation_covered || ''
     },
 
-    // Planned Drugs
-    midazolam: dbData.midazolam ?? false,
-    fentanyl: dbData.fentanyl ?? false,
-    ketamine: dbData.ketamine ?? false,
-    dexamethasone: dbData.dexamethasone ?? false,
+    // Planned Drugs (as object)
+    plannedDrugs: {
+      midazolam: dbData.midazolam ?? false,
+      fentanyl: dbData.fentanyl ?? false,
+      ketamine: dbData.ketamine ?? false,
+      dexamethasone: dbData.dexamethasone ?? false
+    },
 
     // Financial Disclosure
     surgicalExtractions: {
@@ -726,12 +764,14 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     acknowledgmentOutcome: dbData.acknowledgment_outcome ?? false,
     acknowledgmentAuthorize: dbData.acknowledgment_authorize ?? false,
 
-    // Alternatives Initials
-    alternativesNoTreatmentInitials: dbData.alternatives_no_treatment_initials || '',
-    alternativesConventionalDenturesInitials: dbData.alternatives_conventional_dentures_initials || '',
-    alternativesSegmentedExtractionInitials: dbData.alternatives_segmented_extraction_initials || '',
-    alternativesRemovableOverdenturesInitials: dbData.alternatives_removable_overdentures_initials || '',
-    alternativesZygomaticImplantsInitials: dbData.alternatives_zygomatic_implants_initials || '',
+    // Alternatives Initials (as object)
+    alternativesInitials: {
+      noTreatment: dbData.alternatives_no_treatment_initials || '',
+      conventionalDentures: dbData.alternatives_conventional_dentures_initials || '',
+      segmentedExtraction: dbData.alternatives_segmented_extraction_initials || '',
+      removableOverdentures: dbData.alternatives_removable_overdentures_initials || '',
+      zygomaticImplants: dbData.alternatives_zygomatic_implants_initials || ''
+    },
 
     // Signatures
     surgeonName: dbData.surgeon_name || '',

@@ -133,6 +133,7 @@ export function convertFormDataToDatabase(
  */
 export function convertDatabaseToFormData(dbData: ThreeYearCarePackageFormData): any {
   return {
+    id: dbData.id, // Include the ID so it can be used for updates
     patientName: dbData.patient_name || '',
     dateOfBirth: dbData.date_of_birth || '',
     enrollmentDate: dbData.enrollment_date || '',
@@ -323,9 +324,15 @@ export async function autoSaveThreeYearCarePackageForm(
         .eq('id', existingId)
         .single();
 
-      // Use the status from formData if provided, otherwise preserve current status or set to draft
-      dbData.status = formData.status ||
-        (currentRecord?.status === 'submitted' ? 'submitted' : 'draft');
+      // If form data explicitly sets status to completed (from submission), use that
+      // Otherwise preserve completed status, or set to draft for auto-save
+      if (formData.status === 'completed') {
+        dbData.status = 'completed';
+        console.log('📝 Form submission - setting status to completed');
+      } else {
+        dbData.status = currentRecord?.status === 'completed' ? 'completed' : 'draft';
+        console.log('📝 Auto-save - preserving status or setting to draft:', dbData.status);
+      }
 
       // Update existing record
       console.log('📝 Updating existing 3-Year Care Package form with status:', dbData.status);
@@ -375,7 +382,7 @@ export async function autoSaveThreeYearCarePackageForm(
               .from('three_year_care_package_forms')
               .update({
                 ...dbData,
-                status: formData.status || 'draft',
+                status: formData.status === 'completed' ? 'completed' : 'draft',
                 updated_at: new Date().toISOString()
               })
               .eq('id', draftForm.id)
@@ -393,9 +400,14 @@ export async function autoSaveThreeYearCarePackageForm(
         }
       }
 
-      // Create new record only if no existing draft found
-      dbData.status = 'draft';
-      console.log('📝 Creating new 3-Year Care Package form draft');
+      // Create new record - use completed status if explicitly set, otherwise draft
+      if (formData.status === 'completed') {
+        dbData.status = 'completed';
+        console.log('📝 Creating new 3-Year Care Package form with completed status');
+      } else {
+        dbData.status = 'draft';
+        console.log('📝 Creating new 3-Year Care Package form draft');
+      }
       const { data, error } = await supabase
         .from('three_year_care_package_forms')
         .insert(dbData)

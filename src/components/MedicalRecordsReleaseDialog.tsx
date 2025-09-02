@@ -104,15 +104,52 @@ export function MedicalRecordsReleaseDialog({
     }
   };
 
-  const handleSubmit = (formData: any) => {
-    // Update status to completed when submitting and include form ID if it exists
-    const submissionData = {
-      ...formData,
-      status: 'completed',
-      id: savedFormId || initialData?.id // Include the form ID for updating
-    };
-    console.log('🚀 Submitting with form ID:', submissionData.id);
-    onSubmit(submissionData);
+  const handleSubmit = async (formData: any) => {
+    try {
+      // Update status to completed when submitting
+      const submissionData = {
+        ...formData,
+        status: 'completed'
+      };
+
+      if (savedFormId) {
+        console.log('✅ Updating existing Medical Records Release form with ID:', savedFormId);
+        // Update existing form with completed status using auto-save function
+        const { data, error } = await autoSaveMedicalRecordsReleaseForm(
+          submissionData,
+          patientId!,
+          leadId,
+          newPatientPacketId,
+          savedFormId
+        );
+
+        if (error) {
+          console.error('Error submitting Medical Records Release form:', error);
+          throw error;
+        }
+
+        onSubmit(data);
+      } else {
+        console.log('🆕 Creating new Medical Records Release form (no savedFormId)');
+        // Create new form with completed status using auto-save function
+        const { data, error } = await autoSaveMedicalRecordsReleaseForm(
+          submissionData,
+          patientId!,
+          leadId,
+          newPatientPacketId
+        );
+
+        if (error) {
+          console.error('Error submitting Medical Records Release form:', error);
+          throw error;
+        }
+
+        onSubmit(data);
+      }
+    } catch (error) {
+      console.error('Error submitting Medical Records Release form:', error);
+      // You might want to show an error toast here
+    }
   };
 
   const handleCancel = () => {

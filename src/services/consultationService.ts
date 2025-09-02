@@ -317,7 +317,7 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
         city: packetData.address_city || null,
         state: packetData.address_state || null,
         zip_code: packetData.address_zip || null,
-        status: 'Treatment not started', // Valid status from constraint
+        status: 'ACTIVE', // Always set status to ACTIVE
         treatment_type: 'Consultation Completed'
         // Note: full_name is a generated column and will be automatically created
         // created_at and updated_at have default values, so we don't need to specify them
@@ -381,7 +381,7 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
       const { error: updateError } = await supabase
         .from('patients')
         .update({
-          status: 'Treatment not started',
+          status: 'ACTIVE',
           treatment_type: 'Consultation Completed'
         })
         .eq('id', patientId);
@@ -500,7 +500,7 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
         city: null,
         state: null,
         zip_code: null,
-        status: 'Treatment not started', // Valid status from constraint
+        status: 'ACTIVE', // Always set status to ACTIVE
         treatment_type: 'Consultation Completed'
       };
 
@@ -561,7 +561,7 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
       const { error: updateError } = await supabase
         .from('patients')
         .update({
-          status: 'Treatment not started',
+          status: 'ACTIVE',
           treatment_type: 'Consultation Completed'
         })
         .eq('id', patientId);

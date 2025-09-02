@@ -190,7 +190,7 @@ export async function autoSaveMedicalRecordsReleaseForm(
       signature_time: formData.signatureTime || null,
       has_agreed: formData.hasAgreed || false,
       patient_signature: formData.patientSignature || '',
-      status: 'draft' // Always save as draft for auto-save
+      status: formData.status === 'completed' ? 'completed' : 'draft' // Use completed if explicitly set, otherwise draft for auto-save
     };
 
     console.log('🔄 Auto-saving medical records release form with payload:', saveData);

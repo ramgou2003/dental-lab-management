@@ -132,22 +132,30 @@ export function FiveYearWarrantyForm({
   }, [formData, readOnly, onAutoSave, setAutoSaveStatus, setAutoSaveMessage]);
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    if (!readOnly) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handlePatientSignatureSave = (signatureData: string) => {
-    setFormData(prev => ({ ...prev, patientSignature: signatureData }));
+    if (!readOnly) {
+      setFormData(prev => ({ ...prev, patientSignature: signatureData }));
+    }
   };
 
   const handlePatientSignatureClear = () => {
-    setFormData(prev => ({ ...prev, patientSignature: "" }));
+    if (!readOnly) {
+      setFormData(prev => ({ ...prev, patientSignature: "" }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (readOnly) return;
 
     // Validation
     if (!formData.firstName || !formData.lastName || !formData.dateOfBirth || !formData.phone || !formData.email) {
@@ -401,10 +409,12 @@ export function FiveYearWarrantyForm({
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.understandOptionalPlan
                             ? 'bg-blue-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('understandOptionalPlan', !formData.understandOptionalPlan)}
                       >
@@ -414,7 +424,7 @@ export function FiveYearWarrantyForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer text-blue-800"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
                           onClick={() => !readOnly && handleInputChange('understandOptionalPlan', !formData.understandOptionalPlan)}
                         >
                           I understand this is an optional 5-year extended warranty plan
@@ -424,10 +434,12 @@ export function FiveYearWarrantyForm({
 
                     <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.understandMonthlyCost
                             ? 'bg-blue-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('understandMonthlyCost', !formData.understandMonthlyCost)}
                       >
@@ -437,7 +449,7 @@ export function FiveYearWarrantyForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer text-blue-800"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
                           onClick={() => !readOnly && handleInputChange('understandMonthlyCost', !formData.understandMonthlyCost)}
                         >
                           I understand the cost is $150/month plus 5% processing fee
@@ -447,10 +459,12 @@ export function FiveYearWarrantyForm({
 
                     <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.understandCoverageDetails
                             ? 'bg-blue-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('understandCoverageDetails', !formData.understandCoverageDetails)}
                       >
@@ -460,7 +474,7 @@ export function FiveYearWarrantyForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer text-blue-800"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
                           onClick={() => !readOnly && handleInputChange('understandCoverageDetails', !formData.understandCoverageDetails)}
                         >
                           I understand the coverage details and limitations
@@ -470,10 +484,12 @@ export function FiveYearWarrantyForm({
 
                     <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.understandPaymentProcess
                             ? 'bg-blue-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('understandPaymentProcess', !formData.understandPaymentProcess)}
                       >
@@ -483,7 +499,7 @@ export function FiveYearWarrantyForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer text-blue-800"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
                           onClick={() => !readOnly && handleInputChange('understandPaymentProcess', !formData.understandPaymentProcess)}
                         >
                           I understand the automatic payment process
@@ -492,10 +508,12 @@ export function FiveYearWarrantyForm({
                     </div>
                     <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.questionsAnswered
                             ? 'bg-blue-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('questionsAnswered', !formData.questionsAnswered)}
                       >
@@ -505,7 +523,7 @@ export function FiveYearWarrantyForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer text-blue-800"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
                           onClick={() => !readOnly && handleInputChange('questionsAnswered', !formData.questionsAnswered)}
                         >
                           All my questions have been answered satisfactorily
@@ -515,10 +533,12 @@ export function FiveYearWarrantyForm({
 
                     <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.voluntarilyEnrolling
                             ? 'bg-blue-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('voluntarilyEnrolling', !formData.voluntarilyEnrolling)}
                       >
@@ -528,7 +548,7 @@ export function FiveYearWarrantyForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer text-blue-800"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
                           onClick={() => !readOnly && handleInputChange('voluntarilyEnrolling', !formData.voluntarilyEnrolling)}
                         >
                           I am voluntarily enrolling in this warranty plan
@@ -538,10 +558,12 @@ export function FiveYearWarrantyForm({
 
                     <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          readOnly ? 'cursor-default' : 'cursor-pointer'
+                        } transition-colors ${
                           formData.coverageBeginsAfterPayment
                             ? 'bg-blue-100'
-                            : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+                            : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
                         }`}
                         onClick={() => !readOnly && handleInputChange('coverageBeginsAfterPayment', !formData.coverageBeginsAfterPayment)}
                       >
@@ -551,7 +573,7 @@ export function FiveYearWarrantyForm({
                       </div>
                       <div className="flex-1">
                         <Label
-                          className="text-sm font-medium cursor-pointer text-blue-800"
+                          className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
                           onClick={() => !readOnly && handleInputChange('coverageBeginsAfterPayment', !formData.coverageBeginsAfterPayment)}
                         >
                           I understand coverage begins after the first successful payment
@@ -573,10 +595,12 @@ export function FiveYearWarrantyForm({
                 <CardContent>
                   <div className="flex items-start space-x-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        readOnly ? 'cursor-default' : 'cursor-pointer'
+                      } transition-colors ${
                         formData.authorizePayment
                           ? 'bg-green-100'
-                          : 'border-2 border-gray-300 bg-white hover:border-green-300'
+                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
                       }`}
                       onClick={() => !readOnly && handleInputChange('authorizePayment', !formData.authorizePayment)}
                     >
@@ -586,7 +610,7 @@ export function FiveYearWarrantyForm({
                     </div>
                     <div className="flex-1">
                       <Label
-                        className="text-sm font-medium cursor-pointer text-green-800"
+                        className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-green-800`}
                         onClick={() => !readOnly && handleInputChange('authorizePayment', !formData.authorizePayment)}
                       >
                         <strong>I authorize New York Dental Implants</strong> to charge my payment method $150 monthly
@@ -681,20 +705,21 @@ export function FiveYearWarrantyForm({
                           {formData.patientSignature ? (
                             <SignaturePreview
                               signature={formData.patientSignature}
-                              onEdit={() => setShowPatientSignatureDialog(true)}
-                              onClear={handlePatientSignatureClear}
+                              onEdit={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
+                              onClear={readOnly ? undefined : handlePatientSignatureClear}
                               label="Patient Signature"
+                              readOnly={readOnly}
                             />
                           ) : (
                             <Button
                               type="button"
                               variant="outline"
-                              onClick={() => setShowPatientSignatureDialog(true)}
+                              onClick={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
                               className="w-64 h-20 border-2 border-dashed border-blue-300 hover:border-blue-500 flex items-center justify-center gap-2"
                               disabled={readOnly}
                             >
                               <Edit className="h-4 w-4" />
-                              Sign Here
+                              {readOnly ? 'No Signature' : 'Sign Here'}
                             </Button>
                           )}
                         </div>
@@ -722,7 +747,7 @@ export function FiveYearWarrantyForm({
               </Button>
               {!readOnly ? (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  Submit
+                  {isEditing ? 'Update Form' : 'Submit'}
                 </Button>
               ) : (
                 <Button type="button" disabled className="bg-gray-400 text-white">
@@ -735,13 +760,15 @@ export function FiveYearWarrantyForm({
       </div>
 
       {/* Signature Dialog */}
-      <SignatureDialog
-        isOpen={showPatientSignatureDialog}
-        onClose={() => setShowPatientSignatureDialog(false)}
-        onSave={handlePatientSignatureSave}
-        title="Patient Signature"
-        currentSignature={formData.patientSignature}
-      />
+      {!readOnly && (
+        <SignatureDialog
+          isOpen={showPatientSignatureDialog}
+          onClose={() => setShowPatientSignatureDialog(false)}
+          onSave={handlePatientSignatureSave}
+          title="Patient Signature"
+          currentSignature={formData.patientSignature}
+        />
+      )}
     </div>
   );
 }
