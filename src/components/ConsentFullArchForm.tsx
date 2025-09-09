@@ -748,6 +748,17 @@ export function ConsentFullArchForm({
     }));
   };
 
+  // Format US phone number as (XXX) XXX-XXXX
+  const formatUSPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Format based on length
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  };
+
   const handleNestedInputChange = (parentField: string, childField: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -2740,14 +2751,23 @@ export function ConsentFullArchForm({
                         <Label htmlFor="escortPhone" className="text-sm font-semibold text-gray-700">
                           <span className="text-red-500">*</span> Escort Mobile #
                         </Label>
-                        <Input
-                          id="escortPhone"
-                          value={formData.escortPhone}
-                          onChange={(e) => handleInputChange('escortPhone', e.target.value)}
-                          placeholder="Mobile phone number"
-                          required
-                          className="h-10"
-                        />
+                        <div className="flex gap-2">
+                          <div className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium">
+                            🇺🇸 +1
+                          </div>
+                          <Input
+                            id="escortPhone"
+                            type="tel"
+                            value={formData.escortPhone}
+                            onChange={(e) => {
+                              const formatted = formatUSPhoneNumber(e.target.value);
+                              handleInputChange('escortPhone', formatted);
+                            }}
+                            placeholder="(555) 123-4567"
+                            required
+                            className="h-10 flex-1"
+                          />
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -3640,14 +3660,22 @@ export function ConsentFullArchForm({
                                     <Label htmlFor="hipaaPhone" className="text-sm font-medium text-gray-700">
                                       Phone Number
                                     </Label>
-                                    <Input
-                                      id="hipaaPhone"
-                                      type="tel"
-                                      value={formData.hipaaPhone}
-                                      onChange={(e) => handleInputChange('hipaaPhone', e.target.value)}
-                                      placeholder="Enter phone number"
-                                      className="w-full h-10"
-                                    />
+                                    <div className="flex gap-2">
+                                      <div className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium">
+                                        🇺🇸 +1
+                                      </div>
+                                      <Input
+                                        id="hipaaPhone"
+                                        type="tel"
+                                        value={formData.hipaaPhone}
+                                        onChange={(e) => {
+                                          const formatted = formatUSPhoneNumber(e.target.value);
+                                          handleInputChange('hipaaPhone', formatted);
+                                        }}
+                                        placeholder="(555) 123-4567"
+                                        className="w-full h-10 flex-1"
+                                      />
+                                    </div>
                                   </div>
                                 </div>
                               )}

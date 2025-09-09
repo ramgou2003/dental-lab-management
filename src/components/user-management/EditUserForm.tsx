@@ -57,6 +57,17 @@ export function EditUserForm({ user, onUserUpdated, asDropdownItem = false }: Ed
     }));
   };
 
+  // Format US phone number as (XXX) XXX-XXXX
+  const formatUSPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Format based on length
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -198,14 +209,23 @@ export function EditUserForm({ user, onUserUpdated, asDropdownItem = false }: Ed
           {/* Phone */}
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
-              placeholder="Enter phone number"
-              disabled={loading}
-            />
+            <div className="flex gap-2">
+              <div className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium">
+                🇺🇸 +1
+              </div>
+              <Input
+                id="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => {
+                  const formatted = formatUSPhoneNumber(e.target.value);
+                  handleInputChange('phone', formatted);
+                }}
+                placeholder="(555) 123-4567"
+                disabled={loading}
+                className="flex-1"
+              />
+            </div>
           </div>
 
           {/* Status */}

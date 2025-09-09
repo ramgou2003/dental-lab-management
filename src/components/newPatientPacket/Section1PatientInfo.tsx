@@ -32,6 +32,17 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
     }
   };
 
+  // Format US phone number as (XXX) XXX-XXXX
+  const formatUSPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Format based on length
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  };
+
   const handleHeightFeetChange = (value: string) => {
     onNestedInputChange('height', 'feet', value);
     // Calculate BMI with the new feet value
@@ -239,26 +250,44 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
               <Label htmlFor="cellPhone" className="text-sm font-semibold">
                 <span className="text-red-500">*</span> Cell Phone
               </Label>
-              <Input
-                id="cellPhone"
-                type="tel"
-                value={formData.phone.cell}
-                onChange={(e) => onNestedInputChange('phone', 'cell', e.target.value)}
-                placeholder="(555) 123-4567"
-                required
-              />
+              <div className="flex gap-2">
+                <div className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium">
+                  🇺🇸 +1
+                </div>
+                <Input
+                  id="cellPhone"
+                  type="tel"
+                  value={formData.phone.cell}
+                  onChange={(e) => {
+                    const formatted = formatUSPhoneNumber(e.target.value);
+                    onNestedInputChange('phone', 'cell', formatted);
+                  }}
+                  placeholder="(555) 123-4567"
+                  className="flex-1"
+                  required
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="workPhone" className="text-sm font-semibold">
                 Work Phone
               </Label>
-              <Input
-                id="workPhone"
-                type="tel"
-                value={formData.phone.work || ''}
-                onChange={(e) => onNestedInputChange('phone', 'work', e.target.value)}
-                placeholder="(555) 123-4567"
-              />
+              <div className="flex gap-2">
+                <div className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium">
+                  🇺🇸 +1
+                </div>
+                <Input
+                  id="workPhone"
+                  type="tel"
+                  value={formData.phone.work || ''}
+                  onChange={(e) => {
+                    const formatted = formatUSPhoneNumber(e.target.value);
+                    onNestedInputChange('phone', 'work', formatted);
+                  }}
+                  placeholder="(555) 123-4567"
+                  className="flex-1"
+                />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -363,14 +392,23 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
               <Label htmlFor="emergencyPhone" className="text-sm font-semibold">
                 <span className="text-red-500">*</span> Phone Number
               </Label>
-              <Input
-                id="emergencyPhone"
-                type="tel"
-                value={formData.emergencyContact.phone}
-                onChange={(e) => onNestedInputChange('emergencyContact', 'phone', e.target.value)}
-                placeholder="(555) 123-4567"
-                required
-              />
+              <div className="flex gap-2">
+                <div className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium">
+                  🇺🇸 +1
+                </div>
+                <Input
+                  id="emergencyPhone"
+                  type="tel"
+                  value={formData.emergencyContact.phone}
+                  onChange={(e) => {
+                    const formatted = formatUSPhoneNumber(e.target.value);
+                    onNestedInputChange('emergencyContact', 'phone', formatted);
+                  }}
+                  placeholder="(555) 123-4567"
+                  className="flex-1"
+                  required
+                />
+              </div>
             </div>
           </div>
         </CardContent>
@@ -443,13 +481,22 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
                 <Label htmlFor="pcpPhone" className="text-sm font-semibold">
                   Phone Number
                 </Label>
-                <Input
-                  id="pcpPhone"
-                  type="tel"
-                  value={formData.primaryCarePhysician?.phone || ''}
-                  onChange={(e) => onNestedInputChange('primaryCarePhysician', 'phone', e.target.value)}
-                  placeholder="(555) 123-4567"
-                />
+                <div className="flex gap-2">
+                  <div className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium">
+                    🇺🇸 +1
+                  </div>
+                  <Input
+                    id="pcpPhone"
+                    type="tel"
+                    value={formData.primaryCarePhysician?.phone || ''}
+                    onChange={(e) => {
+                      const formatted = formatUSPhoneNumber(e.target.value);
+                      onNestedInputChange('primaryCarePhysician', 'phone', formatted);
+                    }}
+                    placeholder="(555) 123-4567"
+                    className="flex-1"
+                  />
+                </div>
               </div>
             </div>
           )}

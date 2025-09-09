@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
 import { 
@@ -115,7 +116,8 @@ export function ThankYouPreSurgeryForm({
       // Signatures
       patientSignature: initialData?.patientSignature || "",
       signatureDate: initialData?.signatureDate || today,
-      patientPrintName: initialData?.patientPrintName || ""
+      signatureTime: initialData?.signatureTime || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+      patientPrintName: initialData?.patientPrintName || patientName || ""
     };
 
     console.log('🏁 Initial Thank You Pre-Surgery form data setup:', {
@@ -201,7 +203,8 @@ export function ThankYouPreSurgeryForm({
         // Signatures
         patientSignature: initialData.patientSignature || prev.patientSignature || "",
         signatureDate: initialData.signatureDate || prev.signatureDate || today,
-        patientPrintName: initialData.patientPrintName || prev.patientPrintName || ""
+        signatureTime: initialData.signatureTime || prev.signatureTime || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+        patientPrintName: initialData.patientPrintName || prev.patientPrintName || patientName || ""
       }));
 
       // Mark form as initialized after loading initial data
@@ -256,6 +259,17 @@ export function ThankYouPreSurgeryForm({
         [field]: value
       }));
     }
+  };
+
+  // Format US phone number as (XXX) XXX-XXXX
+  const formatUSPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Format based on length
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
   };
 
 
@@ -367,6 +381,7 @@ export function ThankYouPreSurgeryForm({
       // Signatures
       patient_signature: formData.patientSignature,
       signature_date: isValidDate(formData.signatureDate) ? formData.signatureDate : currentDate,
+      signature_time: formData.signatureTime || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
       patient_print_name: formData.patientPrintName
     };
 
@@ -428,13 +443,24 @@ export function ThankYouPreSurgeryForm({
               </div>
               <div>
                 <Label htmlFor="phone" className="text-sm font-medium">Phone Number *</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  required
-                  disabled={readOnly}
-                />
+                <div className="flex gap-2">
+                  <div className="flex items-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-medium">
+                    🇺🇸 +1
+                  </div>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      const formatted = formatUSPhoneNumber(e.target.value);
+                      handleInputChange('phone', formatted);
+                    }}
+                    placeholder="(555) 123-4567"
+                    required
+                    disabled={readOnly}
+                    className="flex-1"
+                  />
+                </div>
               </div>
             </div>
             
@@ -462,13 +488,24 @@ export function ThankYouPreSurgeryForm({
               </div>
               <div>
                 <Label htmlFor="treatmentType" className="text-sm font-medium">Treatment Type</Label>
-                <Input
-                  id="treatmentType"
+                <Select
                   value={formData.treatmentType}
-                  onChange={(e) => handleInputChange('treatmentType', e.target.value)}
-                  placeholder="e.g., Full Arch Implants"
+                  onValueChange={(value) => handleInputChange('treatmentType', value)}
                   disabled={readOnly}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select treatment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FULL ARCH FIXED">FULL ARCH FIXED</SelectItem>
+                    <SelectItem value="DENTURE">DENTURE</SelectItem>
+                    <SelectItem value="IMPLANT REMOVABLE DENTURE">IMPLANT REMOVABLE DENTURE</SelectItem>
+                    <SelectItem value="SINGLE IMPLANT">SINGLE IMPLANT</SelectItem>
+                    <SelectItem value="MULTIPLE IMPLANTS">MULTIPLE IMPLANTS</SelectItem>
+                    <SelectItem value="EXTRACTION">EXTRACTION</SelectItem>
+                    <SelectItem value="EXTRACTION AND GRAFT">EXTRACTION AND GRAFT</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
@@ -824,12 +861,12 @@ export function ThankYouPreSurgeryForm({
                 <h4 className="font-semibold text-orange-800 mb-2">Medrol Dose Pack</h4>
                 <p className="text-sm text-orange-700 mb-2">Anti-inflammatory steroid</p>
                 <ul className="text-xs text-orange-600 space-y-1">
-                  <li>Day 1: 6 tablets (2-2-2)</li>
-                  <li>Day 2: 5 tablets (2-1-2)</li>
-                  <li>Day 3: 4 tablets (2-0-2)</li>
-                  <li>Day 4: 3 tablets (1-0-2)</li>
-                  <li>Day 5: 2 tablets (1-0-1)</li>
-                  <li>Day 6: 1 tablet (1-0-0)</li>
+                  <li>Day 1: 6 tablets</li>
+                  <li>Day 2: 5 tablets</li>
+                  <li>Day 3: 4 tablets</li>
+                  <li>Day 4: 3 tablets</li>
+                  <li>Day 5: 2 tablets</li>
+                  <li>Day 6: 1 tablet</li>
                 </ul>
               </div>
 
@@ -996,33 +1033,79 @@ export function ThankYouPreSurgeryForm({
         </Card>
 
         {/* Signature Section */}
-        <Card className="border-2 border-gray-300">
+        <Card className="border-2 border-blue-200">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-800">Signatures</CardTitle>
+            <CardTitle className="text-lg font-semibold text-blue-600 flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Patient Signature & Acknowledgment
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Date */}
-              <div className="space-y-2">
-                <Label htmlFor="signatureDate" className="text-sm font-medium">Date *</Label>
-                <Input
-                  id="signatureDate"
-                  type="date"
-                  value={formData.signatureDate}
-                  onChange={(e) => handleInputChange('signatureDate', e.target.value)}
-                  required
-                  disabled={readOnly}
-                />
+              {/* Left Side - Patient Info */}
+              <div className="space-y-4">
+                {/* Patient Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="patientPrintName" className="text-sm font-medium">Patient Name</Label>
+                  <Input
+                    id="patientPrintName"
+                    value={formData.patientPrintName || patientName || ""}
+                    onChange={(e) => handleInputChange('patientPrintName', e.target.value)}
+                    required
+                    disabled={true}
+                    className="bg-gray-50 text-gray-700"
+                  />
+                </div>
+
+                {/* Date and Time Row */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signatureDate" className="text-sm font-medium">Date</Label>
+                    <div className="relative">
+                      <Input
+                        id="signatureDate"
+                        type="date"
+                        value={formData.signatureDate}
+                        onChange={(e) => handleInputChange('signatureDate', e.target.value)}
+                        required
+                        disabled={readOnly}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signatureTime" className="text-sm font-medium">Time</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="signatureTime"
+                        type="time"
+                        value={formData.signatureTime || new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                        onChange={(e) => handleInputChange('signatureTime', e.target.value)}
+                        disabled={readOnly}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleInputChange('signatureTime', new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }))}
+                        disabled={readOnly}
+                        className="text-xs px-2"
+                      >
+                        Now
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Patient Signature */}
+              {/* Right Side - Signature */}
               <div className="space-y-2">
                 {formData.patientSignature ? (
                   <SignaturePreview
                     signature={formData.patientSignature}
                     onEdit={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
                     onClear={readOnly ? undefined : handlePatientSignatureClear}
-                    label="Patient Signature *"
+                    label="Patient Signature"
                     readOnly={readOnly}
                   />
                 ) : (
@@ -1031,27 +1114,15 @@ export function ThankYouPreSurgeryForm({
                       type="button"
                       variant="outline"
                       onClick={readOnly ? undefined : () => setShowPatientSignatureDialog(true)}
-                      className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                      className="w-full h-32 border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50"
                       disabled={readOnly}
                     >
                       {readOnly ? 'No Signature' : 'Click to Sign'}
                     </Button>
-                    <Separator className="my-2" />
-                    <Label className="text-sm font-medium text-center block">Patient Signature *</Label>
+                    <Label className="text-sm font-medium text-center block">Patient Signature</Label>
                   </div>
                 )}
               </div>
-            </div>
-
-            <div>
-              <Label htmlFor="patientPrintName" className="text-sm font-medium">Print Patient Name *</Label>
-              <Input
-                id="patientPrintName"
-                value={formData.patientPrintName}
-                onChange={(e) => handleInputChange('patientPrintName', e.target.value)}
-                required
-                disabled={readOnly}
-              />
             </div>
           </CardContent>
         </Card>
