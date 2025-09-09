@@ -1073,7 +1073,7 @@ export function PatientProfilePage() {
         console.error('Error deleting consent form:', error);
         toast({
           title: "Error",
-          description: "Failed to delete consent form. Please try again.",
+          description: "Failed to delete consent packet. Please try again.",
           variant: "destructive",
         });
         return;
@@ -1088,7 +1088,7 @@ export function PatientProfilePage() {
 
       toast({
         title: "Success",
-        description: "Consent form deleted successfully!",
+        description: "Consent packet deleted successfully!",
       });
     } catch (error) {
       console.error('Unexpected error deleting consent form:', error);
@@ -4886,7 +4886,7 @@ export function PatientProfilePage() {
                             <SelectContent>
                               <SelectItem value="new-patient-packet">New Patient Packet</SelectItem>
                               <SelectItem value="financial-agreement">Financial Agreement</SelectItem>
-                              <SelectItem value="consent-full-arch">Consent Form</SelectItem>
+                              <SelectItem value="consent-full-arch">Consent Packet</SelectItem>
                               <SelectItem value="medical-records-release">Medical Records Release Form</SelectItem>
                               <SelectItem value="informed-consent-smoking">Informed Consent Form For Smoking</SelectItem>
                               <SelectItem value="three-year-care-package">3-Year Care Package Enrollment Form</SelectItem>
@@ -5173,7 +5173,7 @@ export function PatientProfilePage() {
                                             form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
-                                            Consent Form
+                                            Consent Packet
                                           </span>
                                         </div>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -5245,7 +5245,7 @@ export function PatientProfilePage() {
                                                 }
                                               }}
                                               className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Edit consent form"
+                                              title="Edit consent packet"
                                             >
                                               <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
                                             </button>
@@ -5260,7 +5260,7 @@ export function PatientProfilePage() {
                                                 setShowDeleteConsentFormConfirm(true);
                                               }}
                                               className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Delete consent form"
+                                              title="Delete consent packet"
                                             >
                                               <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
                                             </button>
@@ -13356,7 +13356,7 @@ export function PatientProfilePage() {
         sheet={surgicalRecallSheetToDelete}
       />
 
-      {/* Consent Form Dialog */}
+      {/* Consent Packet Dialog */}
       {patient && (
         <ConsentFullArchDialog
           isOpen={showConsentFullArchForm}
@@ -13386,7 +13386,7 @@ export function PatientProfilePage() {
 
               toast({
                 title: "Success",
-                description: "Consent form saved successfully!",
+                description: "Consent packet saved successfully!",
               });
 
               // Reset states and refresh forms
@@ -14145,16 +14145,16 @@ export function PatientProfilePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Consent Form Confirmation Dialog */}
+      {/* Delete Consent Packet Confirmation Dialog */}
       <AlertDialog open={showDeleteConsentFormConfirm} onOpenChange={setShowDeleteConsentFormConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="h-5 w-5" />
-              Delete Consent Form
+              Delete Consent Packet
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this consent form? This action cannot be undone.
+              Are you sure you want to delete this consent packet? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

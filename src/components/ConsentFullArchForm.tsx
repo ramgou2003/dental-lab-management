@@ -874,7 +874,7 @@ export function ConsentFullArchForm({
         <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-6 w-6" />
-            Consent Form
+            Consent Packet
           </div>
 
           {/* Auto-save Status Indicator */}
