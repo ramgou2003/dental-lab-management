@@ -22,6 +22,7 @@ CREATE TABLE financial_agreements (
   patient_payment_today DECIMAL(10,2),
   remaining_balance DECIMAL(10,2),
   balance_due_date DATE,
+  payment_amount DECIMAL(10,2),
   payment_terms_initials TEXT,
   
   -- Section 3: Non-Refundable & Lab Fees
@@ -52,8 +53,8 @@ CREATE TABLE financial_agreements (
   witness_signature_time TIME,
   
   -- Section 8: Office Use Only
-  scanned_to_chart BOOLEAN DEFAULT false,
-  countersigned_by_manager BOOLEAN DEFAULT false,
+  downloaded_to_dental_management_software BOOLEAN DEFAULT false,
+  confirmed_by_staff_initials TEXT,
   
   -- Status and Metadata
   status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'completed', 'signed', 'executed')),

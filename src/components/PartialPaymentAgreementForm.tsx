@@ -84,8 +84,8 @@ export function PartialPaymentAgreementForm({
       patientFullName: initialData?.patientFullName || patientName || "",
       patientSignature: initialData?.patientSignature || "",
       patientSignatureDate: initialData?.patientSignatureDate || today,
-      providerRepName: initialData?.providerRepresentativeName || "Dr. Smith",
-      providerRepTitle: initialData?.providerRepresentativeTitle || "Practice Manager",
+      providerRepName: initialData?.providerRepresentativeName || "",
+      providerRepTitle: initialData?.providerRepresentativeTitle || "",
       practiceSignatureDate: initialData?.practiceSignatureDate || today
     };
 
@@ -150,8 +150,8 @@ export function PartialPaymentAgreementForm({
         patientFullName: initialData.patientFullName || patientName || "",
         patientSignature: initialData.patientSignature || "",
         patientSignatureDate: initialData.patientSignatureDate || today,
-        providerRepName: initialData.providerRepresentativeName || "Dr. Smith",
-        providerRepTitle: initialData.providerRepresentativeTitle || "Practice Manager",
+        providerRepName: initialData.providerRepresentativeName || "",
+        providerRepTitle: initialData.providerRepresentativeTitle || "",
         practiceSignatureDate: initialData.practiceSignatureDate || today
       };
 
@@ -232,8 +232,8 @@ export function PartialPaymentAgreementForm({
         patientSignature: initialData.patientSignature || prev.patientSignature || "",
         patientSignatureDate: initialData.patientSignatureDate || prev.patientSignatureDate || today,
         patientFullName: initialData.patientFullName || prev.patientFullName || patientName || "",
-        providerRepName: initialData.providerRepresentativeName || prev.providerRepName || "Dr. Smith",
-        providerRepTitle: initialData.providerRepresentativeTitle || prev.providerRepTitle || "Practice Manager",
+        providerRepName: initialData.providerRepresentativeName || prev.providerRepName || "",
+        providerRepTitle: initialData.providerRepresentativeTitle || prev.providerRepTitle || "",
         practiceSignatureDate: initialData.practiceSignatureDate || prev.practiceSignatureDate || today
       }));
 

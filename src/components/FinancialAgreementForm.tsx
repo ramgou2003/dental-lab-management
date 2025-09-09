@@ -56,6 +56,7 @@ export function FinancialAgreementForm({
     patientPaymentToday: "",
     remainingBalance: "",
     remainingPaymentPlan: "",
+    paymentAmount: "",
     paymentTermsInitials: "",
 
     // Non-Refundable & Lab Fees
@@ -86,7 +87,7 @@ export function FinancialAgreementForm({
     witnessSignatureTime: new Date().toTimeString().slice(0, 5),
 
     // Office Use Only
-    downloadedToDentraAssent: false,
+    downloadedToDentalManagementSoftware: false,
     confirmedByStaffInitials: "",
   });
 
@@ -144,6 +145,7 @@ export function FinancialAgreementForm({
       patientPaymentToday: initialData.patient_payment_today != null ? String(initialData.patient_payment_today) : "",
       remainingBalance: initialData.remaining_balance != null ? String(initialData.remaining_balance) : "",
       remainingPaymentPlan: initialData.remaining_payment_plan || "",
+      paymentAmount: initialData.payment_amount != null ? String(initialData.payment_amount) : "",
       paymentTermsInitials: initialData.payment_terms_initials || "",
 
       labFeeInitials: initialData.lab_fee_initials || "",
@@ -168,7 +170,7 @@ export function FinancialAgreementForm({
       witnessSignatureDate: initialData.witness_signature_date || prev.witnessSignatureDate,
       witnessSignatureTime: initialData.witness_signature_time || prev.witnessSignatureTime,
 
-      downloadedToDentraAssent: !!initialData.downloaded_to_dentra_assent,
+      downloadedToDentalManagementSoftware: !!initialData.downloaded_to_dental_management_software,
       confirmedByStaffInitials: initialData.confirmed_by_staff_initials || "",
     }));
   }, [isEditing, initialData]);
@@ -758,6 +760,7 @@ export function FinancialAgreementForm({
                   <SelectValue placeholder="Select payment plan..." />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="paid-in-full">Paid in Full</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="twice-a-month">Twice A Month</SelectItem>
                   <SelectItem value="twice-a-month-by-pay-cycle">Twice A Month By Pay Cycle</SelectItem>
@@ -766,6 +769,36 @@ export function FinancialAgreementForm({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Payment Amount - Show only when payment plan is selected (except Paid in Full) */}
+            {formData.remainingPaymentPlan && formData.remainingPaymentPlan !== 'paid-in-full' && (
+              <div>
+                <Label htmlFor="paymentAmount" className="text-sm font-semibold">
+                  Payment Amount ({
+                    formData.remainingPaymentPlan === 'monthly' ? 'per month' :
+                    formData.remainingPaymentPlan === 'twice-a-month' ? 'twice a month' :
+                    formData.remainingPaymentPlan === 'twice-a-month-by-pay-cycle' ? 'twice a month by pay cycle' :
+                    formData.remainingPaymentPlan === 'weekly' ? 'per week' :
+                    formData.remainingPaymentPlan === 'twice-a-year' ? 'twice a year' :
+                    'per payment'
+                  })
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    id="paymentAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={formData.paymentAmount}
+                    onChange={(e) => handleInputChange('paymentAmount', e.target.value)}
+                    className="pl-8"
+                    disabled={readOnly}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="space-y-2 text-sm text-blue-800">
@@ -1050,11 +1083,11 @@ export function FinancialAgreementForm({
               <h4 className="font-semibold text-blue-800 mb-2">Office Use Only:</h4>
               <div className="space-y-3">
                 <SimpleCheckbox
-                  id="downloadedToDentraAssent"
-                  checked={formData.downloadedToDentraAssent || false}
-                  onCheckedChange={(checked) => handleInputChange('downloadedToDentraAssent', checked)}
+                  id="downloadedToDentalManagementSoftware"
+                  checked={formData.downloadedToDentalManagementSoftware || false}
+                  onCheckedChange={(checked) => handleInputChange('downloadedToDentalManagementSoftware', checked)}
                 >
-                  Downloaded to Dentra Assent
+                  Downloaded to Dental Management Software
                 </SimpleCheckbox>
                 <div className="flex items-center gap-2">
                   <Label htmlFor="confirmedByStaffInitials" className="text-sm whitespace-nowrap">Confirmed by (Staff Initial):</Label>

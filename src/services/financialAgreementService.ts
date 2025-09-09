@@ -27,6 +27,7 @@ export interface FinancialAgreementData {
   patient_payment_today?: number;
   remaining_balance?: number;
   remaining_payment_plan?: string;
+  payment_amount?: number;
   payment_terms_initials?: string;
   
   // Section 3: Non-Refundable & Lab Fees
@@ -57,7 +58,7 @@ export interface FinancialAgreementData {
   witness_signature_time?: string;
   
   // Section 8: Office Use Only
-  downloaded_to_dentra_assent?: boolean;
+  downloaded_to_dental_management_software?: boolean;
   confirmed_by_staff_initials?: string;
   
   // Status and Metadata
@@ -100,6 +101,7 @@ export function convertFormDataToDatabase(formData: any, patientId?: string, lea
     patient_payment_today: formData.patientPaymentToday ? parseFloat(formData.patientPaymentToday) : null,
     remaining_balance: formData.remainingBalance ? parseFloat(formData.remainingBalance) : null,
     remaining_payment_plan: formData.remainingPaymentPlan || null,
+    payment_amount: formData.paymentAmount ? parseFloat(formData.paymentAmount) : null,
     payment_terms_initials: formData.paymentTermsInitials || null,
     
     // Section 3: Non-Refundable & Lab Fees
@@ -130,7 +132,7 @@ export function convertFormDataToDatabase(formData: any, patientId?: string, lea
     witness_signature_time: formData.witnessSignatureTime || null,
     
     // Section 8: Office Use Only
-    downloaded_to_dentra_assent: formData.downloadedToDentraAssent || false,
+    downloaded_to_dental_management_software: formData.downloadedToDentalManagementSoftware || false,
     confirmed_by_staff_initials: formData.confirmedByStaffInitials || null,
     
     // Status and Metadata
@@ -217,6 +219,13 @@ export async function saveFinancialAgreement(
     }
 
     console.log('✅ Financial agreement saved successfully:', data);
+
+    // Update patient chart number if provided and patient_id exists
+    if (dbData.chart_number && dbData.patient_id) {
+      console.log('📋 Updating patient chart number:', dbData.chart_number);
+      await updatePatientChartNumber(dbData.patient_id, dbData.chart_number);
+    }
+
     return { data, error: null };
   } catch (error) {
     console.error('💥 Unexpected error saving financial agreement:', error);
@@ -256,6 +265,13 @@ export async function updateFinancialAgreement(
     }
 
     console.log('Financial agreement updated successfully:', data);
+
+    // Update patient chart number if provided and patient_id exists
+    if (dbData.chart_number && dbData.patient_id) {
+      console.log('📋 Updating patient chart number:', dbData.chart_number);
+      await updatePatientChartNumber(dbData.patient_id, dbData.chart_number);
+    }
+
     return { data, error: null };
   } catch (error) {
     console.error('Unexpected error updating financial agreement:', error);
@@ -358,6 +374,13 @@ export async function autoSaveFinancialAgreement(
         }
 
         console.log('✅ Financial agreement auto-saved successfully (updated existing draft):', data);
+
+        // Update patient chart number if provided and patient_id exists
+        if (dbData.chart_number && dbData.patient_id) {
+          console.log('📋 Auto-save: Updating patient chart number:', dbData.chart_number);
+          await updatePatientChartNumber(dbData.patient_id, dbData.chart_number);
+        }
+
         return { data, error: null };
       }
 
@@ -381,6 +404,13 @@ export async function autoSaveFinancialAgreement(
       }
 
       console.log('✅ Financial agreement auto-saved successfully:', data);
+
+      // Update patient chart number if provided and patient_id exists
+      if (dbData.chart_number && dbData.patient_id) {
+        console.log('📋 Auto-save: Updating patient chart number:', dbData.chart_number);
+        await updatePatientChartNumber(dbData.patient_id, dbData.chart_number);
+      }
+
       return { data, error: null };
     }
   } catch (error) {
@@ -457,6 +487,65 @@ export async function deleteFinancialAgreement(id: string): Promise<{ data: any 
     return { data, error: null };
   } catch (error) {
     console.error('💥 Unexpected error deleting financial agreement:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Update patient chart number in the patients table
+ */
+export async function updatePatientChartNumber(
+  patientId: string,
+  chartNumber: string
+): Promise<{ data: any | null; error: any }> {
+  try {
+    console.log('📋 Updating patient chart number:', { patientId, chartNumber });
+
+    const { data, error } = await supabase
+      .from('patients')
+      .update({ chart_number: chartNumber })
+      .eq('id', patientId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Error updating patient chart number:', error);
+      return { data: null, error };
+    }
+
+    console.log('✅ Patient chart number updated successfully:', data);
+    return { data, error: null };
+  } catch (error) {
+    console.error('💥 Unexpected error updating patient chart number:', error);
+    return { data: null, error };
+  }
+}
+
+/**
+ * Sync chart number from patient profile to all related financial agreements
+ */
+export async function syncChartNumberToFinancialAgreements(
+  patientId: string,
+  chartNumber: string
+): Promise<{ data: any | null; error: any }> {
+  try {
+    console.log('🔄 Syncing chart number to financial agreements:', { patientId, chartNumber });
+
+    const { data, error } = await supabase
+      .from('financial_agreements')
+      .update({ chart_number: chartNumber })
+      .eq('patient_id', patientId)
+      .select();
+
+    if (error) {
+      console.error('❌ Error syncing chart number to financial agreements:', error);
+      return { data: null, error };
+    }
+
+    console.log('✅ Chart number synced to financial agreements successfully:', data);
+    return { data, error: null };
+  } catch (error) {
+    console.error('💥 Unexpected error syncing chart number:', error);
     return { data: null, error };
   }
 }

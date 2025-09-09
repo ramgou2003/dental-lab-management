@@ -9,6 +9,7 @@ import { PhoneInput } from "./PhoneInput";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { syncChartNumberToFinancialAgreements } from "@/services/financialAgreementService";
 
 interface Patient {
   id: string;
@@ -20,6 +21,7 @@ interface Patient {
   city: string | null;
   state: string | null;
   zip_code: string | null;
+  chart_number: string | null;
   gender: string | null;
   date_of_birth: string;
   status: string | null;
@@ -48,6 +50,7 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
     city: '',
     state: '',
     zipCode: '',
+    chartNumber: '',
     gender: 'male'
   });
 
@@ -71,6 +74,7 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
         city: patient.city || '',
         state: patient.state || '',
         zipCode: patient.zip_code || '',
+        chartNumber: patient.chart_number || '',
         gender: patient.gender || 'male'
       });
     }
@@ -107,6 +111,7 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
         city: formData.city || null,
         state: formData.state || null,
         zip_code: formData.zipCode || null,
+        chart_number: formData.chartNumber || null,
         gender: formData.gender,
         updated_at: new Date().toISOString()
       };
@@ -126,6 +131,12 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
         console.error('Error details:', error.message, error.details, error.hint);
         toast.error(`Failed to update patient: ${error.message}`);
         return;
+      }
+
+      // Sync chart number to financial agreements if it was updated
+      if (formData.chartNumber && formData.chartNumber !== patient.chart_number) {
+        console.log('📋 Chart number changed, syncing to financial agreements...');
+        await syncChartNumberToFinancialAgreements(patient.id, formData.chartNumber);
       }
 
       toast.success("Patient updated successfully");
@@ -181,6 +192,18 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
                 className={errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
             </div>
+          </div>
+
+          <div className="col-span-2">
+            <Label htmlFor="chartNumber">
+              Chart Number
+            </Label>
+            <Input
+              id="chartNumber"
+              value={formData.chartNumber}
+              onChange={(e) => handleInputChange('chartNumber', e.target.value)}
+              placeholder="Enter chart number"
+            />
           </div>
 
           <div>

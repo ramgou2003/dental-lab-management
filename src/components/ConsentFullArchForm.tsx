@@ -126,11 +126,13 @@ export function ConsentFullArchForm({
       // Upper Arch Treatment Details
       upperTeethRegions: initialData?.upperTeethRegions || "",
       upperImplants: initialData?.upperImplants || "",
+      upperTreatmentType: initialData?.upperTreatmentType || "",
       upperSameDayLoad: initialData?.upperSameDayLoad || "",
 
       // Lower Arch Treatment Details
       lowerTeethRegions: initialData?.lowerTeethRegions || "",
       lowerImplants: initialData?.lowerImplants || "",
+      lowerTreatmentType: initialData?.lowerTreatmentType || "",
       lowerSameDayLoad: initialData?.lowerSameDayLoad || "",
 
       // ASA Physical Status
@@ -165,12 +167,20 @@ export function ConsentFullArchForm({
         midazolam: false,
         fentanyl: false,
         ketamine: false,
-        dexamethasone: false
+        dexamethasone: false,
+        versed: false,
+        ketorolac: false,
+        benadryl: false,
+        acetaminophen: false,
+        valium: false,
+        clindamycin: false,
+        lidocaine: false
       },
       upperGraftMaterial: initialData?.upperGraftMaterial || {
         allograft: false,
         xenograft: false,
-        autograft: false
+        autograft: false,
+        prf: false
       },
       upperProsthesis: initialData?.upperProsthesis || {
         zirconia: false,
@@ -179,7 +189,8 @@ export function ConsentFullArchForm({
       lowerGraftMaterial: initialData?.lowerGraftMaterial || {
         allograft: false,
         xenograft: false,
-        autograft: false
+        autograft: false,
+        prf: false
       },
       lowerProsthesis: initialData?.lowerProsthesis || {
         zirconia: false,
@@ -317,11 +328,13 @@ export function ConsentFullArchForm({
         // Upper Arch Treatment Details
         upperTeethRegions: initialData.upperTeethRegions || prev.upperTeethRegions || "",
         upperImplants: initialData.upperImplants || prev.upperImplants || "",
+        upperTreatmentType: initialData.upperTreatmentType || prev.upperTreatmentType || "",
         upperSameDayLoad: initialData.upperSameDayLoad || prev.upperSameDayLoad || "",
 
         // Lower Arch Treatment Details
         lowerTeethRegions: initialData.lowerTeethRegions || prev.lowerTeethRegions || "",
         lowerImplants: initialData.lowerImplants || prev.lowerImplants || "",
+        lowerTreatmentType: initialData.lowerTreatmentType || prev.lowerTreatmentType || "",
         lowerSameDayLoad: initialData.lowerSameDayLoad || prev.lowerSameDayLoad || "",
 
         // ASA Physical Status
@@ -393,7 +406,8 @@ export function ConsentFullArchForm({
         upperGraftMaterial: initialData.upperGraftMaterial || prev.upperGraftMaterial || {
           allograft: false,
           xenograft: false,
-          autograft: false
+          autograft: false,
+          prf: false
         },
 
         // Nested Objects - Upper Arch Prosthesis
@@ -406,7 +420,8 @@ export function ConsentFullArchForm({
         lowerGraftMaterial: initialData.lowerGraftMaterial || prev.lowerGraftMaterial || {
           allograft: false,
           xenograft: false,
-          autograft: false
+          autograft: false,
+          prf: false
         },
 
         // Nested Objects - Lower Arch Prosthesis
@@ -428,7 +443,14 @@ export function ConsentFullArchForm({
           midazolam: false,
           fentanyl: false,
           ketamine: false,
-          dexamethasone: false
+          dexamethasone: false,
+          versed: false,
+          ketorolac: false,
+          benadryl: false,
+          acetaminophen: false,
+          valium: false,
+          clindamycin: false,
+          lidocaine: false
         },
 
         // Nested Objects - Alternatives Initials
@@ -468,11 +490,13 @@ export function ConsentFullArchForm({
     // Check if form has meaningful data
     const hasData = formData.patientName || formData.archType || formData.patientSignature ||
                    formData.plannedDrugs.midazolam || formData.plannedDrugs.fentanyl || formData.plannedDrugs.ketamine || formData.plannedDrugs.dexamethasone ||
-                   formData.upperTeethRegions || formData.upperImplants || formData.upperSameDayLoad ||
-                   formData.lowerTeethRegions || formData.lowerImplants || formData.lowerSameDayLoad ||
+                   formData.plannedDrugs.versed || formData.plannedDrugs.ketorolac || formData.plannedDrugs.benadryl || formData.plannedDrugs.acetaminophen ||
+                   formData.plannedDrugs.valium || formData.plannedDrugs.clindamycin || formData.plannedDrugs.lidocaine ||
+                   formData.upperTeethRegions || formData.upperImplants || formData.upperTreatmentType || formData.upperSameDayLoad ||
+                   formData.lowerTeethRegions || formData.lowerImplants || formData.lowerTreatmentType || formData.lowerSameDayLoad ||
                    formData.asaPhysicalStatus || formData.treatmentDescriptionInitials ||
-                   formData.upperGraftMaterial.allograft || formData.upperGraftMaterial.xenograft || formData.upperGraftMaterial.autograft ||
-                   formData.lowerGraftMaterial.allograft || formData.lowerGraftMaterial.xenograft || formData.lowerGraftMaterial.autograft ||
+                   formData.upperGraftMaterial.allograft || formData.upperGraftMaterial.xenograft || formData.upperGraftMaterial.autograft || formData.upperGraftMaterial.prf ||
+                   formData.lowerGraftMaterial.allograft || formData.lowerGraftMaterial.xenograft || formData.lowerGraftMaterial.autograft || formData.lowerGraftMaterial.prf ||
                    formData.upperProsthesis.zirconia || formData.upperProsthesis.overdenture ||
                    formData.lowerProsthesis.zirconia || formData.lowerProsthesis.overdenture ||
                    formData.sedationPlan.localOnly || formData.sedationPlan.nitrous || formData.sedationPlan.ivConscious || formData.sedationPlan.generalHospital ||
@@ -568,7 +592,8 @@ export function ConsentFullArchForm({
     upperGraftMaterial: {
       allograft: initialData?.upper_graft_allograft || false,
       xenograft: initialData?.upper_graft_xenograft || false,
-      autograft: initialData?.upper_graft_autograft || false
+      autograft: initialData?.upper_graft_autograft || false,
+      prf: initialData?.upper_graft_prf || false
     },
     upperProsthesis: {
       zirconia: initialData?.upper_prosthesis_zirconia || false,
@@ -581,7 +606,8 @@ export function ConsentFullArchForm({
     lowerGraftMaterial: {
       allograft: initialData?.lower_graft_allograft || false,
       xenograft: initialData?.lower_graft_xenograft || false,
-      autograft: initialData?.lower_graft_autograft || false
+      autograft: initialData?.lower_graft_autograft || false,
+      prf: initialData?.lower_graft_prf || false
     },
     lowerProsthesis: {
       zirconia: initialData?.lower_prosthesis_zirconia || false,
@@ -599,7 +625,14 @@ export function ConsentFullArchForm({
       midazolam: initialData?.midazolam || false,
       fentanyl: initialData?.fentanyl || false,
       ketamine: initialData?.ketamine || false,
-      dexamethasone: initialData?.dexamethasone || false
+      dexamethasone: initialData?.dexamethasone || false,
+      versed: initialData?.versed || false,
+      ketorolac: initialData?.ketorolac || false,
+      benadryl: initialData?.benadryl || false,
+      acetaminophen: initialData?.acetaminophen || false,
+      valium: initialData?.valium || false,
+      clindamycin: initialData?.clindamycin || false,
+      lidocaine: initialData?.lidocaine || false
     },
     alternativesInitials: {
       noTreatment: initialData?.alternatives_no_treatment_initials || "",
@@ -820,7 +853,7 @@ export function ConsentFullArchForm({
     };
 
     onSubmit(submissionData);
-    toast.success('Consent Packet for Full Arch Surgery form submitted successfully');
+    toast.success('Consent form submitted successfully');
   };
 
   const formContent = (
@@ -830,7 +863,7 @@ export function ConsentFullArchForm({
         <DialogTitle className="text-2xl font-bold text-blue-600 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-6 w-6" />
-            Consent Packet for Full Arch Surgery
+            Consent Form
           </div>
 
           {/* Auto-save Status Indicator */}
@@ -909,7 +942,7 @@ export function ConsentFullArchForm({
                     <strong>Today we discussed in detail your full-arch implant treatment, including:</strong>
                   </p>
                   <ol className="text-sm text-blue-800 space-y-1 ml-4 list-decimal">
-                    <li>Exactly which teeth and implant fixtures are planned</li>
+                    <li>Exactly which teeth and endosteal implants are planned</li>
                     <li>Reasonable alternatives (from doing nothing to various denture/bridge options)</li>
                     <li>All material risks and their approximate likelihoods</li>
                     <li>The sedation/anesthesia plan and associated safety measures</li>
@@ -962,7 +995,8 @@ export function ConsentFullArchForm({
                     <Input
                       id="chartNumber"
                       value={formData.chartNumber}
-                      onChange={(e) => handleInputChange('chartNumber', e.target.value)}
+                      readOnly
+                      className="bg-gray-50 cursor-not-allowed"
                       required
                     />
                   </div>
@@ -1273,6 +1307,30 @@ export function ConsentFullArchForm({
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
+                        {/* Treatment Type */}
+                        <div className="space-y-2">
+                          <Label htmlFor="upperTreatmentType" className="text-sm font-medium text-gray-700">
+                            Treatment Type
+                          </Label>
+                          <Select
+                            value={formData.upperTreatmentType}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, upperTreatmentType: value }))}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder="Select treatment type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="FULL ARCH FIXED">FULL ARCH FIXED</SelectItem>
+                              <SelectItem value="DENTURE">DENTURE</SelectItem>
+                              <SelectItem value="IMPLANT REMOVABLE DENTURE">IMPLANT REMOVABLE DENTURE</SelectItem>
+                              <SelectItem value="SINGLE IMPLANT">SINGLE IMPLANT</SelectItem>
+                              <SelectItem value="MULTIPLE IMPLANTS">MULTIPLE IMPLANTS</SelectItem>
+                              <SelectItem value="EXTRACTION">EXTRACTION</SelectItem>
+                              <SelectItem value="EXTRACTION AND GRAFT">EXTRACTION AND GRAFT</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
                         {/* Teeth/Regions and Implants */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
@@ -1303,6 +1361,7 @@ export function ConsentFullArchForm({
                                 <SelectItem value="All on 6">All on 6</SelectItem>
                                 <SelectItem value="All on X">All on X</SelectItem>
                                 <SelectItem value="All on X with Remote Anchorage">All on X with Remote Anchorage</SelectItem>
+                                <SelectItem value="NA">NA</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1353,6 +1412,20 @@ export function ConsentFullArchForm({
                               }`}
                             >
                               Autograft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                upperGraftMaterial: { ...prev.upperGraftMaterial, prf: !prev.upperGraftMaterial.prf }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.upperGraftMaterial.prf
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              PRF
                             </button>
                           </div>
                         </div>
@@ -1435,6 +1508,30 @@ export function ConsentFullArchForm({
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
+                        {/* Treatment Type */}
+                        <div className="space-y-2">
+                          <Label htmlFor="lowerTreatmentType" className="text-sm font-medium text-gray-700">
+                            Treatment Type
+                          </Label>
+                          <Select
+                            value={formData.lowerTreatmentType}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, lowerTreatmentType: value }))}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder="Select treatment type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="FULL ARCH FIXED">FULL ARCH FIXED</SelectItem>
+                              <SelectItem value="DENTURE">DENTURE</SelectItem>
+                              <SelectItem value="IMPLANT REMOVABLE DENTURE">IMPLANT REMOVABLE DENTURE</SelectItem>
+                              <SelectItem value="SINGLE IMPLANT">SINGLE IMPLANT</SelectItem>
+                              <SelectItem value="MULTIPLE IMPLANTS">MULTIPLE IMPLANTS</SelectItem>
+                              <SelectItem value="EXTRACTION">EXTRACTION</SelectItem>
+                              <SelectItem value="EXTRACTION AND GRAFT">EXTRACTION AND GRAFT</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
                         {/* Teeth/Regions and Implants */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
@@ -1464,7 +1561,7 @@ export function ConsentFullArchForm({
                                 <SelectItem value="All on 4">All on 4</SelectItem>
                                 <SelectItem value="All on 6">All on 6</SelectItem>
                                 <SelectItem value="All on X">All on X</SelectItem>
-                                <SelectItem value="All on X with Remote Anchorage">All on X with Remote Anchorage</SelectItem>
+                                <SelectItem value="NA">NA</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1515,6 +1612,20 @@ export function ConsentFullArchForm({
                               }`}
                             >
                               Autograft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                lowerGraftMaterial: { ...prev.lowerGraftMaterial, prf: !prev.lowerGraftMaterial.prf }
+                              }))}
+                              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                formData.lowerGraftMaterial.prf
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                            >
+                              PRF
                             </button>
                           </div>
                         </div>
@@ -1613,6 +1724,30 @@ export function ConsentFullArchForm({
                               <h4 className="font-semibold text-blue-800">Upper Arch</h4>
                             </div>
 
+                            {/* Upper Treatment Type */}
+                            <div className="space-y-2">
+                              <Label htmlFor="upperTreatmentType" className="text-sm font-medium text-gray-700">
+                                Treatment Type
+                              </Label>
+                              <Select
+                                value={formData.upperTreatmentType}
+                                onValueChange={(value) => setFormData(prev => ({ ...prev, upperTreatmentType: value }))}
+                              >
+                                <SelectTrigger className="h-10">
+                                  <SelectValue placeholder="Select treatment type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="FULL ARCH FIXED">FULL ARCH FIXED</SelectItem>
+                                  <SelectItem value="DENTURE">DENTURE</SelectItem>
+                                  <SelectItem value="IMPLANT REMOVABLE DENTURE">IMPLANT REMOVABLE DENTURE</SelectItem>
+                                  <SelectItem value="SINGLE IMPLANT">SINGLE IMPLANT</SelectItem>
+                                  <SelectItem value="MULTIPLE IMPLANTS">MULTIPLE IMPLANTS</SelectItem>
+                                  <SelectItem value="EXTRACTION">EXTRACTION</SelectItem>
+                                  <SelectItem value="EXTRACTION AND GRAFT">EXTRACTION AND GRAFT</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
                             {/* Upper Teeth/Regions and Implants */}
                             <div className="space-y-4">
                               <div className="space-y-2">
@@ -1643,6 +1778,7 @@ export function ConsentFullArchForm({
                                     <SelectItem value="All on 6">All on 6</SelectItem>
                                     <SelectItem value="All on X">All on X</SelectItem>
                                     <SelectItem value="All on X with Remote Anchorage">All on X with Remote Anchorage</SelectItem>
+                                    <SelectItem value="NA">NA</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -1693,6 +1829,20 @@ export function ConsentFullArchForm({
                                   }`}
                                 >
                                   Autograft
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    upperGraftMaterial: { ...prev.upperGraftMaterial, prf: !prev.upperGraftMaterial.prf }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.upperGraftMaterial.prf
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  PRF
                                 </button>
                               </div>
                             </div>
@@ -1771,6 +1921,30 @@ export function ConsentFullArchForm({
                               <h4 className="font-semibold text-blue-800">Lower Arch</h4>
                             </div>
 
+                            {/* Lower Treatment Type */}
+                            <div className="space-y-2">
+                              <Label htmlFor="lowerTreatmentType" className="text-sm font-medium text-gray-700">
+                                Treatment Type
+                              </Label>
+                              <Select
+                                value={formData.lowerTreatmentType}
+                                onValueChange={(value) => setFormData(prev => ({ ...prev, lowerTreatmentType: value }))}
+                              >
+                                <SelectTrigger className="h-10">
+                                  <SelectValue placeholder="Select treatment type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="FULL ARCH FIXED">FULL ARCH FIXED</SelectItem>
+                                  <SelectItem value="DENTURE">DENTURE</SelectItem>
+                                  <SelectItem value="IMPLANT REMOVABLE DENTURE">IMPLANT REMOVABLE DENTURE</SelectItem>
+                                  <SelectItem value="SINGLE IMPLANT">SINGLE IMPLANT</SelectItem>
+                                  <SelectItem value="MULTIPLE IMPLANTS">MULTIPLE IMPLANTS</SelectItem>
+                                  <SelectItem value="EXTRACTION">EXTRACTION</SelectItem>
+                                  <SelectItem value="EXTRACTION AND GRAFT">EXTRACTION AND GRAFT</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
                             {/* Lower Teeth/Regions and Implants */}
                             <div className="space-y-4">
                               <div className="space-y-2">
@@ -1800,7 +1974,7 @@ export function ConsentFullArchForm({
                                     <SelectItem value="All on 4">All on 4</SelectItem>
                                     <SelectItem value="All on 6">All on 6</SelectItem>
                                     <SelectItem value="All on X">All on X</SelectItem>
-                                    <SelectItem value="All on X with Remote Anchorage">All on X with Remote Anchorage</SelectItem>
+                                    <SelectItem value="NA">NA</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -1851,6 +2025,20 @@ export function ConsentFullArchForm({
                                   }`}
                                 >
                                   Autograft
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    lowerGraftMaterial: { ...prev.lowerGraftMaterial, prf: !prev.lowerGraftMaterial.prf }
+                                  }))}
+                                  className={`px-2 py-1 rounded border text-xs font-medium transition-all ${
+                                    formData.lowerGraftMaterial.prf
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                  }`}
+                                >
+                                  PRF
                                 </button>
                               </div>
                             </div>
@@ -2081,6 +2269,125 @@ export function ConsentFullArchForm({
                         )}
                         Dexamethasone
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, versed: !prev.plannedDrugs.versed }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.versed
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.versed && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Versed
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, ketorolac: !prev.plannedDrugs.ketorolac }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.ketorolac
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.ketorolac && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Ketorolac
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, benadryl: !prev.plannedDrugs.benadryl }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.benadryl
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.benadryl && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Benadryl
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, acetaminophen: !prev.plannedDrugs.acetaminophen }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.acetaminophen
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.acetaminophen && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Acetaminophen
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, valium: !prev.plannedDrugs.valium }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.valium
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.valium && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Valium
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, clindamycin: !prev.plannedDrugs.clindamycin }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.clindamycin
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.clindamycin && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Clindamycin
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          plannedDrugs: { ...prev.plannedDrugs, lidocaine: !prev.plannedDrugs.lidocaine }
+                        }))}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          formData.plannedDrugs.lidocaine
+                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                        }`}
+                      >
+                        {formData.plannedDrugs.lidocaine && (
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                        )}
+                        Lidocaine
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -2260,27 +2567,28 @@ export function ConsentFullArchForm({
                   </Card>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors mt-1 ${
-                        formData.risksUnderstood
-                          ? 'bg-blue-100'
-                          : 'border-2 border-gray-300 bg-white hover:border-blue-300'
-                      }`}
-                      onClick={() => handleInputChange('risksUnderstood', !formData.risksUnderstood)}
-                    >
-                      {formData.risksUnderstood && (
-                        <Check className="h-3 w-3 text-blue-600" />
-                      )}
-                    </div>
-                    <p
-                      className="text-sm cursor-pointer"
-                      onClick={() => handleInputChange('risksUnderstood', !formData.risksUnderstood)}
-                    >
-                      I have had the opportunity to ask about each risk and understand that percentages are population estimates, not guarantees of my individual outcome.
-                    </p>
+                <div
+                  className={`flex items-center space-x-3 p-5 rounded-lg border-2 cursor-pointer transition-all duration-200 min-h-[60px] ${
+                    formData.risksUnderstood
+                      ? 'bg-blue-100 border-blue-500 shadow-sm'
+                      : 'bg-blue-50 border-blue-300 hover:border-blue-400 hover:bg-blue-100'
+                  }`}
+                  onClick={() => handleInputChange('risksUnderstood', !formData.risksUnderstood)}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      formData.risksUnderstood
+                        ? 'border-blue-600 bg-blue-600'
+                        : 'border-blue-400 bg-white'
+                    }`}
+                  >
+                    {formData.risksUnderstood && (
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    )}
                   </div>
+                  <p className="text-sm font-medium text-blue-800 leading-relaxed">
+                    I have had the opportunity to ask about each risk and understand that percentages are population estimates, not guarantees of my individual outcome.
+                  </p>
                 </div>
 
                 <Separator />
@@ -2675,13 +2983,13 @@ export function ConsentFullArchForm({
                         </CardContent>
                       </Card>
 
-                      {/* Implant Fixtures */}
+                      {/* Endosteal implants */}
                       <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
                         <CardContent className="p-4">
                           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
                             <div className="md:col-span-1">
                               <div className="space-y-2">
-                                <h4 className="font-semibold text-gray-900 text-sm">Implant Fixtures</h4>
+                                <h4 className="font-semibold text-gray-900 text-sm">Endosteal implants</h4>
                                 <div className="flex flex-col gap-1">
                                   <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">CDT: D6010</span>
                                   <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2 py-1 rounded-full">CPT: 21249</span>
@@ -3059,20 +3367,6 @@ export function ConsentFullArchForm({
                         </CardContent>
                       </Card>
 
-                      <Card className="border border-gray-200 bg-white">
-                        <CardContent className="p-2.5">
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-gray-900">Mandible Reconstruction</span>
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">CDT: D6010</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs text-gray-600">Endosteal implant (4+)</p>
-                              <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">CPT: 21249 × 4</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
 
                       <Card className="border border-gray-200 bg-white">
                         <CardContent className="p-2.5">

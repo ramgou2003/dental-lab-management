@@ -432,19 +432,26 @@ export function InformedConsentSmokingForm({
               { key: 'offeredResources', text: 'I have been offered resources to help me quit' },
               { key: 'takesResponsibility', text: 'I take responsibility for following these recommendations' }
             ].map((item) => (
-              <div key={item.key} className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div
+                key={item.key}
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData[item.key as keyof typeof formData]
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-blue-50 border-blue-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-100' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleCheckboxChange(item.key, !formData[item.key as keyof typeof formData])}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData[item.key as keyof typeof formData]
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-blue-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleCheckboxChange(item.key, !formData[item.key as keyof typeof formData])}
                 >
                   {formData[item.key as keyof typeof formData] && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">

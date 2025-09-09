@@ -4886,7 +4886,7 @@ export function PatientProfilePage() {
                             <SelectContent>
                               <SelectItem value="new-patient-packet">New Patient Packet</SelectItem>
                               <SelectItem value="financial-agreement">Financial Agreement</SelectItem>
-                              <SelectItem value="consent-full-arch">Consent Packet for Full Arch</SelectItem>
+                              <SelectItem value="consent-full-arch">Consent Form</SelectItem>
                               <SelectItem value="medical-records-release">Medical Records Release Form</SelectItem>
                               <SelectItem value="informed-consent-smoking">Informed Consent Form For Smoking</SelectItem>
                               <SelectItem value="three-year-care-package">3-Year Care Package Enrollment Form</SelectItem>
@@ -5170,18 +5170,18 @@ export function PatientProfilePage() {
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${
                                             form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'submitted' ? 'bg-green-500' : 'bg-orange-500'
+                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                           }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
-                                            Consent Full Arch Form
+                                            Consent Form
                                           </span>
                                         </div>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                                           form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                          form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                                         }`}>
                                           {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'submitted' ? 'Completed' : 'Draft'}
+                                           form.status === 'completed' ? 'Completed' : 'Draft'}
                                         </span>
                                       </div>
 
@@ -5886,7 +5886,10 @@ export function PatientProfilePage() {
                                     {/* Header with form name and status */}
                                     <div className="flex items-center justify-between mb-2">
                                       <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                        <div className={`w-2 h-2 rounded-full ${
+                                          form.status === 'completed' ? 'bg-green-500' :
+                                          form.status === 'signed' ? 'bg-green-500' : 'bg-purple-500'
+                                        }`}></div>
                                         <span className="text-sm font-semibold text-gray-900">
                                           5-Year Extended Warranty Plan
                                         </span>
@@ -5918,18 +5921,20 @@ export function PatientProfilePage() {
                                             new Date(form.created_at).toLocaleDateString('en-US', {
                                               year: 'numeric',
                                               month: 'short',
-                                              day: 'numeric'
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
                                             }) : 'No date'
                                           }
                                         </span>
                                       </div>
                                     </div>
 
-                                    {/* Action buttons */}
+                                    {/* Action Buttons */}
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-1 text-xs text-gray-500">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
-                                        <span>5-Year Warranty</span>
+                                        <Clock className="h-3 w-3" />
+                                        <span>{form.created_at ? new Date(form.created_at).toLocaleDateString() : 'Unknown date'}</span>
                                       </div>
 
                                       <div className="flex items-center gap-1">
@@ -6012,7 +6017,10 @@ export function PatientProfilePage() {
                                     {/* Header with form name and status */}
                                     <div className="flex items-center justify-between mb-2">
                                       <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                                        <div className={`w-2 h-2 rounded-full ${
+                                          form.status === 'completed' ? 'bg-green-500' :
+                                          form.status === 'signed' ? 'bg-green-500' : 'bg-orange-500'
+                                        }`}></div>
                                         <span className="text-sm font-semibold text-gray-900">
                                           Partial Payment Agreement
                                         </span>
@@ -6044,20 +6052,20 @@ export function PatientProfilePage() {
                                             new Date(form.created_at).toLocaleDateString('en-US', {
                                               year: 'numeric',
                                               month: 'short',
-                                              day: 'numeric'
+                                              day: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
                                             }) : 'No date'
                                           }
                                         </span>
                                       </div>
                                     </div>
 
-
-
-                                    {/* Action buttons */}
+                                    {/* Action Buttons */}
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-1 text-xs text-gray-500">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
-                                        <span>Payment Agreement</span>
+                                        <Clock className="h-3 w-3" />
+                                        <span>{form.created_at ? new Date(form.created_at).toLocaleDateString() : 'Unknown date'}</span>
                                       </div>
 
                                       <div className="flex items-center gap-1">
@@ -9023,7 +9031,7 @@ export function PatientProfilePage() {
                               key={allergy}
                               type="button"
                               disabled={isDisabled}
-                              className={`px-3 py-2 rounded text-xs font-medium transition-colors ${
+                              className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                                 ivSedationFormData.allergies?.includes(allergy)
                                   ? 'bg-red-600 text-white'
                                   : isDisabled
@@ -9138,7 +9146,7 @@ export function PatientProfilePage() {
                             <button
                               key={option}
                               type="button"
-                              className={`w-full text-left px-3 py-2 rounded text-xs font-medium transition-colors ${
+                              className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                                 ivSedationFormData.anesthesiaHistory === option
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
@@ -9177,18 +9185,18 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Respiratory Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'NKDA', 'Asthma', 'Anemia', 'Reactive Airway', 'Bronchitis', 'COPD',
+                            'NONE', 'Asthma', 'Anemia', 'Reactive Airway', 'Bronchitis', 'COPD',
                             'Dyspnea', 'Orthopnea', 'Recent URI', 'SOB', 'Tuberculosis', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.respiratoryProblems?.includes('NKDA');
-                            const isDisabled = isNA && problem !== 'NKDA';
+                            const isNA = ivSedationFormData.respiratoryProblems?.includes('NONE');
+                            const isDisabled = isNA && problem !== 'NONE';
 
                             return (
                               <button
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                                   ivSedationFormData.respiratoryProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
@@ -9199,10 +9207,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.respiratoryProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'NKDA') {
-                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
+                                  if (problem === 'NONE') {
+                                    updated = current.includes('NONE') ? [] : ['NONE'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NONE');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -9243,18 +9251,18 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Cardiovascular Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'NKDA', 'Anemia', 'Congestive Heart Failure (CHF)', 'Dysrhythmia', 'Murmur', 'Hypertension (HTN)',
+                            'NONE', 'Anemia', 'Congestive Heart Failure (CHF)', 'Dysrhythmia', 'Murmur', 'Hypertension (HTN)',
                             'Myocardial Infarction (MI)', 'Valvular DX', 'Rheumatic Fever', 'Sickle Cell Disease', 'Congenital Heart DX', 'Pacemaker', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.cardiovascularProblems?.includes('NKDA');
-                            const isDisabled = isNA && problem !== 'NKDA';
+                            const isNA = ivSedationFormData.cardiovascularProblems?.includes('NONE');
+                            const isDisabled = isNA && problem !== 'NONE';
 
                             return (
                               <button
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                                   ivSedationFormData.cardiovascularProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
@@ -9265,10 +9273,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.cardiovascularProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'NKDA') {
-                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
+                                  if (problem === 'NONE') {
+                                    updated = current.includes('NONE') ? [] : ['NONE'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NONE');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -9309,17 +9317,17 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Gastrointestinal Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'NKDA', 'Cirrhosis', 'Hepatitis', 'Reflux', 'Ulcers', 'Oesophageal Issues', 'Other'
+                            'NONE', 'Cirrhosis', 'Hepatitis', 'Reflux', 'Ulcers', 'Oesophageal Issues', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.gastrointestinalProblems?.includes('NKDA');
-                            const isDisabled = isNA && problem !== 'NKDA';
+                            const isNA = ivSedationFormData.gastrointestinalProblems?.includes('NONE');
+                            const isDisabled = isNA && problem !== 'NONE';
 
                             return (
                               <button
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                                   ivSedationFormData.gastrointestinalProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
@@ -9330,10 +9338,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.gastrointestinalProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'NKDA') {
-                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
+                                  if (problem === 'NONE') {
+                                    updated = current.includes('NONE') ? [] : ['NONE'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NONE');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -9377,17 +9385,17 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Neurologic Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'NKDA', 'Cerebral Vascular Accident (CVA)', 'Headaches', 'Transient Ischemic Attack (TIA)', 'Syncope', 'Seizures', 'Other'
+                            'NONE', 'Cerebral Vascular Accident (CVA)', 'Headaches', 'Transient Ischemic Attack (TIA)', 'Syncope', 'Seizures', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.neurologicProblems?.includes('NKDA');
-                            const isDisabled = isNA && problem !== 'NKDA';
+                            const isNA = ivSedationFormData.neurologicProblems?.includes('NONE');
+                            const isDisabled = isNA && problem !== 'NONE';
 
                             return (
                               <button
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                                   ivSedationFormData.neurologicProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
@@ -9398,10 +9406,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.neurologicProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'NKDA') {
-                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
+                                  if (problem === 'NONE') {
+                                    updated = current.includes('NONE') ? [] : ['NONE'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NONE');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -9442,17 +9450,17 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Endocrine/Renal Problems</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'NKDA', 'Diabetes', 'Dialysis', 'Thyroid DX', 'Renal Failure', 'Other'
+                            'NONE', 'Diabetes', 'Dialysis', 'Thyroid DX', 'Renal Failure', 'Other'
                           ].map((problem) => {
-                            const isNA = ivSedationFormData.endocrineRenalProblems?.includes('NKDA');
-                            const isDisabled = isNA && problem !== 'NKDA';
+                            const isNA = ivSedationFormData.endocrineRenalProblems?.includes('NONE');
+                            const isDisabled = isNA && problem !== 'NONE';
 
                             return (
                               <button
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                                   ivSedationFormData.endocrineRenalProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
@@ -9463,10 +9471,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.endocrineRenalProblems || [];
                                   let updated: string[];
 
-                                  if (problem === 'NKDA') {
-                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
+                                  if (problem === 'NONE') {
+                                    updated = current.includes('NONE') ? [] : ['NONE'];
                                   } else {
-                                    const problemsWithoutNA = current.filter(p => p !== 'NKDA');
+                                    const problemsWithoutNA = current.filter(p => p !== 'NONE');
                                     updated = problemsWithoutNA.includes(problem)
                                       ? problemsWithoutNA.filter(p => p !== problem)
                                       : [...problemsWithoutNA, problem];
@@ -9531,23 +9539,23 @@ export function PatientProfilePage() {
                     {/* Miscellaneous - Full Width */}
                     <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                       <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Miscellaneous</h3>
-                      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
                         {[
-                          'NKDA', 'Artificial Valve', 'Heart Birth Defect', 'Bypass', 'Seizures', 'Stroke',
+                          'NONE', 'Artificial Valve', 'Heart Birth Defect', 'Bypass', 'Seizures', 'Stroke',
                           'Parkinson\'s Disease', 'Dementia (Alzheimer\'s)', 'Anxiety', 'Schizophrenia', 'Eating Disorder',
                           'HIV', 'AIDS', 'Rheumatoid Arthritis', 'Lupus', 'Fibromyalgia', 'Immunosuppressive Disease',
                           'Prolonged Bleeding', 'Platelet Disorder', 'Sickle Cell', 'Hemophilia', 'Chronic Kidney Disease',
                           'Osteoporosis', 'Artificial Joint', 'Muscle Weakness', 'Cancer', 'Chemotherapy', 'Other'
                         ].map((condition) => {
-                          const isNA = ivSedationFormData.miscellaneous?.includes('NKDA');
-                          const isDisabled = isNA && condition !== 'NKDA';
+                          const isNA = ivSedationFormData.miscellaneous?.includes('NONE');
+                          const isDisabled = isNA && condition !== 'NONE';
 
                           return (
                             <button
                               key={condition}
                               type="button"
                               disabled={isDisabled}
-                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                                 ivSedationFormData.miscellaneous?.includes(condition)
                                   ? 'bg-blue-600 text-white'
                                   : isDisabled
@@ -9558,10 +9566,10 @@ export function PatientProfilePage() {
                                 const current = ivSedationFormData.miscellaneous || [];
                                 let updated: string[];
 
-                                if (condition === 'NKDA') {
-                                  updated = current.includes('NKDA') ? [] : ['NKDA'];
+                                if (condition === 'NONE') {
+                                  updated = current.includes('NONE') ? [] : ['NONE'];
                                 } else {
-                                  const conditionsWithoutNA = current.filter(c => c !== 'NKDA');
+                                  const conditionsWithoutNA = current.filter(c => c !== 'NONE');
                                   updated = conditionsWithoutNA.includes(condition)
                                     ? conditionsWithoutNA.filter(c => c !== condition)
                                     : [...conditionsWithoutNA, condition];
@@ -9604,17 +9612,17 @@ export function PatientProfilePage() {
                         <h3 className="text-sm font-semibold text-blue-900 mb-3"><span className="text-red-500">*</span> Social History</h3>
                         <div className="grid grid-cols-2 gap-1">
                           {[
-                            'NKDA', 'Tobacco', 'ETOH Consumption', 'Recreational Drugs', 'Other'
+                            'NONE', 'Tobacco', 'ETOH Consumption', 'Recreational Drugs', 'Other'
                           ].map((habit) => {
-                            const isNA = ivSedationFormData.socialHistory?.includes('NKDA');
-                            const isDisabled = isNA && habit !== 'NKDA';
+                            const isNA = ivSedationFormData.socialHistory?.includes('NONE');
+                            const isDisabled = isNA && habit !== 'NONE';
 
                             return (
                               <button
                                 key={habit}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                                   ivSedationFormData.socialHistory?.includes(habit)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
@@ -9625,10 +9633,10 @@ export function PatientProfilePage() {
                                   const current = ivSedationFormData.socialHistory || [];
                                   let updated: string[];
 
-                                  if (habit === 'NKDA') {
-                                    updated = current.includes('NKDA') ? [] : ['NKDA'];
+                                  if (habit === 'NONE') {
+                                    updated = current.includes('NONE') ? [] : ['NONE'];
                                   } else {
-                                    const habitsWithoutNA = current.filter(h => h !== 'NKDA');
+                                    const habitsWithoutNA = current.filter(h => h !== 'NONE');
                                     updated = habitsWithoutNA.includes(habit)
                                       ? habitsWithoutNA.filter(h => h !== habit)
                                       : [...habitsWithoutNA, habit];
@@ -13348,7 +13356,7 @@ export function PatientProfilePage() {
         sheet={surgicalRecallSheetToDelete}
       />
 
-      {/* Consent Packet for Full Arch Form Dialog */}
+      {/* Consent Form Dialog */}
       {patient && (
         <ConsentFullArchDialog
           isOpen={showConsentFullArchForm}
@@ -13378,7 +13386,7 @@ export function PatientProfilePage() {
 
               toast({
                 title: "Success",
-                description: "Consent Packet for Full Arch Surgery form saved successfully!",
+                description: "Consent form saved successfully!",
               });
 
               // Reset states and refresh forms

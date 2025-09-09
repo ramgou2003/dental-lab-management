@@ -280,6 +280,21 @@ export function ThreeYearCarePackageForm({
     "Interproximal brushes"
   ];
 
+  // Calculate expiration date (3 years from enrollment date)
+  const calculateExpirationDate = (enrollmentDate: string) => {
+    if (!enrollmentDate) return '';
+
+    const enrollment = new Date(enrollmentDate);
+    const expiration = new Date(enrollment);
+    expiration.setFullYear(expiration.getFullYear() + 3);
+
+    return expiration.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white">
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -546,6 +561,16 @@ export function ThreeYearCarePackageForm({
               <div className="text-center text-sm text-gray-600 bg-blue-50 p-4 rounded-lg mt-4">
                 <p className="font-medium text-blue-800">Your 3-Year Care Journey</p>
                 <p>Receive a comprehensive care package every 3 months to maintain your dental implants</p>
+                {formData.enrollmentDate && (
+                  <div className="mt-3 pt-3 border-t border-blue-200">
+                    <p className="font-semibold text-blue-900">
+                      Package Expiration Date: {calculateExpirationDate(formData.enrollmentDate)}
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      Your care package coverage ends 3 years from enrollment
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -561,25 +586,30 @@ export function ThreeYearCarePackageForm({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex items-start space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.chlorhexidineRinse
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-yellow-50 border-yellow-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-50' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('chlorhexidineRinse', !formData.chlorhexidineRinse)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.chlorhexidineRinse
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-yellow-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('chlorhexidineRinse', !formData.chlorhexidineRinse)}
                 >
                   {formData.chlorhexidineRinse && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('chlorhexidineRinse', !formData.chlorhexidineRinse)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800 leading-relaxed`}
                   >
                     <strong>Rinse with chlorhexidine:</strong>
                     <br />
@@ -590,25 +620,30 @@ export function ThreeYearCarePackageForm({
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.waterFlosser
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-yellow-50 border-yellow-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-50' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('waterFlosser', !formData.waterFlosser)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.waterFlosser
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-yellow-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('waterFlosser', !formData.waterFlosser)}
                 >
                   {formData.waterFlosser && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('waterFlosser', !formData.waterFlosser)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800 leading-relaxed`}
                   >
                     <strong>Use water flosser:</strong>
                     <br />
@@ -619,25 +654,30 @@ export function ThreeYearCarePackageForm({
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.electricToothbrush
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-yellow-50 border-yellow-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-50' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('electricToothbrush', !formData.electricToothbrush)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.electricToothbrush
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-yellow-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('electricToothbrush', !formData.electricToothbrush)}
                 >
                   {formData.electricToothbrush && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('electricToothbrush', !formData.electricToothbrush)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800 leading-relaxed`}
                   >
                     <strong>Brush twice daily:</strong>
                     <br />
@@ -648,25 +688,30 @@ export function ThreeYearCarePackageForm({
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.attendCheckups
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-yellow-50 border-yellow-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-50' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('attendCheckups', !formData.attendCheckups)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.attendCheckups
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-yellow-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('attendCheckups', !formData.attendCheckups)}
                 >
                   {formData.attendCheckups && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('attendCheckups', !formData.attendCheckups)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-yellow-800 leading-relaxed`}
                   >
                     <strong>Attend all check-ups:</strong>
                     <br />
@@ -763,59 +808,71 @@ export function ThreeYearCarePackageForm({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex items-start space-x-3 p-4 border border-green-300 rounded-lg bg-green-50">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.enrollmentChoice === 'enroll'
+                    ? 'bg-green-100 border-green-500 shadow-sm'
+                    : `bg-green-50 border-green-300 ${!readOnly ? 'hover:border-green-400 hover:bg-green-100' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'enroll')}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.enrollmentChoice === 'enroll'
-                      ? 'bg-green-100 border-2 border-green-500'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
+                      ? 'border-green-600 bg-green-600'
+                      : 'border-green-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'enroll')}
                 >
                   {formData.enrollmentChoice === 'enroll' && (
-                    <Check className="h-3 w-3 text-green-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
-                    onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'enroll')}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} leading-relaxed`}
                   >
                     <strong>ENROLL NOW</strong> - Protect investment, activate warranty
+                    <br />
+                    <span className="text-xs text-green-700">
+                      Start your 3-year warranty coverage and receive all care packages
+                    </span>
                   </Label>
-                  <p className="text-xs text-green-700 mt-1">
-                    Start your 3-year warranty coverage and receive all care packages
-                  </p>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-4 border border-red-300 rounded-lg bg-red-50">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.enrollmentChoice === 'defer'
+                    ? 'bg-red-100 border-red-500 shadow-sm'
+                    : `bg-red-50 border-red-300 ${!readOnly ? 'hover:border-red-400 hover:bg-red-100' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'defer')}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.enrollmentChoice === 'defer'
-                      ? 'bg-red-100 border-2 border-red-500'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-red-300' : ''}`
+                      ? 'border-red-600 bg-red-600'
+                      : 'border-red-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'defer')}
                 >
                   {formData.enrollmentChoice === 'defer' && (
-                    <Check className="h-3 w-3 text-red-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}
-                    onClick={readOnly ? undefined : () => handleInputChange('enrollmentChoice', 'defer')}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} leading-relaxed`}
                   >
                     <strong>DEFER ENROLLMENT</strong> - Decline coverage, $150 reinstatement fee later
+                    <br />
+                    <span className="text-xs text-red-700">
+                      No warranty protection, pay full price for any issues
+                    </span>
                   </Label>
-                  <p className="text-xs text-red-700 mt-1">
-                    No warranty protection, pay full price for any issues
-                  </p>
                 </div>
               </div>
             </div>
@@ -864,100 +921,120 @@ export function ThreeYearCarePackageForm({
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.cancellationPolicy
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-gray-50 border-gray-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-50' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('cancellationPolicy', !formData.cancellationPolicy)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.cancellationPolicy
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-gray-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('cancellationPolicy', !formData.cancellationPolicy)}
                 >
                   {formData.cancellationPolicy && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('cancellationPolicy', !formData.cancellationPolicy)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800 leading-relaxed`}
                   >
                     I understand the cancellation policy
                   </Label>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.governingLaw
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-gray-50 border-gray-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-50' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('governingLaw', !formData.governingLaw)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.governingLaw
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-gray-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('governingLaw', !formData.governingLaw)}
                 >
                   {formData.governingLaw && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('governingLaw', !formData.governingLaw)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800 leading-relaxed`}
                   >
                     I agree to New York governing law
                   </Label>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.arbitrationClause
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-gray-50 border-gray-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-50' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('arbitrationClause', !formData.arbitrationClause)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.arbitrationClause
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-gray-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('arbitrationClause', !formData.arbitrationClause)}
                 >
                   {formData.arbitrationClause && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('arbitrationClause', !formData.arbitrationClause)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800 leading-relaxed`}
                   >
                     I agree to arbitration clause
                   </Label>
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.hipaaConsent
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-gray-50 border-gray-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-50' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('hipaaConsent', !formData.hipaaConsent)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.hipaaConsent
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-gray-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('hipaaConsent', !formData.hipaaConsent)}
                 >
                   {formData.hipaaConsent && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('hipaaConsent', !formData.hipaaConsent)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800 leading-relaxed`}
                   >
                     I provide HIPAA consent
                   </Label>
@@ -966,25 +1043,30 @@ export function ThreeYearCarePackageForm({
             </div>
 
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.ageConfirmation
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-blue-50 border-blue-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-100' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('ageConfirmation', !formData.ageConfirmation)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.ageConfirmation
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-blue-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('ageConfirmation', !formData.ageConfirmation)}
                 >
                   {formData.ageConfirmation && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('ageConfirmation', !formData.ageConfirmation)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-blue-800 leading-relaxed`}
                   >
                     I confirm I am 18+ years old and understand this document in English
                   </Label>
@@ -1003,25 +1085,30 @@ export function ThreeYearCarePackageForm({
           </CardHeader>
           <CardContent>
             <div className="mb-6">
-              <div className="flex items-start space-x-3 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div
+                className={`flex items-center space-x-3 p-5 rounded-lg border-2 transition-all duration-200 min-h-[60px] ${
+                  readOnly ? 'cursor-default' : 'cursor-pointer'
+                } ${
+                  formData.acknowledgmentRead
+                    ? 'bg-blue-100 border-blue-500 shadow-sm'
+                    : `bg-gray-50 border-gray-300 ${!readOnly ? 'hover:border-blue-400 hover:bg-blue-50' : ''}`
+                }`}
+                onClick={readOnly ? undefined : () => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
+              >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                     formData.acknowledgmentRead
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
+                      ? 'border-blue-600 bg-blue-600'
+                      : 'border-gray-400 bg-white'
                   }`}
-                  onClick={readOnly ? undefined : () => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
                 >
                   {formData.acknowledgmentRead && (
-                    <Check className="h-3 w-3 text-blue-600" />
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
                   )}
                 </div>
                 <div className="flex-1">
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange('acknowledgmentRead', !formData.acknowledgmentRead)}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-800 leading-relaxed`}
                   >
                     <span className="text-red-500">*</span> I acknowledge that I have read and understand this 3-Year Care Package Enrollment Agreement.
                     I understand the benefits, requirements, and consequences outlined above.

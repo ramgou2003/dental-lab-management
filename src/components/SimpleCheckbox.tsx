@@ -11,24 +11,29 @@ interface SimpleCheckboxProps {
 
 export function SimpleCheckbox({ id, checked, onCheckedChange, children, className = "" }: SimpleCheckboxProps) {
   return (
-    <div className={`flex items-start space-x-3 ${className}`}>
+    <div
+      className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 min-h-[56px] ${
+        checked
+          ? 'bg-blue-100 border-blue-500 shadow-sm'
+          : 'bg-white border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+      } ${className}`}
+      onClick={() => onCheckedChange(!checked)}
+    >
       <div
-        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
           checked
-            ? 'bg-blue-100'
-            : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+            ? 'border-blue-600 bg-blue-600'
+            : 'border-gray-400 bg-white'
         }`}
-        onClick={() => onCheckedChange(!checked)}
       >
         {checked && (
-          <Check className="h-3 w-3 text-blue-600" />
+          <div className="w-2 h-2 rounded-full bg-white"></div>
         )}
       </div>
       <div className="flex-1">
         <label
           htmlFor={id}
-          className="text-sm font-medium cursor-pointer"
-          onClick={() => onCheckedChange(!checked)}
+          className="text-sm font-medium cursor-pointer leading-relaxed"
         >
           {children}
         </label>

@@ -11,24 +11,29 @@ interface CustomCheckboxProps {
 
 export function CustomCheckbox({ id, checked, onCheckedChange, children, className = "" }: CustomCheckboxProps) {
   return (
-    <div className={`flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg ${className}`}>
+    <div
+      className={`flex items-center space-x-3 p-5 rounded-lg border-2 cursor-pointer transition-all duration-200 min-h-[60px] ${
+        checked
+          ? 'bg-blue-100 border-blue-500 shadow-sm'
+          : 'bg-blue-50 border-blue-300 hover:border-blue-400 hover:bg-blue-100'
+      } ${className}`}
+      onClick={() => onCheckedChange(!checked)}
+    >
       <div
-        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-colors ${
+        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
           checked
-            ? 'bg-blue-100'
-            : 'border-2 border-gray-300 bg-white hover:border-blue-300'
+            ? 'border-blue-600 bg-blue-600'
+            : 'border-blue-400 bg-white'
         }`}
-        onClick={() => onCheckedChange(!checked)}
       >
         {checked && (
-          <Check className="h-3 w-3 text-blue-600" />
+          <div className="w-2 h-2 rounded-full bg-white"></div>
         )}
       </div>
       <div className="flex-1">
         <label
           htmlFor={id}
-          className="text-sm font-medium cursor-pointer text-blue-800"
-          onClick={() => onCheckedChange(!checked)}
+          className="text-sm font-medium cursor-pointer text-blue-800 leading-relaxed"
         >
           {children}
         </label>

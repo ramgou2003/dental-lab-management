@@ -7,7 +7,7 @@ export interface ConsentFullArchFormData {
   chart_number?: string;
   consent_date?: string;
   consent_time?: string;
-  status: 'draft' | 'submitted' | 'signed' | 'void';
+  status: 'draft' | 'submitted' | 'completed' | 'signed' | 'void';
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -46,14 +46,21 @@ export interface ConsentFullArchFormData {
   fentanyl?: boolean;
   ketamine?: boolean;
   dexamethasone?: boolean;
+  versed?: boolean;
+  ketorolac?: boolean;
+  benadryl?: boolean;
+  acetaminophen?: boolean;
+  valium?: boolean;
+  clindamycin?: boolean;
+  lidocaine?: boolean;
 
   // Financial Disclosure
   surgical_extractions_count?: string;
   surgical_extractions_fee?: string;
   surgical_extractions_covered?: string;
-  implant_fixtures_count?: string;
-  implant_fixtures_fee?: string;
-  implant_fixtures_covered?: string;
+  endosteal_implants_count?: string;
+  endosteal_implants_fee?: string;
+  endosteal_implants_covered?: string;
   zirconia_bridge_fee?: string;
   zirconia_bridge_covered?: string;
   financial_initials?: string;
@@ -98,7 +105,7 @@ export interface ConsentFullArchFormData {
 export async function getConsentFormsByPatientId(patientId: string): Promise<{ data: ConsentFullArchFormData[] | null; error: any }> {
   try {
     const { data, error } = await supabase
-      .from('consent_full_arch_forms')
+      .from('consent_forms')
       .select('*')
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false });
@@ -121,7 +128,7 @@ export async function getConsentFormsByPatientId(patientId: string): Promise<{ d
 export async function getConsentForm(formId: string): Promise<{ data: ConsentFullArchFormData | null; error: any }> {
   try {
     const { data, error } = await supabase
-      .from('consent_full_arch_forms')
+      .from('consent_forms')
       .select('*')
       .eq('id', formId)
       .single();
@@ -147,10 +154,10 @@ export async function updateConsentForm(
 ): Promise<{ data: any | null; error: any }> {
   try {
     const { data, error } = await supabase
-      .from('consent_full_arch_forms')
+      .from('consent_forms')
       .update({
         ...formData,
-        status: formData.status || 'submitted', // Preserve existing status or set to submitted
+        status: formData.status || 'completed', // Preserve existing status or set to completed
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -176,7 +183,7 @@ export async function updateConsentForm(
 export async function deleteConsentForm(id: string): Promise<{ error: any }> {
   try {
     const { error } = await supabase
-      .from('consent_full_arch_forms')
+      .from('consent_forms')
       .delete()
       .eq('id', id);
 
@@ -201,10 +208,10 @@ export async function createConsentForm(
 ): Promise<{ data: any | null; error: any }> {
   try {
     const { data, error } = await supabase
-      .from('consent_full_arch_forms')
+      .from('consent_forms')
       .insert([{
         ...formData,
-        status: 'submitted' // Set status to submitted for regular form submissions
+        status: 'completed' // Set status to completed for regular form submissions
       }])
       .select()
       .single();
@@ -256,19 +263,19 @@ export async function autoSaveConsentFullArchForm(
     if (existingId) {
       // Get current record to check status
       const { data: currentRecord } = await supabase
-        .from('consent_full_arch_forms')
+        .from('consent_forms')
         .select('status')
         .eq('id', existingId)
         .single();
 
       // Use the status from formData if provided, otherwise preserve current status or set to draft
       dbData.status = formData.status ||
-        (currentRecord?.status === 'submitted' ? 'submitted' : 'draft');
+        (currentRecord?.status === 'completed' ? 'completed' : 'draft');
 
       // Update existing record
       console.log('📝 Updating existing Consent Full Arch form with status:', dbData.status);
       const { data, error } = await supabase
-        .from('consent_full_arch_forms')
+        .from('consent_forms')
         .update({
           ...dbData,
           updated_at: new Date().toISOString()
@@ -289,23 +296,23 @@ export async function autoSaveConsentFullArchForm(
       if (patientId) {
         // Check for any existing forms (both draft and submitted)
         const { data: existingForms } = await supabase
-          .from('consent_full_arch_forms')
+          .from('consent_forms')
           .select('id, status')
           .eq('patient_id', patientId)
           .order('created_at', { ascending: false })
           .limit(5);
 
         if (existingForms && existingForms.length > 0) {
-          // If we're submitting (status = 'submitted'), always look for existing draft to update
-          if (formData.status === 'submitted') {
+          // If we're submitting (status = 'completed'), always look for existing draft to update
+          if (formData.status === 'completed') {
             const draftForm = existingForms.find(form => form.status === 'draft');
             if (draftForm) {
               console.log('📝 Submitting existing Consent Full Arch draft:', draftForm.id);
               const { data, error } = await supabase
-                .from('consent_full_arch_forms')
+                .from('consent_forms')
                 .update({
                   ...dbData,
-                  status: 'submitted',
+                  status: 'completed',
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', draftForm.id)
@@ -328,7 +335,7 @@ export async function autoSaveConsentFullArchForm(
             // Update the existing draft instead of creating a new one
             console.log('📝 Updating existing Consent Full Arch draft:', draftForm.id);
             const { data, error } = await supabase
-              .from('consent_full_arch_forms')
+              .from('consent_forms')
               .update({
                 ...dbData,
                 status: formData.status || 'draft',
@@ -347,12 +354,12 @@ export async function autoSaveConsentFullArchForm(
             return { data, error: null };
           }
 
-          // Check if there's already a submitted form (only prevent new drafts, not submissions)
-          const submittedForm = existingForms.find(form => form.status === 'submitted');
-          if (submittedForm && !formData.status) {
-            // Don't create new drafts if a submitted form already exists (unless explicitly submitting)
-            console.log('⚠️ Submitted form already exists, not creating new draft');
-            return { data: submittedForm, error: null };
+          // Check if there's already a completed form (only prevent new drafts, not submissions)
+          const completedForm = existingForms.find(form => form.status === 'completed');
+          if (completedForm && !formData.status) {
+            // Don't create new drafts if a completed form already exists (unless explicitly submitting)
+            console.log('⚠️ Completed form already exists, not creating new draft');
+            return { data: completedForm, error: null };
           }
         }
       }
@@ -361,7 +368,7 @@ export async function autoSaveConsentFullArchForm(
       dbData.status = 'draft';
       console.log('📝 Creating new Consent Full Arch form draft');
       const { data, error } = await supabase
-        .from('consent_full_arch_forms')
+        .from('consent_forms')
         .insert(dbData)
         .select()
         .single();
@@ -452,17 +459,20 @@ export function convertFormDataToDatabase(
     // Upper Arch Treatment Details
     upper_teeth_regions: formData.upperTeethRegions || '',
     upper_implants: formData.upperImplants || '',
+    upper_treatment_type: formData.upperTreatmentType || '',
     upper_same_day_load: formData.upperSameDayLoad || '',
 
     // Lower Arch Treatment Details
     lower_teeth_regions: formData.lowerTeethRegions || '',
     lower_implants: formData.lowerImplants || '',
+    lower_treatment_type: formData.lowerTreatmentType || '',
     lower_same_day_load: formData.lowerSameDayLoad || '',
 
     // Upper Arch Graft Material
     upper_graft_allograft: formData.upperGraftMaterial?.allograft ?? false,
     upper_graft_xenograft: formData.upperGraftMaterial?.xenograft ?? false,
     upper_graft_autograft: formData.upperGraftMaterial?.autograft ?? false,
+    upper_graft_prf: formData.upperGraftMaterial?.prf ?? false,
 
     // Upper Arch Prosthesis
     upper_prosthesis_zirconia: formData.upperProsthesis?.zirconia ?? false,
@@ -472,6 +482,7 @@ export function convertFormDataToDatabase(
     lower_graft_allograft: formData.lowerGraftMaterial?.allograft ?? false,
     lower_graft_xenograft: formData.lowerGraftMaterial?.xenograft ?? false,
     lower_graft_autograft: formData.lowerGraftMaterial?.autograft ?? false,
+    lower_graft_prf: formData.lowerGraftMaterial?.prf ?? false,
 
     // Lower Arch Prosthesis
     lower_prosthesis_zirconia: formData.lowerProsthesis?.zirconia ?? false,
@@ -508,6 +519,13 @@ export function convertFormDataToDatabase(
     fentanyl: formData.plannedDrugs?.fentanyl ?? formData.fentanyl ?? false,
     ketamine: formData.plannedDrugs?.ketamine ?? formData.ketamine ?? false,
     dexamethasone: formData.plannedDrugs?.dexamethasone ?? formData.dexamethasone ?? false,
+    versed: formData.plannedDrugs?.versed ?? formData.versed ?? false,
+    ketorolac: formData.plannedDrugs?.ketorolac ?? formData.ketorolac ?? false,
+    benadryl: formData.plannedDrugs?.benadryl ?? formData.benadryl ?? false,
+    acetaminophen: formData.plannedDrugs?.acetaminophen ?? formData.acetaminophen ?? false,
+    valium: formData.plannedDrugs?.valium ?? formData.valium ?? false,
+    clindamycin: formData.plannedDrugs?.clindamycin ?? formData.clindamycin ?? false,
+    lidocaine: formData.plannedDrugs?.lidocaine ?? formData.lidocaine ?? false,
 
     // Alternatives Initials
     alternatives_no_treatment_initials: formData.alternativesInitials?.noTreatment || '',
@@ -520,9 +538,9 @@ export function convertFormDataToDatabase(
     surgical_extractions_count: formData.surgicalExtractions?.count || '',
     surgical_extractions_fee: formData.surgicalExtractions?.fee || '',
     surgical_extractions_covered: formData.surgicalExtractions?.covered || '',
-    implant_fixtures_count: formData.implantFixtures?.count || '',
-    implant_fixtures_fee: formData.implantFixtures?.fee || '',
-    implant_fixtures_covered: formData.implantFixtures?.covered || '',
+    endosteal_implants_count: formData.implantFixtures?.count || '',
+    endosteal_implants_fee: formData.implantFixtures?.fee || '',
+    endosteal_implants_covered: formData.implantFixtures?.covered || '',
     zirconia_bridge_fee: formData.zirconiabridge?.fee || '',
     zirconia_bridge_covered: formData.zirconiabridge?.covered || '',
     financial_initials: formData.financialInitials || '',
@@ -657,18 +675,21 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     // Upper Arch Treatment Details
     upperTeethRegions: dbData.upper_teeth_regions || '',
     upperImplants: dbData.upper_implants || '',
+    upperTreatmentType: dbData.upper_treatment_type || '',
     upperSameDayLoad: dbData.upper_same_day_load || '',
 
     // Lower Arch Treatment Details
     lowerTeethRegions: dbData.lower_teeth_regions || '',
     lowerImplants: dbData.lower_implants || '',
+    lowerTreatmentType: dbData.lower_treatment_type || '',
     lowerSameDayLoad: dbData.lower_same_day_load || '',
 
     // Upper Arch Graft Material (as object)
     upperGraftMaterial: {
       allograft: dbData.upper_graft_allograft ?? false,
       xenograft: dbData.upper_graft_xenograft ?? false,
-      autograft: dbData.upper_graft_autograft ?? false
+      autograft: dbData.upper_graft_autograft ?? false,
+      prf: dbData.upper_graft_prf ?? false
     },
 
     // Upper Arch Prosthesis (as object)
@@ -681,7 +702,8 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     lowerGraftMaterial: {
       allograft: dbData.lower_graft_allograft ?? false,
       xenograft: dbData.lower_graft_xenograft ?? false,
-      autograft: dbData.lower_graft_autograft ?? false
+      autograft: dbData.lower_graft_autograft ?? false,
+      prf: dbData.lower_graft_prf ?? false
     },
 
     // Lower Arch Prosthesis (as object)
@@ -724,7 +746,14 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
       midazolam: dbData.midazolam ?? false,
       fentanyl: dbData.fentanyl ?? false,
       ketamine: dbData.ketamine ?? false,
-      dexamethasone: dbData.dexamethasone ?? false
+      dexamethasone: dbData.dexamethasone ?? false,
+      versed: dbData.versed ?? false,
+      ketorolac: dbData.ketorolac ?? false,
+      benadryl: dbData.benadryl ?? false,
+      acetaminophen: dbData.acetaminophen ?? false,
+      valium: dbData.valium ?? false,
+      clindamycin: dbData.clindamycin ?? false,
+      lidocaine: dbData.lidocaine ?? false
     },
 
     // Financial Disclosure
@@ -734,9 +763,9 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
       covered: dbData.surgical_extractions_covered || ''
     },
     implantFixtures: {
-      count: dbData.implant_fixtures_count || '',
-      fee: dbData.implant_fixtures_fee || '',
-      covered: dbData.implant_fixtures_covered || ''
+      count: dbData.endosteal_implants_count || '',
+      fee: dbData.endosteal_implants_fee || '',
+      covered: dbData.endosteal_implants_covered || ''
     },
     zirconiabridge: {
       fee: dbData.zirconia_bridge_fee || '',

@@ -585,24 +585,30 @@ export function ThankYouPreSurgeryForm({
                 { key: 'recentIllness', text: 'Recent illness or fever' },
                 { key: 'medicationChanges', text: 'Recent medication changes' }
               ].map((item) => (
-                <div key={item.key} className="flex items-start space-x-3">
+                <div
+                  key={item.key}
+                  className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all duration-200 min-h-[56px] ${
+                    readOnly ? 'cursor-default' : 'cursor-pointer'
+                  } ${
+                    formData[item.key as keyof typeof formData]
+                      ? 'bg-red-100 border-red-500 shadow-sm'
+                      : `bg-white border-gray-300 ${!readOnly ? 'hover:border-red-400 hover:bg-red-50' : ''}`
+                  }`}
+                  onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                >
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      readOnly ? 'cursor-default' : 'cursor-pointer'
-                    } transition-colors ${
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                       formData[item.key as keyof typeof formData]
-                        ? 'bg-red-100'
-                        : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-red-300' : ''}`
+                        ? 'border-red-600 bg-red-600'
+                        : 'border-gray-400 bg-white'
                     }`}
-                    onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                   >
                     {formData[item.key as keyof typeof formData] && (
-                      <Check className="h-3 w-3 text-red-600" />
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
                     )}
                   </div>
                   <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-red-800`}
-                    onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-red-800 leading-relaxed flex-1`}
                   >
                     {item.text}
                   </Label>
@@ -643,27 +649,33 @@ export function ThankYouPreSurgeryForm({
                   { key: 'noAlcohol3Days', text: 'No alcohol consumption' },
                   { key: 'arrangeRide', text: 'Confirm transportation arrangements' }
                 ].map((item) => (
-                  <div key={item.key} className="flex items-start space-x-3">
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        readOnly ? 'cursor-default' : 'cursor-pointer'
-                      } transition-colors ${
-                        formData[item.key as keyof typeof formData]
-                          ? 'bg-green-100'
-                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                      }`}
-                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                    >
-                      {formData[item.key as keyof typeof formData] && (
-                        <Check className="h-3 w-3 text-green-600" />
-                      )}
+                  <div
+                    key={item.key}
+                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                      formData[item.key as keyof typeof formData]
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 bg-white hover:border-green-300'
+                    } ${!readOnly ? 'cursor-pointer' : 'cursor-default'}`}
+                    onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          formData[item.key as keyof typeof formData]
+                            ? 'bg-green-500 text-white'
+                            : 'border-2 border-gray-300 bg-white'
+                        }`}
+                      >
+                        {formData[item.key as keyof typeof formData] && (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </div>
+                      <Label
+                        className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700 font-medium`}
+                      >
+                        {item.text}
+                      </Label>
                     </div>
-                    <Label
-                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
-                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                    >
-                      {item.text}
-                    </Label>
                   </div>
                 ))}
               </div>
@@ -679,27 +691,33 @@ export function ThankYouPreSurgeryForm({
                   { key: 'noWaterAfter6Am', text: 'No water after 6:00 AM on surgery day' },
                   { key: 'confirmRide', text: 'Confirm your ride for surgery day' }
                 ].map((item) => (
-                  <div key={item.key} className="flex items-start space-x-3">
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        readOnly ? 'cursor-default' : 'cursor-pointer'
-                      } transition-colors ${
-                        formData[item.key as keyof typeof formData]
-                          ? 'bg-green-100'
-                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                      }`}
-                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                    >
-                      {formData[item.key as keyof typeof formData] && (
-                        <Check className="h-3 w-3 text-green-600" />
-                      )}
+                  <div
+                    key={item.key}
+                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                      formData[item.key as keyof typeof formData]
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 bg-white hover:border-green-300'
+                    } ${!readOnly ? 'cursor-pointer' : 'cursor-default'}`}
+                    onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          formData[item.key as keyof typeof formData]
+                            ? 'bg-green-500 text-white'
+                            : 'border-2 border-gray-300 bg-white'
+                        }`}
+                      >
+                        {formData[item.key as keyof typeof formData] && (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </div>
+                      <Label
+                        className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700 font-medium`}
+                      >
+                        {item.text}
+                      </Label>
                     </div>
-                    <Label
-                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
-                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                    >
-                      {item.text}
-                    </Label>
                   </div>
                 ))}
               </div>
@@ -715,27 +733,33 @@ export function ThankYouPreSurgeryForm({
                   { key: 'wearComfortable', text: 'Wear comfortable, loose-fitting clothes' },
                   { key: 'arriveOnTime', text: 'Arrive on time for your appointment' }
                 ].map((item) => (
-                  <div key={item.key} className="flex items-start space-x-3">
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        readOnly ? 'cursor-default' : 'cursor-pointer'
-                      } transition-colors ${
-                        formData[item.key as keyof typeof formData]
-                          ? 'bg-green-100'
-                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                      }`}
-                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                    >
-                      {formData[item.key as keyof typeof formData] && (
-                        <Check className="h-3 w-3 text-green-600" />
-                      )}
+                  <div
+                    key={item.key}
+                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                      formData[item.key as keyof typeof formData]
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 bg-white hover:border-green-300'
+                    } ${!readOnly ? 'cursor-pointer' : 'cursor-default'}`}
+                    onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          formData[item.key as keyof typeof formData]
+                            ? 'bg-green-500 text-white'
+                            : 'border-2 border-gray-300 bg-white'
+                        }`}
+                      >
+                        {formData[item.key as keyof typeof formData] && (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </div>
+                      <Label
+                        className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700 font-medium`}
+                      >
+                        {item.text}
+                      </Label>
                     </div>
-                    <Label
-                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
-                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                    >
-                      {item.text}
-                    </Label>
                   </div>
                 ))}
               </div>
@@ -751,27 +775,33 @@ export function ThankYouPreSurgeryForm({
                   { key: 'followInstructions', text: 'Follow all post-operative instructions' },
                   { key: 'callIfConcerns', text: 'Call office with any concerns' }
                 ].map((item) => (
-                  <div key={item.key} className="flex items-start space-x-3">
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        readOnly ? 'cursor-default' : 'cursor-pointer'
-                      } transition-colors ${
-                        formData[item.key as keyof typeof formData]
-                          ? 'bg-green-100'
-                          : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                      }`}
-                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                    >
-                      {formData[item.key as keyof typeof formData] && (
-                        <Check className="h-3 w-3 text-green-600" />
-                      )}
+                  <div
+                    key={item.key}
+                    className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                      formData[item.key as keyof typeof formData]
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 bg-white hover:border-green-300'
+                    } ${!readOnly ? 'cursor-pointer' : 'cursor-default'}`}
+                    onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          formData[item.key as keyof typeof formData]
+                            ? 'bg-green-500 text-white'
+                            : 'border-2 border-gray-300 bg-white'
+                        }`}
+                      >
+                        {formData[item.key as keyof typeof formData] && (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </div>
+                      <Label
+                        className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700 font-medium`}
+                      >
+                        {item.text}
+                      </Label>
                     </div>
-                    <Label
-                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
-                      onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                    >
-                      {item.text}
-                    </Label>
                   </div>
                 ))}
               </div>
@@ -922,38 +952,46 @@ export function ThankYouPreSurgeryForm({
             <p className="text-sm text-gray-700 mb-4">
               Please check each box to confirm your understanding:
             </p>
-            {[
-              { key: 'readInstructions', text: 'I have read and understand all pre-surgery instructions' },
-              { key: 'understandMedications', text: 'I understand the medication schedule and requirements' },
-              { key: 'understandSedation', text: 'I understand the IV sedation process and restrictions' },
-              { key: 'arrangedTransport', text: 'I have arranged transportation to and from surgery' },
-              { key: 'understandRestrictions', text: 'I understand the 24-hour post-sedation restrictions' },
-              { key: 'willFollowInstructions', text: 'I agree to follow all pre and post-operative instructions' },
-              { key: 'understandEmergency', text: 'I understand when to seek emergency help' }
-            ].map((item) => (
-              <div key={item.key} className="flex items-start space-x-3">
+            <div className="space-y-2">
+              {[
+                { key: 'readInstructions', text: 'I have read and understand all pre-surgery instructions' },
+                { key: 'understandMedications', text: 'I understand the medication schedule and requirements' },
+                { key: 'understandSedation', text: 'I understand the IV sedation process and restrictions' },
+                { key: 'arrangedTransport', text: 'I have arranged transportation to and from surgery' },
+                { key: 'understandRestrictions', text: 'I understand the 24-hour post-sedation restrictions' },
+                { key: 'willFollowInstructions', text: 'I agree to follow all pre and post-operative instructions' },
+                { key: 'understandEmergency', text: 'I understand when to seek emergency help' }
+              ].map((item) => (
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } transition-colors ${
+                  key={item.key}
+                  className={`p-3 rounded-lg border-2 transition-all duration-200 ${
                     formData[item.key as keyof typeof formData]
-                      ? 'bg-blue-100'
-                      : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
-                  }`}
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 bg-white hover:border-green-300'
+                  } ${!readOnly ? 'cursor-pointer' : 'cursor-default'}`}
                   onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                 >
-                  {formData[item.key as keyof typeof formData] && (
-                    <Check className="h-3 w-3 text-blue-600" />
-                  )}
+                  <div className="flex items-center space-x-3">
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        formData[item.key as keyof typeof formData]
+                          ? 'bg-green-500 text-white'
+                          : 'border-2 border-gray-300 bg-white'
+                      }`}
+                    >
+                      {formData[item.key as keyof typeof formData] && (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </div>
+                    <Label
+                      className={`text-sm ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700 font-medium`}
+                    >
+                      {item.text}
+                    </Label>
+                  </div>
                 </div>
-                <Label
-                  className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-gray-700`}
-                  onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                >
-                  {item.text}
-                </Label>
-              </div>
-            ))}
+              ))}
+            </div>
           </CardContent>
         </Card>
 

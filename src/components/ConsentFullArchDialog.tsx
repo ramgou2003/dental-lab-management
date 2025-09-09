@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ConsentFullArchForm } from "@/components/ConsentFullArchForm";
 import { autoSaveConsentFullArchForm, convertDatabaseToFormData } from "@/services/consentFullArchService";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ConsentFullArchDialogProps {
   isOpen: boolean;
@@ -35,6 +36,40 @@ export function ConsentFullArchDialog({
   const [lastSavedTime, setLastSavedTime] = useState('');
   const [savedFormId, setSavedFormId] = useState<string | undefined>(undefined);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [patientChartNumber, setPatientChartNumber] = useState<string>('');
+
+  // Fetch patient chart number when dialog opens
+  useEffect(() => {
+    const fetchPatientChartNumber = async () => {
+      if (!isOpen || !patientId) return;
+
+      try {
+        console.log('📋 Fetching patient chart number for:', patientId);
+        const { data, error } = await supabase
+          .from('patients')
+          .select('chart_number')
+          .eq('id', patientId)
+          .single();
+
+        if (error) {
+          console.error('❌ Error fetching patient chart number:', error);
+          return;
+        }
+
+        if (data?.chart_number) {
+          console.log('✅ Found patient chart number:', data.chart_number);
+          setPatientChartNumber(data.chart_number);
+        } else {
+          console.log('📋 No chart number found for patient');
+          setPatientChartNumber('');
+        }
+      } catch (error) {
+        console.error('💥 Unexpected error fetching patient chart number:', error);
+      }
+    };
+
+    fetchPatientChartNumber();
+  }, [isOpen, patientId]);
 
   // Update savedFormId when initialData changes
   useEffect(() => {
@@ -102,10 +137,10 @@ export function ConsentFullArchDialog({
     try {
       console.log('🚀 Form submission started with data:', formData);
 
-      // Set status to submitted when form is submitted
+      // Set status to completed when form is submitted
       const submissionData = {
         ...formData,
-        status: 'submitted'
+        status: 'completed'
       };
 
       console.log('📝 Submission data with status:', submissionData);
@@ -166,19 +201,36 @@ export function ConsentFullArchDialog({
       if (initialData.patient_name && !initialData.patientName) {
         console.log('🔄 Converting database format to form format');
         const converted = convertDatabaseToFormData(initialData);
+        // Add patient chart number if available and not already set
+        if (patientChartNumber && !converted.chartNumber) {
+          converted.chartNumber = patientChartNumber;
+          console.log('📋 Added patient chart number to converted data:', patientChartNumber);
+        }
         console.log('✅ Converted data:', converted);
         setConvertedInitialData(converted);
         setSavedFormId(converted.id);
       } else {
         console.log('✅ Data already in form format');
-        setConvertedInitialData(initialData);
+        // Add patient chart number if available and not already set
+        const dataWithChartNumber = { ...initialData };
+        if (patientChartNumber && !dataWithChartNumber.chartNumber) {
+          dataWithChartNumber.chartNumber = patientChartNumber;
+          console.log('📋 Added patient chart number to form data:', patientChartNumber);
+        }
+        setConvertedInitialData(dataWithChartNumber);
         setSavedFormId(initialData.id);
       }
     } else {
-      setConvertedInitialData(null);
+      // No initial data, but we might have a patient chart number
+      if (patientChartNumber) {
+        console.log('📋 No initial data, but setting chart number:', patientChartNumber);
+        setConvertedInitialData({ chartNumber: patientChartNumber });
+      } else {
+        setConvertedInitialData(null);
+      }
       setSavedFormId(undefined);
     }
-  }, [initialData, isEditing, isViewing, savedFormId]);
+  }, [initialData, isEditing, isViewing, savedFormId, patientChartNumber]);
 
   // Reset state when dialog opens/closes
   useEffect(() => {

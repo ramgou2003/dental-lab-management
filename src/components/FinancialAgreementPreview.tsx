@@ -579,6 +579,14 @@ export function FinancialAgreementPreview({ onClose, agreementData }: FinancialA
           <CardContent>
             <div className="p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-700">Downloaded to Dental Management Software:</span>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  displayData.downloaded_to_dental_management_software ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {displayData.downloaded_to_dental_management_software ? 'YES' : 'NO'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-3">
                 <span className="text-sm font-semibold text-gray-700">Confirmed by Staff Initials:</span>
                 <span className="font-mono text-sm bg-white px-2 py-1 rounded border">
                   {displayData.confirmed_by_staff_initials || 'Pending'}

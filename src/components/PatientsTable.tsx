@@ -20,6 +20,7 @@ interface Patient {
   city: string | null;
   state: string | null;
   zip_code: string | null;
+  chart_number: string | null;
   status: string | null;
   treatment_type: string | null;
   upper_arch: boolean | null;
@@ -142,10 +143,13 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
       <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0 table-header">
         <div className="grid text-sm font-medium text-slate-900 h-6 gap-2 lg:gap-4"
              style={{
-               gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(120px, 1.3fr) minmax(120px, 1.3fr)'
+               gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(120px, 1.3fr) minmax(120px, 1.3fr)'
              }}>
           <div className="text-left flex items-center px-2 border-r border-slate-300">
             <span className="truncate">Patient Name</span>
+          </div>
+          <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
+            <span className="truncate">Chart #</span>
           </div>
           <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
             <span className="truncate">Phone</span>
@@ -176,7 +180,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                      index !== filteredPatients.length - 1 ? 'border-b border-slate-100' : ''
                    } hover:bg-slate-50`}
                    style={{
-                     gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(120px, 1.3fr) minmax(120px, 1.3fr)'
+                     gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(120px, 1.3fr) minmax(120px, 1.3fr)'
                    }}>
 
                 {/* Patient Name */}
@@ -192,6 +196,11 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                       {patient.full_name}
                     </span>
                   </div>
+                </div>
+
+                {/* Chart Number */}
+                <div className="text-slate-600 text-sm text-center px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
+                  <span className="truncate font-mono">{patient.chart_number || '-'}</span>
                 </div>
 
                 {/* Phone */}

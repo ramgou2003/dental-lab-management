@@ -26,6 +26,7 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
     city: '',
     state: '',
     zipCode: '',
+    chartNumber: '',
     gender: 'male',
     status: 'ACTIVE'
   });
@@ -68,6 +69,7 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
         city: formData.city || null,
         state: formData.state || null,
         zip_code: formData.zipCode || null,
+        chart_number: formData.chartNumber || null,
         status: formData.status
       };
 
@@ -139,6 +141,18 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
                 className={errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
             </div>
+          </div>
+
+          <div className="col-span-2">
+            <Label htmlFor="chartNumber">
+              Chart Number
+            </Label>
+            <Input
+              id="chartNumber"
+              value={formData.chartNumber}
+              onChange={(e) => handleInputChange('chartNumber', e.target.value)}
+              placeholder="Enter chart number"
+            />
           </div>
 
           <div>
