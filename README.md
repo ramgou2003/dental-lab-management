@@ -2,6 +2,10 @@
 
 A comprehensive dental lab management system with patient management, lab scripts, manufacturing queue, and report cards. Built with React, TypeScript, Tailwind CSS, and Supabase.
 
+## Recent Updates
+- ✅ Added US phone number formatting with country code (+1) to all forms
+- ✅ Changed "Consent Form" to "Consent Packet" in administrative forms interface
+
 ## Features
 - 🦷 Patient Management System
 - 🧪 Lab Scripts with AI Enhancement (OpenRouter API)
