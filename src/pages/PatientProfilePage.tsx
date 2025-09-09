@@ -4890,7 +4890,7 @@ export function PatientProfilePage() {
                               <SelectItem value="medical-records-release">Medical Records Release Form</SelectItem>
                               <SelectItem value="informed-consent-smoking">Informed Consent Form For Smoking</SelectItem>
                               <SelectItem value="three-year-care-package">3-Year Care Package Enrollment Form</SelectItem>
-                              <SelectItem value="five-year-warranty">5-Year Extended Warranty Plan</SelectItem>
+                              {/* <SelectItem value="five-year-warranty">5-Year Extended Warranty Plan</SelectItem> */}
                               <SelectItem value="partial-payment-agreement">Partial Payment Agreement for Future Treatment</SelectItem>
                               <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
                               <SelectItem value="thank-you-pre-surgery">Thank You and Pre-Surgery Form</SelectItem>
