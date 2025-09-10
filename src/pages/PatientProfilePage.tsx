@@ -4864,92 +4864,6 @@ export function PatientProfilePage() {
                 {/* Clinical Forms Grid with Horizontal Scroll */}
                 <div className="overflow-x-auto pl-0 pr-0 pt-2 pb-2" style={{ height: 'calc(100vh - 280px)' }}>
                   <div className="flex gap-3 h-full" style={{ minWidth: 'max-content' }}>
-                  {/* Consultations */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                      <div className="p-1.5 bg-purple-100 rounded-lg">
-                        <Activity className="h-4 w-4 text-purple-600" />
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">Consultations ({consultationForms.length})</h3>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                      <div className="space-y-3 pb-2">
-                        {/* Consultations List */}
-                        {loadingConsultationForms ? (
-                          <div className="text-center py-6">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
-                            <p className="text-sm text-gray-500">Loading consultations...</p>
-                          </div>
-                        ) : consultationForms.length > 0 ? (
-                          <div className="space-y-2">
-                            {consultationForms.map((consultation, index) => (
-                              <div
-                                key={consultation.id || index}
-                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-purple-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                onClick={() => handleViewConsultation(consultation)}
-                              >
-                                {/* Header with consultation number */}
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                                    <span className="text-sm font-semibold text-gray-900">
-                                      Consultation #{index + 1}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Consultation Date */}
-                                <div className="text-xs text-gray-500 mb-2">
-                                  {consultation.consultation_date ?
-                                    new Date(consultation.consultation_date).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
-                                    }) : 'Date not available'
-                                  }
-                                </div>
-
-                                {/* Patient Name */}
-                                <div className="text-sm text-gray-700 mb-2">
-                                  <span className="font-medium">Patient:</span> {consultation.patient_name || 'Unknown'}
-                                </div>
-
-                                {/* Treatment Type */}
-                                {consultation.treatment_type && (
-                                  <div className="text-sm text-gray-700 mb-2">
-                                    <span className="font-medium">Treatment:</span> {consultation.treatment_type}
-                                  </div>
-                                )}
-
-                                {/* Status */}
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-medium text-gray-500">Status:</span>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    consultation.treatment_accepted === true ? 'bg-green-100 text-green-800' :
-                                    consultation.treatment_accepted === false ? 'bg-red-100 text-red-800' :
-                                    'bg-yellow-100 text-yellow-800'
-                                  }`}>
-                                    {consultation.treatment_accepted === true ? 'Accepted' :
-                                     consultation.treatment_accepted === false ? 'Declined' :
-                                     'Pending'}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8">
-                            <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-sm font-medium text-gray-500 mb-1">No consultations</p>
-                            <p className="text-xs text-gray-400">Consultation forms will appear here when available</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Administrative Forms */}
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
                     {/* Header */}
@@ -6228,8 +6142,158 @@ export function PatientProfilePage() {
                     </div>
                   </div>
 
+                  {/* Consultations */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
+                    {/* Header */}
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                      <div className="p-1.5 bg-purple-100 rounded-lg">
+                        <Activity className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">Consultations ({consultationForms.length})</h3>
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                      <div className="space-y-3 pb-2">
+                        {/* Consultations List */}
+                        {loadingConsultationForms ? (
+                          <div className="text-center py-6">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                            <p className="text-sm text-gray-500">Loading consultations...</p>
+                          </div>
+                        ) : consultationForms.length > 0 ? (
+                          <div className="space-y-2">
+                            {consultationForms.map((consultation, index) => (
+                              <div
+                                key={consultation.id || index}
+                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-purple-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                onClick={() => handleViewConsultation(consultation)}
+                              >
+                                {/* Header with consultation number */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                    <span className="text-sm font-semibold text-gray-900">
+                                      Consultation #{index + 1}
+                                    </span>
+                                  </div>
+                                </div>
 
+                                {/* Status Badges Row */}
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {/* Consultation Status */}
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                                    consultation.consultation_status === 'completed'
+                                      ? 'bg-green-100 text-green-800 border-green-200'
+                                      : consultation.consultation_status === 'in-progress'
+                                      ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                      : 'bg-gray-100 text-gray-800 border-gray-200'
+                                  }`}>
+                                    {consultation.consultation_status === 'completed' ? 'Completed' :
+                                     consultation.consultation_status === 'in-progress' ? 'In Progress' :
+                                     consultation.consultation_status || 'Pending'}
+                                  </span>
 
+                                  {/* Outcome Status (Treatment Decision) */}
+                                  {consultation.treatment_decision && (
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                                      consultation.treatment_decision === 'accepted'
+                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                        : consultation.treatment_decision === 'declined'
+                                        ? 'bg-red-100 text-red-800 border-red-200'
+                                        : consultation.treatment_decision === 'followup-required'
+                                        ? 'bg-orange-100 text-orange-800 border-orange-200'
+                                        : 'bg-purple-100 text-purple-800 border-purple-200'
+                                    }`}>
+                                      {consultation.treatment_decision === 'accepted' ? 'Treatment Accepted' :
+                                       consultation.treatment_decision === 'declined' ? 'Treatment Declined' :
+                                       consultation.treatment_decision === 'followup-required' ? 'Follow-up Required' :
+                                       consultation.treatment_decision.charAt(0).toUpperCase() + consultation.treatment_decision.slice(1)}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Consultation Date */}
+                                <div className="mb-3">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-500">Consultation Date:</span>
+                                    <span className="font-medium text-gray-700">
+                                      {consultation.consultation_date
+                                        ? new Date(consultation.consultation_date).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                          })
+                                        : new Date(consultation.created_at).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                          })
+                                      }
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Patient Name */}
+                                <div className="mb-2">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-500">Patient:</span>
+                                    <span className="font-medium text-gray-700">
+                                      {consultation.patient_name}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Additional Status Information */}
+                                {(consultation.treatment_plan_approved !== null || consultation.follow_up_required) && (
+                                  <div className="mb-2 space-y-1">
+                                    {consultation.treatment_plan_approved !== null && (
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-500">Treatment Plan:</span>
+                                        <span className={`font-medium ${
+                                          consultation.treatment_plan_approved
+                                            ? 'text-green-700'
+                                            : 'text-red-700'
+                                        }`}>
+                                          {consultation.treatment_plan_approved ? 'Approved' : 'Not Approved'}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {consultation.follow_up_required && (
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-500">Follow-up:</span>
+                                        <span className="font-medium text-orange-700">Required</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Action buttons */}
+                                <div className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-gray-100">
+                                  {/* View button */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewConsultation(consultation);
+                                    }}
+                                    className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                    title="View consultation"
+                                  >
+                                    <Eye className="h-3.5 w-3.5 text-gray-400 hover:text-purple-600" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6">
+                            <Activity className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm font-medium text-gray-500 mb-1">No consultations</p>
+                            <p className="text-xs text-gray-400">Consultation forms will appear here when available</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Data Collection Sheet */}
                   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
