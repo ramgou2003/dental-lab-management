@@ -33,11 +33,14 @@ import { ThankYouPreSurgeryDialog } from "@/components/ThankYouPreSurgeryDialog"
 import { ThreeYearCarePackageDialog } from "@/components/ThreeYearCarePackageDialog";
 import { FiveYearWarrantyDialog } from "@/components/FiveYearWarrantyDialog";
 import { PartialPaymentAgreementDialog } from "@/components/PartialPaymentAgreementDialog";
+import { TreatmentPlanDialog } from "@/components/TreatmentPlanDialog";
+import { saveTreatmentPlanForm, getTreatmentPlanFormsByPatientId, deleteTreatmentPlanForm, getTreatmentPlanForm, TreatmentPlanFormDB } from "@/services/treatmentPlanFormService";
 import { ConsultationViewer } from "@/components/ConsultationViewer";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
 import { usePatientAppointments } from "@/hooks/usePatientAppointments";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/contexts/AuthContext";
 import { LabScript } from "@/hooks/useLabScripts";
 import { ManufacturingItem } from "@/hooks/useManufacturingItems";
 import { useReportCards } from "@/hooks/useReportCards";
@@ -178,6 +181,9 @@ export function PatientProfilePage() {
   // Permission checks for admin functionality
   const { isAdminUser } = usePermissions();
 
+  // Auth context for user information
+  const { user } = useAuth();
+
   // Filter report cards for this specific patient
   const patientReportCards = reportCards.filter(card => {
     // Check if the report card's lab script belongs to this patient
@@ -261,6 +267,7 @@ export function PatientProfilePage() {
   const [showThreeYearCarePackageForm, setShowThreeYearCarePackageForm] = useState(false);
   const [showFiveYearWarrantyForm, setShowFiveYearWarrantyForm] = useState(false);
   const [showPartialPaymentAgreementForm, setShowPartialPaymentAgreementForm] = useState(false);
+  const [showTreatmentPlanForm, setShowTreatmentPlanForm] = useState(false);
   const [selectedAdminFormType, setSelectedAdminFormType] = useState<string>("");
 
   // State for 3-Year Care Package Forms
@@ -293,7 +300,15 @@ export function PatientProfilePage() {
   const [showDeletePartialPaymentAgreementFormConfirm, setShowDeletePartialPaymentAgreementFormConfirm] = useState(false);
   const [partialPaymentAgreementFormToDelete, setPartialPaymentAgreementFormToDelete] = useState<any | null>(null);
 
-
+  // State for Treatment Plan Forms
+  const [treatmentPlanForms, setTreatmentPlanForms] = useState<TreatmentPlanFormDB[]>([]);
+  const [loadingTreatmentPlanForms, setLoadingTreatmentPlanForms] = useState(false);
+  const [selectedTreatmentPlanForm, setSelectedTreatmentPlanForm] = useState<TreatmentPlanFormDB | null>(null);
+  const [isEditingTreatmentPlanForm, setIsEditingTreatmentPlanForm] = useState(false);
+  const [isViewingTreatmentPlanForm, setIsViewingTreatmentPlanForm] = useState(false);
+  const [treatmentPlanActiveDropdown, setTreatmentPlanActiveDropdown] = useState<string | null>(null);
+  const [showDeleteTreatmentPlanFormConfirm, setShowDeleteTreatmentPlanFormConfirm] = useState(false);
+  const [treatmentPlanFormToDelete, setTreatmentPlanFormToDelete] = useState<TreatmentPlanFormDB | null>(null);
 
   // State for Patient Packets
   const [patientPackets, setPatientPackets] = useState<any[]>([]);
@@ -486,7 +501,64 @@ export function PatientProfilePage() {
     medications: [] as string[]
   });
 
-  // Medication options for surgery
+  // State for new medication form in flow entry dialog
+  const [newMedication, setNewMedication] = useState({
+    name: '',
+    dosage: '',
+    unit: '',
+    isCustomMedication: false,
+    isCustomDosage: false
+  });
+
+  // Medication options for surgery - organized by medication with specific dosages
+  const medicationOptionsNew = {
+    'Versed (Midazolam)': [
+      { dosage: '0.5', unit: 'mg' },
+      { dosage: '1', unit: 'mg' },
+      { dosage: '2', unit: 'mg' },
+      { dosage: '3', unit: 'mg' }
+    ],
+    'Fentanyl': [
+      { dosage: '25', unit: 'mcg' },
+      { dosage: '50', unit: 'mcg' },
+      { dosage: '75', unit: 'mcg' },
+      { dosage: '100', unit: 'mcg' }
+    ],
+    'Ketorolac': [
+      { dosage: '15', unit: 'mg' },
+      { dosage: '30', unit: 'mg' }
+    ],
+    'Benadryl': [
+      { dosage: '25', unit: 'mg' },
+      { dosage: '50', unit: 'mg' }
+    ],
+    'Dexamethasone': [
+      { dosage: '2', unit: 'mg' },
+      { dosage: '4', unit: 'mg' }
+    ],
+    'Acetaminophen': [
+      { dosage: '2 ml (20 mg)', unit: 'ml' },
+      { dosage: '5 ml (50 mg)', unit: 'ml' }
+    ],
+    'Valium': [
+      { dosage: '10', unit: 'mg Tab' }
+    ],
+    'Clindamycin': [
+      { dosage: '300', unit: 'mg Tab' }
+    ],
+    'Lidocaine': [
+      { dosage: '0.5 ml (2.5 mg)', unit: 'ml' }
+    ]
+  };
+
+  const medicationNames = Object.keys(medicationOptionsNew);
+
+  // Common unit options for custom medications
+  const commonUnitOptions = [
+    'mg', 'mcg', 'g', 'ml', 'L', 'units', 'IU', 'Tab', 'Capsule', 'Drop', 'Spray', 'Patch', 'Injection', 'Infusion'
+  ];
+
+  // Legacy medication options for backward compatibility with existing data
   const medicationOptions = [
     // Versed (Midazolam)
     { id: 'versed-0.5', name: '0.5mg | Versed', category: 'Versed' },
@@ -681,6 +753,7 @@ export function PatientProfilePage() {
       fetchThreeYearCarePackageForms();
       fetchFiveYearWarrantyForms();
       fetchPartialPaymentAgreementForms();
+      fetchTreatmentPlanForms();
     } else {
       // Use mock data if no patientId provided
       setPatient({
@@ -1060,6 +1133,33 @@ export function PatientProfilePage() {
       setPartialPaymentAgreementForms([]);
     } finally {
       setLoadingPartialPaymentAgreementForms(false);
+    }
+  };
+
+  const fetchTreatmentPlanForms = async () => {
+    if (!patientId) {
+      console.log('⚠️ No patientId provided to fetchTreatmentPlanForms');
+      return;
+    }
+
+    try {
+      console.log('🔄 Fetching Treatment Plan forms for patient:', patientId);
+      setLoadingTreatmentPlanForms(true);
+
+      const { data, error } = await getTreatmentPlanFormsByPatientId(patientId);
+
+      if (error) {
+        console.error('❌ Error fetching Treatment Plan forms:', error);
+        setTreatmentPlanForms([]);
+      } else {
+        console.log('✅ Successfully fetched Treatment Plan forms:', data?.length || 0);
+        setTreatmentPlanForms(data || []);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Treatment Plan forms:', error);
+      setTreatmentPlanForms([]);
+    } finally {
+      setLoadingTreatmentPlanForms(false);
     }
   };
 
@@ -4871,7 +4971,7 @@ export function PatientProfilePage() {
                       <div className="p-1.5 bg-blue-100 rounded-lg">
                         <Settings className="h-4 w-4 text-blue-600" />
                       </div>
-                      <h3 className="text-base font-semibold text-gray-900">Administrative Forms ({patientPackets.length + financialAgreements.length + consentForms.length + medicalRecordsReleaseForms.length + informedConsentSmokingForms.length + finalDesignApprovalForms.length + thankYouPreSurgeryForms.length + threeYearCarePackageForms.length + fiveYearWarrantyForms.length + partialPaymentAgreementForms.length})</h3>
+                      <h3 className="text-base font-semibold text-gray-900">Administrative Forms ({patientPackets.length + financialAgreements.length + consentForms.length + medicalRecordsReleaseForms.length + informedConsentSmokingForms.length + finalDesignApprovalForms.length + thankYouPreSurgeryForms.length + threeYearCarePackageForms.length + fiveYearWarrantyForms.length + partialPaymentAgreementForms.length + treatmentPlanForms.length})</h3>
                     </div>
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
@@ -4894,6 +4994,7 @@ export function PatientProfilePage() {
                               <SelectItem value="partial-payment-agreement">Partial Payment Agreement for Future Treatment</SelectItem>
                               <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
                               <SelectItem value="thank-you-pre-surgery">Thank You and Pre-Surgery Form</SelectItem>
+                              <SelectItem value="create-treatment-plan">Create Treatment Plan</SelectItem>
                             </SelectContent>
                           </Select>
 
@@ -4926,6 +5027,8 @@ export function PatientProfilePage() {
                                 setShowFiveYearWarrantyForm(true);
                               } else if (selectedAdminFormType === 'partial-payment-agreement') {
                                 setShowPartialPaymentAgreementForm(true);
+                              } else if (selectedAdminFormType === 'create-treatment-plan') {
+                                setShowTreatmentPlanForm(true);
                               } else {
                                 // Handle other form types here
                                 alert(`Opening ${selectedAdminFormType} form - Not implemented yet`);
@@ -4937,12 +5040,12 @@ export function PatientProfilePage() {
                         </div>
 
                         {/* Administrative Forms List */}
-                        {(loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms || loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms || loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms || loadingFiveYearWarrantyForms || loadingPartialPaymentAgreementForms) ? (
+                        {(loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms || loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms || loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms || loadingFiveYearWarrantyForms || loadingPartialPaymentAgreementForms || loadingTreatmentPlanForms) ? (
                           <div className="text-center py-6">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                             <p className="text-sm text-gray-500">Loading administrative forms...</p>
                           </div>
-                        ) : (patientPackets.length > 0 || financialAgreements.length > 0 || consentForms.length > 0 || medicalRecordsReleaseForms.length > 0 || informedConsentSmokingForms.length > 0 || finalDesignApprovalForms.length > 0 || thankYouPreSurgeryForms.length > 0 || threeYearCarePackageForms.length > 0 || fiveYearWarrantyForms.length > 0 || partialPaymentAgreementForms.length > 0) ? (
+                        ) : (patientPackets.length > 0 || financialAgreements.length > 0 || consentForms.length > 0 || medicalRecordsReleaseForms.length > 0 || informedConsentSmokingForms.length > 0 || finalDesignApprovalForms.length > 0 || thankYouPreSurgeryForms.length > 0 || threeYearCarePackageForms.length > 0 || fiveYearWarrantyForms.length > 0 || partialPaymentAgreementForms.length > 0 || treatmentPlanForms.length > 0) ? (
                           <div className="space-y-2">
                             {patientPackets.map((packet) => (
                               <div
@@ -6117,6 +6220,154 @@ export function PatientProfilePage() {
                                               e.stopPropagation();
                                               setPartialPaymentAgreementFormToDelete(form);
                                               setShowDeletePartialPaymentAgreementFormConfirm(true);
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Delete form"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </>
+                            )}
+
+                            {/* Treatment Plan Forms Section */}
+                            {treatmentPlanForms.length > 0 && (
+                              <>
+                                {treatmentPlanForms.map((form) => (
+                                  <div
+                                    key={form.id}
+                                    className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                    onClick={async () => {
+                                      try {
+                                        console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+
+                                        const { data: freshFormData, error } = await getTreatmentPlanForm(form.id);
+
+                                        if (error) {
+                                          console.error('❌ Error fetching fresh Treatment Plan form data:', error);
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to load form data. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                          return;
+                                        }
+
+                                        console.log('✅ Fresh Treatment Plan form data loaded:', freshFormData);
+                                        setSelectedTreatmentPlanForm(freshFormData);
+                                        setIsViewingTreatmentPlanForm(true);
+                                        setShowTreatmentPlanForm(true);
+                                      } catch (error) {
+                                        console.error('❌ Unexpected error loading Treatment Plan form:', error);
+                                        toast({
+                                          title: "Error",
+                                          description: "An unexpected error occurred. Please try again.",
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    {/* Header with form name and status */}
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${
+                                          form.form_status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                        }`}></div>
+                                        <span className="text-sm font-semibold text-gray-900">
+                                          Treatment Plan
+                                        </span>
+                                      </div>
+                                      {/* Status Badge - moved to top right */}
+                                      {form.form_status === 'draft' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                                          Draft
+                                        </span>
+                                      )}
+                                      {form.form_status === 'completed' && (
+                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                          Completed
+                                        </span>
+                                      )}
+                                    </div>
+
+
+
+                                    {/* Plan Date */}
+                                    <div className="mb-3">
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-500">Plan Date:</span>
+                                        <span className="font-medium text-gray-700">
+                                          {form.plan_date ?
+                                            new Date(form.plan_date).toLocaleDateString('en-US', {
+                                              year: 'numeric',
+                                              month: 'short',
+                                              day: 'numeric'
+                                            }) : 'Not set'
+                                          }
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                                        <Clock className="h-3 w-3" />
+                                        <span>Created: {new Date(form.created_at).toLocaleDateString()}</span>
+                                      </div>
+
+                                      <div className="flex items-center gap-1">
+                                        {/* Edit button - visible to all users if draft, only admins if completed */}
+                                        {(form.form_status === 'draft' || isAdminUser()) && (
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+
+                                                const { data: freshFormData, error } = await getTreatmentPlanForm(form.id);
+
+                                                if (error) {
+                                                  console.error('❌ Error fetching fresh Treatment Plan form data:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Failed to load form data. Please try again.",
+                                                    variant: "destructive",
+                                                  });
+                                                  return;
+                                                }
+
+                                                console.log('✅ Fresh Treatment Plan form data loaded for editing:', freshFormData);
+                                                setSelectedTreatmentPlanForm(freshFormData);
+                                                setIsEditingTreatmentPlanForm(true);
+                                                setIsViewingTreatmentPlanForm(false);
+                                                setShowTreatmentPlanForm(true);
+                                              } catch (error) {
+                                                console.error('❌ Unexpected error loading Treatment Plan form for editing:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "An unexpected error occurred. Please try again.",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Edit form"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                          </button>
+                                        )}
+
+                                        {/* Delete button - only visible to admins */}
+                                        {isAdminUser() && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setTreatmentPlanFormToDelete(form);
+                                              setShowDeleteTreatmentPlanFormConfirm(true);
                                             }}
                                             className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
                                             title="Delete form"
@@ -10263,13 +10514,23 @@ export function PatientProfilePage() {
                                   <td className="px-3 py-2 text-sm text-gray-900 border-b border-gray-200">
                                     {entry.medications && entry.medications.length > 0 ? (
                                       <div className="space-y-1">
-                                        {entry.medications.map((medId, index) => {
-                                          const medication = medicationOptions.find(med => med.id === medId);
-                                          return medication ? (
+                                        {entry.medications.map((medication, index) => {
+                                          // Handle both new string format and legacy ID format
+                                          let displayText = '';
+                                          if (typeof medication === 'string') {
+                                            // New format: "dosage | medication name"
+                                            displayText = medication;
+                                          } else {
+                                            // Legacy format: find by ID
+                                            const legacyMed = medicationOptions.find(med => med.id === medication);
+                                            displayText = legacyMed ? legacyMed.name : medication;
+                                          }
+
+                                          return (
                                             <div key={index} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                                              {medication.name}
+                                              {displayText}
                                             </div>
-                                          ) : null;
+                                          );
                                         })}
                                       </div>
                                     ) : '-'}
@@ -11321,7 +11582,7 @@ export function PatientProfilePage() {
 
               </div>
 
-              {/* Medications Section - Full Width with Scroll */}
+              {/* Medications Section - New Dropdown Approach */}
               <div className="border-t pt-4">
                 <label className="text-sm font-medium text-gray-700 block mb-3">Medications</label>
 
@@ -11330,66 +11591,292 @@ export function PatientProfilePage() {
                   <div className="mb-3 p-2 bg-gray-50 rounded-lg">
                     <div className="text-xs text-gray-600 mb-2">Selected:</div>
                     <div className="flex flex-wrap gap-1">
-                      {newFlowEntry.medications.map((medId) => {
-                        const medication = medicationOptions.find(med => med.id === medId);
-                        return medication ? (
-                          <div key={medId} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs flex items-center gap-1">
-                            {medication.name}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setNewFlowEntry({
-                                  ...newFlowEntry,
-                                  medications: newFlowEntry.medications.filter(id => id !== medId)
-                                });
-                              }}
-                              className="text-blue-600 hover:text-blue-800"
-                            >
-                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : null;
-                      })}
+                      {newFlowEntry.medications.map((medication, index) => (
+                        <div key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs flex items-center gap-1">
+                          {medication}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewFlowEntry({
+                                ...newFlowEntry,
+                                medications: newFlowEntry.medications.filter((_, i) => i !== index)
+                              });
+                            }}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {/* Medication Categories with Scroll */}
-                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                    {['Versed', 'Fentanyl', 'Ketorolac', 'Benadryl', 'Dexamethasone', 'Acetaminophen', 'Valium', 'Clindamycin', 'Lidocaine'].map(category => (
-                      <div key={category} className="border border-gray-100 rounded p-2">
-                        <h4 className="text-xs font-semibold text-gray-700 mb-1">{category}</h4>
-                        <div className="space-y-1">
-                          {medicationOptions
-                            .filter(med => med.category === category)
-                            .map(medication => (
-                              <button
-                                key={medication.id}
-                                type="button"
-                                onClick={() => {
-                                  if (!newFlowEntry.medications.includes(medication.id)) {
-                                    setNewFlowEntry({
-                                      ...newFlowEntry,
-                                      medications: [...newFlowEntry.medications, medication.id]
-                                    });
-                                  }
-                                }}
-                                disabled={newFlowEntry.medications.includes(medication.id)}
-                                className={`w-full text-left px-1.5 py-0.5 text-xs rounded transition-colors ${
-                                  newFlowEntry.medications.includes(medication.id)
-                                    ? 'bg-blue-100 text-blue-800 cursor-not-allowed'
-                                    : 'bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-                                }`}
-                              >
-                                {medication.name.split(' | ')[0]} {/* Show only dosage */}
-                              </button>
-                            ))}
+                {/* Add New Medication Form */}
+                <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <div className="text-xs font-medium text-gray-700 mb-2">Add Medication</div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+                    {/* Medication Name Dropdown/Input */}
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Medication</label>
+                      {newMedication.isCustomMedication ? (
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={newMedication.name}
+                            onChange={(e) => setNewMedication({
+                              ...newMedication,
+                              name: e.target.value,
+                              dosage: '',
+                              unit: '',
+                              isCustomDosage: true,
+                              isCustomUnit: true
+                            })}
+                            placeholder="Enter custom medication"
+                            className="w-full h-7 px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:outline-none pr-6"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setNewMedication({
+                              ...newMedication,
+                              name: '',
+                              dosage: '',
+                              unit: '',
+                              isCustomMedication: false,
+                              isCustomDosage: false,
+                              isCustomUnit: false
+                            })}
+                            className="absolute right-1 top-1 text-gray-400 hover:text-gray-600"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
-                      </div>
-                    ))}
+                      ) : (
+                        <Select
+                          value={newMedication.name}
+                          onValueChange={(value) => {
+                            if (value === 'custom') {
+                              setNewMedication({
+                                ...newMedication,
+                                name: '',
+                                dosage: '',
+                                unit: '',
+                                isCustomMedication: true,
+                                isCustomDosage: true
+                              });
+                            } else {
+                              const medicationOptions = medicationOptionsNew[value] || [];
+                              const allUnits = [...new Set(medicationOptions.map(option => option.unit))];
+
+                              setNewMedication({
+                                ...newMedication,
+                                name: value,
+                                dosage: '',
+                                unit: allUnits.length === 1 ? allUnits[0] : '',
+                                isCustomMedication: false,
+                                isCustomDosage: false
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full h-7 text-xs">
+                            <SelectValue placeholder="Select medication" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {medicationNames.map((name) => (
+                              <SelectItem key={name} value={name} className="text-xs">{name}</SelectItem>
+                            ))}
+                            <SelectItem value="custom" className="text-xs font-medium text-blue-600">+ Custom Medication</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+
+                    {/* Dosage Dropdown/Input - Shows medication-specific dosages or custom input */}
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Dosage</label>
+                      {newMedication.isCustomDosage ? (
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={newMedication.dosage}
+                            onChange={(e) => setNewMedication({...newMedication, dosage: e.target.value})}
+                            placeholder="Enter dosage"
+                            className="w-full h-7 px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:outline-none pr-6"
+                            disabled={!newMedication.name}
+                          />
+                          {!newMedication.isCustomMedication && (
+                            <button
+                              type="button"
+                              onClick={() => setNewMedication({
+                                ...newMedication,
+                                dosage: '',
+                                unit: '',
+                                isCustomDosage: false
+                              })}
+                              className="absolute right-1 top-1 text-gray-400 hover:text-gray-600"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <Select
+                          value={newMedication.dosage}
+                          onValueChange={(value) => {
+                            if (value === 'custom') {
+                              setNewMedication({
+                                ...newMedication,
+                                dosage: '',
+                                unit: '',
+                                isCustomDosage: true
+                              });
+                            } else {
+                              const availableUnits = medicationOptionsNew[newMedication.name]
+                                ?.filter(option => option.dosage === value)
+                                .map(option => option.unit);
+                              const uniqueUnits = [...new Set(availableUnits)];
+
+                              setNewMedication({
+                                ...newMedication,
+                                dosage: value,
+                                unit: uniqueUnits.length === 1 ? uniqueUnits[0] : ''
+                              });
+                            }
+                          }}
+                          disabled={!newMedication.name}
+                        >
+                          <SelectTrigger className="w-full h-7 text-xs">
+                            <SelectValue placeholder={newMedication.name ? "Select dosage" : "Select medication first"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {newMedication.name && !newMedication.isCustomMedication && [...new Set(medicationOptionsNew[newMedication.name]?.map(option => option.dosage))].map((dosage, index) => (
+                              <SelectItem key={index} value={dosage} className="text-xs">
+                                {dosage}
+                              </SelectItem>
+                            ))}
+                            {newMedication.name && (
+                              <SelectItem value="custom" className="text-xs font-medium text-blue-600">+ Custom Dosage</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+
+                    {/* Unit Dropdown - Shows medication-specific units or common units for custom medications */}
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Unit</label>
+                      <Select
+                        value={newMedication.unit}
+                        onValueChange={(value) => setNewMedication({...newMedication, unit: value})}
+                        disabled={!newMedication.name || !newMedication.dosage}
+                      >
+                        <SelectTrigger className="w-full h-7 text-xs">
+                          <SelectValue placeholder={
+                            !newMedication.name ? "Select medication first" :
+                            !newMedication.dosage ? "Select dosage first" :
+                            "Select unit"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {/* Show common units for custom medications */}
+                          {newMedication.name && newMedication.dosage && newMedication.isCustomMedication &&
+                            commonUnitOptions.map((unit, index) => (
+                              <SelectItem key={index} value={unit} className="text-xs">
+                                {unit}
+                              </SelectItem>
+                            ))
+                          }
+
+                          {/* Show medication-specific units for predefined medications */}
+                          {newMedication.name && newMedication.dosage && !newMedication.isCustomMedication && !newMedication.isCustomDosage && (() => {
+                            const availableUnits = medicationOptionsNew[newMedication.name]
+                              ?.filter(option => option.dosage === newMedication.dosage)
+                              .map(option => option.unit);
+                            const uniqueUnits = [...new Set(availableUnits)];
+
+                            return uniqueUnits.map((unit, index) => (
+                              <SelectItem key={index} value={unit} className="text-xs">
+                                {unit}
+                              </SelectItem>
+                            ));
+                          })()}
+
+                          {/* Show common units for custom dosages on predefined medications */}
+                          {newMedication.name && newMedication.dosage && !newMedication.isCustomMedication && newMedication.isCustomDosage &&
+                            commonUnitOptions.map((unit, index) => (
+                              <SelectItem key={index} value={unit} className="text-xs">
+                                {unit}
+                              </SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Add Button */}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newMedication.name && newMedication.dosage && newMedication.unit) {
+                            // For custom medications, skip validation
+                            if (newMedication.isCustomMedication || newMedication.isCustomDosage) {
+                              const medicationString = `${newMedication.dosage} ${newMedication.unit} | ${newMedication.name}`;
+                              setNewFlowEntry({
+                                ...newFlowEntry,
+                                medications: [...newFlowEntry.medications, medicationString]
+                              });
+                              setNewMedication({
+                                name: '',
+                                dosage: '',
+                                unit: '',
+                                isCustomMedication: false,
+                                isCustomDosage: false
+                              });
+                            } else {
+                              // Validate that the dosage-unit combination exists for predefined medications
+                              const validCombination = medicationOptionsNew[newMedication.name]?.some(
+                                option => option.dosage === newMedication.dosage && option.unit === newMedication.unit
+                              );
+
+                              if (validCombination) {
+                                const medicationString = `${newMedication.dosage} ${newMedication.unit} | ${newMedication.name}`;
+                                setNewFlowEntry({
+                                  ...newFlowEntry,
+                                  medications: [...newFlowEntry.medications, medicationString]
+                                });
+                                setNewMedication({
+                                  name: '',
+                                  dosage: '',
+                                  unit: '',
+                                  isCustomMedication: false,
+                                  isCustomDosage: false
+                                });
+                              }
+                            }
+                          }
+                        }}
+                        disabled={
+                          !newMedication.name ||
+                          !newMedication.dosage ||
+                          !newMedication.unit ||
+                          (!newMedication.isCustomMedication && !newMedication.isCustomDosage &&
+                           !medicationOptionsNew[newMedication.name]?.some(
+                             option => option.dosage === newMedication.dosage && option.unit === newMedication.unit
+                           ))
+                        }
+                        className="w-full px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -11410,6 +11897,13 @@ export function PatientProfilePage() {
                   rr: '',
                   spo2: '',
                   medications: []
+                });
+                setNewMedication({
+                  name: '',
+                  dosage: '',
+                  unit: '',
+                  isCustomMedication: false,
+                  isCustomDosage: false
                 });
               }}
             >
@@ -11464,6 +11958,13 @@ export function PatientProfilePage() {
                     rr: '',
                     spo2: '',
                     medications: []
+                  });
+                  setNewMedication({
+                    name: '',
+                    dosage: '',
+                    unit: '',
+                    isCustomMedication: false,
+                    isCustomDosage: false
                   });
                 }
               }}
@@ -12290,12 +12791,21 @@ export function PatientProfilePage() {
                               <td className="p-3 text-gray-700">{entry.spo2}%</td>
                               <td className="p-3">
                                 <div className="flex flex-wrap gap-1">
-                                  {Array.isArray(entry.medications) ? entry.medications.map((medId, medIndex) => {
-                                    const med = medicationOptions.find(m => m.id === medId);
-                                    const medName = med ? med.name : medId; // Show full name (dosage | medication)
+                                  {Array.isArray(entry.medications) ? entry.medications.map((medication, medIndex) => {
+                                    // Handle both new string format and legacy ID format
+                                    let displayText = '';
+                                    if (typeof medication === 'string') {
+                                      // New format: "dosage | medication name"
+                                      displayText = medication;
+                                    } else {
+                                      // Legacy format: find by ID
+                                      const legacyMed = medicationOptions.find(m => m.id === medication);
+                                      displayText = legacyMed ? legacyMed.name : medication;
+                                    }
+
                                     return (
                                       <span key={medIndex} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                                        {medName}
+                                        {displayText}
                                       </span>
                                     );
                                   }) : null}
@@ -13177,12 +13687,21 @@ export function PatientProfilePage() {
                                 <td className="p-3 text-gray-700">{entry.spo2}%</td>
                                 <td className="p-3">
                                   <div className="flex flex-wrap gap-1">
-                                    {Array.isArray(entry.medications) ? entry.medications.map((medId, medIndex) => {
-                                      const med = medicationOptions.find(m => m.id === medId);
-                                      const medName = med ? med.name : medId; // Show full name (dosage | medication)
+                                    {Array.isArray(entry.medications) ? entry.medications.map((medication, medIndex) => {
+                                      // Handle both new string format and legacy ID format
+                                      let displayText = '';
+                                      if (typeof medication === 'string') {
+                                        // New format: "dosage | medication name"
+                                        displayText = medication;
+                                      } else {
+                                        // Legacy format: find by ID
+                                        const legacyMed = medicationOptions.find(m => m.id === medication);
+                                        displayText = legacyMed ? legacyMed.name : medication;
+                                      }
+
                                       return (
                                         <span key={medIndex} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                                          {medName}
+                                          {displayText}
                                         </span>
                                       );
                                     }) : null}
@@ -14396,7 +14915,151 @@ export function PatientProfilePage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Delete Treatment Plan Form Confirmation Dialog */}
+      <AlertDialog open={showDeleteTreatmentPlanFormConfirm} onOpenChange={setShowDeleteTreatmentPlanFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Treatment Plan Form
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this treatment plan form? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!treatmentPlanFormToDelete) return;
+                try {
+                  const { error } = await deleteTreatmentPlanForm(treatmentPlanFormToDelete.id);
+                  if (error) {
+                    console.error('Error deleting treatment plan form:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to delete treatment plan form. Please try again.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
 
+                  setTreatmentPlanForms(prev => prev.filter(form => form.id !== treatmentPlanFormToDelete.id));
+                  setShowDeleteTreatmentPlanFormConfirm(false);
+                  setTreatmentPlanFormToDelete(null);
+                  toast({
+                    title: "Success",
+                    description: "Treatment plan form deleted successfully!",
+                  });
+                } catch (error) {
+                  console.error('Error deleting treatment plan form:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to delete treatment plan form. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Treatment Plan Dialog */}
+      {patient && (
+        <TreatmentPlanDialog
+          isOpen={showTreatmentPlanForm}
+          onClose={() => {
+            setShowTreatmentPlanForm(false);
+            setSelectedAdminFormType("");
+            setSelectedTreatmentPlanForm(null);
+            setIsEditingTreatmentPlanForm(false);
+            setIsViewingTreatmentPlanForm(false);
+            // Refresh forms to show any auto-saved drafts
+            fetchTreatmentPlanForms();
+          }}
+          patientId={patient.id}
+          patientName={patient.full_name}
+          patientDateOfBirth={patient.date_of_birth}
+          userId={user?.id}
+          initialData={(() => {
+            if (selectedTreatmentPlanForm && (isEditingTreatmentPlanForm || isViewingTreatmentPlanForm)) {
+              return {
+                firstName: selectedTreatmentPlanForm.first_name,
+                lastName: selectedTreatmentPlanForm.last_name,
+                dateOfBirth: selectedTreatmentPlanForm.date_of_birth,
+                treatments: selectedTreatmentPlanForm.treatments || [],
+                planDate: selectedTreatmentPlanForm.plan_date || '',
+                formStatus: selectedTreatmentPlanForm.form_status
+              };
+            }
+            return undefined;
+          })()}
+          isEditing={isEditingTreatmentPlanForm}
+          isViewing={isViewingTreatmentPlanForm}
+          formId={selectedTreatmentPlanForm?.id}
+          onSubmit={async (formData) => {
+            try {
+              console.log('Treatment plan submitted:', formData);
+
+              // Prepare data for saving to Supabase
+              const treatmentPlanData = {
+                patient_id: patient.id,
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                date_of_birth: formData.dateOfBirth,
+                treatments: formData.treatments,
+                plan_date: formData.planDate,
+                form_status: 'completed' as const
+              };
+
+              // Save to Supabase
+              const { data, error } = await saveTreatmentPlanForm(
+                treatmentPlanData,
+                user?.id
+              );
+
+              if (error) {
+                console.error('Error saving treatment plan:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to save treatment plan. Please try again.",
+                  variant: "destructive",
+                });
+                return;
+              }
+
+              console.log('Treatment plan saved successfully:', data);
+              toast({
+                title: "Success",
+                description: "Treatment plan created successfully!",
+              });
+
+              setShowTreatmentPlanForm(false);
+              setSelectedAdminFormType("");
+              setSelectedTreatmentPlanForm(null);
+              setIsEditingTreatmentPlanForm(false);
+              setIsViewingTreatmentPlanForm(false);
+
+              // Refresh the forms list
+              fetchTreatmentPlanForms();
+
+              // Navigate to Forms section
+              setActiveTab("clinical");
+            } catch (error) {
+              console.error('Error saving treatment plan:', error);
+              toast({
+                title: "Error",
+                description: "Failed to save treatment plan. Please try again.",
+                variant: "destructive",
+              });
+            }
+          }}
+        />
+      )}
 
       {/* Consultation Viewer */}
       <ConsultationViewer
