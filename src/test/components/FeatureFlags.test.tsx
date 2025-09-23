@@ -1,20 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getFeatureFlags, isFeatureEnabled } from '@/config/featureFlags'
 
 // Mock import.meta.env
-const mockEnv = vi.hoisted(() => ({}))
-vi.mock('import.meta.env', () => mockEnv)
+Object.defineProperty(globalThis, 'import', {
+  value: {
+    meta: {
+      env: {}
+    }
+  },
+  writable: true
+})
 
 describe('Feature Flags', () => {
   beforeEach(() => {
     // Reset mocked environment variables
-    Object.keys(mockEnv).forEach(key => delete mockEnv[key])
+    import.meta.env = {}
   })
 
   describe('getFeatureFlags', () => {
-    it('should return default flags when no environment variables are set', () => {
+    it('should return default flags when no environment variables are set', async () => {
+      const { getFeatureFlags } = await import('@/config/featureFlags')
       const flags = getFeatureFlags()
-      
+
       expect(flags.dashboard).toBe(true)
       expect(flags.patients).toBe(true)
       expect(flags.settings).toBe(true)
@@ -31,13 +37,16 @@ describe('Feature Flags', () => {
       expect(flags.publicPatientPacket).toBe(true)
     })
 
-    it('should override defaults with environment variables', () => {
-      mockEnv.VITE_FEATURE_LAB = 'false'
-      mockEnv.VITE_FEATURE_MANUFACTURING = 'false'
-      mockEnv.VITE_FEATURE_USER_MANAGEMENT = 'false'
-      
+    it('should override defaults with environment variables', async () => {
+      import.meta.env.VITE_FEATURE_LAB = 'false'
+      import.meta.env.VITE_FEATURE_MANUFACTURING = 'false'
+      import.meta.env.VITE_FEATURE_USER_MANAGEMENT = 'false'
+
+      // Re-import to get fresh module with new env vars
+      vi.resetModules()
+      const { getFeatureFlags } = await import('@/config/featureFlags')
       const flags = getFeatureFlags()
-      
+
       expect(flags.lab).toBe(false)
       expect(flags.manufacturing).toBe(false)
       expect(flags.userManagement).toBe(false)
@@ -46,13 +55,16 @@ describe('Feature Flags', () => {
       expect(flags.patients).toBe(true)
     })
 
-    it('should handle case-insensitive boolean parsing', () => {
-      mockEnv.VITE_FEATURE_LAB = 'TRUE'
-      mockEnv.VITE_FEATURE_MANUFACTURING = 'False'
-      mockEnv.VITE_FEATURE_USER_MANAGEMENT = 'true'
-      
+    it('should handle case-insensitive boolean parsing', async () => {
+      import.meta.env.VITE_FEATURE_LAB = 'TRUE'
+      import.meta.env.VITE_FEATURE_MANUFACTURING = 'False'
+      import.meta.env.VITE_FEATURE_USER_MANAGEMENT = 'true'
+
+      // Re-import to get fresh module with new env vars
+      vi.resetModules()
+      const { getFeatureFlags } = await import('@/config/featureFlags')
       const flags = getFeatureFlags()
-      
+
       expect(flags.lab).toBe(true)
       expect(flags.manufacturing).toBe(false)
       expect(flags.userManagement).toBe(true)
@@ -60,35 +72,42 @@ describe('Feature Flags', () => {
   })
 
   describe('isFeatureEnabled', () => {
-    it('should return correct feature status', () => {
-      mockEnv.VITE_FEATURE_LAB = 'false'
-      mockEnv.VITE_FEATURE_DASHBOARD = 'true'
-      
+    it('should return correct feature status', async () => {
+      import.meta.env.VITE_FEATURE_LAB = 'false'
+      import.meta.env.VITE_FEATURE_DASHBOARD = 'true'
+
+      // Re-import to get fresh module with new env vars
+      vi.resetModules()
+      const { isFeatureEnabled } = await import('@/config/featureFlags')
+
       expect(isFeatureEnabled('lab')).toBe(false)
       expect(isFeatureEnabled('dashboard')).toBe(true)
     })
   })
 
   describe('Minimal Production Configuration', () => {
-    it('should disable advanced features in minimal mode', () => {
+    it('should disable advanced features in minimal mode', async () => {
       // Simulate minimal production environment
-      mockEnv.VITE_FEATURE_DASHBOARD = 'true'
-      mockEnv.VITE_FEATURE_PATIENTS = 'true'
-      mockEnv.VITE_FEATURE_SETTINGS = 'true'
-      mockEnv.VITE_FEATURE_PROFILE = 'true'
-      mockEnv.VITE_FEATURE_LEAD_IN = 'false'
-      mockEnv.VITE_FEATURE_APPOINTMENTS = 'false'
-      mockEnv.VITE_FEATURE_CONSULTATION = 'false'
-      mockEnv.VITE_FEATURE_LAB = 'false'
-      mockEnv.VITE_FEATURE_REPORT_CARDS = 'false'
-      mockEnv.VITE_FEATURE_MANUFACTURING = 'false'
-      mockEnv.VITE_FEATURE_APPLIANCE_DELIVERY = 'false'
-      mockEnv.VITE_FEATURE_USER_MANAGEMENT = 'false'
-      mockEnv.VITE_FEATURE_PUBLIC_PATIENT_FORM = 'true'
-      mockEnv.VITE_FEATURE_PUBLIC_PATIENT_PACKET = 'true'
-      
+      import.meta.env.VITE_FEATURE_DASHBOARD = 'true'
+      import.meta.env.VITE_FEATURE_PATIENTS = 'true'
+      import.meta.env.VITE_FEATURE_SETTINGS = 'true'
+      import.meta.env.VITE_FEATURE_PROFILE = 'true'
+      import.meta.env.VITE_FEATURE_LEAD_IN = 'false'
+      import.meta.env.VITE_FEATURE_APPOINTMENTS = 'false'
+      import.meta.env.VITE_FEATURE_CONSULTATION = 'false'
+      import.meta.env.VITE_FEATURE_LAB = 'false'
+      import.meta.env.VITE_FEATURE_REPORT_CARDS = 'false'
+      import.meta.env.VITE_FEATURE_MANUFACTURING = 'false'
+      import.meta.env.VITE_FEATURE_APPLIANCE_DELIVERY = 'false'
+      import.meta.env.VITE_FEATURE_USER_MANAGEMENT = 'false'
+      import.meta.env.VITE_FEATURE_PUBLIC_PATIENT_FORM = 'true'
+      import.meta.env.VITE_FEATURE_PUBLIC_PATIENT_PACKET = 'true'
+
+      // Re-import to get fresh module with new env vars
+      vi.resetModules()
+      const { getFeatureFlags } = await import('@/config/featureFlags')
       const flags = getFeatureFlags()
-      
+
       // Core features should be enabled
       expect(flags.dashboard).toBe(true)
       expect(flags.patients).toBe(true)
@@ -96,7 +115,7 @@ describe('Feature Flags', () => {
       expect(flags.profile).toBe(true)
       expect(flags.publicPatientForm).toBe(true)
       expect(flags.publicPatientPacket).toBe(true)
-      
+
       // Advanced features should be disabled
       expect(flags.leadIn).toBe(false)
       expect(flags.appointments).toBe(false)

@@ -1,34 +1,58 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '../utils'
+import { render, screen } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Sidebar from '@/components/Sidebar'
 
 // Mock the feature flags
-const mockIsFeatureEnabled = vi.fn()
+const mockIsFeatureEnabled = vi.hoisted(() => vi.fn())
 vi.mock('@/config/featureFlags', () => ({
   isFeatureEnabled: mockIsFeatureEnabled
 }))
 
 // Mock the auth context
-const mockUseAuth = vi.fn()
+const mockUseAuth = vi.hoisted(() => vi.fn())
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: mockUseAuth
+  useAuth: mockUseAuth,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }))
 
 // Mock the permissions hook
-const mockUsePermissions = vi.fn()
+const mockUsePermissions = vi.hoisted(() => vi.fn())
 vi.mock('@/hooks/usePermissions', () => ({
   usePermissions: mockUsePermissions
 }))
 
 // Mock react-router-dom
-const mockNavigate = vi.fn()
+const mockNavigate = vi.hoisted(() => vi.fn())
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
-    useNavigate: () => mockNavigate
+    useNavigate: () => mockNavigate,
+    BrowserRouter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
   }
 })
+
+// Custom render function for this test
+const renderWithProviders = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+    },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        {ui}
+      </BrowserRouter>
+    </QueryClientProvider>
+  )
+}
 
 describe('Sidebar', () => {
   const defaultProps = {
@@ -61,7 +85,7 @@ describe('Sidebar', () => {
   })
 
   it('should render all navigation items when all features are enabled', () => {
-    render(<Sidebar {...defaultProps} />)
+    renderWithProviders(<Sidebar {...defaultProps} />)
     
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Lead-in')).toBeInTheDocument()
@@ -83,7 +107,7 @@ describe('Sidebar', () => {
       return enabledFeatures.includes(feature)
     })
     
-    render(<Sidebar {...defaultProps} />)
+    renderWithProviders(<Sidebar {...defaultProps} />)
     
     // Should show enabled features
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
@@ -102,29 +126,29 @@ describe('Sidebar', () => {
       canAccessUserManagement: () => false
     })
     
-    render(<Sidebar {...defaultProps} />)
-    
+    renderWithProviders(<Sidebar {...defaultProps} />)
+
     // Should not show user management for non-admin
     expect(screen.queryByText('User Management')).not.toBeInTheDocument()
-    
+
     // Should still show other items
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Patients')).toBeInTheDocument()
   })
 
   it('should highlight active section', () => {
-    render(<Sidebar {...defaultProps} activeSection="patients" />)
-    
+    renderWithProviders(<Sidebar {...defaultProps} activeSection="patients" />)
+
     const patientsButton = screen.getByText('Patients').closest('button')
     expect(patientsButton).toHaveClass('bg-indigo-50', 'text-indigo-700')
   })
 
   it('should handle navigation clicks', () => {
-    render(<Sidebar {...defaultProps} />)
-    
+    renderWithProviders(<Sidebar {...defaultProps} />)
+
     const dashboardButton = screen.getByText('Dashboard').closest('button')
     dashboardButton?.click()
-    
+
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
   })
 
@@ -134,8 +158,8 @@ describe('Sidebar', () => {
       const minimalFeatures = ['dashboard', 'patients', 'settings', 'profile']
       return minimalFeatures.includes(feature)
     })
-    
-    render(<Sidebar {...defaultProps} />)
+
+    renderWithProviders(<Sidebar {...defaultProps} />)
     
     // Should only show core features
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
