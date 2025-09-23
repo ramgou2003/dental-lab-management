@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import Sidebar from '@/components/Sidebar'
+import { Sidebar } from '@/components/Sidebar'
 
 // Mock the feature flags
 const mockIsFeatureEnabled = vi.hoisted(() => vi.fn())
