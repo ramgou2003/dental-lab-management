@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { TreatmentPlanForm } from "@/components/TreatmentPlanForm";
-import { saveTreatmentPlanForm, autoSaveTreatmentPlanForm } from "@/services/treatmentPlanFormService";
+import { saveTreatmentPlanForm, updateTreatmentPlanForm, autoSaveTreatmentPlanForm } from "@/services/treatmentPlanFormService";
 
 interface TreatmentPlanDialogProps {
   isOpen: boolean;
@@ -33,8 +33,13 @@ export function TreatmentPlanDialog({
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [autoSaveMessage, setAutoSaveMessage] = useState('');
   const [lastSavedTime, setLastSavedTime] = useState('');
-  const [currentFormId, setCurrentFormId] = useState<string | null>(null);
+  const [currentFormId, setCurrentFormId] = useState<string | null>(formId || null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update currentFormId when formId prop changes (for editing)
+  useEffect(() => {
+    setCurrentFormId(formId || null);
+  }, [formId]);
 
   const handleFormSubmit = (formData: any) => {
     onSubmit(formData);

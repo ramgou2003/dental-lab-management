@@ -33,6 +33,7 @@ interface ConsultationData {
   patient_name: string;
   clinical_assessment: string;
   treatment_recommendations: any;
+  treatment_plan: any;
   additional_information: string;
   treatment_decision: string;
   treatment_cost: number;
@@ -134,13 +135,21 @@ export function ConsultationPreviewDialog({
 
   const formatFinancingOptions = (options: any) => {
     if (!options) return 'Not specified';
-    
+
     const selected = [];
     if (options.yesApproved) selected.push('Approved');
     if (options.noNotApproved) selected.push('Not Approved');
     if (options.didNotApply) selected.push('Did Not Apply');
-    
+
     return selected.length > 0 ? selected.join(', ') : 'Not specified';
+  };
+
+  const formatCurrency = (amount: number | string | null | undefined) => {
+    if (!amount) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(Number(amount));
   };
 
   const getDecisionBadgeColor = (decision: string) => {
@@ -263,6 +272,97 @@ export function ConsultationPreviewDialog({
               </p>
             </CardContent>
           </Card>
+
+          {/* Treatment Plan */}
+          {consultationData.treatment_plan && consultationData.treatment_plan.treatments && consultationData.treatment_plan.treatments.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="h-4 w-4 text-blue-500" />
+                  Treatment Plan
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-blue-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Total Treatments</p>
+                    <p className="text-2xl font-bold text-blue-600">{consultationData.treatment_plan.treatments.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Total Procedures</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {consultationData.treatment_plan.treatments.reduce((sum: number, t: any) => sum + (t.procedure_count || 0), 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Total Cost</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {formatCurrency(consultationData.treatment_plan.treatments.reduce((sum: number, t: any) => sum + (t.total_cost || 0), 0))}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {consultationData.treatment_plan.treatments.map((treatment: any, index: number) => (
+                    <div key={treatment.id || index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{treatment.name}</h4>
+                          {treatment.description && (
+                            <p className="text-sm text-gray-600 mt-1">{treatment.description}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-gray-900">{formatCurrency(treatment.total_cost)}</p>
+                          <p className="text-xs text-gray-500">{treatment.procedure_count} procedure{treatment.procedure_count !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+
+                      {treatment.procedures && treatment.procedures.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-gray-200 bg-gray-50">
+                                  <th className="text-left py-2 px-3 font-semibold text-gray-700">Code</th>
+                                  <th className="text-left py-2 px-3 font-semibold text-gray-700">Procedure Name</th>
+                                  <th className="text-center py-2 px-3 font-semibold text-gray-700">Qty</th>
+                                  <th className="text-right py-2 px-3 font-semibold text-gray-700">Unit Price</th>
+                                  <th className="text-right py-2 px-3 font-semibold text-gray-700">Total</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {treatment.procedures.map((proc: any, procIndex: number) => (
+                                  <tr key={proc.id || procIndex} className="border-b border-gray-100 hover:bg-gray-50">
+                                    <td className="py-3 px-3">
+                                      {proc.cdt_code && (
+                                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-0 text-xs">
+                                          {proc.cdt_code}
+                                        </Badge>
+                                      )}
+                                      {proc.cpt_code && (
+                                        <Badge className="bg-pink-100 text-pink-700 hover:bg-pink-100 border-0 text-xs ml-1">
+                                          {proc.cpt_code}
+                                        </Badge>
+                                      )}
+                                    </td>
+                                    <td className="py-3 px-3 text-gray-900 font-medium">{proc.name}</td>
+                                    <td className="py-3 px-3 text-center text-gray-700">{proc.quantity || 1}</td>
+                                    <td className="py-3 px-3 text-right text-gray-700">{formatCurrency(proc.unit_price || proc.cost || 0)}</td>
+                                    <td className="py-3 px-3 text-right font-semibold text-gray-900">{formatCurrency((proc.quantity || 1) * (proc.unit_price || proc.cost || 0))}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Additional Information */}
           {consultationData.additional_information && (

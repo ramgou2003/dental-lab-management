@@ -90,6 +90,13 @@ const ConsultationSessionPage = () => {
       try {
         setLoading(true);
 
+        // Fix old consultations with follow-up required status on page load
+        const { fixOldFollowUpConsultations } = await import('@/services/consultationService');
+        const fixedCount = await fixOldFollowUpConsultations();
+        if (fixedCount > 0) {
+          console.log(`✅ Fixed ${fixedCount} old follow-up consultations`);
+        }
+
         // First try to get from appointments table
         const { data: appointmentData, error: appointmentError } = await supabase
           .from('appointments')

@@ -140,7 +140,7 @@ export function CreateTreatmentDialog({
   // Calculate total cost from selected procedures with quantities
   const calculatedCost = useMemo(() => {
     return selectedProcedures.reduce((total, procedure) => {
-      const cost = parseFloat(procedure.cost || 0);
+      const cost = parseFloat(procedure.dental_cost || 0);
       const quantity = procedure.quantity || 1;
       return total + (cost * quantity);
     }, 0);
@@ -419,9 +419,9 @@ export function CreateTreatmentDialog({
                             </div>
 
                             {/* Cost per unit */}
-                            {procedure.cost && (
+                            {procedure.dental_cost && (
                               <div className="text-xs text-green-600 font-medium">
-                                ${parseFloat(procedure.cost).toFixed(2)} each
+                                ${parseFloat(procedure.dental_cost).toFixed(2)} each
                               </div>
                             )}
                           </div>
@@ -462,11 +462,11 @@ export function CreateTreatmentDialog({
                           </div>
 
                           {/* Total cost */}
-                          {procedure.cost && (
+                          {procedure.dental_cost && (
                             <div className="text-right">
                               <span className="text-xs font-medium text-gray-500">Total: </span>
                               <span className="text-sm font-semibold text-green-600">
-                                ${(parseFloat(procedure.cost) * (procedure.quantity || 1)).toFixed(2)}
+                                ${(parseFloat(procedure.dental_cost) * (procedure.quantity || 1)).toFixed(2)}
                               </span>
                             </div>
                           )}
@@ -554,9 +554,9 @@ export function CreateTreatmentDialog({
                                     {procedure.description}
                                   </p>
                                 )}
-                                {procedure.cost && (
+                                {procedure.dental_cost && (
                                   <p className="text-sm font-medium text-green-600">
-                                    ${parseFloat(procedure.cost).toFixed(2)}
+                                    ${parseFloat(procedure.dental_cost).toFixed(2)}
                                   </p>
                                 )}
                               </div>

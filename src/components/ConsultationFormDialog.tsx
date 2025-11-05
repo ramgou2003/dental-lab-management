@@ -61,6 +61,7 @@ export function ConsultationFormDialog({
 }: ConsultationFormDialogProps) {
   const [activeSection, setActiveSection] = useState(1);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [treatmentPlanTotal, setTreatmentPlanTotal] = useState<number>(0);
 
   // Refs for form components
   const treatmentFormRef = React.useRef<TreatmentFormRef>(null);
@@ -68,6 +69,12 @@ export function ConsultationFormDialog({
 
   const handleNext = () => {
     if (activeSection < sections.length) {
+      // If moving from Treatment section to Financial section, capture the treatment plan total
+      if (activeSection === 1 && treatmentFormRef.current) {
+        const total = treatmentFormRef.current.getTreatmentPlanTotal();
+        console.log('📊 Treatment plan total captured:', total);
+        setTreatmentPlanTotal(total);
+      }
       setActiveSection(activeSection + 1);
     }
   };
@@ -158,6 +165,7 @@ export function ConsultationFormDialog({
             patientName={patientName || 'Unknown Patient'}
             consultationPatientId={consultationPatientId}
             appointmentId={appointmentId}
+            treatmentPlanTotal={treatmentPlanTotal}
           />
         </div>
       </div>
@@ -167,13 +175,20 @@ export function ConsultationFormDialog({
   const currentSection = sections[activeSection - 1];
   const progress = (activeSection / sections.length) * 100;
 
+  // Guard against undefined currentSection
+  if (!currentSection) {
+    return null;
+  }
+
+  const CurrentSectionIcon = currentSection.icon;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       if (!open) {
         onClose();
       }
     }}>
-      <DialogContent className="max-w-4xl max-h-[95vh] p-0 [&>button]:hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[95vh] p-0 [&>button]:hidden flex flex-col">
         <div className="flex flex-col h-full max-h-[90vh]">
           {/* Fixed Header */}
           <div className="flex-shrink-0 bg-white border-b border-gray-200 p-6 space-y-4">
@@ -238,7 +253,7 @@ export function ConsultationFormDialog({
             <Card className="h-full">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-3">
-                  <currentSection.icon className="h-6 w-6 text-blue-600" />
+                  <CurrentSectionIcon className="h-6 w-6 text-blue-600" />
                   <div>
                     <h2 className="text-xl font-semibold">{currentSection.title}</h2>
                     <p className="text-sm text-gray-600 font-normal">{currentSection.description}</p>

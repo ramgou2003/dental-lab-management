@@ -17,7 +17,8 @@ import {
   Plus,
   X,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from "lucide-react";
 
 interface TreatmentPlanFormProps {
@@ -76,39 +77,9 @@ export function TreatmentPlanForm({
   const [showTreatmentListDialog, setShowTreatmentListDialog] = useState(false);
   const [showProcedureListDialog, setShowProcedureListDialog] = useState(false);
   const [expandedTreatments, setExpandedTreatments] = useState<Set<string>>(new Set());
+  const [addingProceduresToTreatment, setAddingProceduresToTreatment] = useState<number | null>(null);
 
-  // Auto-save status badge component
-  const AutoSaveStatusBadge = () => {
-    if (!onAutoSave) return null;
 
-    const getStatusConfig = () => {
-      switch (autoSaveStatus) {
-        case 'saving':
-          return { text: 'Saving...', className: 'bg-yellow-100 text-yellow-800' };
-        case 'saved':
-          return { text: 'Saved', className: 'bg-green-100 text-green-800' };
-        case 'error':
-          return { text: 'Error saving', className: 'bg-red-100 text-red-800' };
-        default:
-          return { text: 'Draft', className: 'bg-gray-100 text-gray-800' };
-      }
-    };
-
-    const { text, className } = getStatusConfig();
-
-    return (
-      <div className="flex items-center gap-2 text-sm">
-        <Badge variant="outline" className={className}>
-          {text}
-        </Badge>
-        {lastSavedTime && autoSaveStatus === 'saved' && (
-          <span className="text-gray-500">
-            Last saved: {lastSavedTime}
-          </span>
-        )}
-      </div>
-    );
-  };
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -133,22 +104,52 @@ export function TreatmentPlanForm({
   };
 
   const handleSelectProcedures = (selectedProcedures: any[]) => {
-    // Create individual treatments for each selected procedure
-    const newTreatments = selectedProcedures.map(procedure => ({
-      id: `proc_${Date.now()}_${Math.random()}`,
-      name: procedure.name,
-      description: procedure.description || `Individual procedure: ${procedure.name}`,
-      total_cost: (parseFloat(procedure.cost || 0) * (procedure.quantity || 1)),
-      procedure_count: procedure.quantity || 1,
-      procedures: [procedure],
-      createdAt: new Date().toISOString(),
-      isIndividualProcedure: true
-    }));
+    if (addingProceduresToTreatment !== null) {
+      // Add procedures to existing treatment
+      setFormData(prev => {
+        const newTreatments = [...prev.treatments];
+        const treatment = { ...newTreatments[addingProceduresToTreatment] };
+        const existingProcedures = [...treatment.procedures];
 
-    setFormData(prev => ({
-      ...prev,
-      treatments: [...prev.treatments, ...newTreatments]
-    }));
+        // Add new procedures to existing ones
+        const updatedProcedures = [...existingProcedures, ...selectedProcedures];
+        treatment.procedures = updatedProcedures;
+        treatment.procedure_count = updatedProcedures.length;
+
+        // Recalculate treatment total cost
+        treatment.total_cost = updatedProcedures.reduce((total, proc) => {
+          const cost = parseFloat(proc.dental_cost || 0);
+          const quantity = proc.quantity || 1;
+          return total + (cost * quantity);
+        }, 0);
+
+        newTreatments[addingProceduresToTreatment] = treatment;
+
+        return {
+          ...prev,
+          treatments: newTreatments
+        };
+      });
+
+      setAddingProceduresToTreatment(null);
+    } else {
+      // Create individual treatments for each selected procedure
+      const newTreatments = selectedProcedures.map(procedure => ({
+        id: `proc_${Date.now()}_${Math.random()}`,
+        name: procedure.name,
+        description: procedure.description || `Individual procedure: ${procedure.name}`,
+        total_cost: (parseFloat(procedure.dental_cost || 0) * (procedure.quantity || 1)),
+        procedure_count: procedure.quantity || 1,
+        procedures: [procedure],
+        createdAt: new Date().toISOString(),
+        isIndividualProcedure: true
+      }));
+
+      setFormData(prev => ({
+        ...prev,
+        treatments: [...prev.treatments, ...newTreatments]
+      }));
+    }
 
     setShowProcedureListDialog(false);
   };
@@ -162,6 +163,64 @@ export function TreatmentPlanForm({
         newSet.add(treatmentId);
       }
       return newSet;
+    });
+  };
+
+  const handleProcedureEdit = (treatmentIndex: number, procedureIndex: number, field: string, value: string | number) => {
+    setFormData(prev => {
+      const newTreatments = [...prev.treatments];
+      const treatment = { ...newTreatments[treatmentIndex] };
+      const procedures = [...treatment.procedures];
+      const procedure = { ...procedures[procedureIndex] };
+
+      if (field === 'quantity') {
+        procedure.quantity = Math.max(1, Number(value));
+      } else if (field === 'cost') {
+        procedure.dental_cost = value.toString();
+      }
+
+      procedures[procedureIndex] = procedure;
+      treatment.procedures = procedures;
+
+      // Recalculate treatment total cost
+      treatment.total_cost = procedures.reduce((total, proc) => {
+        const cost = parseFloat(proc.dental_cost || 0);
+        const quantity = proc.quantity || 1;
+        return total + (cost * quantity);
+      }, 0);
+
+      newTreatments[treatmentIndex] = treatment;
+
+      return {
+        ...prev,
+        treatments: newTreatments
+      };
+    });
+  };
+
+  const handleRemoveProcedure = (treatmentIndex: number, procedureIndex: number) => {
+    setFormData(prev => {
+      const newTreatments = [...prev.treatments];
+      const treatment = { ...newTreatments[treatmentIndex] };
+      const procedures = [...treatment.procedures];
+
+      procedures.splice(procedureIndex, 1);
+      treatment.procedures = procedures;
+      treatment.procedure_count = procedures.length;
+
+      // Recalculate treatment total cost
+      treatment.total_cost = procedures.reduce((total, proc) => {
+        const cost = parseFloat(proc.dental_cost || 0);
+        const quantity = proc.quantity || 1;
+        return total + (cost * quantity);
+      }, 0);
+
+      newTreatments[treatmentIndex] = treatment;
+
+      return {
+        ...prev,
+        treatments: newTreatments
+      };
     });
   };
 
@@ -199,7 +258,6 @@ export function TreatmentPlanForm({
               </div>
               Create Treatment Plan
             </DialogTitle>
-            <AutoSaveStatusBadge />
           </div>
           <Separator />
         </DialogHeader>
@@ -276,7 +334,10 @@ export function TreatmentPlanForm({
                     variant="outline"
                     size="sm"
                     className="bg-white hover:bg-blue-50 border-blue-300 text-blue-700 hover:text-blue-800"
-                    onClick={() => setShowProcedureListDialog(true)}
+                    onClick={() => {
+                      setAddingProceduresToTreatment(null);
+                      setShowProcedureListDialog(true);
+                    }}
                     disabled={readOnly}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -396,70 +457,174 @@ export function TreatmentPlanForm({
                                 <p className="text-xs font-medium text-gray-500 mb-3">Procedures ({treatment.procedures.length}):</p>
                                 <div className="grid grid-cols-1 gap-3">
                                   {treatment.procedures.map((procedure, procIndex) => (
-                                    <div key={procIndex} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                      {/* Procedure Header */}
-                                      <div className="flex items-start justify-between mb-3">
-                                        <div className="flex-1 min-w-0">
-                                          <h4 className="text-sm font-medium text-gray-900 mb-2">
-                                            {procedure.name}
-                                          </h4>
+                                    <div key={procIndex} className="group relative bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 overflow-hidden">
+                                      {/* Gradient Header */}
+                                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-100">
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex-1">
+                                            <h4 className="text-base font-semibold text-gray-900 mb-2 leading-tight">
+                                              {procedure.name}
+                                            </h4>
 
-                                          {/* Codes and Quantity Row */}
-                                          <div className="flex items-center gap-4 mb-2">
-                                            <div className="flex items-center gap-2">
+                                            {/* Medical Codes */}
+                                            <div className="flex items-center gap-3">
                                               {procedure.cdt_code && (
-                                                <div className="flex items-center gap-1">
-                                                  <span className="text-xs font-medium text-gray-500">CDT:</span>
-                                                  <span className="text-xs font-mono bg-white px-2 py-1 rounded border">
-                                                    {procedure.cdt_code}
-                                                  </span>
+                                                <div className="inline-flex items-center gap-1.5 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                                                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                                  CDT {procedure.cdt_code}
                                                 </div>
                                               )}
                                               {procedure.cpt_code && (
-                                                <div className="flex items-center gap-1">
-                                                  <span className="text-xs font-medium text-gray-500">CPT:</span>
-                                                  <span className="text-xs font-mono bg-white px-2 py-1 rounded border">
-                                                    {procedure.cpt_code}
-                                                  </span>
+                                                <div className="inline-flex items-center gap-1.5 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-medium">
+                                                  <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                                                  CPT {procedure.cpt_code}
                                                 </div>
                                               )}
                                             </div>
+                                          </div>
 
-                                            {/* Quantity Badge */}
-                                            {procedure.quantity && (
-                                              <div className="flex items-center gap-1">
-                                                <span className="text-xs font-medium text-gray-500">Qty:</span>
-                                                <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                                  {procedure.quantity}
+                                          {/* Remove Button */}
+                                          {!readOnly && (
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => handleRemoveProcedure(index, procIndex)}
+                                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0 rounded-full"
+                                              title="Remove procedure"
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Content Area */}
+                                      <div className="px-6 py-5">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                                          {/* Quantity Section */}
+                                          <div className="space-y-2">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                              Quantity
+                                            </label>
+                                            {readOnly ? (
+                                              <div className="flex items-center justify-center w-full h-12 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                                                <span className="text-xl font-bold text-blue-700">
+                                                  {procedure.quantity || 1}
                                                 </span>
                                               </div>
+                                            ) : (
+                                              <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg hover:border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all duration-200">
+                                                {/* Decrease Button */}
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => {
+                                                    const currentQty = procedure.quantity || 1;
+                                                    if (currentQty > 1) {
+                                                      handleProcedureEdit(index, procIndex, 'quantity', currentQty - 1);
+                                                    }
+                                                  }}
+                                                  disabled={procedure.quantity <= 1}
+                                                  className="h-12 w-12 rounded-l-lg rounded-r-none border-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                                                >
+                                                  <span className="text-xl font-bold">−</span>
+                                                </Button>
+
+                                                {/* Quantity Input */}
+                                                <Input
+                                                  type="number"
+                                                  min="1"
+                                                  value={procedure.quantity || 1}
+                                                  onChange={(e) => handleProcedureEdit(index, procIndex, 'quantity', e.target.value)}
+                                                  className="flex-1 h-12 text-center text-lg font-semibold border-0 border-l border-r border-gray-200 rounded-none focus:ring-0 focus:border-transparent bg-transparent [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                />
+
+                                                {/* Increase Button */}
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => {
+                                                    const currentQty = procedure.quantity || 1;
+                                                    handleProcedureEdit(index, procIndex, 'quantity', currentQty + 1);
+                                                  }}
+                                                  className="h-12 w-12 rounded-r-lg rounded-l-none border-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors duration-200"
+                                                >
+                                                  <span className="text-xl font-bold">+</span>
+                                                </Button>
+                                              </div>
                                             )}
                                           </div>
-                                        </div>
 
-                                        {/* Cost Section */}
-                                        {procedure.cost && (
-                                          <div className="text-right ml-4 flex-shrink-0">
-                                            {procedure.quantity && procedure.quantity > 1 ? (
-                                              <div>
-                                                <div className="text-xs text-gray-500 mb-1">
-                                                  ${parseFloat(procedure.cost).toFixed(2)} × {procedure.quantity}
-                                                </div>
-                                                <div className="text-sm font-semibold text-green-600">
-                                                  ${(parseFloat(procedure.cost) * (procedure.quantity || 1)).toFixed(2)}
-                                                </div>
+                                          {/* Unit Price Section */}
+                                          <div className="space-y-2">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                              Unit Price
+                                            </label>
+                                            {readOnly ? (
+                                              <div className="flex items-center justify-center w-full h-12 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                                                <span className="text-lg font-bold text-green-700">
+                                                  ${parseFloat(procedure.dental_cost || 0).toFixed(2)}
+                                                </span>
                                               </div>
                                             ) : (
-                                              <div className="text-sm font-semibold text-green-600">
-                                                ${parseFloat(procedure.cost).toFixed(2)}
+                                              <div className="w-full h-12 bg-white border border-gray-300 rounded-lg flex items-center px-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-200 transition-all duration-200">
+                                                <span className="text-gray-500 text-lg font-medium mr-2">$</span>
+                                                <Input
+                                                  type="number"
+                                                  step="0.01"
+                                                  min="0"
+                                                  value={procedure.dental_cost || 0}
+                                                  onChange={(e) => handleProcedureEdit(index, procIndex, 'cost', e.target.value)}
+                                                  className="flex-1 border-0 bg-transparent text-lg font-medium text-right focus:ring-0 focus:outline-none p-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                  placeholder="0.00"
+                                                />
                                               </div>
                                             )}
                                           </div>
-                                        )}
+
+                                          {/* Total Cost Section */}
+                                          <div className="space-y-2">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                              Total Cost
+                                            </label>
+                                            <div className="relative">
+                                              <div className="w-full h-12 border border-gray-300 rounded-lg flex items-center justify-center bg-white">
+                                                <span className="text-xl font-bold text-gray-900">
+                                                  ${((parseFloat(procedure.dental_cost || 0)) * (procedure.quantity || 1)).toFixed(2)}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   ))}
                                 </div>
+
+                                {/* Add Procedure Button */}
+                                {!readOnly && (
+                                  <div className="mt-6">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setAddingProceduresToTreatment(index);
+                                        setShowProcedureListDialog(true);
+                                      }}
+                                      className="w-full h-14 border-2 border-dashed border-blue-300 text-blue-600 hover:text-blue-700 hover:border-blue-400 hover:bg-blue-50 rounded-xl transition-all duration-200 group"
+                                    >
+                                      <div className="flex items-center justify-center gap-3">
+                                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors duration-200">
+                                          <Plus className="h-4 w-4" />
+                                        </div>
+                                        <span className="font-medium">Add Another Procedure</span>
+                                      </div>
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </CardContent>
@@ -520,7 +685,7 @@ export function TreatmentPlanForm({
                 className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
               >
                 <Save className="h-4 w-4" />
-                Submit Treatment Plan
+                {isEditing ? "Update Treatment Plan" : "Submit Treatment Plan"}
               </Button>
             )}
           </div>

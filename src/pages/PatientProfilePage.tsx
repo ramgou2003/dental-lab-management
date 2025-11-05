@@ -34,7 +34,7 @@ import { ThreeYearCarePackageDialog } from "@/components/ThreeYearCarePackageDia
 import { FiveYearWarrantyDialog } from "@/components/FiveYearWarrantyDialog";
 import { PartialPaymentAgreementDialog } from "@/components/PartialPaymentAgreementDialog";
 import { TreatmentPlanDialog } from "@/components/TreatmentPlanDialog";
-import { saveTreatmentPlanForm, getTreatmentPlanFormsByPatientId, deleteTreatmentPlanForm, getTreatmentPlanForm, TreatmentPlanFormDB } from "@/services/treatmentPlanFormService";
+import { saveTreatmentPlanForm, updateTreatmentPlanForm, getTreatmentPlanFormsByPatientId, deleteTreatmentPlanForm, getTreatmentPlanForm, TreatmentPlanFormDB } from "@/services/treatmentPlanFormService";
 import { ConsultationViewer } from "@/components/ConsultationViewer";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
@@ -15016,17 +15016,34 @@ export function PatientProfilePage() {
                 form_status: 'completed' as const
               };
 
-              // Save to Supabase
-              const { data, error } = await saveTreatmentPlanForm(
-                treatmentPlanData,
-                user?.id
-              );
+              let data, error;
+
+              if (isEditingTreatmentPlanForm && selectedTreatmentPlanForm?.id) {
+                // Update existing treatment plan
+                console.log('Updating existing treatment plan with ID:', selectedTreatmentPlanForm.id);
+                const result = await updateTreatmentPlanForm(
+                  selectedTreatmentPlanForm.id,
+                  treatmentPlanData,
+                  user?.id
+                );
+                data = result.data;
+                error = result.error;
+              } else {
+                // Create new treatment plan
+                console.log('Creating new treatment plan');
+                const result = await saveTreatmentPlanForm(
+                  treatmentPlanData,
+                  user?.id
+                );
+                data = result.data;
+                error = result.error;
+              }
 
               if (error) {
                 console.error('Error saving treatment plan:', error);
                 toast({
                   title: "Error",
-                  description: "Failed to save treatment plan. Please try again.",
+                  description: `Failed to ${isEditingTreatmentPlanForm ? 'update' : 'save'} treatment plan. Please try again.`,
                   variant: "destructive",
                 });
                 return;
@@ -15035,7 +15052,7 @@ export function PatientProfilePage() {
               console.log('Treatment plan saved successfully:', data);
               toast({
                 title: "Success",
-                description: "Treatment plan created successfully!",
+                description: `Treatment plan ${isEditingTreatmentPlanForm ? 'updated' : 'created'} successfully!`,
               });
 
               setShowTreatmentPlanForm(false);
@@ -15053,7 +15070,7 @@ export function PatientProfilePage() {
               console.error('Error saving treatment plan:', error);
               toast({
                 title: "Error",
-                description: "Failed to save treatment plan. Please try again.",
+                description: `Failed to ${isEditingTreatmentPlanForm ? 'update' : 'save'} treatment plan. Please try again.`,
                 variant: "destructive",
               });
             }

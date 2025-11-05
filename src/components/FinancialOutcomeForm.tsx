@@ -41,6 +41,7 @@ interface FinancialOutcomeFormProps {
   consultationPatientId?: string;
   appointmentId?: string;
   onDataChange?: (data: FinancialOutcomeData) => void;
+  treatmentPlanTotal?: number;
 }
 
 export interface FinancialOutcomeFormRef {
@@ -53,7 +54,8 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
   patientName,
   consultationPatientId,
   appointmentId,
-  onDataChange
+  onDataChange,
+  treatmentPlanTotal
 }, ref) => {
   const [formData, setFormData] = useState<FinancialOutcomeData>({
     treatmentDecision: '',
@@ -126,6 +128,17 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
     }
   }, [appointmentId]);
 
+  // Auto-fill treatment cost when treatmentPlanTotal is provided
+  useEffect(() => {
+    if (treatmentPlanTotal && treatmentPlanTotal > 0) {
+      console.log('💰 Auto-filling treatment cost with:', treatmentPlanTotal);
+      setFormData(prev => ({
+        ...prev,
+        treatmentCost: treatmentPlanTotal.toString()
+      }));
+    }
+  }, [treatmentPlanTotal]);
+
   const handleSave = async () => {
     console.log('🔥 FinancialOutcomeForm handleSave called');
     setIsSaving(true);
@@ -159,7 +172,7 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
         treatment_plan_approved: formData.treatmentDecision === 'accepted' ? true :
                                formData.treatmentDecision === 'not-accepted' ? false : null,
         follow_up_required: formData.treatmentDecision === 'followup-required',
-        consultation_status: formData.treatmentDecision === 'accepted' || formData.treatmentDecision === 'not-accepted' ? 'completed' : 'scheduled',
+        consultation_status: formData.treatmentDecision ? 'completed' : 'scheduled',
         progress_step: Math.max(existingData?.progress_step || 0, 2),
         updated_at: new Date().toISOString(),
         // Preserve existing treatment data if it exists

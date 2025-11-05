@@ -5,6 +5,55 @@ import { Consultation, ConsultationInsert } from '@/types/consultation';
 export type ConsultationData = Consultation;
 
 /**
+ * Fix old consultations with follow-up required status
+ * Mark them as completed if they have a treatment decision
+ */
+export async function fixOldFollowUpConsultations(): Promise<number> {
+  try {
+    console.log('🔧 Starting to fix old follow-up consultations...');
+
+    // Get all consultations with follow_up_required = true and consultation_status = 'scheduled'
+    const { data: consultations, error: fetchError } = await supabase
+      .from('consultations')
+      .select('id, follow_up_required, consultation_status, treatment_decision')
+      .eq('follow_up_required', true)
+      .eq('consultation_status', 'scheduled');
+
+    if (fetchError) {
+      console.error('❌ Error fetching consultations:', fetchError);
+      return 0;
+    }
+
+    if (!consultations || consultations.length === 0) {
+      console.log('✅ No consultations to fix');
+      return 0;
+    }
+
+    console.log(`📋 Found ${consultations.length} consultations to fix`);
+
+    // Update all these consultations to completed status
+    const { error: updateError, data: updatedData } = await supabase
+      .from('consultations')
+      .update({ consultation_status: 'completed' })
+      .eq('follow_up_required', true)
+      .eq('consultation_status', 'scheduled')
+      .select();
+
+    if (updateError) {
+      console.error('❌ Error updating consultations:', updateError);
+      return 0;
+    }
+
+    const count = updatedData?.length || 0;
+    console.log(`✅ Successfully updated ${count} consultations to completed status`);
+    return count;
+  } catch (error) {
+    console.error('❌ Failed to fix old follow-up consultations:', error);
+    return 0;
+  }
+}
+
+/**
  * Create or update a comprehensive consultation record
  */
 export async function saveConsultation(consultationData: ConsultationData): Promise<ConsultationData | null> {
@@ -404,6 +453,36 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
         .eq('id', packetData.lead_id);
 
       console.log('✅ Updated lead status to converted');
+    }
+
+    // Create treatment plan from consultation treatment plan
+    if (consultation.treatment_plan && consultation.treatment_plan.treatments && consultation.treatment_plan.treatments.length > 0) {
+      console.log('📋 Creating treatment plan for accepted patient...');
+
+      const treatmentPlanData = {
+        patient_id: patientId,
+        first_name: packetData.first_name || consultationPatientData?.first_name || 'Unknown',
+        last_name: packetData.last_name || consultationPatientData?.last_name || 'Patient',
+        date_of_birth: packetData.date_of_birth || consultationPatientData?.date_of_birth || '1900-01-01',
+        treatments: consultation.treatment_plan.treatments,
+        plan_date: new Date().toISOString().split('T')[0],
+        form_status: 'completed',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: treatmentPlan, error: treatmentPlanError } = await supabase
+        .from('treatment_plan_forms')
+        .insert([treatmentPlanData])
+        .select()
+        .single();
+
+      if (treatmentPlanError) {
+        console.error('❌ Error creating treatment plan:', treatmentPlanError);
+        // Don't throw error here as patient creation was successful
+      } else {
+        console.log('✅ Treatment plan created successfully:', treatmentPlan?.id);
+      }
     }
 
     return patientId;

@@ -129,16 +129,16 @@ export function ProcedureListDialog({
                   Selected Procedures ({selectedProcedures.length})
                 </p>
                 <p className="text-sm font-semibold text-green-700">
-                  Total: ${selectedProcedures.reduce((total, proc) => total + parseFloat(proc.cost || 0), 0).toFixed(2)}
+                  Total: ${selectedProcedures.reduce((total, proc) => total + parseFloat(proc.dental_cost || 0), 0).toFixed(2)}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {selectedProcedures.map((procedure) => (
                   <Badge key={procedure.id} variant="outline" className="bg-white">
                     {procedure.name}
-                    {procedure.cost && (
+                    {procedure.dental_cost && (
                       <span className="ml-1 text-green-600">
-                        ${parseFloat(procedure.cost).toFixed(2)}
+                        ${parseFloat(procedure.dental_cost).toFixed(2)}
                       </span>
                     )}
                     <button
@@ -207,9 +207,9 @@ export function ProcedureListDialog({
                               {procedure.description}
                             </p>
                           )}
-                          {procedure.cost && (
+                          {procedure.dental_cost && (
                             <p className="text-sm font-semibold text-green-600">
-                              ${parseFloat(procedure.cost).toFixed(2)}
+                              ${parseFloat(procedure.dental_cost).toFixed(2)}
                             </p>
                           )}
                         </div>
