@@ -419,11 +419,18 @@ export function CreateTreatmentDialog({
                             </div>
 
                             {/* Cost per unit */}
-                            {procedure.dental_cost && (
-                              <div className="text-xs text-green-600 font-medium">
-                                ${parseFloat(procedure.dental_cost).toFixed(2)} each
-                              </div>
-                            )}
+                            <div className="text-xs font-medium space-y-1">
+                              {procedure.dental_cost && (
+                                <div className="text-green-600">
+                                  Dental: ${parseFloat(procedure.dental_cost).toFixed(2)} each
+                                </div>
+                              )}
+                              {procedure.medical_cost && (
+                                <div className="text-blue-600">
+                                  Medical: ${parseFloat(procedure.medical_cost).toFixed(2)} each
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {/* Remove button */}
