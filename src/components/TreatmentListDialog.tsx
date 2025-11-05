@@ -7,13 +7,14 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { CreateTreatmentDialog } from "@/components/CreateTreatmentDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { 
+import {
   Search,
   Plus,
   Edit,
   Trash2,
   Stethoscope,
-  FileText
+  FileText,
+  Eye
 } from "lucide-react";
 
 interface TreatmentListDialogProps {
@@ -32,6 +33,7 @@ export function TreatmentListDialog({
   const [treatments, setTreatments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editingTreatment, setEditingTreatment] = useState(null);
+  const [previewTreatment, setPreviewTreatment] = useState<any>(null);
 
   // Fetch treatments from Supabase
   const fetchTreatments = async () => {
@@ -49,7 +51,7 @@ export function TreatmentListDialog({
               name,
               cdt_code,
               cpt_code,
-              cost
+              dental_cost
             )
           )
         `)
@@ -81,6 +83,29 @@ export function TreatmentListDialog({
   useEffect(() => {
     if (isOpen) {
       fetchTreatments();
+
+      // Subscribe to real-time changes in procedures table
+      const proceduresSubscription = supabase
+        .channel('procedures-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'procedures'
+          },
+          (payload) => {
+            console.log('Procedure updated:', payload);
+            // Refresh treatments when any procedure changes
+            fetchTreatments();
+          }
+        )
+        .subscribe();
+
+      // Cleanup subscription on unmount or when dialog closes
+      return () => {
+        supabase.removeChannel(proceduresSubscription);
+      };
     }
   }, [isOpen]);
 
@@ -99,6 +124,18 @@ export function TreatmentListDialog({
     fetchTreatments();
     setShowCreateTreatmentDialog(false);
     setEditingTreatment(null);
+  };
+
+  // Calculate total cost dynamically based on current procedure prices
+  const calculateTreatmentCost = (treatment: any) => {
+    if (!treatment.procedures || treatment.procedures.length === 0) {
+      return 0;
+    }
+    return treatment.procedures.reduce((total, procedure) => {
+      const unitPrice = parseFloat(procedure.dental_cost || 0);
+      const quantity = procedure.quantity || 1;
+      return total + (unitPrice * quantity);
+    }, 0);
   };
 
   const handleEditTreatment = (treatment: any) => {
@@ -184,7 +221,7 @@ export function TreatmentListDialog({
                 <p className="text-base">Try adjusting your search or create a new treatment</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 {filteredTreatments.map((treatment) => (
                   <Card key={treatment.id} className="border-2 hover:border-blue-300 transition-colors cursor-pointer">
                     <CardHeader className="pb-3">
@@ -194,17 +231,28 @@ export function TreatmentListDialog({
                             {treatment.name}
                           </CardTitle>
                           <div className="flex items-center gap-2 mb-2">
-                            {treatment.total_cost && (
-                              <Badge variant="outline" className="text-xs text-green-600">
-                                ${parseFloat(treatment.total_cost).toFixed(2)}
-                              </Badge>
-                            )}
+                            <Badge variant="outline" className="text-xs text-green-600">
+                              ${calculateTreatmentCost(treatment).toFixed(2)}
+                            </Badge>
                             <Badge variant="outline" className="text-xs">
                               {treatment.procedure_count || 0} procedures
                             </Badge>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewTreatment(treatment);
+                            }}
+                            className="text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                            title="Preview procedures"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"
@@ -237,31 +285,10 @@ export function TreatmentListDialog({
                         <p className="text-sm text-gray-600 mb-3">{treatment.description}</p>
                       )}
 
-                      {/* Show procedures if any */}
-                      {treatment.procedures && treatment.procedures.length > 0 && (
-                        <div className="mb-3">
-                          <p className="text-xs font-medium text-gray-500 mb-1">Procedures:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {treatment.procedures.slice(0, 3).map((procedure, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {procedure.name}
-                              </Badge>
-                            ))}
-                            {treatment.procedures.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{treatment.procedures.length - 3} more
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
                       <div className="flex items-center justify-between">
-                        {treatment.total_cost && (
-                          <span className="text-lg font-semibold text-green-600">
-                            ${parseFloat(treatment.total_cost).toLocaleString()}
-                          </span>
-                        )}
+                        <span className="text-lg font-semibold text-green-600">
+                          ${calculateTreatmentCost(treatment).toFixed(2)}
+                        </span>
                         <Button
                           type="button"
                           size="sm"
@@ -303,6 +330,101 @@ export function TreatmentListDialog({
         onSubmit={handleCreateTreatment}
         editingTreatment={editingTreatment}
       />
+
+      {/* Treatment Preview Dialog */}
+      <Dialog open={!!previewTreatment} onOpenChange={(open) => !open && setPreviewTreatment(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Eye className="h-5 w-5 text-blue-600" />
+              </div>
+              Treatment Preview: {previewTreatment?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {previewTreatment?.description && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Description</h4>
+                <p className="text-gray-600">{previewTreatment.description}</p>
+              </div>
+            )}
+
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Procedures ({previewTreatment?.procedures?.length || 0})</h4>
+              {previewTreatment?.procedures && previewTreatment.procedures.length > 0 ? (
+                <div className="space-y-2">
+                  {previewTreatment.procedures.map((procedure, index) => (
+                    <div key={index} className="p-3 bg-gray-50 rounded-lg border">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900">{procedure.name}</h5>
+                          <div className="flex items-center gap-2 mt-1">
+                            {procedure.cdt_code && (
+                              <Badge variant="outline" className="text-xs">
+                                CDT: {procedure.cdt_code}
+                              </Badge>
+                            )}
+                            {procedure.cpt_code && (
+                              <Badge variant="outline" className="text-xs">
+                                CPT: {procedure.cpt_code}
+                              </Badge>
+                            )}
+                            {procedure.quantity && procedure.quantity > 1 && (
+                              <Badge variant="outline" className="text-xs">
+                                Qty: {procedure.quantity}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        {procedure.dental_cost && (
+                          <span className="text-sm font-medium text-green-600">
+                            ${parseFloat(procedure.dental_cost).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 italic">No procedures defined for this treatment.</p>
+              )}
+            </div>
+
+            {previewTreatment && (
+              <div className="pt-3 border-t">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-900">Total Cost:</span>
+                  <span className="text-lg font-semibold text-green-600">
+                    ${calculateTreatmentCost(previewTreatment).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPreviewTreatment(null)}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                handleSelectTreatment(previewTreatment);
+                setPreviewTreatment(null);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Select Treatment
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
