@@ -46,12 +46,14 @@ export function TreatmentListDialog({
           treatment_procedures (
             procedure_id,
             quantity,
+            cost_type,
             procedures (
               id,
               name,
               cdt_code,
               cpt_code,
-              dental_cost
+              dental_cost,
+              medical_cost
             )
           )
         `)
@@ -62,12 +64,13 @@ export function TreatmentListDialog({
         console.error('Error fetching treatments:', error);
         setTreatments([]);
       } else {
-        // Transform data to include procedures array
+        // Transform data to include procedures array with cost_type
         const treatmentsWithProcedures = data.map(treatment => ({
           ...treatment,
           procedures: treatment.treatment_procedures?.map(tp => ({
             ...tp.procedures,
-            quantity: tp.quantity || 1
+            quantity: tp.quantity || 1,
+            cost_type: tp.cost_type || 'dental'
           })) || []
         }));
         setTreatments(treatmentsWithProcedures);
@@ -126,13 +129,16 @@ export function TreatmentListDialog({
     setEditingTreatment(null);
   };
 
-  // Calculate total cost dynamically based on current procedure prices
+  // Calculate total cost dynamically based on current procedure prices and cost_type
   const calculateTreatmentCost = (treatment: any) => {
     if (!treatment.procedures || treatment.procedures.length === 0) {
       return 0;
     }
     return treatment.procedures.reduce((total, procedure) => {
-      const unitPrice = parseFloat(procedure.dental_cost || 0);
+      // Use the selected cost_type for this procedure, default to dental
+      const costType = procedure.cost_type || 'dental';
+      const costField = costType === 'medical' ? 'medical_cost' : 'dental_cost';
+      const unitPrice = parseFloat(procedure[costField] || 0);
       const quantity = procedure.quantity || 1;
       return total + (unitPrice * quantity);
     }, 0);

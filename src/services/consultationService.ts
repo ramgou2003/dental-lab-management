@@ -464,7 +464,9 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
         first_name: packetData.first_name || consultationPatientData?.first_name || 'Unknown',
         last_name: packetData.last_name || consultationPatientData?.last_name || 'Patient',
         date_of_birth: packetData.date_of_birth || consultationPatientData?.date_of_birth || '1900-01-01',
-        treatments: consultation.treatment_plan.treatments,
+        treatments: consultation.treatment_plan?.treatments || [],
+        procedures: consultation.treatment_plan?.procedures || [],
+        discount: consultation.treatment_plan?.discount || 0,
         plan_date: new Date().toISOString().split('T')[0],
         form_status: 'completed',
         created_at: new Date().toISOString(),
@@ -649,6 +651,49 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
         console.error('❌ Error updating existing patient status:', updateError);
       } else {
         console.log('✅ Updated existing patient status:', patientId);
+      }
+    }
+
+    // Create treatment plan if treatment data exists
+    if (consultation.treatment_plan && (consultation.treatment_plan.treatments?.length > 0 || consultation.treatment_plan.procedures?.length > 0)) {
+      console.log('📋 Creating treatment plan for accepted patient...');
+
+      // Get consultation patient data for name and DOB
+      let consultationPatientData = null;
+      if (consultationPatientId || consultation.consultation_patient_id) {
+        const { data: cpData } = await supabase
+          .from('consultation_patients')
+          .select('*')
+          .eq('id', consultationPatientId || consultation.consultation_patient_id)
+          .single();
+        consultationPatientData = cpData;
+      }
+
+      const treatmentPlanData = {
+        patient_id: patientId,
+        first_name: consultationPatientData?.first_name || 'Unknown',
+        last_name: consultationPatientData?.last_name || 'Patient',
+        date_of_birth: consultationPatientData?.date_of_birth || '1900-01-01',
+        treatments: consultation.treatment_plan?.treatments || [],
+        procedures: consultation.treatment_plan?.procedures || [],
+        discount: consultation.treatment_plan?.discount || 0,
+        plan_date: new Date().toISOString().split('T')[0],
+        form_status: 'completed',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data: treatmentPlan, error: treatmentPlanError } = await supabase
+        .from('treatment_plan_forms')
+        .insert([treatmentPlanData])
+        .select()
+        .single();
+
+      if (treatmentPlanError) {
+        console.error('❌ Error creating treatment plan:', treatmentPlanError);
+        // Don't throw error here as patient creation was successful
+      } else {
+        console.log('✅ Treatment plan created successfully:', treatmentPlan?.id);
       }
     }
 

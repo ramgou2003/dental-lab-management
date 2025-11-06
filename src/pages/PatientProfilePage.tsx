@@ -14992,7 +14992,9 @@ export function PatientProfilePage() {
                 lastName: selectedTreatmentPlanForm.last_name,
                 dateOfBirth: selectedTreatmentPlanForm.date_of_birth,
                 treatments: selectedTreatmentPlanForm.treatments || [],
+                procedures: selectedTreatmentPlanForm.procedures || [],
                 planDate: selectedTreatmentPlanForm.plan_date || '',
+                discount: selectedTreatmentPlanForm.discount || 0,
                 formStatus: selectedTreatmentPlanForm.form_status
               };
             }
@@ -15012,7 +15014,9 @@ export function PatientProfilePage() {
                 last_name: formData.lastName,
                 date_of_birth: formData.dateOfBirth,
                 treatments: formData.treatments,
+                procedures: formData.procedures || [],
                 plan_date: formData.planDate,
+                discount: formData.discount || 0,
                 form_status: 'completed' as const
               };
 

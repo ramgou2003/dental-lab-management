@@ -7,7 +7,9 @@ export interface TreatmentPlanFormData {
   last_name: string;
   date_of_birth: string;
   treatments: TreatmentData[];
+  procedures?: ProcedureData[];
   plan_date?: string;
+  discount?: number;
   form_status?: 'draft' | 'completed';
   created_by?: string;
   created_at?: string;
@@ -30,6 +32,9 @@ export interface ProcedureData {
   cpt_code?: string;
   cost?: string;
   quantity: number;
+  dental_cost?: string | number;
+  medical_cost?: string | number;
+  cost_type?: 'dental' | 'medical';
 }
 
 export interface TreatmentPlanFormDB {
@@ -57,16 +62,35 @@ export async function saveTreatmentPlanForm(
     console.log('Saving treatment plan form...', {
       first_name: formData.first_name,
       last_name: formData.last_name,
-      treatments_count: formData.treatments.length
+      treatments_count: formData.treatments.length,
+      procedures_count: (formData.procedures || []).length
     });
+
+    // Merge individual procedures into treatments array
+    const treatmentsWithProcedures = [
+      ...formData.treatments,
+      ...(formData.procedures || []).map(proc => ({
+        id: proc.id,
+        name: proc.name,
+        cdt_code: proc.cdt_code,
+        cpt_code: proc.cpt_code,
+        quantity: proc.quantity,
+        dental_cost: proc.dental_cost,
+        medical_cost: proc.medical_cost,
+        cost_type: proc.cost_type,
+        is_individual_procedure: true // Mark as individual procedure
+      }))
+    ];
 
     const dbData = {
       patient_id: formData.patient_id,
       first_name: formData.first_name,
       last_name: formData.last_name,
       date_of_birth: formData.date_of_birth,
-      treatments: formData.treatments,
+      treatments: treatmentsWithProcedures,
+      procedures: formData.procedures || [],
       plan_date: formData.plan_date || new Date().toISOString().split('T')[0],
+      discount: parseFloat(String(formData.discount || 0)),
       form_status: formData.form_status || 'draft',
       created_by: userId
     };
@@ -111,12 +135,30 @@ export async function updateTreatmentPlanForm(
     const currentStatus = currentForm?.form_status;
     console.log('Current form status:', currentStatus);
 
+    // Merge individual procedures into treatments array
+    const treatmentsWithProcedures = [
+      ...formData.treatments,
+      ...(formData.procedures || []).map(proc => ({
+        id: proc.id,
+        name: proc.name,
+        cdt_code: proc.cdt_code,
+        cpt_code: proc.cpt_code,
+        quantity: proc.quantity,
+        dental_cost: proc.dental_cost,
+        medical_cost: proc.medical_cost,
+        cost_type: proc.cost_type,
+        is_individual_procedure: true // Mark as individual procedure
+      }))
+    ];
+
     const dbData = {
       first_name: formData.first_name,
       last_name: formData.last_name,
       date_of_birth: formData.date_of_birth,
-      treatments: formData.treatments,
+      treatments: treatmentsWithProcedures,
+      procedures: formData.procedures || [],
       plan_date: formData.plan_date,
+      discount: parseFloat(String(formData.discount || 0)),
       form_status: formData.form_status || currentStatus || 'draft'
     };
 
@@ -175,12 +217,30 @@ export async function autoSaveTreatmentPlanForm(
       console.log('Form is draft, keeping as draft');
     }
 
+    // Merge individual procedures into treatments array
+    const treatmentsWithProcedures = [
+      ...formData.treatments,
+      ...(formData.procedures || []).map(proc => ({
+        id: proc.id,
+        name: proc.name,
+        cdt_code: proc.cdt_code,
+        cpt_code: proc.cpt_code,
+        quantity: proc.quantity,
+        dental_cost: proc.dental_cost,
+        medical_cost: proc.medical_cost,
+        cost_type: proc.cost_type,
+        is_individual_procedure: true // Mark as individual procedure
+      }))
+    ];
+
     const dbData = {
       first_name: formData.first_name,
       last_name: formData.last_name,
       date_of_birth: formData.date_of_birth,
-      treatments: formData.treatments,
+      treatments: treatmentsWithProcedures,
+      procedures: formData.procedures || [],
       plan_date: formData.plan_date,
+      discount: parseFloat(String(formData.discount || 0)),
       form_status: finalStatus
     };
 
@@ -218,6 +278,41 @@ export async function getTreatmentPlanForm(formId: string): Promise<{ data: Trea
     if (error) {
       console.error('Error fetching treatment plan form:', error);
       return { data: null, error };
+    }
+
+    // Separate individual procedures from treatment groups
+    if (data && data.treatments) {
+      const treatments: TreatmentData[] = [];
+      const procedures: ProcedureData[] = [];
+
+      data.treatments.forEach((item: any) => {
+        if (item.is_individual_procedure) {
+          // This is an individual procedure, add to procedures array
+          procedures.push({
+            id: item.id,
+            name: item.name,
+            cdt_code: item.cdt_code,
+            cpt_code: item.cpt_code,
+            quantity: item.quantity || 1,
+            dental_cost: item.dental_cost,
+            medical_cost: item.medical_cost,
+            cost_type: item.cost_type
+          });
+        } else {
+          // This is a treatment group, add to treatments array
+          treatments.push(item);
+        }
+      });
+
+      // Return data with separated treatments and procedures
+      return {
+        data: {
+          ...data,
+          treatments,
+          procedures: procedures.length > 0 ? procedures : (data.procedures || [])
+        } as TreatmentPlanFormData,
+        error: null
+      };
     }
 
     return { data: data as TreatmentPlanFormData, error: null };

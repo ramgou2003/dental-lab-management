@@ -45,6 +45,8 @@ export interface TreatmentData {
  */
 export interface TreatmentPlanData {
   treatments: TreatmentData[];
+  procedures?: ProcedureData[];
+  discount?: number;
 }
 
 /**
@@ -77,6 +79,8 @@ export interface ConsultationTreatmentFormData {
     lowerTreatment: string[];
   };
   treatmentPlan: TreatmentPlanData;
+  procedures?: ProcedureData[];
+  discount?: number;
   additionalInformation: string;
 }
 

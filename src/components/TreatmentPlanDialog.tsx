@@ -77,7 +77,9 @@ export function TreatmentPlanDialog({
           last_name: formData.lastName,
           date_of_birth: formData.dateOfBirth,
           treatments: formData.treatments,
+          procedures: formData.procedures || [],
           plan_date: formData.planDate,
+          discount: formData.discount || 0,
           form_status: 'draft' as const
         };
 

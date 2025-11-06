@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Save,
@@ -82,10 +83,11 @@ export function CreateTreatmentDialog({
           description: editingTreatment.description || "",
           estimatedCost: editingTreatment.total_cost ? editingTreatment.total_cost.toString() : ""
         });
-        // Ensure procedures have quantity property
+        // Ensure procedures have quantity and cost_type properties
         const proceduresWithQuantity = (editingTreatment.procedures || []).map(proc => ({
           ...proc,
-          quantity: proc.quantity || 1
+          quantity: proc.quantity || 1,
+          cost_type: proc.cost_type || 'dental'
         }));
         setSelectedProcedures(proceduresWithQuantity);
       } else {
@@ -113,7 +115,7 @@ export function CreateTreatmentDialog({
       if (isSelected) {
         return prev.filter(p => p.id !== procedure.id);
       } else {
-        return [...prev, { ...procedure, quantity: 1 }];
+        return [...prev, { ...procedure, quantity: 1, cost_type: 'dental' }];
       }
     });
   }, []);
@@ -238,7 +240,8 @@ export function CreateTreatmentDialog({
         const treatmentProcedures = selectedProcedures.map(procedure => ({
           treatment_id: treatmentData_db.id,
           procedure_id: procedure.id,
-          quantity: procedure.quantity || 1
+          quantity: procedure.quantity || 1,
+          cost_type: procedure.cost_type || 'dental'
         }));
 
         const { error: proceduresError } = await supabase
@@ -431,48 +434,18 @@ export function CreateTreatmentDialog({
                               </div>
                             </div>
 
-                            {/* Cost per unit with toggle */}
-                            <div className="text-xs font-medium space-y-2">
-                              <div className="flex items-center gap-3">
-                                <div className="space-y-1">
-                                  {procedure.dental_cost && (
-                                    <div className={procedure.cost_type === 'dental' ? 'text-green-600' : 'text-gray-500'}>
-                                      Dental: ${parseFloat(procedure.dental_cost).toFixed(2)} each
-                                    </div>
-                                  )}
-                                  {procedure.medical_cost && (
-                                    <div className={procedure.cost_type === 'medical' ? 'text-blue-600' : 'text-gray-500'}>
-                                      Medical: ${parseFloat(procedure.medical_cost).toFixed(2)} each
-                                    </div>
-                                  )}
+                            {/* Cost per unit */}
+                            <div className="text-xs font-medium space-y-1">
+                              {procedure.dental_cost && (
+                                <div className="text-green-600">
+                                  Dental: ${parseFloat(procedure.dental_cost).toFixed(2)} each
                                 </div>
-                                {procedure.dental_cost && procedure.medical_cost && (
-                                  <div className="flex gap-1 bg-gray-100 p-1 rounded">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCostTypeChange(procedure.id, 'dental')}
-                                      className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                                        procedure.cost_type === 'dental'
-                                          ? 'bg-green-500 text-white'
-                                          : 'bg-white text-gray-600 hover:bg-gray-200'
-                                      }`}
-                                    >
-                                      D
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCostTypeChange(procedure.id, 'medical')}
-                                      className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                                        procedure.cost_type === 'medical'
-                                          ? 'bg-blue-500 text-white'
-                                          : 'bg-white text-gray-600 hover:bg-gray-200'
-                                      }`}
-                                    >
-                                      M
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                              )}
+                              {procedure.medical_cost && (
+                                <div className="text-blue-600">
+                                  Medical: ${parseFloat(procedure.medical_cost).toFixed(2)} each
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -511,12 +484,25 @@ export function CreateTreatmentDialog({
                             </div>
                           </div>
 
-                          {/* Total cost */}
-                          <div className="text-right">
-                            <span className="text-xs font-medium text-gray-500">Total: </span>
-                            <span className="text-sm font-semibold text-green-600">
-                              ${(parseFloat(procedure[(procedure.cost_type || 'dental') === 'medical' ? 'medical_cost' : 'dental_cost'] || 0) * (procedure.quantity || 1)).toFixed(2)}
-                            </span>
+                          {/* Cost Type Toggle and Total */}
+                          <div className="flex items-center gap-4">
+                            {procedure.dental_cost && procedure.medical_cost && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-gray-600">
+                                  {procedure.cost_type === 'medical' ? 'Medical' : 'Dental'}
+                                </span>
+                                <Switch
+                                  checked={procedure.cost_type === 'medical'}
+                                  onCheckedChange={(checked) => handleCostTypeChange(procedure.id, checked ? 'medical' : 'dental')}
+                                />
+                              </div>
+                            )}
+                            <div className="text-right">
+                              <span className="text-xs font-medium text-gray-500">Total: </span>
+                              <span className="text-sm font-semibold text-green-600">
+                                ${(parseFloat(procedure[(procedure.cost_type || 'dental') === 'medical' ? 'medical_cost' : 'dental_cost'] || 0) * (procedure.quantity || 1)).toFixed(2)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>

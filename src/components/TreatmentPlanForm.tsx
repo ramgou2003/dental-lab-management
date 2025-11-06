@@ -70,7 +70,9 @@ export function TreatmentPlanForm({
 
       // Treatment Plan Details
       treatments: initialData?.treatments || [],
+      procedures: initialData?.procedures || [],
       notes: initialData?.notes || "",
+      discount: initialData?.discount || 0,
     };
   });
 
@@ -118,7 +120,8 @@ export function TreatmentPlanForm({
 
         // Recalculate treatment total cost
         treatment.total_cost = updatedProcedures.reduce((total, proc) => {
-          const cost = parseFloat(proc.dental_cost || 0);
+          const costType = proc.cost_type || 'dental';
+          const cost = parseFloat(costType === 'medical' ? proc.medical_cost || 0 : proc.dental_cost || 0);
           const quantity = proc.quantity || 1;
           return total + (cost * quantity);
         }, 0);
@@ -133,21 +136,10 @@ export function TreatmentPlanForm({
 
       setAddingProceduresToTreatment(null);
     } else {
-      // Create individual treatments for each selected procedure
-      const newTreatments = selectedProcedures.map(procedure => ({
-        id: `proc_${Date.now()}_${Math.random()}`,
-        name: procedure.name,
-        description: procedure.description || `Individual procedure: ${procedure.name}`,
-        total_cost: (parseFloat(procedure.dental_cost || 0) * (procedure.quantity || 1)),
-        procedure_count: procedure.quantity || 1,
-        procedures: [procedure],
-        createdAt: new Date().toISOString(),
-        isIndividualProcedure: true
-      }));
-
+      // Add procedures directly as individual procedures
       setFormData(prev => ({
         ...prev,
-        treatments: [...prev.treatments, ...newTreatments]
+        procedures: [...prev.procedures, ...selectedProcedures]
       }));
     }
 
@@ -184,7 +176,8 @@ export function TreatmentPlanForm({
 
       // Recalculate treatment total cost
       treatment.total_cost = procedures.reduce((total, proc) => {
-        const cost = parseFloat(proc.dental_cost || 0);
+        const costType = proc.cost_type || 'dental';
+        const cost = parseFloat(costType === 'medical' ? proc.medical_cost || 0 : proc.dental_cost || 0);
         const quantity = proc.quantity || 1;
         return total + (cost * quantity);
       }, 0);
@@ -210,7 +203,8 @@ export function TreatmentPlanForm({
 
       // Recalculate treatment total cost
       treatment.total_cost = procedures.reduce((total, proc) => {
-        const cost = parseFloat(proc.dental_cost || 0);
+        const costType = proc.cost_type || 'dental';
+        const cost = parseFloat(costType === 'medical' ? proc.medical_cost || 0 : proc.dental_cost || 0);
         const quantity = proc.quantity || 1;
         return total + (cost * quantity);
       }, 0);
@@ -358,7 +352,7 @@ export function TreatmentPlanForm({
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
-              {formData.treatments.length === 0 ? (
+              {formData.treatments.length === 0 && (!formData.procedures || formData.procedures.length === 0) ? (
                 <div className="text-center py-16 text-gray-500 min-h-[300px] flex flex-col justify-center">
                   <FileText className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                   <p className="text-xl font-medium mb-2">No Treatments Added</p>
@@ -564,9 +558,15 @@ export function TreatmentPlanForm({
                                               Unit Price
                                             </label>
                                             {readOnly ? (
-                                              <div className="flex items-center justify-center w-full h-12 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                                                <span className="text-lg font-bold text-green-700">
-                                                  ${parseFloat(procedure.dental_cost || 0).toFixed(2)}
+                                              <div className="w-full h-12 border border-gray-300 rounded-lg flex items-center justify-center bg-white">
+                                                <span className="text-lg font-bold text-gray-900">
+                                                  ${(
+                                                    parseFloat(
+                                                      procedure.cost_type === 'medical'
+                                                        ? procedure.medical_cost || 0
+                                                        : procedure.dental_cost || 0
+                                                    )
+                                                  ).toFixed(2)}
                                                 </span>
                                               </div>
                                             ) : (
@@ -576,7 +576,7 @@ export function TreatmentPlanForm({
                                                   type="number"
                                                   step="0.01"
                                                   min="0"
-                                                  value={procedure.dental_cost || 0}
+                                                  value={procedure.cost_type === 'medical' ? procedure.medical_cost || 0 : procedure.dental_cost || 0}
                                                   onChange={(e) => handleProcedureEdit(index, procIndex, 'cost', e.target.value)}
                                                   className="flex-1 border-0 bg-transparent text-lg font-medium text-right focus:ring-0 focus:outline-none p-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                   placeholder="0.00"
@@ -593,7 +593,13 @@ export function TreatmentPlanForm({
                                             <div className="relative">
                                               <div className="w-full h-12 border border-gray-300 rounded-lg flex items-center justify-center bg-white">
                                                 <span className="text-xl font-bold text-gray-900">
-                                                  ${((parseFloat(procedure.dental_cost || 0)) * (procedure.quantity || 1)).toFixed(2)}
+                                                  ${(
+                                                    (parseFloat(
+                                                      procedure.cost_type === 'medical'
+                                                        ? procedure.medical_cost || 0
+                                                        : procedure.dental_cost || 0
+                                                    )) * (procedure.quantity || 1)
+                                                  ).toFixed(2)}
                                                 </span>
                                               </div>
                                             </div>
@@ -633,23 +639,257 @@ export function TreatmentPlanForm({
                     );
                   })}
 
+                  {/* Individual Procedures */}
+                  {formData.procedures && formData.procedures.length > 0 && (
+                    <div className="space-y-4">
+                      {formData.procedures.map((procedure, index) => (
+                        <div key={`proc_${index}`} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                          {/* Header with Procedure Name and Codes */}
+                          <div className="bg-blue-50 px-6 py-4 border-b border-gray-200 flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h4 className="text-base font-semibold text-gray-900 mb-3 leading-tight">
+                                {procedure.name}
+                              </h4>
+                              {/* Medical Codes */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {procedure.cdt_code && (
+                                  <Badge className="bg-blue-100 text-blue-700 text-xs font-medium border-0">
+                                    CDT {procedure.cdt_code}
+                                  </Badge>
+                                )}
+                                {procedure.cpt_code && (
+                                  <Badge className="bg-purple-100 text-purple-700 text-xs font-medium border-0">
+                                    CPT {procedure.cpt_code}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            {!readOnly && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    procedures: prev.procedures.filter((_, i) => i !== index)
+                                  }));
+                                }}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                              >
+                                <X className="h-5 w-5" />
+                              </Button>
+                            )}
+                          </div>
+
+                          {/* Procedure Details Grid */}
+                          <div className="px-6 py-4">
+                            <div className="grid grid-cols-3 gap-6">
+                              {/* Quantity */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                                {readOnly ? (
+                                  <div className="w-full h-12 border border-gray-300 rounded-lg flex items-center justify-center bg-white">
+                                    <span className="text-lg font-bold text-gray-900">{procedure.quantity || 1}</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center bg-white border-2 border-gray-200 rounded-lg hover:border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all duration-200">
+                                    {/* Decrease Button */}
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const currentQty = procedure.quantity || 1;
+                                        if (currentQty > 1) {
+                                          setFormData(prev => ({
+                                            ...prev,
+                                            procedures: prev.procedures.map((p, i) =>
+                                              i === index ? { ...p, quantity: currentQty - 1 } : p
+                                            )
+                                          }));
+                                        }
+                                      }}
+                                      disabled={procedure.quantity <= 1}
+                                      className="h-12 w-12 rounded-l-lg rounded-r-none border-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                                    >
+                                      <span className="text-xl font-bold">−</span>
+                                    </Button>
+
+                                    {/* Quantity Input */}
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      value={procedure.quantity || 1}
+                                      onChange={(e) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          procedures: prev.procedures.map((p, i) =>
+                                            i === index ? { ...p, quantity: parseInt(e.target.value) || 1 } : p
+                                          )
+                                        }));
+                                      }}
+                                      className="flex-1 h-12 text-center text-lg font-semibold border-0 border-l border-r border-gray-200 rounded-none focus:ring-0 focus:border-transparent bg-transparent [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+
+                                    {/* Increase Button */}
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const currentQty = procedure.quantity || 1;
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          procedures: prev.procedures.map((p, i) =>
+                                            i === index ? { ...p, quantity: currentQty + 1 } : p
+                                          )
+                                        }));
+                                      }}
+                                      className="h-12 w-12 rounded-r-lg rounded-l-none border-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors duration-200"
+                                    >
+                                      <span className="text-xl font-bold">+</span>
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Unit Price */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Unit Price</label>
+                                {readOnly ? (
+                                  <div className="w-full h-12 border border-gray-300 rounded-lg flex items-center justify-center bg-white">
+                                    <span className="text-lg font-bold text-gray-900">
+                                      ${(
+                                        parseFloat(
+                                          procedure.cost_type === 'medical'
+                                            ? procedure.medical_cost || 0
+                                            : procedure.dental_cost || 0
+                                        )
+                                      ).toFixed(2)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="w-full h-12 bg-white border border-gray-300 rounded-lg flex items-center px-3 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-200 transition-all duration-200">
+                                    <span className="text-gray-500 text-lg font-medium mr-2">$</span>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={procedure.cost_type === 'medical' ? procedure.medical_cost || 0 : procedure.dental_cost || 0}
+                                      onChange={(e) => {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          procedures: prev.procedures.map((p, i) => {
+                                            if (i === index) {
+                                              const costType = p.cost_type || 'dental';
+                                              return costType === 'medical'
+                                                ? { ...p, medical_cost: e.target.value }
+                                                : { ...p, dental_cost: e.target.value };
+                                            }
+                                            return p;
+                                          })
+                                        }));
+                                      }}
+                                      className="flex-1 border-0 bg-transparent text-lg font-medium text-right focus:ring-0 focus:outline-none p-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      placeholder="0.00"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Total Cost */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Total Cost</label>
+                                <div className="w-full h-12 border border-gray-300 rounded-lg flex items-center justify-center bg-white">
+                                  <span className="text-lg font-bold text-gray-900">
+                                    ${(
+                                      parseFloat(
+                                        procedure.cost_type === 'medical'
+                                          ? procedure.medical_cost || 0
+                                          : procedure.dental_cost || 0
+                                      ) * (procedure.quantity || 1)
+                                    ).toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Treatment Summary */}
                   <Card className="bg-blue-50 border-blue-200">
                     <CardContent className="pt-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-blue-800">Treatment Plan Summary</p>
-                          <p className="text-xs text-blue-600">
-                            {formData.treatments.length} treatment{formData.treatments.length !== 1 ? 's' : ''} selected
-                          </p>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">Treatment Plan Summary</p>
+                            <p className="text-xs text-blue-600">
+                              {formData.treatments.length} treatment{formData.treatments.length !== 1 ? 's' : ''} selected
+                              {formData.procedures && formData.procedures.length > 0 && ` + ${formData.procedures.length} procedure${formData.procedures.length !== 1 ? 's' : ''}`}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-semibold text-blue-800">
-                            Total: ${formData.treatments.reduce((total, treatment) => {
-                              const cost = treatment.total_cost || treatment.estimatedCost || 0;
-                              return total + parseFloat(cost);
-                            }, 0).toFixed(2)}
-                          </p>
+
+                        {/* Cost Breakdown */}
+                        <div className="space-y-2 border-t border-blue-200 pt-3">
+                          {(() => {
+                            const subtotal = (formData.treatments || []).reduce((total, treatment) => {
+                              const treatmentTotal = (treatment.procedures || []).reduce((procTotal, proc) => {
+                                const costType = proc.cost_type || 'dental';
+                                const unitPrice = parseFloat(costType === 'medical' ? proc.medical_cost || 0 : proc.dental_cost || 0);
+                                const quantity = proc.quantity || 1;
+                                return procTotal + (unitPrice * quantity);
+                              }, 0);
+                              return total + treatmentTotal;
+                            }, 0) +
+                            ((formData.procedures && Array.isArray(formData.procedures)) ? formData.procedures.reduce((total, proc) => {
+                              const costType = proc.cost_type || 'dental';
+                              const unitPrice = parseFloat(costType === 'medical' ? proc.medical_cost || 0 : proc.dental_cost || 0);
+                              const quantity = proc.quantity || 1;
+                              return total + (unitPrice * quantity);
+                            }, 0) : 0);
+
+                            const discount = parseFloat(formData.discount || 0);
+                            const finalTotal = Math.max(0, subtotal - discount);
+
+                            return (
+                              <>
+                                <div className="flex items-center justify-end">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-blue-700">Subtotal:</span>
+                                    <span className="text-sm font-semibold text-blue-800 w-20 text-right">${subtotal.toFixed(2)}</span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-2">
+                                  <label className="text-sm text-blue-700">Courtesy:</label>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-sm">$</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={formData.discount || ''}
+                                      onChange={(e) => handleInputChange('discount', parseFloat(e.target.value) || 0)}
+                                      className="w-20 h-8 px-2 border border-blue-300 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      placeholder=""
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-end border-t border-blue-200 pt-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-blue-900">Final Total:</span>
+                                    <span className="text-lg font-bold text-blue-900 w-20 text-right">${finalTotal.toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </CardContent>
