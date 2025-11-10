@@ -75,7 +75,8 @@ import {
   Edit2,
   Trash2,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -93,11 +94,21 @@ import { getFinancialAgreementsByPatientId, deleteFinancialAgreement, updateFina
 import { getConsentFormsByPatientId, getConsentForm, deleteConsentForm, formatConsentFormForDisplay, ConsentFullArchFormData } from "@/services/consentFullArchService";
 import { getMedicalRecordsReleaseFormsByPatientId, deleteMedicalRecordsReleaseForm, formatMedicalRecordsReleaseFormForDisplay, MedicalRecordsReleaseFormData } from "@/services/medicalRecordsReleaseService";
 import { getInformedConsentSmokingFormsByPatientId, deleteInformedConsentSmokingForm, formatInformedConsentSmokingFormForDisplay, InformedConsentSmokingFormData } from "@/services/informedConsentSmokingService";
+import { generateInformedConsentSmokingPdf } from "@/utils/informedConsentSmokingPdfGenerator";
+import { generateMedicalRecordsReleasePdf } from "@/utils/medicalRecordsReleasePdfGenerator";
+import { generateFinancialAgreementPdf } from "@/utils/financialAgreementPdfGenerator";
 import { getFinalDesignApprovalFormsByPatientId, getFinalDesignApprovalForm, deleteFinalDesignApprovalForm, formatFinalDesignApprovalFormForDisplay, FinalDesignApprovalFormData } from "@/services/finalDesignApprovalService";
 import { getThankYouPreSurgeryFormsByPatientId, getThankYouPreSurgeryForm, deleteThankYouPreSurgeryForm, formatThankYouPreSurgeryFormForDisplay, ThankYouPreSurgeryFormData } from "@/services/thankYouPreSurgeryService";
 import { getThreeYearCarePackageFormsByPatientId, deleteThreeYearCarePackageForm, formatThreeYearCarePackageFormForDisplay, ThreeYearCarePackageFormData, createThreeYearCarePackageForm, updateThreeYearCarePackageForm } from "@/services/threeYearCarePackageService";
 import { fiveYearWarrantyService, FiveYearWarrantyFormData, formatFiveYearWarrantyFormForDisplay } from "@/services/fiveYearWarrantyService";
 import { partialPaymentAgreementService, PartialPaymentAgreementFormData, formatPartialPaymentAgreementFormForDisplay } from "@/services/partialPaymentAgreementService";
+import { generateTreatmentPlanPDF } from "@/utils/treatmentPlanPdfGenerator";
+import { generateThankYouPreSurgeryPdf } from "@/utils/thankYouPreSurgeryPdfGenerator";
+import { generateThreeYearCarePackagePdf } from "@/utils/threeYearCarePackagePdfGenerator";
+import { generatePartialPaymentAgreementPdf } from "@/utils/partialPaymentAgreementPdfGenerator";
+import { generateFinalDesignApprovalPdf } from "@/utils/finalDesignApprovalPdfGenerator";
+import { generateNewPatientPacketPdf } from "@/utils/newPatientPacketPdfGenerator";
+import { generateConsentFullArchPdf } from "@/utils/consentFullArchPdfGenerator";
 
 
 export function PatientProfilePage() {
@@ -5111,6 +5122,33 @@ export function PatientProfilePage() {
                                   </div>
 
                                   <div className="flex items-center gap-1">
+                                    {/* Download PDF button */}
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        try {
+                                          // Convert database format to form format for PDF generation
+                                          const formData = convertDatabaseToFormData(packet);
+                                          await generateNewPatientPacketPdf(formData);
+                                          toast({
+                                            title: "Success",
+                                            description: "PDF downloaded successfully!",
+                                          });
+                                        } catch (error) {
+                                          console.error('Error generating PDF:', error);
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to generate PDF",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      title="Download PDF"
+                                    >
+                                      <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                    </button>
+
                                     {/* Edit button - visible to all users if draft, only admins if completed */}
                                     {(packet.form_status === 'draft' || isAdminUser()) && (
                                       <button
@@ -5194,6 +5232,66 @@ export function PatientProfilePage() {
                                   </div>
 
                                   <div className="flex items-center gap-1">
+                                    {/* Download PDF button */}
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        try {
+                                          // Map database fields to PDF generator format
+                                          const pdfData = {
+                                            patientName: agreement.patient_name || '',
+                                            chartNumber: agreement.chart_number || '',
+                                            dateOfBirth: agreement.date_of_birth || '',
+                                            dateOfExecution: agreement.date_of_execution || '',
+                                            timeOfExecution: agreement.time_of_execution || '',
+                                            acceptedTreatments: agreement.accepted_treatments || [],
+                                            totalCostOfTreatment: agreement.total_cost_of_treatment?.toString() || '',
+                                            patientPaymentToday: agreement.patient_payment_today?.toString() || '',
+                                            remainingBalance: agreement.remaining_balance?.toString() || '',
+                                            remainingPaymentPlan: agreement.remaining_payment_plan || '',
+                                            paymentAmount: agreement.payment_amount?.toString() || '',
+                                            paymentTermsInitials: agreement.payment_terms_initials || '',
+                                            labFeeInitials: agreement.lab_fee_initials || '',
+                                            carePackageFee: agreement.care_package_fee?.toString() || '',
+                                            carePackageElection: agreement.care_package_election || '',
+                                            warrantyInitials: agreement.warranty_initials || '',
+                                            capacityConfirmed: agreement.capacity_confirmed,
+                                            hipaaAcknowledged: agreement.hipaa_acknowledged,
+                                            capacityInitials: agreement.capacity_initials || '',
+                                            disputeInitials: agreement.dispute_initials || '',
+                                            termsAgreed: agreement.terms_agreed,
+                                            patientSignature: agreement.patient_signature || '',
+                                            patientSignatureDate: agreement.patient_signature_date || '',
+                                            patientSignatureTime: agreement.patient_signature_time || '',
+                                            witnessName: agreement.witness_name || '',
+                                            witnessRole: agreement.witness_role || '',
+                                            witnessSignature: agreement.witness_signature || '',
+                                            witnessSignatureDate: agreement.witness_signature_date || '',
+                                            witnessSignatureTime: agreement.witness_signature_time || '',
+                                            downloadedToDentalManagementSoftware: agreement.downloaded_to_dental_management_software,
+                                            confirmedByStaffInitials: agreement.confirmed_by_staff_initials || ''
+                                          };
+
+                                          await generateFinancialAgreementPdf(pdfData);
+                                          toast({
+                                            title: "Success",
+                                            description: "PDF downloaded successfully!",
+                                          });
+                                        } catch (error) {
+                                          console.error('Error generating PDF:', error);
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to generate PDF. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      title="Download PDF"
+                                    >
+                                      <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                    </button>
+
                                     {/* Edit button - visible to all users if draft, only admins if completed */}
                                     {(agreement.status === 'draft' || isAdminUser()) && (
                                       <button
@@ -5312,6 +5410,43 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
+                                          {/* Download PDF button */}
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                // Fetch fresh data from Supabase
+                                                const freshData = await getConsentForm(form.id);
+
+                                                if (freshData.data) {
+                                                  const formattedData = formatConsentFormForDisplay(freshData.data);
+                                                  await generateConsentFullArchPdf(formattedData);
+                                                  toast({
+                                                    title: "Success",
+                                                    description: "PDF downloaded successfully!",
+                                                  });
+                                                } else {
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Could not load form data for PDF generation.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              } catch (error) {
+                                                console.error('Error generating PDF:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to generate PDF",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Download PDF"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
                                           {/* Edit button - visible to all users if draft, only admins if completed */}
                                           {(form.status === 'draft' || isAdminUser()) && (
                                             <button
@@ -5438,6 +5573,42 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
+                                          {/* Download PDF button */}
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                // Map database fields to PDF generator format
+                                                const pdfData = {
+                                                  firstName: form.first_name || '',
+                                                  lastName: form.last_name || '',
+                                                  dateOfBirth: form.date_of_birth || '',
+                                                  hasAgreed: form.has_agreed,
+                                                  patientSignature: form.patient_signature || '',
+                                                  signatureDate: form.signature_date || '',
+                                                  signatureTime: form.signature_time || ''
+                                                };
+
+                                                await generateMedicalRecordsReleasePdf(pdfData);
+                                                toast({
+                                                  title: "Success",
+                                                  description: "PDF downloaded successfully!",
+                                                });
+                                              } catch (error) {
+                                                console.error('Error generating PDF:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to generate PDF. Please try again.",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Download PDF"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
                                           {/* Edit button - visible to all users if draft, only admins if completed */}
                                           {(form.status === 'draft' || isAdminUser()) && (
                                             <button
@@ -5539,6 +5710,49 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
+                                          {/* Download PDF button */}
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                // Map database fields to PDF generator format
+                                                const pdfData = {
+                                                  firstName: form.first_name || '',
+                                                  lastName: form.last_name || '',
+                                                  dateOfBirth: form.date_of_birth || '',
+                                                  nicotineUse: form.nicotine_use || '',
+                                                  understandsNicotineEffects: form.understands_nicotine_effects,
+                                                  understandsRisks: form.understands_risks,
+                                                  understandsTimeline: form.understands_timeline,
+                                                  understandsInsurance: form.understands_insurance,
+                                                  offeredResources: form.offered_resources,
+                                                  takesResponsibility: form.takes_responsibility,
+                                                  patientSignature: form.patient_signature || '',
+                                                  signatureDate: form.signature_date || '',
+                                                  signedConsent: form.signed_consent || '',
+                                                  refusalReason: form.refusal_reason || ''
+                                                };
+
+                                                await generateInformedConsentSmokingPdf(pdfData);
+                                                toast({
+                                                  title: "Success",
+                                                  description: "PDF downloaded successfully!",
+                                                });
+                                              } catch (error) {
+                                                console.error('Error generating PDF:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to generate PDF. Please try again.",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Download PDF"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
                                           {/* Edit button - visible to all users if draft, only admins if completed */}
                                           {(form.status === 'draft' || isAdminUser()) && (
                                             <button
@@ -5661,6 +5875,31 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
+                                          {/* Download PDF button */}
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                await generateFinalDesignApprovalPdf(displayData);
+                                                toast({
+                                                  title: "Success",
+                                                  description: "Final Design Approval PDF exported successfully!",
+                                                });
+                                              } catch (error) {
+                                                console.error('Error exporting PDF:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to export PDF",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Download PDF"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
                                           {/* Edit button - visible to all users if draft, only admins if completed */}
                                           {(form.status === 'draft' || isAdminUser()) && (
                                             <button
@@ -5807,6 +6046,31 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
+                                          {/* Download PDF button */}
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                await generateThankYouPreSurgeryPdf(displayData);
+                                                toast({
+                                                  title: "Success",
+                                                  description: "Thank You & Pre-Surgery PDF exported successfully!",
+                                                });
+                                              } catch (error) {
+                                                console.error('Error exporting PDF:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to export PDF",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Download PDF"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
                                           {/* Edit button - visible to all users if draft, only admins if completed */}
                                           {(form.status === 'draft' || isAdminUser()) && (
                                             <button
@@ -5934,6 +6198,31 @@ export function PatientProfilePage() {
                                         </div>
 
                                         <div className="flex items-center gap-1">
+                                          {/* Download PDF button */}
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                await generateThreeYearCarePackagePdf(displayData);
+                                                toast({
+                                                  title: "Success",
+                                                  description: "3-Year Care Package PDF exported successfully!",
+                                                });
+                                              } catch (error) {
+                                                console.error('Error exporting PDF:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to export PDF",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Download PDF"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
                                           {/* Edit button - visible to all users if draft, only admins if completed */}
                                           {(form.status === 'draft' || isAdminUser()) && (
                                             <button
@@ -6041,6 +6330,21 @@ export function PatientProfilePage() {
                                       </div>
 
                                       <div className="flex items-center gap-1">
+                                        {/* Download PDF button - Coming soon */}
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toast({
+                                              title: "Coming Soon",
+                                              description: "PDF export for 5-Year Warranty forms will be available soon!",
+                                            });
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Download PDF (Coming Soon)"
+                                        >
+                                          <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                        </button>
+
                                         {/* Edit button - visible to all users if draft, only admins if completed */}
                                         {((form.status === 'draft' || !form.status) || isAdminUser()) && (
                                           <button
@@ -6172,6 +6476,32 @@ export function PatientProfilePage() {
                                       </div>
 
                                       <div className="flex items-center gap-1">
+                                        {/* Download PDF button */}
+                                        <button
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            try {
+                                              const formattedData = formatPartialPaymentAgreementFormForDisplay(form);
+                                              await generatePartialPaymentAgreementPdf(formattedData);
+                                              toast({
+                                                title: "Success",
+                                                description: "Partial Payment Agreement PDF exported successfully!",
+                                              });
+                                            } catch (error) {
+                                              console.error('Error exporting PDF:', error);
+                                              toast({
+                                                title: "Error",
+                                                description: "Failed to export PDF",
+                                                variant: "destructive",
+                                              });
+                                            }
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Download PDF"
+                                        >
+                                          <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                        </button>
+
                                         {/* Edit button - visible to all users if draft, only admins if completed */}
                                         {((form.status === 'draft' || !form.status) || isAdminUser()) && (
                                           <button
@@ -6320,6 +6650,40 @@ export function PatientProfilePage() {
                                       </div>
 
                                       <div className="flex items-center gap-1">
+                                        {/* Download PDF button */}
+                                        <button
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            try {
+                                              await generateTreatmentPlanPDF({
+                                                firstName: form.first_name || '',
+                                                lastName: form.last_name || '',
+                                                dateOfBirth: form.date_of_birth || '',
+                                                planDate: form.plan_date || '',
+                                                treatments: form.treatments || [],
+                                                procedures: form.procedures || [],
+                                                discount: form.discount || 0,
+                                                letterheadImagePath: '/letterhead.png'
+                                              });
+                                              toast({
+                                                title: "Success",
+                                                description: "Treatment Plan PDF exported successfully!",
+                                              });
+                                            } catch (error) {
+                                              console.error('Error exporting PDF:', error);
+                                              toast({
+                                                title: "Error",
+                                                description: "Failed to export Treatment Plan PDF",
+                                                variant: "destructive",
+                                              });
+                                            }
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Download PDF"
+                                        >
+                                          <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                        </button>
+
                                         {/* Edit button - visible to all users if draft, only admins if completed */}
                                         {(form.form_status === 'draft' || isAdminUser()) && (
                                           <button

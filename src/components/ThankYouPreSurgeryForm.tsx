@@ -9,20 +9,26 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
-import { 
-  Heart, 
-  AlertTriangle, 
-  Phone, 
-  Clock, 
-  CheckCircle, 
-  FileText, 
+import { generateThankYouPreSurgeryPdf } from "@/utils/thankYouPreSurgeryPdfGenerator";
+import {
+  Heart,
+  AlertTriangle,
+  Phone,
+  Clock,
+  CheckCircle,
+  FileText,
   Check,
   Calendar,
   Pill,
   Shield,
   Users,
   MapPin,
-  Mail
+  Mail,
+  Download,
+  Droplet,
+  Zap,
+  AlertCircle,
+  Baby
 } from "lucide-react";
 
 interface ThankYouPreSurgeryFormProps {
@@ -286,6 +292,8 @@ export function ThankYouPreSurgeryForm({
       handleInputChange('patientSignature', '');
     }
   };
+
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -613,44 +621,48 @@ export function ThankYouPreSurgeryForm({
             <p className="text-red-700 font-medium">Please check any that apply to you:</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
-                { key: 'heartConditions', text: 'Heart conditions or pacemaker' },
-                { key: 'bloodThinners', text: 'Taking blood thinners' },
-                { key: 'diabetes', text: 'Diabetes (Type 1 or 2)' },
-                { key: 'highBloodPressure', text: 'High blood pressure' },
-                { key: 'allergies', text: 'Drug allergies or reactions' },
-                { key: 'pregnancyNursing', text: 'Pregnant or nursing' },
-                { key: 'recentIllness', text: 'Recent illness or fever' },
-                { key: 'medicationChanges', text: 'Recent medication changes' }
-              ].map((item) => (
-                <div
-                  key={item.key}
-                  className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all duration-200 min-h-[56px] ${
-                    readOnly ? 'cursor-default' : 'cursor-pointer'
-                  } ${
-                    formData[item.key as keyof typeof formData]
-                      ? 'bg-red-100 border-red-500 shadow-sm'
-                      : `bg-white border-gray-300 ${!readOnly ? 'hover:border-red-400 hover:bg-red-50' : ''}`
-                  }`}
-                  onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
-                >
+                { key: 'heartConditions', text: 'Heart conditions or pacemaker', icon: Heart },
+                { key: 'bloodThinners', text: 'Taking blood thinners', icon: Droplet },
+                { key: 'diabetes', text: 'Diabetes (Type 1 or 2)', icon: Zap },
+                { key: 'highBloodPressure', text: 'High blood pressure', icon: AlertCircle },
+                { key: 'allergies', text: 'Drug allergies or reactions', icon: AlertTriangle },
+                { key: 'pregnancyNursing', text: 'Pregnant or nursing', icon: Baby },
+                { key: 'recentIllness', text: 'Recent illness or fever', icon: Pill },
+                { key: 'medicationChanges', text: 'Recent medication changes', icon: Shield }
+              ].map((item) => {
+                const IconComponent = item.icon;
+                return (
                   <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                    key={item.key}
+                    className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all duration-200 min-h-[56px] ${
+                      readOnly ? 'cursor-default' : 'cursor-pointer'
+                    } ${
                       formData[item.key as keyof typeof formData]
-                        ? 'border-red-600 bg-red-600'
-                        : 'border-gray-400 bg-white'
+                        ? 'bg-red-100 border-red-500 shadow-sm'
+                        : `bg-white border-gray-300 ${!readOnly ? 'hover:border-red-400 hover:bg-red-50' : ''}`
                     }`}
+                    onClick={readOnly ? undefined : () => handleInputChange(item.key, !formData[item.key as keyof typeof formData])}
                   >
-                    {formData[item.key as keyof typeof formData] && (
-                      <div className="w-2 h-2 rounded-full bg-white"></div>
-                    )}
+                    <div
+                      className={`w-6 h-6 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        formData[item.key as keyof typeof formData]
+                          ? 'border-red-600 bg-red-600'
+                          : 'border-gray-400 bg-white'
+                      }`}
+                    >
+                      {formData[item.key as keyof typeof formData] && (
+                        <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                      )}
+                    </div>
+                    <IconComponent className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    <Label
+                      className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-red-800 leading-relaxed flex-1`}
+                    >
+                      {item.text}
+                    </Label>
                   </div>
-                  <Label
-                    className={`text-sm font-medium ${readOnly ? 'cursor-default' : 'cursor-pointer'} text-red-800 leading-relaxed flex-1`}
-                  >
-                    {item.text}
-                  </Label>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="bg-yellow-100 border border-yellow-300 p-4 rounded-lg mt-4">
               <div className="flex items-start gap-2">

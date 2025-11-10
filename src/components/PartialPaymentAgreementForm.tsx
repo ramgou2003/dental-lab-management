@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
-import { FileText, User, CreditCard, Calendar, AlertTriangle, Check, DollarSign, Clock, Edit } from "lucide-react";
+import { FileText, User, CreditCard, Calendar, AlertTriangle, Check, DollarSign, Clock, Edit, Download } from "lucide-react";
 import { toast } from "sonner";
+import { generatePartialPaymentAgreementPdf } from "@/utils/partialPaymentAgreementPdfGenerator";
 
 interface PartialPaymentAgreementFormProps {
   onSubmit: (formData: any) => void;
@@ -425,6 +426,8 @@ export function PartialPaymentAgreementForm({
         return null;
     }
   };
+
+
 
   return (
     <div className="h-[80vh] flex flex-col">

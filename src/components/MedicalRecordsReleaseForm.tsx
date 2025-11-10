@@ -7,7 +7,9 @@ import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
 import { SimpleCheckbox } from "@/components/SimpleCheckbox";
-import { FileText, User, Clock, CheckCircle, AlertCircle, Edit } from "lucide-react";
+import { FileText, User, Clock, CheckCircle, AlertCircle, Edit, Download } from "lucide-react";
+import { toast } from "sonner";
+import { generateMedicalRecordsReleasePdf } from "@/utils/medicalRecordsReleasePdfGenerator";
 
 interface MedicalRecordsReleaseFormProps {
   onSubmit: (formData: any) => void;
@@ -140,6 +142,8 @@ export function MedicalRecordsReleaseForm({
     console.log('🔄 Submitting Medical Records Release form data:', submissionData);
     onSubmit(submissionData);
   };
+
+
 
   return (
     <div className="flex flex-col h-full w-full">

@@ -10,7 +10,9 @@ import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
 import { CustomCheckbox } from "@/components/CustomCheckbox";
 import { SimpleCheckbox } from "@/components/SimpleCheckbox";
-import { FileText, User, DollarSign, Shield, AlertTriangle, Scale, Edit, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { FileText, User, DollarSign, Shield, AlertTriangle, Scale, Edit, Clock, CheckCircle, AlertCircle, Download } from "lucide-react";
+import { toast } from "sonner";
+import { generateFinancialAgreementPdf } from "@/utils/financialAgreementPdfGenerator";
 
 interface FinancialAgreementFormProps {
   onSubmit: (formData: any) => void;
@@ -340,6 +342,8 @@ export function FinancialAgreementForm({
     }
     onSubmit(formData);
   };
+
+
 
   return (
     <div className="max-w-5xl mx-auto">

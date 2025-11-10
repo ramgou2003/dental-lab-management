@@ -21,8 +21,10 @@ import {
   Mail,
   Check,
   Edit,
-  AlertCircle
+  AlertCircle,
+  Download
 } from "lucide-react";
+import { generateThreeYearCarePackagePdf } from "@/utils/threeYearCarePackagePdfGenerator";
 
 interface ThreeYearCarePackageFormProps {
   onSubmit: (formData: any) => void;
@@ -257,6 +259,8 @@ export function ThreeYearCarePackageForm({
 
     onSubmit(formData);
   };
+
+
 
   const paymentSchedule = [
     { payment: 1, amount: 345, due: "Due at enrollment" },
@@ -1322,9 +1326,11 @@ export function ThreeYearCarePackageForm({
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-            {isEditing ? 'Update Form' : 'Submit'}
-          </Button>
+          {!readOnly && (
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              {isEditing ? 'Update Form' : 'Submit'}
+            </Button>
+          )}
         </div>
       </form>
 

@@ -12,7 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
-import { FileText, User, Calendar, AlertTriangle, Stethoscope, CheckCircle, Edit, DollarSign, Camera, Shield, Check, ChevronLeft, ChevronRight, Pill, Clock, Mail } from "lucide-react";
+import { FileText, User, Calendar, AlertTriangle, Stethoscope, CheckCircle, Edit, DollarSign, Camera, Shield, Check, ChevronLeft, ChevronRight, Pill, Clock, Mail, Download } from "lucide-react";
+import { generateConsentFullArchPdf } from "@/utils/consentFullArchPdfGenerator";
 
 interface ConsentFullArchFormProps {
   onSubmit: (formData: any) => void;
@@ -806,6 +807,8 @@ export function ConsentFullArchForm({
       [type]: ''
     }));
   };
+
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -4337,16 +4340,18 @@ export function ConsentFullArchForm({
 
         {/* Fixed Footer with Navigation */}
         <div className="mt-auto sticky bottom-0 left-0 right-0 flex items-center justify-between border-t bg-white px-6 py-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goToPreviousStep}
-            disabled={isFirstStep}
-            className="navigation-button flex items-center gap-2 px-4 py-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Previous
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goToPreviousStep}
+              disabled={isFirstStep}
+              className="navigation-button flex items-center gap-2 px-4 py-2"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+          </div>
 
           <div className="flex items-center">
             {isLastStep ? (

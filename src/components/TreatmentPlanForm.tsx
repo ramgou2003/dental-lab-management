@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { TreatmentListDialog } from "@/components/TreatmentListDialog";
 import { ProcedureListDialog } from "@/components/ProcedureListDialog";
+import { generateTreatmentPlanPDF } from "@/utils/treatmentPlanPdfGenerator";
+import { toast } from "@/components/ui/sonner";
 import {
   FileText,
   Users,
@@ -18,7 +20,8 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  Trash2
+  Trash2,
+  Download
 } from "lucide-react";
 
 interface TreatmentPlanFormProps {
@@ -239,6 +242,8 @@ export function TreatmentPlanForm({
       day: 'numeric'
     });
   };
+
+
 
   return (
     <div className="flex flex-col h-full">

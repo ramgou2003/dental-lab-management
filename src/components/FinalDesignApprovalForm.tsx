@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
-import { FileText, User, CheckCircle, Edit, Building2, Check, AlertTriangle } from "lucide-react";
+import { FileText, User, CheckCircle, Edit, Building2, Check, AlertTriangle, Download } from "lucide-react";
+import { generateFinalDesignApprovalPdf } from "@/utils/finalDesignApprovalPdfGenerator";
 
 interface FinalDesignApprovalFormProps {
   onSubmit: (formData: any) => void;
@@ -229,6 +230,8 @@ export function FinalDesignApprovalForm({
       setFormData(prev => ({ ...prev, witnessSignature: "" }));
     }
   };
+
+
 
 
 

@@ -3,13 +3,14 @@ import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
+import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SignatureDialog } from "@/components/SignatureDialog";
 import { SignaturePreview } from "@/components/SignaturePreview";
-import { Heart, AlertTriangle, Calendar, Users, CheckCircle, FileText, Check, Clock, AlertCircle } from "lucide-react";
+import { generateInformedConsentSmokingPdf } from "@/utils/informedConsentSmokingPdfGenerator";
+import { Heart, AlertTriangle, Calendar, Users, CheckCircle, FileText, Check, Clock, AlertCircle, Download } from "lucide-react";
 
 interface InformedConsentSmokingFormProps {
   onSubmit: (formData: any) => void;
@@ -119,6 +120,8 @@ export function InformedConsentSmokingForm({
       handleInputChange('patientSignature', '');
     }
   };
+
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

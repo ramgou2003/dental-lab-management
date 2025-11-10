@@ -18,8 +18,11 @@ import {
   CheckCircle,
   AlertTriangle,
   AlertCircle,
-  Info
+  Info,
+  Download
 } from "lucide-react";
+import { toast } from "sonner";
+import { generateNewPatientPacketPdf } from "@/utils/newPatientPacketPdfGenerator";
 
 // Import section components
 import { Section1PatientInfo } from "@/components/newPatientPacket/Section1PatientInfo";
@@ -735,6 +738,8 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
 
   const currentSection = sections.find(s => s.id === activeSection);
 
+
+
   return (
     <div id="patient-packet-form" className="w-full">
       {/* Logo and Greeting Section - Only show on public links */}
@@ -925,7 +930,7 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
             >
               Previous
             </Button>
-            
+
             <div className="flex gap-2">
               {activeSection === totalSections ? (
                 <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700">
