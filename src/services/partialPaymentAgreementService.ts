@@ -332,8 +332,8 @@ export function convertFormDataToDatabase(
     patient_signature: getValue('patientSignature', 'patient_signature'),
     patient_signature_date: validateDate(getValue('patientSignatureDate', 'patient_signature_date')),
     patient_full_name: getValue('patientFullName', 'patient_full_name'),
-    provider_representative_name: getValue('providerRepresentativeName', 'provider_representative_name'),
-    provider_representative_title: getValue('providerRepresentativeTitle', 'provider_representative_title'),
+    provider_representative_name: getValue('providerRepName', 'provider_representative_name') || getValue('providerRepresentativeName', 'provider_representative_name'),
+    provider_representative_title: getValue('providerRepTitle', 'provider_representative_title') || getValue('providerRepresentativeTitle', 'provider_representative_title'),
     practice_signature_date: validateDate(getValue('practiceSignatureDate', 'practice_signature_date')),
     status: getValue('status', 'status', 'draft')
   };
@@ -372,7 +372,11 @@ export function convertDatabaseToFormData(dbData: PartialPaymentAgreementFormDat
     patientFullName: dbData.patient_full_name || '',
     providerRepresentativeName: dbData.provider_representative_name || '',
     providerRepresentativeTitle: dbData.provider_representative_title || '',
+    // Also add the short versions for PDF generator compatibility
+    providerRepName: dbData.provider_representative_name || '',
+    providerRepTitle: dbData.provider_representative_title || '',
     practiceSignatureDate: dbData.practice_signature_date || '',
+    formDate: dbData.agreement_date || new Date().toISOString().split('T')[0],
     status: dbData.status || 'draft'
   };
 

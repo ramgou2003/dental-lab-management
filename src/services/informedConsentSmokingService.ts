@@ -196,8 +196,9 @@ export async function autoSaveInformedConsentSmokingForm(
         .eq('id', existingId)
         .single();
 
-      // Preserve submitted status, otherwise set to draft
-      dbData.status = currentRecord?.status === 'submitted' ? 'submitted' : 'draft';
+      // Preserve completed, signed, or submitted status, otherwise set to draft
+      const preservedStatuses = ['completed', 'signed', 'submitted'];
+      dbData.status = preservedStatuses.includes(currentRecord?.status) ? currentRecord.status : 'draft';
 
       // Update existing record
       console.log('📝 Updating existing informed consent smoking form with status:', dbData.status);

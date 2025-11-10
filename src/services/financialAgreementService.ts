@@ -307,13 +307,14 @@ export async function autoSaveFinancialAgreement(
         return { data: null, error: fetchError };
       }
 
-      // If form data explicitly sets status to completed (from submission), use that
-      // Otherwise preserve completed status, or set to draft for auto-save
-      if (formData.status === 'completed') {
-        dbData.status = 'completed';
-        console.log('📝 Form submission - setting status to completed');
+      // If form data explicitly sets status (from submission), use that
+      // Otherwise preserve completed, signed, or submitted status, or set to draft for auto-save
+      if (formData.status) {
+        dbData.status = formData.status;
+        console.log('📝 Form submission - setting status to:', formData.status);
       } else {
-        dbData.status = currentRecord?.status === 'completed' ? 'completed' : 'draft';
+        const preservedStatuses = ['completed', 'signed', 'submitted'];
+        dbData.status = preservedStatuses.includes(currentRecord?.status) ? currentRecord.status : 'draft';
         console.log('📝 Auto-save - preserving status or setting to draft:', dbData.status);
       }
 

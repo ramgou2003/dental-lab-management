@@ -190,15 +190,29 @@ export async function autoSaveMedicalRecordsReleaseForm(
       signature_time: formData.signatureTime || null,
       has_agreed: formData.hasAgreed || false,
       patient_signature: formData.patientSignature || '',
-      status: formData.status === 'completed' ? 'completed' : 'draft' // Use completed if explicitly set, otherwise draft for auto-save
+      status: formData.status || 'draft' // Use provided status or default to draft
     };
 
     console.log('🔄 Auto-saving medical records release form with payload:', saveData);
     console.log('🆔 Existing form ID:', existingFormId);
 
     if (existingFormId) {
+      // Only preserve status if not explicitly set (i.e., during auto-save)
+      if (!formData.status) {
+        // Get current record to check status
+        const { data: currentRecord } = await supabase
+          .from('medical_records_release_forms')
+          .select('status')
+          .eq('id', existingFormId)
+          .single();
+
+        // Preserve completed, signed, or submitted status, otherwise set to draft
+        const preservedStatuses = ['completed', 'signed', 'submitted'];
+        saveData.status = preservedStatuses.includes(currentRecord?.status) ? currentRecord.status : 'draft';
+      }
+
       // Update existing form
-      console.log('📝 Updating existing form with ID:', existingFormId);
+      console.log('📝 Updating existing form with ID:', existingFormId, 'Status:', saveData.status);
       return await updateMedicalRecordsReleaseForm(existingFormId, saveData);
     } else {
       // Before creating a new form, check if there's already a draft form for this patient
