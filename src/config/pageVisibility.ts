@@ -38,10 +38,10 @@ export const PAGE_VISIBILITY: PageVisibilityConfig = {
   leadIn: false,             // Lead-in - Lead management system
   appointments: false,       // Appointments - Appointment scheduling
   consultation: true,       // Consultation - Patient consultations
-  lab: true,                // Lab - Laboratory management
-  reportCards: true,        // Report Cards - Clinical reports
-  manufacturing: true,      // Manufacturing - Production tracking
-  applianceDelivery: true,  // Appliance Delivery - Delivery tracking
+  lab: false,                // Lab - Laboratory management
+  reportCards: false,        // Report Cards - Clinical reports
+  manufacturing: false,      // Manufacturing - Production tracking
+  applianceDelivery: false,  // Appliance Delivery - Delivery tracking
   settings: false,           // Settings - Application settings
 };
 
