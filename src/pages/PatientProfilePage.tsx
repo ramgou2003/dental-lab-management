@@ -105,10 +105,12 @@ import { partialPaymentAgreementService, PartialPaymentAgreementFormData, format
 import { generateTreatmentPlanPDF } from "@/utils/treatmentPlanPdfGenerator";
 import { generateThankYouPreSurgeryPdf } from "@/utils/thankYouPreSurgeryPdfGenerator";
 import { generateThreeYearCarePackagePdf } from "@/utils/threeYearCarePackagePdfGenerator";
+import { generateDataCollectionPdf } from "@/utils/dataCollectionPdfGenerator";
 import { generatePartialPaymentAgreementPdf } from "@/utils/partialPaymentAgreementPdfGenerator";
 import { generateFinalDesignApprovalPdf } from "@/utils/finalDesignApprovalPdfGenerator";
 import { generateNewPatientPacketPdf } from "@/utils/newPatientPacketPdfGenerator";
 import { generateConsentFullArchPdf } from "@/utils/consentFullArchPdfGenerator";
+import { generateSurgicalRecallPdf } from "@/utils/surgicalRecallPdfGenerator";
 
 
 export function PatientProfilePage() {
@@ -3366,6 +3368,170 @@ export function PatientProfilePage() {
     setIVSedationSheetToDelete(sheet);
     setShowIVSedationDeleteConfirmation(true);
     setIVSedationActiveDropdown(null); // Close the dropdown
+  };
+
+  const handleDownloadIVSedationPDF = async (sheet: any) => {
+    try {
+      const { generateIVSedationPdf } = await import('@/utils/ivSedationPdfGenerator');
+
+      await generateIVSedationPdf({
+        patient_name: sheet.patient_name,
+        sedation_date: sheet.sedation_date,
+        // Step 1
+        upper_treatment: sheet.upper_treatment,
+        lower_treatment: sheet.lower_treatment,
+        upper_surgery_type: sheet.upper_surgery_type,
+        lower_surgery_type: sheet.lower_surgery_type,
+        height_feet: sheet.height_feet,
+        height_inches: sheet.height_inches,
+        weight: sheet.weight,
+        // Step 2
+        npo_status: sheet.npo_status,
+        morning_medications: sheet.morning_medications,
+        allergies: sheet.allergies,
+        allergies_other: sheet.allergies_other,
+        pregnancy_risk: sheet.pregnancy_risk,
+        last_menstrual_cycle: sheet.last_menstrual_cycle,
+        anesthesia_history: sheet.anesthesia_history,
+        anesthesia_history_other: sheet.anesthesia_history_other,
+        respiratory_problems: sheet.respiratory_problems,
+        respiratory_problems_other: sheet.respiratory_problems_other,
+        cardiovascular_problems: sheet.cardiovascular_problems,
+        cardiovascular_problems_other: sheet.cardiovascular_problems_other,
+        gastrointestinal_problems: sheet.gastrointestinal_problems,
+        gastrointestinal_problems_other: sheet.gastrointestinal_problems_other,
+        neurologic_problems: sheet.neurologic_problems,
+        neurologic_problems_other: sheet.neurologic_problems_other,
+        endocrine_renal_problems: sheet.endocrine_renal_problems,
+        endocrine_renal_problems_other: sheet.endocrine_renal_problems_other,
+        last_a1c_level: sheet.last_a1c_level,
+        miscellaneous: sheet.miscellaneous,
+        miscellaneous_other: sheet.miscellaneous_other,
+        social_history: sheet.social_history,
+        social_history_other: sheet.social_history_other,
+        well_developed_nourished: sheet.well_developed_nourished,
+        patient_anxious: sheet.patient_anxious,
+        asa_classification: sheet.asa_classification,
+        airway_evaluation: sheet.airway_evaluation,
+        airway_evaluation_other: sheet.airway_evaluation_other,
+        mallampati_score: sheet.mallampati_score,
+        heart_lung_evaluation: sheet.heart_lung_evaluation,
+        heart_lung_evaluation_other: sheet.heart_lung_evaluation_other,
+        // Step 3
+        instruments_checklist: sheet.instruments_checklist,
+        sedation_type: sheet.sedation_type,
+        medications_planned: sheet.medications_planned,
+        medications_other: sheet.medications_other,
+        administration_route: sheet.administration_route,
+        emergency_protocols: sheet.emergency_protocols,
+        level_of_sedation: sheet.level_of_sedation,
+        // Step 4
+        time_in_room: sheet.time_in_room,
+        sedation_start_time: sheet.sedation_start_time,
+        flow_entries: sheet.flow_entries || sheet.monitoring_log || [],
+        sedation_end_time: sheet.sedation_end_time,
+        out_of_room_time: sheet.out_of_room_time,
+        // Step 5
+        alert_oriented: sheet.alert_oriented,
+        protective_reflexes: sheet.protective_reflexes,
+        breathing_spontaneously: sheet.breathing_spontaneously,
+        post_op_nausea: sheet.post_op_nausea,
+        caregiver_present: sheet.caregiver_present,
+        baseline_mental_status: sheet.baseline_mental_status,
+        responsive_verbal_commands: sheet.responsive_verbal_commands,
+        saturating_room_air: sheet.saturating_room_air,
+        vital_signs_baseline: sheet.vital_signs_baseline,
+        pain_during_recovery: sheet.pain_during_recovery,
+        post_op_instructions_given_to: sheet.post_op_instructions_given_to,
+        follow_up_instructions_given_to: sheet.follow_up_instructions_given_to,
+        discharged_to: sheet.discharged_to,
+        pain_level_discharge: sheet.pain_level_discharge,
+        other_remarks: sheet.other_remarks,
+      });
+
+      toast({
+        title: "Success",
+        description: "IV Sedation Flow Chart PDF downloaded successfully",
+      });
+    } catch (error) {
+      console.error('Error generating IV Sedation PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadSurgicalRecallPdf = async (sheet: any) => {
+    try {
+      // Fetch implants for this sheet
+      const { data: implants, error } = await supabase
+        .from('surgical_recall_implants')
+        .select('*')
+        .eq('surgical_recall_sheet_id', sheet.id);
+
+      if (error) {
+        console.error('Error fetching implants:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch implant data for PDF generation.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Separate implants by arch type
+      const upperImplants = (implants || [])
+        .filter((imp: any) => imp.arch_type === 'upper')
+        .map((imp: any) => ({
+          position: imp.position,
+          implantBrand: imp.implant_brand,
+          implantSubtype: imp.implant_subtype,
+          implantSize: imp.implant_size,
+          implantPictureUrl: imp.implant_picture_url,
+          muaBrand: imp.mua_brand,
+          muaSubtype: imp.mua_subtype,
+          muaSize: imp.mua_size,
+          muaPictureUrl: imp.mua_picture_url,
+        }));
+
+      const lowerImplants = (implants || [])
+        .filter((imp: any) => imp.arch_type === 'lower')
+        .map((imp: any) => ({
+          position: imp.position,
+          implantBrand: imp.implant_brand,
+          implantSubtype: imp.implant_subtype,
+          implantSize: imp.implant_size,
+          implantPictureUrl: imp.implant_picture_url,
+          muaBrand: imp.mua_brand,
+          muaSubtype: imp.mua_subtype,
+          muaSize: imp.mua_size,
+          muaPictureUrl: imp.mua_picture_url,
+        }));
+
+      await generateSurgicalRecallPdf({
+        patientName: sheet.patient_name,
+        surgeryDate: sheet.surgery_date,
+        archType: sheet.arch_type,
+        upperSurgeryType: sheet.upper_surgery_type,
+        lowerSurgeryType: sheet.lower_surgery_type,
+        upperImplants,
+        lowerImplants,
+      });
+
+      toast({
+        title: "Success",
+        description: "Surgical Recall Sheet PDF downloaded successfully",
+      });
+    } catch (error) {
+      console.error('Error generating Surgical Recall PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleConfirmIVSedationDelete = async () => {
@@ -6962,8 +7128,8 @@ export function PatientProfilePage() {
                                 )}
                               </div>
 
-                              {/* Timestamp and Menu */}
-                              <div className="flex items-end justify-between">
+                              {/* Timestamp and Action Buttons */}
+                              <div className="flex items-center justify-between">
                                 <p className="text-xs text-gray-500">
                                   Created {new Date(sheet.created_at).toLocaleDateString('en-US', {
                                     month: 'short',
@@ -6974,44 +7140,97 @@ export function PatientProfilePage() {
                                   })}
                                 </p>
 
-                                {/* Three dots menu */}
-                                <div className="relative">
+                                <div className="flex items-center gap-1">
+                                  {/* Download PDF button */}
                                   <button
-                                    onClick={(e) => {
+                                    onClick={async (e) => {
                                       e.stopPropagation();
-                                      setActiveDropdown(activeDropdown === sheet.id ? null : sheet.id);
+                                      try {
+                                        await generateDataCollectionPdf({
+                                          patientName: sheet.patient_name,
+                                          collectionDate: sheet.collection_date,
+                                          reasonsForCollection: sheet.reasons_for_collection || [],
+                                          customReason: sheet.custom_reason,
+                                          currentUpperAppliance: sheet.current_upper_appliance,
+                                          currentLowerAppliance: sheet.current_lower_appliance,
+                                          preSurgicalPictures: sheet.pre_surgical_pictures,
+                                          surgicalPictures: sheet.surgical_pictures,
+                                          followUpPictures: sheet.follow_up_pictures,
+                                          fracturedAppliancePictures: sheet.fractured_appliance_pictures,
+                                          cbctTaken: sheet.cbct_taken,
+                                          preSurgicalJawRecordsUpper: sheet.pre_surgical_jaw_records_upper,
+                                          preSurgicalJawRecordsLower: sheet.pre_surgical_jaw_records_lower,
+                                          facialScan: sheet.facial_scan,
+                                          jawRecordsUpper: sheet.jaw_records_upper,
+                                          jawRecordsLower: sheet.jaw_records_lower,
+                                          tissueScanUpper: sheet.tissue_scan_upper,
+                                          tissueScanLower: sheet.tissue_scan_lower,
+                                          photogrammetryUpper: sheet.photogrammetry_upper,
+                                          photogrammetryLower: sheet.photogrammetry_lower,
+                                          dcRefScanUpper: sheet.dc_ref_scan_upper,
+                                          dcRefScanLower: sheet.dc_ref_scan_lower,
+                                          appliance360Upper: sheet.appliance_360_upper,
+                                          appliance360Lower: sheet.appliance_360_lower,
+                                          additionalNotes: sheet.additional_notes
+                                        });
+                                        toast({
+                                          title: "Success",
+                                          description: "PDF downloaded successfully!",
+                                        });
+                                      } catch (error) {
+                                        console.error('Error generating PDF:', error);
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to generate PDF",
+                                          variant: "destructive",
+                                        });
+                                      }
                                     }}
                                     className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                    title="Download PDF"
                                   >
-                                    <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                    <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
                                   </button>
 
-                                  {/* Dropdown menu */}
-                                  {activeDropdown === sheet.id && (
-                                    <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setActiveDropdown(null);
-                                          handleEditDataCollectionSheet(sheet);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
-                                      >
-                                        <Edit2 className="h-3.5 w-3.5" />
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteDataCollectionSheet(sheet);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                        Delete
-                                      </button>
-                                    </div>
-                                  )}
+                                  {/* Three dots menu */}
+                                  <div className="relative">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveDropdown(activeDropdown === sheet.id ? null : sheet.id);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                      <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                    </button>
+
+                                    {/* Dropdown menu */}
+                                    {activeDropdown === sheet.id && (
+                                      <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveDropdown(null);
+                                            handleEditDataCollectionSheet(sheet);
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
+                                        >
+                                          <Edit2 className="h-3.5 w-3.5" />
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteDataCollectionSheet(sheet);
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                          Delete
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -7124,44 +7343,71 @@ export function PatientProfilePage() {
                                   })}
                                 </span>
 
-                                {/* Three dots menu */}
-                                <div className="relative">
+                                <div className="flex items-center gap-1">
+                                  {/* Download PDF button */}
                                   <button
-                                    onClick={(e) => {
+                                    onClick={async (e) => {
                                       e.stopPropagation();
-                                      setIVSedationActiveDropdown(ivSedationActiveDropdown === sheet.id ? null : sheet.id);
+                                      try {
+                                        await handleDownloadIVSedationPDF(sheet);
+                                        toast({
+                                          title: "Success",
+                                          description: "PDF downloaded successfully!",
+                                        });
+                                      } catch (error) {
+                                        console.error('Error generating PDF:', error);
+                                        toast({
+                                          title: "Error",
+                                          description: "Failed to generate PDF",
+                                          variant: "destructive",
+                                        });
+                                      }
                                     }}
                                     className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                    title="Download PDF"
                                   >
-                                    <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                    <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
                                   </button>
 
-                                  {/* Dropdown menu */}
-                                  {ivSedationActiveDropdown === sheet.id && (
-                                    <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setIVSedationActiveDropdown(null);
-                                          handleEditIVSedationSheet(sheet);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
-                                      >
-                                        <Edit2 className="h-3.5 w-3.5" />
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteIVSedationSheet(sheet);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                        Delete
-                                      </button>
-                                    </div>
-                                  )}
+                                  {/* Three dots menu */}
+                                  <div className="relative">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIVSedationActiveDropdown(ivSedationActiveDropdown === sheet.id ? null : sheet.id);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                      <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                    </button>
+
+                                    {/* Dropdown menu */}
+                                    {ivSedationActiveDropdown === sheet.id && (
+                                      <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIVSedationActiveDropdown(null);
+                                            handleEditIVSedationSheet(sheet);
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
+                                        >
+                                          <Edit2 className="h-3.5 w-3.5" />
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteIVSedationSheet(sheet);
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                          Delete
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -7262,45 +7508,59 @@ export function PatientProfilePage() {
                                   })}
                                 </span>
 
-                                {/* Three dots menu */}
-                                <div className="relative">
+                                <div className="flex items-center gap-2">
+                                  {/* Download PDF button */}
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setSurgicalRecallActiveDropdown(surgicalRecallActiveDropdown === sheet.id ? null : sheet.id);
+                                      handleDownloadSurgicalRecallPdf(sheet);
                                     }}
-                                    className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                    className="p-1 rounded-full hover:bg-blue-50 transition-colors duration-200 group"
+                                    title="Download PDF"
                                   >
-                                    <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                    <Download className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
                                   </button>
 
-                                  {/* Dropdown menu */}
-                                  {surgicalRecallActiveDropdown === sheet.id && (
-                                    <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSurgicalRecallActiveDropdown(null);
-                                          handleEditSurgicalRecallSheet(sheet);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
-                                      >
-                                        <Edit2 className="h-3.5 w-3.5" />
-                                        Edit
-                                      </button>
+                                  {/* Three dots menu */}
+                                  <div className="relative">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSurgicalRecallActiveDropdown(surgicalRecallActiveDropdown === sheet.id ? null : sheet.id);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                      <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                    </button>
 
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteSurgicalRecallSheet(sheet);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                        Delete
-                                      </button>
-                                    </div>
-                                  )}
+                                    {/* Dropdown menu */}
+                                    {surgicalRecallActiveDropdown === sheet.id && (
+                                      <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSurgicalRecallActiveDropdown(null);
+                                            handleEditSurgicalRecallSheet(sheet);
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
+                                        >
+                                          <Edit2 className="h-3.5 w-3.5" />
+                                          Edit
+                                        </button>
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteSurgicalRecallSheet(sheet);
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                          Delete
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </div>
