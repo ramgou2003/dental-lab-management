@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/AuthGuard";
-import { Eye } from "lucide-react";
+import { Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 interface Patient {
   id: string;
@@ -22,6 +22,7 @@ interface Patient {
   zip_code: string | null;
   chart_number: string | null;
   status: string | null;
+  treatment_status: string | null;
   treatment_type: string | null;
   upper_arch: boolean | null;
   lower_arch: boolean | null;
@@ -30,6 +31,7 @@ interface Patient {
   upper_surgery_date: string | null;
   lower_surgery_date: string | null;
   profile_picture?: string | null;
+  patient_source: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -39,16 +41,24 @@ interface PatientsTableProps {
   activeTab: string;
   refreshTrigger?: number;
   onViewProfile?: (patientId: string) => void;
+  onPatientCountChange?: (count: number) => void;
 }
 
-export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewProfile }: PatientsTableProps) {
+export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewProfile, onPatientCountChange }: PatientsTableProps) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const { toast } = useToast();
 
   useEffect(() => {
     fetchPatients();
   }, [refreshTrigger]);
+
+  useEffect(() => {
+    if (onPatientCountChange) {
+      onPatientCountChange(patients.length);
+    }
+  }, [patients, onPatientCountChange]);
 
   const fetchPatients = async () => {
     try {
@@ -81,6 +91,14 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
     }
   };
 
+  const handleSort = () => {
+    if (sortOrder === 'asc') {
+      setSortOrder('desc');
+    } else {
+      setSortOrder('asc');
+    }
+  };
+
   const filteredPatients = patients.filter(patient => {
     const matchesSearch = patient.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (patient.phone && patient.phone.includes(searchTerm)) ||
@@ -88,30 +106,51 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
 
     if (activeTab === "all") return matchesSearch;
 
-    // Map tab IDs to status values
+    // Map tab IDs to status values (now using ACTIVE/INACTIVE)
     const statusMap: { [key: string]: string } = {
-      "new": "New patient",
-      "not-started": "Treatment not started",
-      "in-progress": "Treatment in progress",
-      "completed": "Treatment completed",
-      "deceased": "Patient deceased"
+      "active": "ACTIVE",
+      "inactive": "INACTIVE"
     };
 
     return matchesSearch && patient.status === statusMap[activeTab];
   });
 
+  // Apply sorting (always sorted)
+  const sortedPatients = [...filteredPatients].sort((a, b) => {
+    const nameA = a.full_name?.toLowerCase() || '';
+    const nameB = b.full_name?.toLowerCase() || '';
+    if (sortOrder === 'asc') {
+      return nameA.localeCompare(nameB);
+    } else {
+      return nameB.localeCompare(nameA);
+    }
+  });
+
   const getStatusButtonColor = (status: string | null) => {
     switch (status) {
-      case "New patient":
-        return "bg-purple-200 text-purple-900 hover:bg-purple-300";
-      case "Treatment not started":
-        return "bg-yellow-200 text-yellow-900 hover:bg-yellow-300";
-      case "Treatment in progress":
-        return "bg-blue-200 text-blue-900 hover:bg-blue-300";
-      case "Treatment completed":
+      case "ACTIVE":
         return "bg-green-200 text-green-900 hover:bg-green-300";
-      case "Patient deceased":
+      case "INACTIVE":
+        return "bg-red-200 text-red-900 hover:bg-red-300";
+      case null:
+        return "bg-gray-100 text-gray-600 hover:bg-gray-200";
+      default:
+        return "bg-slate-200 text-slate-900 hover:bg-slate-300";
+    }
+  };
+
+  const getTreatmentStatusColor = (treatmentStatus: string | null) => {
+    switch (treatmentStatus) {
+      case "Treatment Not Started":
         return "bg-gray-200 text-gray-900 hover:bg-gray-300";
+      case "Treatment In Progress":
+        return "bg-blue-200 text-blue-900 hover:bg-blue-300";
+      case "Treatment Completed":
+        return "bg-green-200 text-green-900 hover:bg-green-300";
+      case "Patient Deceased":
+        return "bg-black text-white hover:bg-gray-800";
+      case "Dismissed DNC":
+        return "bg-red-200 text-red-900 hover:bg-red-300";
       case null:
         return "bg-gray-100 text-gray-600 hover:bg-gray-200";
       default:
@@ -141,27 +180,38 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
     <div className="flex flex-col h-full">
       {/* Table Header - Fixed with proper responsive columns */}
       <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0 table-header">
-        <div className="grid text-sm font-medium text-slate-900 h-6 gap-2 lg:gap-4"
+        <div className="grid text-sm font-bold text-blue-600 h-6 gap-2 lg:gap-4"
              style={{
-               gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(120px, 1.3fr) minmax(120px, 1.3fr)'
+               gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(150px, 1.5fr) minmax(120px, 1.3fr)'
              }}>
-          <div className="text-left flex items-center px-2 border-r border-slate-300">
-            <span className="truncate">Patient Name</span>
+          <div className="text-center flex items-center justify-center px-2 border-r border-slate-300 relative">
+            <span className="truncate uppercase">PATIENT NAME</span>
+            <button
+              onClick={handleSort}
+              className="absolute right-2 flex-shrink-0 hover:bg-blue-50 rounded p-1.5 transition-colors border border-transparent hover:border-blue-200"
+              title={sortOrder === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+            >
+              {sortOrder === 'asc' && <ArrowUp className="h-5 w-5 text-blue-600" />}
+              {sortOrder === 'desc' && <ArrowDown className="h-5 w-5 text-blue-600" />}
+            </button>
           </div>
           <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
-            <span className="truncate">Chart #</span>
+            <span className="truncate uppercase">PHONE</span>
           </div>
           <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
-            <span className="truncate">Phone</span>
+            <span className="truncate uppercase">GENDER</span>
           </div>
           <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
-            <span className="truncate">Gender</span>
+            <span className="truncate uppercase">SOURCE</span>
           </div>
           <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
-            <span className="truncate">Status</span>
+            <span className="truncate uppercase">STATUS</span>
+          </div>
+          <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
+            <span className="truncate uppercase">TREATMENT STATUS</span>
           </div>
           <div className="text-center flex items-center justify-center px-2">
-            <span className="truncate">Actions</span>
+            <span className="truncate uppercase">ACTIONS</span>
           </div>
         </div>
       </div>
@@ -169,23 +219,34 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
       {/* Table Body - Scrollable with matching column structure */}
       <div className="flex-1 overflow-y-auto scrollbar-enhanced table-body">
         <div className="bg-white">
-          {filteredPatients.length === 0 ? (
+          {sortedPatients.length === 0 ? (
             <div className="px-4 py-8 text-center text-slate-500">
               {patients.length === 0 ? "No patients found. Add your first patient!" : "No patients match your search criteria."}
             </div>
           ) : (
-            filteredPatients.map((patient, index) => (
+            sortedPatients.map((patient, index) => (
               <div key={patient.id}
                    className={`grid gap-2 lg:gap-4 px-4 py-3 transition-colors items-center min-h-[64px] ${
-                     index !== filteredPatients.length - 1 ? 'border-b border-slate-100' : ''
+                     index !== sortedPatients.length - 1 ? 'border-b border-slate-100' : ''
                    } hover:bg-slate-50`}
                    style={{
-                     gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(120px, 1.3fr) minmax(120px, 1.3fr)'
+                     gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(150px, 1.5fr) minmax(120px, 1.3fr)'
                    }}>
 
                 {/* Patient Name */}
                 <div className="flex items-center px-2 min-w-0 border-r border-gray-200">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className="flex items-center gap-3 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => onViewProfile?.(patient.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onViewProfile?.(patient.id);
+                      }
+                    }}
+                  >
                     <Avatar className="h-10 w-10 flex-shrink-0">
                       <AvatarImage src={patient.profile_picture || undefined} alt={patient.full_name} />
                       <AvatarFallback className="bg-indigo-600 text-white font-semibold text-xs">
@@ -198,11 +259,6 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                   </div>
                 </div>
 
-                {/* Chart Number */}
-                <div className="text-slate-600 text-sm text-center px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
-                  <span className="truncate font-mono">{patient.chart_number || '-'}</span>
-                </div>
-
                 {/* Phone */}
                 <div className="text-slate-600 text-sm text-center px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
                   <span className="truncate">{patient.phone || '-'}</span>
@@ -213,6 +269,13 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                   <span className="truncate capitalize">{patient.gender || '-'}</span>
                 </div>
 
+                {/* Patient Source */}
+                <div className="text-slate-600 text-sm text-center px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
+                  <span className={`truncate font-medium ${patient.patient_source === 'Consult' ? 'text-blue-600' : 'text-green-600'}`}>
+                    {patient.patient_source || '-'}
+                  </span>
+                </div>
+
                 {/* Status */}
                 <div className="px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
                   <Button
@@ -220,10 +283,19 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                     variant="secondary"
                   >
                     <span className="truncate">
-                      {patient.status ?
-                        patient.status === 'New patient' ? 'New' :
-                        patient.status.replace('Treatment ', '').replace('Patient ', '')
-                        : 'No Status'}
+                      {patient.status || 'No Status'}
+                    </span>
+                  </Button>
+                </div>
+
+                {/* Treatment Status */}
+                <div className="px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
+                  <Button
+                    className={`${getTreatmentStatusColor(patient.treatment_status)} rounded-full px-3 h-7 text-xs font-medium min-w-0 max-w-full`}
+                    variant="secondary"
+                  >
+                    <span className="truncate">
+                      {patient.treatment_status || '-'}
                     </span>
                   </Button>
                 </div>

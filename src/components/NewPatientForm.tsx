@@ -28,7 +28,8 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
     zipCode: '',
     chartNumber: '',
     gender: 'male',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    treatmentStatus: ''
   });
 
   const [errors, setErrors] = useState({
@@ -70,7 +71,9 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
         state: formData.state || null,
         zip_code: formData.zipCode || null,
         chart_number: formData.chartNumber || null,
-        status: formData.status
+        status: formData.status,
+        treatment_status: formData.treatmentStatus || null,
+        patient_source: 'Direct'
       };
 
       const { data, error } = await supabase
@@ -206,6 +209,27 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
             zipCode={formData.zipCode}
             onAddressChange={handleInputChange}
           />
+
+          <div className="col-span-2">
+            <Label htmlFor="treatmentStatus">
+              Treatment Status (Optional)
+            </Label>
+            <Select
+              value={formData.treatmentStatus}
+              onValueChange={(value) => handleInputChange('treatmentStatus', value)}
+            >
+              <SelectTrigger id="treatmentStatus">
+                <SelectValue placeholder="Select treatment status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Treatment Not Started">Treatment Not Started</SelectItem>
+                <SelectItem value="Treatment In Progress">Treatment In Progress</SelectItem>
+                <SelectItem value="Treatment Completed">Treatment Completed</SelectItem>
+                <SelectItem value="Patient Deceased">Patient Deceased</SelectItem>
+                <SelectItem value="Dismissed DNC">Dismissed DNC</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="flex justify-end pt-4">
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmitting}>

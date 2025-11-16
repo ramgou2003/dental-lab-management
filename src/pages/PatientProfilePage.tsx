@@ -323,6 +323,14 @@ export function PatientProfilePage() {
   const [showDeleteTreatmentPlanFormConfirm, setShowDeleteTreatmentPlanFormConfirm] = useState(false);
   const [treatmentPlanFormToDelete, setTreatmentPlanFormToDelete] = useState<TreatmentPlanFormDB | null>(null);
 
+  // State for Patient Status Edit Dialog
+  const [showStatusEditDialog, setShowStatusEditDialog] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+
+  // State for Treatment Status Edit Dialog
+  const [showTreatmentStatusEditDialog, setShowTreatmentStatusEditDialog] = useState(false);
+  const [selectedTreatmentStatus, setSelectedTreatmentStatus] = useState<string>('');
+
   // State for Patient Packets
   const [patientPackets, setPatientPackets] = useState<any[]>([]);
   const [loadingPatientPackets, setLoadingPatientPackets] = useState(false);
@@ -3937,6 +3945,89 @@ export function PatientProfilePage() {
     return age;
   };
 
+  // Handle patient status update
+  const handleStatusUpdate = async () => {
+    if (!patientId || !selectedStatus) {
+      console.log('Missing patientId or selectedStatus:', { patientId, selectedStatus });
+      return;
+    }
+
+    console.log('Updating patient status:', { patientId, selectedStatus });
+
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .update({ status: selectedStatus })
+        .eq('id', patientId)
+        .select();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Update successful, data:', data);
+
+      // Update local state
+      setPatient(prev => prev ? { ...prev, status: selectedStatus } : null);
+
+      toast({
+        title: "Success",
+        description: `Patient status updated to ${selectedStatus}`,
+      });
+
+      setShowStatusEditDialog(false);
+    } catch (error) {
+      console.error('Error updating patient status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update patient status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTreatmentStatusUpdate = async () => {
+    if (!patientId || !selectedTreatmentStatus) {
+      console.log('Missing patientId or selectedTreatmentStatus:', { patientId, selectedTreatmentStatus });
+      return;
+    }
+
+    console.log('Updating treatment status:', { patientId, selectedTreatmentStatus });
+
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .update({ treatment_status: selectedTreatmentStatus })
+        .eq('id', patientId)
+        .select();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Update successful, data:', data);
+
+      // Update local state
+      setPatient(prev => prev ? { ...prev, treatment_status: selectedTreatmentStatus } : null);
+
+      toast({
+        title: "Success",
+        description: `Treatment status updated to ${selectedTreatmentStatus}`,
+      });
+
+      setShowTreatmentStatusEditDialog(false);
+    } catch (error) {
+      console.error('Error updating treatment status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update treatment status",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col h-full bg-gray-50">
@@ -4006,9 +4097,58 @@ export function PatientProfilePage() {
                         <Phone className="h-3 w-3 text-gray-500" />
                         <span className="text-xs text-gray-700">{patient.phone || "No phone"}</span>
                       </div>
-                      <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 font-medium text-xs">
-                        {patient.status}
-                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <Badge
+                          variant="outline"
+                          className={`font-medium text-xs ${
+                            patient.status === 'ACTIVE'
+                              ? 'bg-green-50 border-green-200 text-green-700'
+                              : patient.status === 'INACTIVE'
+                              ? 'bg-red-50 border-red-200 text-red-700'
+                              : 'bg-blue-50 border-blue-200 text-blue-700'
+                          }`}
+                        >
+                          {patient.status}
+                        </Badge>
+                        <button
+                          onClick={() => {
+                            setSelectedStatus(patient.status || '');
+                            setShowStatusEditDialog(true);
+                          }}
+                          className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
+                        >
+                          <Edit className="h-3 w-3 text-blue-600" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge
+                          variant="outline"
+                          className={`font-medium text-xs ${
+                            patient.treatment_status === 'Treatment Not Started'
+                              ? 'bg-gray-50 border-gray-200 text-gray-700'
+                              : patient.treatment_status === 'Treatment In Progress'
+                              ? 'bg-blue-50 border-blue-200 text-blue-700'
+                              : patient.treatment_status === 'Treatment Completed'
+                              ? 'bg-green-50 border-green-200 text-green-700'
+                              : patient.treatment_status === 'Patient Deceased'
+                              ? 'bg-black border-gray-800 text-white'
+                              : patient.treatment_status === 'Dismissed DNC'
+                              ? 'bg-red-50 border-red-200 text-red-700'
+                              : 'bg-gray-50 border-gray-200 text-gray-700'
+                          }`}
+                        >
+                          {patient.treatment_status || 'No Treatment Status'}
+                        </Badge>
+                        <button
+                          onClick={() => {
+                            setSelectedTreatmentStatus(patient.treatment_status || '');
+                            setShowTreatmentStatusEditDialog(true);
+                          }}
+                          className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
+                        >
+                          <Edit className="h-3 w-3 text-blue-600" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -15712,6 +15852,151 @@ export function PatientProfilePage() {
         isOpen={showConsultationViewer}
         onClose={handleCloseConsultationViewer}
       />
+
+      {/* Patient Status Edit Dialog */}
+      <Dialog open={showStatusEditDialog} onOpenChange={setShowStatusEditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-blue-600">Update Patient Status</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Current Status Display */}
+            <div className={`rounded-lg p-3 border ${
+              patient?.status === 'ACTIVE'
+                ? 'bg-green-50 border-green-200'
+                : patient?.status === 'INACTIVE'
+                ? 'bg-red-50 border-red-200'
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">Current Status:</span>
+                <Badge
+                  variant="outline"
+                  className={`bg-white font-semibold ${
+                    patient?.status === 'ACTIVE'
+                      ? 'border-green-300 text-green-700'
+                      : patient?.status === 'INACTIVE'
+                      ? 'border-red-300 text-red-700'
+                      : 'border-blue-300 text-blue-700'
+                  }`}
+                >
+                  {patient?.status || 'Not Set'}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Status Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="status" className="text-sm font-medium">
+                Select New Status
+              </Label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger id="status" className="w-full">
+                  <SelectValue placeholder="Select a status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                  <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowStatusEditDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleStatusUpdate}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Update Status
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Treatment Status Edit Dialog */}
+      <Dialog open={showTreatmentStatusEditDialog} onOpenChange={setShowTreatmentStatusEditDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-blue-600">Update Treatment Status</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Current Treatment Status Display */}
+            <div className={`rounded-lg p-3 border ${
+              patient?.treatment_status === 'Treatment Not Started'
+                ? 'bg-gray-50 border-gray-200'
+                : patient?.treatment_status === 'Treatment In Progress'
+                ? 'bg-blue-50 border-blue-200'
+                : patient?.treatment_status === 'Treatment Completed'
+                ? 'bg-green-50 border-green-200'
+                : patient?.treatment_status === 'Patient Deceased'
+                ? 'bg-gray-900 border-gray-800'
+                : patient?.treatment_status === 'Dismissed DNC'
+                ? 'bg-red-50 border-red-200'
+                : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">Current Treatment Status:</span>
+                <Badge
+                  variant="outline"
+                  className={`bg-white font-semibold ${
+                    patient?.treatment_status === 'Treatment Not Started'
+                      ? 'border-gray-300 text-gray-700'
+                      : patient?.treatment_status === 'Treatment In Progress'
+                      ? 'border-blue-300 text-blue-700'
+                      : patient?.treatment_status === 'Treatment Completed'
+                      ? 'border-green-300 text-green-700'
+                      : patient?.treatment_status === 'Patient Deceased'
+                      ? 'border-gray-800 text-gray-900'
+                      : patient?.treatment_status === 'Dismissed DNC'
+                      ? 'border-red-300 text-red-700'
+                      : 'border-gray-300 text-gray-700'
+                  }`}
+                >
+                  {patient?.treatment_status || 'Not Set'}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Treatment Status Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="treatment-status" className="text-sm font-medium">
+                Select New Treatment Status
+              </Label>
+              <Select value={selectedTreatmentStatus} onValueChange={setSelectedTreatmentStatus}>
+                <SelectTrigger id="treatment-status" className="w-full">
+                  <SelectValue placeholder="Select a treatment status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Treatment Not Started">Treatment Not Started</SelectItem>
+                  <SelectItem value="Treatment In Progress">Treatment In Progress</SelectItem>
+                  <SelectItem value="Treatment Completed">Treatment Completed</SelectItem>
+                  <SelectItem value="Patient Deceased">Patient Deceased</SelectItem>
+                  <SelectItem value="Dismissed DNC">Dismissed DNC</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowTreatmentStatusEditDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleTreatmentStatusUpdate}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Update Treatment Status
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
