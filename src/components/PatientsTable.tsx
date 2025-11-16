@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/AuthGuard";
 import { Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { PatientFilters } from "@/pages/PatientsPage";
 
 interface Patient {
   id: string;
@@ -42,9 +43,10 @@ interface PatientsTableProps {
   refreshTrigger?: number;
   onViewProfile?: (patientId: string) => void;
   onPatientCountChange?: (count: number) => void;
+  filters?: PatientFilters;
 }
 
-export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewProfile, onPatientCountChange }: PatientsTableProps) {
+export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewProfile, onPatientCountChange, filters }: PatientsTableProps) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -99,20 +101,70 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
     }
   };
 
+  // Helper function to calculate age from date of birth
+  const calculateAge = (dateOfBirth: string): number => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const filteredPatients = patients.filter(patient => {
+    // Search filter
     const matchesSearch = patient.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (patient.phone && patient.phone.includes(searchTerm)) ||
                          patient.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-    if (activeTab === "all") return matchesSearch;
+    if (!matchesSearch) return false;
 
-    // Map tab IDs to status values (now using ACTIVE/INACTIVE)
-    const statusMap: { [key: string]: string } = {
-      "active": "ACTIVE",
-      "inactive": "INACTIVE"
-    };
+    // Active tab filter
+    if (activeTab !== "all") {
+      const statusMap: { [key: string]: string } = {
+        "active": "ACTIVE",
+        "inactive": "INACTIVE"
+      };
+      if (patient.status !== statusMap[activeTab]) return false;
+    }
 
-    return matchesSearch && patient.status === statusMap[activeTab];
+    // Apply advanced filters if provided
+    if (filters) {
+      // Status filter
+      if (filters.status.length > 0 && !filters.status.includes(patient.status || '')) {
+        return false;
+      }
+
+      // Treatment status filter
+      if (filters.treatmentStatus.length > 0 && !filters.treatmentStatus.includes(patient.treatment_status || '')) {
+        return false;
+      }
+
+      // Gender filter
+      if (filters.gender.length > 0 && !filters.gender.includes(patient.gender || '')) {
+        return false;
+      }
+
+      // Patient source filter
+      if (filters.patientSource.length > 0 && !filters.patientSource.includes(patient.patient_source || '')) {
+        return false;
+      }
+
+      // Age range filter
+      if (filters.ageRange.min !== null || filters.ageRange.max !== null) {
+        const age = calculateAge(patient.date_of_birth);
+        if (filters.ageRange.min !== null && age < filters.ageRange.min) {
+          return false;
+        }
+        if (filters.ageRange.max !== null && age > filters.ageRange.max) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   });
 
   // Apply sorting (always sorted)
@@ -182,7 +234,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
       <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0 table-header">
         <div className="grid text-sm font-bold text-blue-600 h-6 gap-2 lg:gap-4"
              style={{
-               gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(150px, 1.5fr) minmax(120px, 1.3fr)'
+               gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(150px, 1.5fr)'
              }}>
           <div className="text-center flex items-center justify-center px-2 border-r border-slate-300 relative">
             <span className="truncate uppercase">PATIENT NAME</span>
@@ -207,11 +259,8 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
           <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
             <span className="truncate uppercase">STATUS</span>
           </div>
-          <div className="text-center flex items-center justify-center px-2 border-r border-slate-300">
-            <span className="truncate uppercase">TREATMENT STATUS</span>
-          </div>
           <div className="text-center flex items-center justify-center px-2">
-            <span className="truncate uppercase">ACTIONS</span>
+            <span className="truncate uppercase">TREATMENT STATUS</span>
           </div>
         </div>
       </div>
@@ -230,7 +279,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                      index !== sortedPatients.length - 1 ? 'border-b border-slate-100' : ''
                    } hover:bg-slate-50`}
                    style={{
-                     gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(150px, 1.5fr) minmax(120px, 1.3fr)'
+                     gridTemplateColumns: 'minmax(200px, 2.5fr) minmax(120px, 1.3fr) minmax(80px, 0.8fr) minmax(100px, 1fr) minmax(120px, 1.3fr) minmax(150px, 1.5fr)'
                    }}>
 
                 {/* Patient Name */}
@@ -289,7 +338,7 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                 </div>
 
                 {/* Treatment Status */}
-                <div className="px-2 flex items-center justify-center min-w-0 border-r border-gray-200">
+                <div className="px-2 flex items-center justify-center min-w-0">
                   <Button
                     className={`${getTreatmentStatusColor(patient.treatment_status)} rounded-full px-3 h-7 text-xs font-medium min-w-0 max-w-full`}
                     variant="secondary"
@@ -298,22 +347,6 @@ export function PatientsTable({ searchTerm, activeTab, refreshTrigger, onViewPro
                       {patient.treatment_status || '-'}
                     </span>
                   </Button>
-                </div>
-
-                {/* Actions */}
-                <div className="px-2 flex items-center justify-center min-w-0">
-                  <PermissionGuard permission="patients.read">
-                    <Button
-                      onClick={() => onViewProfile?.(patient.id)}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1 h-8 px-3 text-xs min-w-0"
-                    >
-                      <Eye className="h-3 w-3 flex-shrink-0" />
-                      <span className="hidden sm:inline truncate">View Profile</span>
-                      <span className="sm:hidden truncate">View</span>
-                    </Button>
-                  </PermissionGuard>
                 </div>
               </div>
             ))
