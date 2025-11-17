@@ -16,6 +16,7 @@ interface Patient {
   full_name: string;
   date_of_birth: string;
   phone: string | null;
+  email: string | null;
   gender: string | null;
   street: string | null;
   city: string | null;

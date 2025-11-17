@@ -22,6 +22,7 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
     lastName: '',
     dateOfBirth: '',
     phone: '',
+    email: '',
     street: '',
     city: '',
     state: '',
@@ -65,6 +66,7 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
         last_name: formData.lastName,
         date_of_birth: formData.dateOfBirth,
         phone: formData.phone || null,
+        email: formData.email || null,
         gender: formData.gender,
         street: formData.street || null,
         city: formData.city || null,
@@ -201,6 +203,17 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
             value={formData.phone}
             onChange={(value) => handleInputChange('phone', value)}
           />
+
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="patient@example.com"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+            />
+          </div>
 
           <AddressAutocomplete
             street={formData.street}

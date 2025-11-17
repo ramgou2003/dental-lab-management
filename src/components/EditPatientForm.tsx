@@ -17,6 +17,7 @@ interface Patient {
   last_name: string;
   full_name: string;
   phone: string | null;
+  email: string | null;
   street: string | null;
   city: string | null;
   state: string | null;
@@ -46,6 +47,7 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
     lastName: '',
     dateOfBirth: '',
     phone: '',
+    email: '',
     street: '',
     city: '',
     state: '',
@@ -70,6 +72,7 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
         lastName: patient.last_name || '',
         dateOfBirth: patient.date_of_birth || '',
         phone: patient.phone || '',
+        email: patient.email || '',
         street: patient.street || '',
         city: patient.city || '',
         state: patient.state || '',
@@ -107,6 +110,7 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
         last_name: formData.lastName,
         date_of_birth: formData.dateOfBirth,
         phone: formData.phone || null,
+        email: formData.email || null,
         street: formData.street || null,
         city: formData.city || null,
         state: formData.state || null,
@@ -249,6 +253,17 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
             value={formData.phone}
             onChange={(value) => handleInputChange('phone', value)}
           />
+
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="patient@example.com"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+            />
+          </div>
 
           <AddressAutocomplete
             street={formData.street}

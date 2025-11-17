@@ -3934,9 +3934,12 @@ export function PatientProfilePage() {
     return parts.join(", ");
   };
 
-  const calculateAge = (dateOfBirth: string) => {
+  const calculateAge = (dateOfBirth: string | null | undefined) => {
+    if (!dateOfBirth) return null;
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
+    // Check if the date is valid
+    if (isNaN(birthDate.getTime())) return null;
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -4087,7 +4090,11 @@ export function PatientProfilePage() {
                   <div>
                     <h1 className="text-2xl font-bold text-gray-900 mb-1">{patient.full_name}</h1>
                     <div className="flex items-center gap-4 text-gray-600 mb-2">
-                      <span className="text-sm font-medium">{calculateAge(patient.date_of_birth)} years old</span>
+                      <span className="text-sm font-medium">
+                        {calculateAge(patient.date_of_birth) !== null
+                          ? `${calculateAge(patient.date_of_birth)} years old`
+                          : "Age not available"}
+                      </span>
                       <span className="text-sm font-medium capitalize">{patient.gender || "Not specified"}</span>
                     </div>
 
@@ -4321,9 +4328,13 @@ export function PatientProfilePage() {
                           <div className="bg-white rounded-md p-2 border border-blue-200">
                             <p className="text-xs font-medium text-blue-600 mb-0.5">Date of Birth</p>
                             <p className="text-sm font-semibold text-gray-900">
-                              {new Date(patient.date_of_birth).toLocaleDateString()}
+                              {patient.date_of_birth
+                                ? new Date(patient.date_of_birth).toLocaleDateString()
+                                : "Not available"}
                             </p>
-                            <p className="text-xs text-blue-600 font-medium">{calculateAge(patient.date_of_birth)} years old</p>
+                            {patient.date_of_birth && calculateAge(patient.date_of_birth) !== null && (
+                              <p className="text-xs text-blue-600 font-medium">{calculateAge(patient.date_of_birth)} years old</p>
+                            )}
                           </div>
                           <div className="bg-white rounded-md p-2 border border-blue-200">
                             <p className="text-xs font-medium text-blue-600 mb-0.5">Gender</p>
@@ -4341,6 +4352,10 @@ export function PatientProfilePage() {
                         <div className="bg-white rounded-md p-2 border border-blue-200 mb-2">
                           <p className="text-xs font-medium text-blue-600 mb-0.5">Phone Number</p>
                           <p className="text-sm font-semibold text-gray-900">{patient.phone || "Not provided"}</p>
+                        </div>
+                        <div className="bg-white rounded-md p-2 border border-blue-200 mb-2">
+                          <p className="text-xs font-medium text-blue-600 mb-0.5">Email</p>
+                          <p className="text-sm font-semibold text-gray-900">{patient.email || "Not provided"}</p>
                         </div>
                         <div className="bg-white rounded-md p-2 border border-blue-200">
                           <p className="text-xs font-medium text-blue-600 mb-0.5">Address</p>
