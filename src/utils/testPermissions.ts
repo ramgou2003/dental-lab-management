@@ -113,7 +113,7 @@ export const PERMISSION_TESTS: PermissionTest[] = [
     permission: 'lab_scripts.read',
     description: 'View lab scripts',
     expectedRoles: ['super_admin', 'admin', 'dentist', 'lab_technician', 'cad_designer', 'receptionist', 'viewer'],
-    route: '/lab'
+    route: '/lab/lab-scripts'
   },
   {
     permission: 'lab_scripts.update',

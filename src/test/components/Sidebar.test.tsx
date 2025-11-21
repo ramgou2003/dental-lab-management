@@ -86,16 +86,13 @@ describe('Sidebar', () => {
 
   it('should render all navigation items when all features are enabled', () => {
     renderWithProviders(<Sidebar {...defaultProps} />)
-    
+
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
     expect(screen.getByText('Lead-in')).toBeInTheDocument()
     expect(screen.getByText('Appointments')).toBeInTheDocument()
     expect(screen.getByText('Consultation')).toBeInTheDocument()
     expect(screen.getByText('Patients')).toBeInTheDocument()
     expect(screen.getByText('Lab')).toBeInTheDocument()
-    expect(screen.getByText('Report Cards')).toBeInTheDocument()
-    expect(screen.getByText('Manufacturing')).toBeInTheDocument()
-    expect(screen.getByText('Appliance Delivery')).toBeInTheDocument()
     expect(screen.getByText('User Management')).toBeInTheDocument()
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })

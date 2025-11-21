@@ -20,6 +20,7 @@ import ConsultationPage from "./pages/ConsultationPage";
 import ConsultationSessionPage from "./pages/ConsultationSessionPage";
 import { PatientsPage } from "./pages/PatientsPage";
 import { PatientProfilePage } from "./pages/PatientProfilePage";
+import { LabMainPage } from "./pages/LabMainPage";
 import { LabPage } from "./pages/LabPage";
 import { ReportCardsPage } from "./pages/ReportCardsPage";
 import { ApplianceDeliveryPage } from "./pages/ApplianceDeliveryPage";
@@ -247,23 +248,26 @@ const App = () => {
                   </>
                 )}
                 {isFeatureEnabled('lab') && (
-                  <Route
-                    path="lab"
-                    element={
-                      <PermissionGuard permission="lab_scripts.read">
-                        <LabPage />
-                      </PermissionGuard>
-                    }
-                  />
-                )}
-                {isFeatureEnabled('reportCards') && (
-                  <Route path="report-cards" element={<ReportCardsPage />} />
-                )}
-                {isFeatureEnabled('applianceDelivery') && (
-                  <Route path="appliance-delivery" element={<ApplianceDeliveryPage />} />
-                )}
-                {isFeatureEnabled('manufacturing') && (
-                  <Route path="manufacturing" element={<ManufacturingPage />} />
+                  <>
+                    <Route path="lab" element={<LabMainPage />} />
+                    <Route
+                      path="lab/lab-scripts"
+                      element={
+                        <PermissionGuard permission="lab_scripts.read">
+                          <LabPage />
+                        </PermissionGuard>
+                      }
+                    />
+                    {isFeatureEnabled('reportCards') && (
+                      <Route path="lab/report-cards" element={<ReportCardsPage />} />
+                    )}
+                    {isFeatureEnabled('manufacturing') && (
+                      <Route path="lab/manufacturing" element={<ManufacturingPage />} />
+                    )}
+                    {isFeatureEnabled('applianceDelivery') && (
+                      <Route path="lab/appliance-delivery" element={<ApplianceDeliveryPage />} />
+                    )}
+                  </>
                 )}
                 {isFeatureEnabled('userManagement') && (
                   <Route

@@ -312,6 +312,11 @@ export type Database = {
           is_nightguard_needed: string | null
           requested_date: string
           due_date: string | null
+          completion_date: string | null
+          completed_by: string | null
+          completed_by_name: string | null
+          created_by: string | null
+          created_by_name: string | null
           instructions: string | null
           notes: string | null
           status: string
@@ -335,6 +340,11 @@ export type Database = {
           is_nightguard_needed?: string | null
           requested_date: string
           due_date?: string | null
+          completion_date?: string | null
+          completed_by?: string | null
+          completed_by_name?: string | null
+          created_by?: string | null
+          created_by_name?: string | null
           instructions?: string | null
           notes?: string | null
           status?: string
@@ -358,6 +368,11 @@ export type Database = {
           is_nightguard_needed?: string | null
           requested_date?: string
           due_date?: string | null
+          completion_date?: string | null
+          completed_by?: string | null
+          completed_by_name?: string | null
+          created_by?: string | null
+          created_by_name?: string | null
           instructions?: string | null
           notes?: string | null
           status?: string

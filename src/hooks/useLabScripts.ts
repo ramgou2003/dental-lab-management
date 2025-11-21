@@ -18,6 +18,11 @@ export interface LabScript {
   is_nightguard_needed?: string;
   requested_date: string;
   due_date?: string;
+  completion_date?: string;
+  completed_by?: string;
+  completed_by_name?: string;
+  created_by?: string;
+  created_by_name?: string;
   instructions?: string;
   notes?: string;
   status: 'pending' | 'in-progress' | 'completed' | 'delayed' | 'hold';

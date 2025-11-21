@@ -141,7 +141,7 @@ test.describe('Feature Flags Integration', () => {
 
     // Try to navigate directly to disabled feature
     await page.goto('/lab');
-    
+
     // Should redirect to 404 or dashboard since route is disabled
     await expect(page.locator('text=Not Found')).toBeVisible();
   });

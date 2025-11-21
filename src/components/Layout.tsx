@@ -56,10 +56,14 @@ const Layout = () => {
     if (path === "/appointments") return "appointments";
     if (path.startsWith("/consultation")) return "consultation";
     if (path.startsWith("/patients")) return "patients";
-    if (path === "/lab") return "lab";
-    if (path === "/report-cards") return "report-cards";
-    if (path === "/appliance-delivery") return "appliance-delivery";
-    if (path === "/manufacturing") return "manufacturing";
+    if (path.startsWith("/lab")) {
+      // Check for submenu sections
+      if (path === "/lab/lab-scripts") return "lab-scripts";
+      if (path === "/lab/report-cards") return "report-cards";
+      if (path === "/lab/manufacturing") return "manufacturing";
+      if (path === "/lab/appliance-delivery") return "appliance-delivery";
+      return "lab"; // Main lab page
+    }
     if (path === "/user-management") return "user-management";
     if (path === "/settings") return "settings";
     if (path === "/profile") return "profile";

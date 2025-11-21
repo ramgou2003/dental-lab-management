@@ -64,9 +64,9 @@
       ]
     },
     {
-      "name": "Lab Scripts",
+      "name": "Lab",
       "short_name": "Lab",
-      "description": "Manage lab scripts and orders",
+      "description": "Lab management hub with scripts, reports, and manufacturing",
       "url": "/lab",
       "icons": [
         {
