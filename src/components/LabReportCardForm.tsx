@@ -896,7 +896,14 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
           </div>
 
           {/* Scrollable Options List */}
-          <div className="max-h-[300px] overflow-y-scroll p-1">
+          <div
+            className="max-h-[300px] overflow-y-scroll p-1"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-y',
+              overscrollBehavior: 'contain'
+            }}
+          >
             {filteredOptions.length === 0 ? (
               <div className="py-6 text-center text-sm text-gray-500">
                 No tooth library found.
@@ -908,7 +915,14 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
                   className={`flex items-center px-2 py-2 text-sm cursor-pointer rounded hover:bg-gray-100 ${
                     value === option ? "bg-blue-50 text-blue-700 font-medium" : ""
                   }`}
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onValueChange(option);
+                    setOpen(false);
+                    setSearchValue("");
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
                     onValueChange(option);
                     setOpen(false);
                     setSearchValue("");
