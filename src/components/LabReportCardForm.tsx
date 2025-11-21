@@ -890,7 +890,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     };
 
     return (
-      <Popover open={open} onOpenChange={handleOpenChange} modal={false}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -904,11 +904,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent
-          className="w-[400px] p-0"
-          align="start"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-        >
+        <PopoverContent className="w-[400px] p-0" align="start">
           <div className="flex flex-col">
             {/* Search Input */}
             <div className="p-3 border-b">
@@ -917,7 +913,6 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="w-full"
-                autoFocus={false}
               />
             </div>
 
@@ -928,11 +923,9 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
                 WebkitOverflowScrolling: 'touch',
                 overscrollBehavior: 'contain',
                 scrollbarWidth: 'thin',
-                scrollbarColor: '#cbd5e1 #f1f5f9',
-                touchAction: 'pan-y'
+                scrollbarColor: '#cbd5e1 #f1f5f9'
               }}
               onWheel={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
             >
               {filteredOptions.length === 0 ? (
                 <div className="py-6 text-center text-sm text-gray-500">
