@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ interface LabScriptDetailProps {
 }
 
 export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEditMode = false }: LabScriptDetailProps) {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(initialEditMode);
   const [editData, setEditData] = useState<Partial<LabScript>>({});
   const [newComment, setNewComment] = useState("");
@@ -163,6 +165,13 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
     }
   };
 
+  const handlePatientNameClick = () => {
+    if (labScript?.patient_id) {
+      onClose(); // Close the dialog first
+      navigate(`/patients/${labScript.patient_id}`);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-emerald-100 text-emerald-700';
@@ -177,8 +186,8 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0">
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FlaskConical className="h-6 w-6 text-indigo-600" />
@@ -199,7 +208,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto flex-1 px-6 pb-6">
           {/* Patient Information */}
           <Card>
             <CardHeader>
@@ -211,7 +220,24 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
             <CardContent className="space-y-4">
               <div>
                 <Label>Patient Name</Label>
-                <div className="text-lg font-semibold">{labScript.patient_name}</div>
+                {labScript.patient_id ? (
+                  <div
+                    className="text-lg font-semibold text-blue-600 cursor-pointer hover:text-blue-700 hover:underline transition-colors"
+                    onClick={handlePatientNameClick}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handlePatientNameClick();
+                      }
+                    }}
+                  >
+                    {labScript.patient_name}
+                  </div>
+                ) : (
+                  <div className="text-lg font-semibold">{labScript.patient_name}</div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -521,7 +547,109 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
             </CardContent>
           </Card>
 
-          {/* Comments & Remarks */}
+          {/* Tracking Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Calendar className="h-5 w-5 text-indigo-600" />
+                Tracking Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`grid grid-cols-1 ${labScript.status === 'completed' ? 'md:grid-cols-2' : ''} gap-6`}>
+                {/* Created Information */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <User className="h-4 w-4 text-green-600" />
+                    Created
+                  </div>
+                  <div className="pl-6 space-y-2">
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Created By</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {labScript.created_by_name || 'Not available'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Created Date & Time (EST)</div>
+                      <div className="text-sm text-gray-900">
+                        {labScript.created_at ? (
+                          <>
+                            <div className="font-medium">
+                              {new Date(labScript.created_at).toLocaleDateString('en-US', {
+                                timeZone: 'America/New_York',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </div>
+                            <div className="text-gray-600">
+                              {new Date(labScript.created_at).toLocaleTimeString('en-US', {
+                                timeZone: 'America/New_York',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                              })}
+                            </div>
+                          </>
+                        ) : (
+                          'Not available'
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Completed Information - Only show if status is completed */}
+                {labScript.status === 'completed' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <User className="h-4 w-4 text-blue-600" />
+                      Completed
+                    </div>
+                    <div className="pl-6 space-y-2">
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Completed By</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {labScript.completed_by_name || 'Not available'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Completed Date & Time (EST)</div>
+                        <div className="text-sm text-gray-900">
+                          {labScript.completion_date ? (
+                            <>
+                              <div className="font-medium">
+                                {new Date(labScript.completion_date).toLocaleDateString('en-US', {
+                                  timeZone: 'America/New_York',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </div>
+                              <div className="text-gray-600">
+                                {new Date(labScript.completion_date).toLocaleTimeString('en-US', {
+                                  timeZone: 'America/New_York',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit'
+                                })}
+                              </div>
+                            </>
+                          ) : (
+                            'Not available'
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Comments & Remarks - HIDDEN FOR NOW (Keep functionality for future use) */}
+          {/*
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -537,7 +665,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Existing Comments */}
+              {/* Existing Comments *\/}
               <div className="space-y-4">
                 {commentsLoading ? (
                   <div className="flex items-center justify-center py-8">
@@ -551,7 +679,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                     {comments.map((comment, index) => (
                       <div key={comment.id} className="group relative">
                         <div className="flex gap-3">
-                          {/* Avatar */}
+                          {/* Avatar *\/}
                           <div className="flex-shrink-0">
                             <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
                               <span className="text-white text-xs font-semibold">
@@ -563,10 +691,10 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                             </div>
                           </div>
 
-                          {/* Comment Content */}
+                          {/* Comment Content *\/}
                           <div className="flex-1 min-w-0">
                             <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
-                              {/* Header */}
+                              {/* Header *\/}
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium text-gray-900 text-sm">
@@ -600,7 +728,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                                 </time>
                               </div>
 
-                              {/* Comment Text */}
+                              {/* Comment Text *\/}
                               <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
                                 {comment.comment_text}
                               </div>
@@ -608,7 +736,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                           </div>
                         </div>
 
-                        {/* Connection line to next comment */}
+                        {/* Connection line to next comment *\/}
                         {index < comments.length - 1 && (
                           <div className="absolute left-4 top-12 w-px h-4 bg-gray-200"></div>
                         )}
@@ -626,7 +754,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
 
               <Separator className="my-6" />
 
-              {/* Add New Comment */}
+              {/* Add New Comment *\/}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
@@ -641,6 +769,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                     placeholder="Share your thoughts, updates, or important notes about this lab script..."
                     rows={3}
                     className="resize-none border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                    autoFocus={false}
                   />
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-xs text-gray-500">
@@ -669,6 +798,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
               </div>
             </CardContent>
           </Card>
+          */}
         </div>
       </DialogContent>
     </Dialog>

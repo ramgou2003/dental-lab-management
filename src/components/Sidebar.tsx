@@ -1,4 +1,4 @@
-import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, GripVertical, Shield, UserPlus, Stethoscope } from "lucide-react";
+import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, ChevronDown, GripVertical, Shield, UserPlus, Stethoscope, Microscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -16,7 +16,19 @@ interface SidebarProps {
   onResizeStart: () => void;
   onResizeEnd: () => void;
 }
-const navigation = [
+
+interface NavigationItem {
+  name: string;
+  href: string;
+  section: string;
+  icon: any;
+  featureFlag?: string;
+  pageKey?: string;
+  adminOnly?: boolean;
+  submenu?: NavigationItem[];
+}
+
+const navigation: NavigationItem[] = [
   {
     name: "Dashboard",
     href: "/dashboard",
@@ -56,30 +68,43 @@ const navigation = [
     name: "Lab",
     href: "/lab",
     section: "lab",
-    icon: FlaskConical,
+    icon: Microscope,
     featureFlag: "lab",
-    pageKey: "lab"
-  }, {
-    name: "Report Cards",
-    href: "/report-cards",
-    section: "report-cards",
-    icon: FileText,
-    featureFlag: "reportCards",
-    pageKey: "reportCards"
-  }, {
-    name: "Manufacturing",
-    href: "/manufacturing",
-    section: "manufacturing",
-    icon: Factory,
-    featureFlag: "manufacturing",
-    pageKey: "manufacturing"
-  }, {
-    name: "Appliance Delivery",
-    href: "/appliance-delivery",
-    section: "appliance-delivery",
-    icon: Package,
-    featureFlag: "applianceDelivery",
-    pageKey: "applianceDelivery"
+    pageKey: "lab",
+    submenu: [
+      {
+        name: "Lab Scripts",
+        href: "/lab/lab-scripts",
+        section: "lab-scripts",
+        icon: FlaskConical,
+        featureFlag: "lab",
+        pageKey: "lab"
+      },
+      {
+        name: "Report Cards",
+        href: "/lab/report-cards",
+        section: "report-cards",
+        icon: FileText,
+        featureFlag: "reportCards",
+        pageKey: "reportCards"
+      },
+      {
+        name: "Manufacturing",
+        href: "/lab/manufacturing",
+        section: "manufacturing",
+        icon: Factory,
+        featureFlag: "manufacturing",
+        pageKey: "manufacturing"
+      },
+      {
+        name: "Appliance Delivery",
+        href: "/lab/appliance-delivery",
+        section: "appliance-delivery",
+        icon: Package,
+        featureFlag: "applianceDelivery",
+        pageKey: "applianceDelivery"
+      }
+    ]
   }, {
     name: "User Management",
     href: "/user-management",
@@ -111,10 +136,27 @@ export function Sidebar({
   const [isResizing, setIsResizing] = useState(false);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
-
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   const { signOut, userProfile, loading, userRoles } = useAuth();
   const { canAccessUserManagement, isAdminUser } = usePermissions();
+
+  const toggleSubmenu = (section: string) => {
+    setExpandedMenus(prev =>
+      prev.includes(section)
+        ? prev.filter(s => s !== section)
+        : [...prev, section]
+    );
+  };
+
+  const handleMenuClick = (item: NavigationItem) => {
+    const hasSubmenu = item.submenu && item.submenu.length > 0;
+    if (hasSubmenu) {
+      toggleSubmenu(item.section);
+    } else {
+      navigate(item.href);
+    }
+  };
 
   // Check if user has doctor role
   const isDentist = userRoles.some(role => role.name === 'dentist');
@@ -285,7 +327,7 @@ export function Sidebar({
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 p-4 px-[9px] space-y-1">
+      <nav className="flex-1 p-4 px-[9px] space-y-1 overflow-y-auto">
         {navigation.map(item => {
         // Hide admin-only items for non-admin users
         if (item.adminOnly && !isAdminUser()) {
@@ -303,14 +345,82 @@ export function Sidebar({
         }
 
         const isActive = activeSection === item.section;
+        const hasSubmenu = item.submenu && item.submenu.length > 0;
+        const isExpanded = expandedMenus.includes(item.section);
+        const isSubmenuActive = item.submenu?.some(sub => activeSection === sub.section);
+
+        // Filter visible submenu items
+        const visibleSubmenuItems = hasSubmenu ? item.submenu!.filter(subItem => {
+          if (subItem.featureFlag && !isFeatureEnabled(subItem.featureFlag as any)) {
+            return false;
+          }
+          if (subItem.pageKey && !isPageVisible(subItem.pageKey as any)) {
+            return false;
+          }
+          return true;
+        }) : [];
+
         return <div key={item.section} className="relative">
-            <button onClick={() => navigate(item.href)} className={cn("flex items-center justify-start w-full text-left px-3 py-3.5 rounded-lg transition-colors duration-200 relative h-12", isActive ? "bg-indigo-50 text-indigo-700 border border-indigo-200" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900")} title={collapsed ? item.name : undefined}>
-              {isActive && <div className="absolute left-0 top-2 bottom-2 w-1 bg-indigo-600 rounded-r-full" />}
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-                {item.name}
-              </span>
+            <button
+              onClick={() => handleMenuClick(item)}
+              className={cn(
+                "flex items-center justify-between w-full text-left px-3 py-3.5 rounded-lg transition-colors duration-200 relative h-12",
+                isActive || isSubmenuActive
+                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              )}
+              title={collapsed ? item.name : undefined}
+            >
+              <div className="flex items-center">
+                {(isActive || isSubmenuActive) && <div className="absolute left-0 top-2 bottom-2 w-1 bg-indigo-600 rounded-r-full" />}
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                  {item.name}
+                </span>
+              </div>
+              {hasSubmenu && !collapsed && (
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-200",
+                    isExpanded ? "rotate-180" : ""
+                  )}
+                />
+              )}
             </button>
+
+            {/* Submenu - Show when expanded */}
+            {hasSubmenu && isExpanded && (
+              <div className={cn(
+                "mt-1 space-y-1",
+                collapsed ? "flex flex-col items-center" : ""
+              )}>
+                {visibleSubmenuItems.map(subItem => {
+                  const isSubActive = activeSection === subItem.section;
+                  return (
+                    <button
+                      key={subItem.section}
+                      onClick={() => navigate(subItem.href)}
+                      className={cn(
+                        "flex items-center text-left rounded-lg transition-colors duration-200 border-2",
+                        collapsed
+                          ? "w-10 h-10 justify-center"
+                          : "w-full px-3 py-2.5 text-sm",
+                        isSubActive
+                          ? "bg-indigo-50 text-indigo-700 border-indigo-500 font-medium"
+                          : "text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-indigo-300"
+                      )}
+                      title={collapsed ? subItem.name : undefined}
+                    >
+                      <subItem.icon className={cn(
+                        "flex-shrink-0",
+                        collapsed ? "h-5 w-5" : "h-4 w-4"
+                      )} />
+                      {!collapsed && <span className="ml-2">{subItem.name}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>;
       })}
       </nav>

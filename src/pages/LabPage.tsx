@@ -4,10 +4,12 @@ import { NewLabScriptForm } from "@/components/NewLabScriptForm";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { EditLabScriptForm } from "@/components/EditLabScriptForm";
 import { LabScriptFilterDialog } from "@/components/LabScriptFilterDialog";
+import { LabScriptCompletionDialog } from "@/components/LabScriptCompletionDialog";
 import { useLabScripts } from "@/hooks/useLabScripts";
 import { LabScript } from "@/hooks/useLabScripts";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/AuthGuard";
+import { useAuth } from "@/contexts/AuthContext";
 import { FlaskConical, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, MoreHorizontal, Trash2, ArrowUp, ArrowDown, Filter } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
@@ -29,12 +31,15 @@ export interface LabScriptFilters {
 
 export function LabPage() {
   const { canCreateLabScripts, canUpdateLabScripts, canDeleteLabScripts } = usePermissions();
+  const { userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState("orders");
   const [activeFilter, setActiveFilter] = useState("pending");
   const [showNewScriptForm, setShowNewScriptForm] = useState(false);
   const [showLabScriptDetail, setShowLabScriptDetail] = useState(false);
   const [showEditLabScriptForm, setShowEditLabScriptForm] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [completingLabScriptId, setCompletingLabScriptId] = useState<string | null>(null);
   const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [designStates, setDesignStates] = useState<Record<string, 'not-started' | 'in-progress' | 'hold' | 'completed'>>({});
@@ -76,7 +81,9 @@ export function LabPage() {
         due_date: formData.dueDate || null,
         instructions: formData.instructions,
         notes: formData.notes || null,
-        status: 'pending'
+        status: 'pending',
+        created_by: userProfile?.id || null,
+        created_by_name: userProfile?.full_name || null
       });
 
       toast.success("Lab script created successfully!");
@@ -202,6 +209,13 @@ export function LabPage() {
   };
 
   const handleDesignStateChange = async (orderId: string, newState: 'not-started' | 'in-progress' | 'hold' | 'completed') => {
+    // If completing, show the completion dialog
+    if (newState === 'completed') {
+      setCompletingLabScriptId(orderId);
+      setShowCompletionDialog(true);
+      return;
+    }
+
     // Map the design state to lab script status
     const statusMap = {
       'not-started': 'pending',
@@ -228,7 +242,6 @@ export function LabPage() {
       const messages = {
         'in-progress': 'Design started!',
         'hold': 'Status updated to hold!',
-        'completed': 'Design completed and status updated!',
         'not-started': 'Status reset to pending!'
       };
 
@@ -236,6 +249,36 @@ export function LabPage() {
     } catch (error) {
       console.error('Error updating lab script status:', error);
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleConfirmCompletion = async (completionDate: string) => {
+    if (!completingLabScriptId) return;
+
+    try {
+      await updateLabScript(completingLabScriptId, {
+        status: 'completed',
+        completion_date: completionDate,
+        completed_by: userProfile?.id || null,
+        completed_by_name: userProfile?.full_name || null
+      });
+
+      // Update local design state
+      setDesignStates(prev => ({ ...prev, [completingLabScriptId]: 'completed' }));
+
+      // Exit edit mode when updating status
+      setEditingStatus(prev => ({
+        ...prev,
+        [completingLabScriptId]: false
+      }));
+
+      toast.success('Design completed and status updated!');
+
+      // Reset completion dialog state
+      setCompletingLabScriptId(null);
+    } catch (error) {
+      console.error('Error completing lab script:', error);
+      toast.error("Failed to complete lab script");
     }
   };
 
@@ -627,7 +670,7 @@ export function LabPage() {
               <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0 table-header">
                 <div className="grid text-sm font-bold text-blue-600 h-6 gap-2 lg:gap-3"
                      style={{
-                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(80px, 0.8fr) minmax(130px, 1.5fr) minmax(100px, 1fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(80px, 0.8fr) minmax(130px, 1.5fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
                      }}>
                   <div className="text-center flex items-center justify-center px-2 border-r border-slate-300 relative">
                     <span className="truncate uppercase">Patient Name</span>
@@ -646,9 +689,6 @@ export function LabPage() {
                   </div>
                   <div className="border-r border-slate-300 text-center flex items-center justify-center px-2">
                     <span className="truncate uppercase">Appliance Type</span>
-                  </div>
-                  <div className="border-r border-slate-300 text-center flex items-center justify-center px-2">
-                    <span className="truncate uppercase">Screw Type</span>
                   </div>
                   <div className="border-r border-slate-300 text-center flex items-center justify-center px-2 relative">
                     <span className="truncate pr-6 uppercase">Requested Date</span>
@@ -728,12 +768,23 @@ export function LabPage() {
                     <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 min-h-[64px]">
                       <div className="grid gap-2 lg:gap-3 px-4 py-3 text-sm items-center min-h-[64px]"
                            style={{
-                             gridTemplateColumns: 'minmax(180px, 2fr) minmax(80px, 0.8fr) minmax(130px, 1.5fr) minmax(100px, 1fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                             gridTemplateColumns: 'minmax(180px, 2fr) minmax(80px, 0.8fr) minmax(130px, 1.5fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
                            }}>
 
                         {/* Patient */}
                         <div className="border-r border-gray-200 px-2 h-full flex items-center min-w-0">
-                          <div className="flex items-center space-x-2 min-w-0">
+                          <div
+                            className="flex items-center space-x-2 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => originalScript && handleViewLabScript(originalScript)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                originalScript && handleViewLabScript(originalScript);
+                              }
+                            }}
+                          >
                             {(() => {
                               const statusConfig = getStatusIcon(order.status);
                               const StatusIcon = statusConfig.icon;
@@ -779,11 +830,6 @@ export function LabPage() {
                               </div>
                             )}
                           </div>
-                        </div>
-
-                        {/* Screw Type */}
-                        <div className="border-r border-gray-200 px-2 h-full flex items-center justify-center min-w-0">
-                          <p className="text-gray-600 text-xs text-center truncate">{order.screwType || 'N/A'}</p>
                         </div>
 
                         {/* Requested Date */}
@@ -910,6 +956,21 @@ export function LabPage() {
         currentFilters={filters}
         onApplyFilters={handleApplyFilters}
         onClearFilters={handleClearFilters}
+      />
+
+      {/* Completion Confirmation Dialog */}
+      <LabScriptCompletionDialog
+        isOpen={showCompletionDialog}
+        onClose={() => {
+          setShowCompletionDialog(false);
+          setCompletingLabScriptId(null);
+        }}
+        onConfirm={handleConfirmCompletion}
+        patientName={
+          completingLabScriptId
+            ? labScripts.find(s => s.id === completingLabScriptId)?.patient_name || ''
+            : ''
+        }
       />
     </div>
   );
