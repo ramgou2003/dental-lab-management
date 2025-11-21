@@ -865,6 +865,8 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     hasError?: boolean;
   }) => {
     const [searchValue, setSearchValue] = useState("");
+    const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
+    const [isScrolling, setIsScrolling] = useState(false);
 
     // Filter options based on search
     const filteredOptions = toothLibraryOptions.filter(option =>
@@ -887,6 +889,49 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     const handleOptionClick = (option: string) => {
       onValueChange(value === option ? "" : option);
       setOpen(false);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+      const touch = e.touches[0];
+      setTouchStart({
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now()
+      });
+      setIsScrolling(false);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+      if (!touchStart) return;
+
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStart.x);
+      const deltaY = Math.abs(touch.clientY - touchStart.y);
+
+      // If moved more than 10px vertically, consider it scrolling
+      if (deltaY > 10 || deltaX > 10) {
+        setIsScrolling(true);
+      }
+    };
+
+    const handleOptionTouch = (option: string, e: React.TouchEvent) => {
+      if (!touchStart) return;
+
+      const touch = e.changedTouches[0];
+      const deltaX = Math.abs(touch.clientX - touchStart.x);
+      const deltaY = Math.abs(touch.clientY - touchStart.y);
+      const deltaTime = Date.now() - touchStart.time;
+
+      // Only trigger selection if:
+      // 1. Not scrolling (moved less than 10px)
+      // 2. Touch duration is less than 500ms (quick tap)
+      if (!isScrolling && deltaX < 10 && deltaY < 10 && deltaTime < 500) {
+        e.preventDefault();
+        handleOptionClick(option);
+      }
+
+      setTouchStart(null);
+      setIsScrolling(false);
     };
 
     return (
@@ -927,9 +972,8 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
                 touchAction: 'pan-y'
               }}
               onWheel={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
             >
               {filteredOptions.length === 0 ? (
                 <div className="py-6 text-center text-sm text-gray-500">
@@ -944,10 +988,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
                         value === option ? "bg-accent text-accent-foreground" : ""
                       }`}
                       onClick={() => handleOptionClick(option)}
-                      onTouchEnd={(e) => {
-                        e.stopPropagation();
-                        handleOptionClick(option);
-                      }}
+                      onTouchEnd={(e) => handleOptionTouch(option, e)}
                     >
                       <Check
                         className={`mr-2 h-4 w-4 ${
