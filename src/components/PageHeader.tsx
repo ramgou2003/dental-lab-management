@@ -1,10 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { LucideIcon } from "lucide-react";
 
 interface PageHeaderProps {
   title: string;
   description?: string;
+  badge?: number;
   action?: {
     label: string;
     onClick: () => void;
@@ -23,13 +25,21 @@ interface PageHeaderProps {
 export function PageHeader({
   title,
   description,
+  badge,
   action,
   secondaryAction,
   search
 }: PageHeaderProps) {
   return <div className="flex items-center justify-between px-6 py-3.5">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          {badge !== undefined && (
+            <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-semibold px-3 py-1 text-sm">
+              {badge}
+            </Badge>
+          )}
+        </div>
         {description && <p className="text-gray-600 mt-1">{description}</p>}
       </div>
       <div className="flex items-center gap-3">

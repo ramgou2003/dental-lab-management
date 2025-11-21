@@ -23,6 +23,13 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
   // Hardcoded dropdown options
   const options = {
+    treatment_type: [
+      { id: 1, value: 'full-arch-fixed', label: 'Full arch fixed' },
+      { id: 2, value: 'denture', label: 'Denture' },
+      { id: 3, value: 'single-implant', label: 'Single implant' },
+      { id: 4, value: 'multiple-implants', label: 'Multiple implants' },
+      { id: 5, value: 'nightguard', label: 'Nightguard' }
+    ],
     appliance_type: [
       { id: 1, value: 'surgical-day-appliance', label: 'Surgical Day Appliance' },
       { id: 2, value: 'printed-tryin', label: 'Printed Tryin' },
@@ -31,7 +38,8 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       { id: 5, value: 'direct-load-zirconia', label: 'Direct Load Zirconia' },
       { id: 6, value: 'ti-bar-superstructure', label: 'Ti-Bar and Superstructure' },
       { id: 7, value: 'crown', label: 'Crown' },
-      { id: 8, value: 'bridge', label: 'Bridge' }
+      { id: 8, value: 'bridge', label: 'Bridge' },
+      { id: 9, value: 'custom-abutment-crown', label: 'Custom Abutment & Crown' }
     ],
     screw_type: [
       { id: 19, value: 'dc_screw', label: 'DC Screw' },
@@ -109,6 +117,8 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     patientId: "",
     patientName: "",
     archType: "",
+    upperTreatmentType: "",
+    lowerTreatmentType: "",
     upperApplianceType: "",
     lowerApplianceType: "",
     screwType: "",
@@ -154,6 +164,22 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       errors.push("Arch type is required");
     }
 
+    // Treatment type validation based on arch selection
+    if (formData.archType === "upper" && !formData.upperTreatmentType) {
+      errors.push("Upper treatment type is required");
+    }
+    if (formData.archType === "lower" && !formData.lowerTreatmentType) {
+      errors.push("Lower treatment type is required");
+    }
+    if (formData.archType === "dual") {
+      if (!formData.upperTreatmentType) {
+        errors.push("Upper treatment type is required");
+      }
+      if (!formData.lowerTreatmentType) {
+        errors.push("Lower treatment type is required");
+      }
+    }
+
     // Appliance type validation based on arch selection
     if (formData.archType === "upper" && !formData.upperApplianceType) {
       errors.push("Upper appliance type is required");
@@ -173,13 +199,21 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     // Screw type validation (when visible)
     const shouldShowScrewType = () => {
       if (formData.archType === "upper") {
-        return formData.upperApplianceType !== "night-guard" && formData.upperApplianceType !== "denture";
+        const treatmentExcluded = formData.upperTreatmentType === "denture" || formData.upperTreatmentType === "nightguard";
+        const applianceExcluded = formData.upperApplianceType === "night-guard";
+        return !treatmentExcluded && !applianceExcluded;
       } else if (formData.archType === "lower") {
-        return formData.lowerApplianceType !== "night-guard" && formData.lowerApplianceType !== "denture";
+        const treatmentExcluded = formData.lowerTreatmentType === "denture" || formData.lowerTreatmentType === "nightguard";
+        const applianceExcluded = formData.lowerApplianceType === "night-guard";
+        return !treatmentExcluded && !applianceExcluded;
       } else if (formData.archType === "dual") {
-        const upperIsNightGuardOrDenture = formData.upperApplianceType === "night-guard" || formData.upperApplianceType === "denture";
-        const lowerIsNightGuardOrDenture = formData.lowerApplianceType === "night-guard" || formData.lowerApplianceType === "denture";
-        return !(upperIsNightGuardOrDenture && lowerIsNightGuardOrDenture);
+        const upperTreatmentExcluded = formData.upperTreatmentType === "denture" || formData.upperTreatmentType === "nightguard";
+        const upperApplianceExcluded = formData.upperApplianceType === "night-guard";
+        const lowerTreatmentExcluded = formData.lowerTreatmentType === "denture" || formData.lowerTreatmentType === "nightguard";
+        const lowerApplianceExcluded = formData.lowerApplianceType === "night-guard";
+        const upperExcluded = upperTreatmentExcluded || upperApplianceExcluded;
+        const lowerExcluded = lowerTreatmentExcluded || lowerApplianceExcluded;
+        return !(upperExcluded && lowerExcluded);
       }
       return false;
     };
@@ -196,13 +230,21 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
     // VDO Details validation (when visible)
     const shouldShowVDODetails = () => {
       if (formData.archType === "upper") {
-        return formData.upperApplianceType !== "night-guard";
+        const treatmentExcluded = formData.upperTreatmentType === "nightguard";
+        const applianceExcluded = formData.upperApplianceType === "night-guard";
+        return !treatmentExcluded && !applianceExcluded;
       } else if (formData.archType === "lower") {
-        return formData.lowerApplianceType !== "night-guard";
+        const treatmentExcluded = formData.lowerTreatmentType === "nightguard";
+        const applianceExcluded = formData.lowerApplianceType === "night-guard";
+        return !treatmentExcluded && !applianceExcluded;
       } else if (formData.archType === "dual") {
-        const upperIsNightGuard = formData.upperApplianceType === "night-guard";
-        const lowerIsNightGuard = formData.lowerApplianceType === "night-guard";
-        return !(upperIsNightGuard && lowerIsNightGuard);
+        const upperTreatmentExcluded = formData.upperTreatmentType === "nightguard";
+        const upperApplianceExcluded = formData.upperApplianceType === "night-guard";
+        const lowerTreatmentExcluded = formData.lowerTreatmentType === "nightguard";
+        const lowerApplianceExcluded = formData.lowerApplianceType === "night-guard";
+        const upperExcluded = upperTreatmentExcluded || upperApplianceExcluded;
+        const lowerExcluded = lowerTreatmentExcluded || lowerApplianceExcluded;
+        return !(upperExcluded && lowerExcluded);
       }
       return false;
     };
@@ -272,6 +314,8 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
         patientId: "",
         patientName: "",
         archType: "",
+        upperTreatmentType: "",
+        lowerTreatmentType: "",
         upperApplianceType: "",
         lowerApplianceType: "",
         screwType: "",
@@ -413,6 +457,8 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       patientId: "",
       patientName: "",
       archType: "",
+      upperTreatmentType: "",
+      lowerTreatmentType: "",
       upperApplianceType: "",
       lowerApplianceType: "",
       screwType: "",
@@ -529,6 +575,79 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
               </div>
             </div>
 
+            {/* Dynamic Treatment Type based on Arch Selection */}
+            {formData.archType === "upper" && (
+              <div>
+                <Label htmlFor="upperTreatmentType">Upper Treatment Type *</Label>
+                <Select value={formData.upperTreatmentType} onValueChange={(value) => handleInputChange("upperTreatmentType", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select upper treatment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.treatment_type.map((option) => (
+                      <SelectItem key={option.id} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {formData.archType === "lower" && (
+              <div>
+                <Label htmlFor="lowerTreatmentType">Lower Treatment Type *</Label>
+                <Select value={formData.lowerTreatmentType} onValueChange={(value) => handleInputChange("lowerTreatmentType", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select lower treatment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.treatment_type.map((option) => (
+                      <SelectItem key={option.id} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Dual Arch Treatment Types - Full Width Row */}
+            {formData.archType === "dual" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="upperTreatmentType">Upper Treatment Type *</Label>
+                  <Select value={formData.upperTreatmentType} onValueChange={(value) => handleInputChange("upperTreatmentType", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select upper treatment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {options.treatment_type.map((option) => (
+                        <SelectItem key={option.id} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="lowerTreatmentType">Lower Treatment Type *</Label>
+                  <Select value={formData.lowerTreatmentType} onValueChange={(value) => handleInputChange("lowerTreatmentType", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select lower treatment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {options.treatment_type.map((option) => (
+                        <SelectItem key={option.id} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
             {/* Dynamic Appliance Type based on Arch Selection */}
             {formData.archType === "upper" && (
               <div>
@@ -607,16 +726,24 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
               // Logic to determine if screw type should be shown
               const shouldShowScrewType = () => {
                 if (formData.archType === "upper") {
-                  // For upper arch, hide if night-guard or denture is selected
-                  return formData.upperApplianceType !== "night-guard" && formData.upperApplianceType !== "denture";
+                  // For upper arch, hide if treatment type is denture/nightguard or appliance is night-guard
+                  const treatmentExcluded = formData.upperTreatmentType === "denture" || formData.upperTreatmentType === "nightguard";
+                  const applianceExcluded = formData.upperApplianceType === "night-guard";
+                  return !treatmentExcluded && !applianceExcluded;
                 } else if (formData.archType === "lower") {
-                  // For lower arch, hide if night-guard or denture is selected
-                  return formData.lowerApplianceType !== "night-guard" && formData.lowerApplianceType !== "denture";
+                  // For lower arch, hide if treatment type is denture/nightguard or appliance is night-guard
+                  const treatmentExcluded = formData.lowerTreatmentType === "denture" || formData.lowerTreatmentType === "nightguard";
+                  const applianceExcluded = formData.lowerApplianceType === "night-guard";
+                  return !treatmentExcluded && !applianceExcluded;
                 } else if (formData.archType === "dual") {
-                  // For dual arch, show if at least one appliance is NOT night-guard or denture
-                  const upperIsNightGuardOrDenture = formData.upperApplianceType === "night-guard" || formData.upperApplianceType === "denture";
-                  const lowerIsNightGuardOrDenture = formData.lowerApplianceType === "night-guard" || formData.lowerApplianceType === "denture";
-                  return !(upperIsNightGuardOrDenture && lowerIsNightGuardOrDenture);
+                  // For dual arch, show if at least one arch doesn't have excluded treatment/appliance
+                  const upperTreatmentExcluded = formData.upperTreatmentType === "denture" || formData.upperTreatmentType === "nightguard";
+                  const upperApplianceExcluded = formData.upperApplianceType === "night-guard";
+                  const lowerTreatmentExcluded = formData.lowerTreatmentType === "denture" || formData.lowerTreatmentType === "nightguard";
+                  const lowerApplianceExcluded = formData.lowerApplianceType === "night-guard";
+                  const upperExcluded = upperTreatmentExcluded || upperApplianceExcluded;
+                  const lowerExcluded = lowerTreatmentExcluded || lowerApplianceExcluded;
+                  return !(upperExcluded && lowerExcluded);
                 }
                 return false; // Hide if no arch type is selected
               };
@@ -672,16 +799,24 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
               // Logic to determine if VDO details should be shown
               const shouldShowVDODetails = () => {
                 if (formData.archType === "upper") {
-                  // For upper arch, hide if night-guard is selected
-                  return formData.upperApplianceType !== "night-guard";
+                  // For upper arch, hide if treatment type is nightguard or appliance is night-guard
+                  const treatmentExcluded = formData.upperTreatmentType === "nightguard";
+                  const applianceExcluded = formData.upperApplianceType === "night-guard";
+                  return !treatmentExcluded && !applianceExcluded;
                 } else if (formData.archType === "lower") {
-                  // For lower arch, hide if night-guard is selected
-                  return formData.lowerApplianceType !== "night-guard";
+                  // For lower arch, hide if treatment type is nightguard or appliance is night-guard
+                  const treatmentExcluded = formData.lowerTreatmentType === "nightguard";
+                  const applianceExcluded = formData.lowerApplianceType === "night-guard";
+                  return !treatmentExcluded && !applianceExcluded;
                 } else if (formData.archType === "dual") {
-                  // For dual arch, show if at least one appliance is NOT night-guard
-                  const upperIsNightGuard = formData.upperApplianceType === "night-guard";
-                  const lowerIsNightGuard = formData.lowerApplianceType === "night-guard";
-                  return !(upperIsNightGuard && lowerIsNightGuard);
+                  // For dual arch, show if at least one arch doesn't have excluded treatment/appliance
+                  const upperTreatmentExcluded = formData.upperTreatmentType === "nightguard";
+                  const upperApplianceExcluded = formData.upperApplianceType === "night-guard";
+                  const lowerTreatmentExcluded = formData.lowerTreatmentType === "nightguard";
+                  const lowerApplianceExcluded = formData.lowerApplianceType === "night-guard";
+                  const upperExcluded = upperTreatmentExcluded || upperApplianceExcluded;
+                  const lowerExcluded = lowerTreatmentExcluded || lowerApplianceExcluded;
+                  return !(upperExcluded && lowerExcluded);
                 }
                 return false; // Hide if no arch type is selected
               };

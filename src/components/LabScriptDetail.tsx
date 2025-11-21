@@ -230,30 +230,108 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                 <div className="text-base font-medium">{labScript.arch_type?.charAt(0).toUpperCase() + labScript.arch_type?.slice(1)}</div>
               </div>
 
-              {/* Upper Appliance Type - Show when arch is upper or dual */}
-              {(labScript.arch_type === 'upper' || labScript.arch_type === 'dual') && (
-                <div>
-                  <Label>Upper Appliance Type</Label>
-                  <div className="text-base font-medium">
-                    {labScript.upper_appliance_type
-                      ? labScript.upper_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                      : 'N/A'
-                    }
+              {/* Treatment Type - Side by side for dual arch */}
+              {labScript.arch_type === 'dual' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Upper Treatment Type</Label>
+                    <div className="text-base font-medium">
+                      {labScript.upper_treatment_type
+                        ? labScript.upper_treatment_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                        : 'N/A'
+                      }
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Lower Treatment Type</Label>
+                    <div className="text-base font-medium">
+                      {labScript.lower_treatment_type
+                        ? labScript.lower_treatment_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                        : 'N/A'
+                      }
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <>
+                  {/* Upper Treatment Type - Show when arch is upper */}
+                  {labScript.arch_type === 'upper' && (
+                    <div>
+                      <Label>Upper Treatment Type</Label>
+                      <div className="text-base font-medium">
+                        {labScript.upper_treatment_type
+                          ? labScript.upper_treatment_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                          : 'N/A'
+                        }
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lower Treatment Type - Show when arch is lower */}
+                  {labScript.arch_type === 'lower' && (
+                    <div>
+                      <Label>Lower Treatment Type</Label>
+                      <div className="text-base font-medium">
+                        {labScript.lower_treatment_type
+                          ? labScript.lower_treatment_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                          : 'N/A'
+                        }
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
-              {/* Lower Appliance Type - Show when arch is lower or dual */}
-              {(labScript.arch_type === 'lower' || labScript.arch_type === 'dual') && (
-                <div>
-                  <Label>Lower Appliance Type</Label>
-                  <div className="text-base font-medium">
-                    {labScript.lower_appliance_type
-                      ? labScript.lower_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                      : 'N/A'
-                    }
+              {/* Appliance Type - Side by side for dual arch */}
+              {labScript.arch_type === 'dual' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Upper Appliance Type</Label>
+                    <div className="text-base font-medium">
+                      {labScript.upper_appliance_type
+                        ? labScript.upper_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                        : 'N/A'
+                      }
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Lower Appliance Type</Label>
+                    <div className="text-base font-medium">
+                      {labScript.lower_appliance_type
+                        ? labScript.lower_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                        : 'N/A'
+                      }
+                    </div>
                   </div>
                 </div>
+              ) : (
+                <>
+                  {/* Upper Appliance Type - Show when arch is upper */}
+                  {labScript.arch_type === 'upper' && (
+                    <div>
+                      <Label>Upper Appliance Type</Label>
+                      <div className="text-base font-medium">
+                        {labScript.upper_appliance_type
+                          ? labScript.upper_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                          : 'N/A'
+                        }
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lower Appliance Type - Show when arch is lower */}
+                  {labScript.arch_type === 'lower' && (
+                    <div>
+                      <Label>Lower Appliance Type</Label>
+                      <div className="text-base font-medium">
+                        {labScript.lower_appliance_type
+                          ? labScript.lower_appliance_type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                          : 'N/A'
+                        }
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               <div className="grid grid-cols-2 gap-4">

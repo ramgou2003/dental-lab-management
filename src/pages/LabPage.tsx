@@ -3,11 +3,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { NewLabScriptForm } from "@/components/NewLabScriptForm";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { EditLabScriptForm } from "@/components/EditLabScriptForm";
+import { LabScriptFilterDialog } from "@/components/LabScriptFilterDialog";
 import { useLabScripts } from "@/hooks/useLabScripts";
 import { LabScript } from "@/hooks/useLabScripts";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/AuthGuard";
-import { FlaskConical, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, MoreHorizontal, Trash2 } from "lucide-react";
+import { FlaskConical, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, MoreHorizontal, Trash2, ArrowUp, ArrowDown, Filter } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+export interface LabScriptFilters {
+  status: string[];
+  archType: string[];
+  treatmentType: string[];
+  applianceType: string[];
+  screwType: string[];
+  material: string[];
+}
+
 export function LabPage() {
   const { canCreateLabScripts, canUpdateLabScripts, canDeleteLabScripts } = usePermissions();
   const [activeTab, setActiveTab] = useState("orders");
@@ -24,11 +34,22 @@ export function LabPage() {
   const [showNewScriptForm, setShowNewScriptForm] = useState(false);
   const [showLabScriptDetail, setShowLabScriptDetail] = useState(false);
   const [showEditLabScriptForm, setShowEditLabScriptForm] = useState(false);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [designStates, setDesignStates] = useState<Record<string, 'not-started' | 'in-progress' | 'hold' | 'completed'>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [editingStatus, setEditingStatus] = useState<Record<string, boolean>>({});
+  const [sortField, setSortField] = useState<'patient' | 'requestedDate' | 'dueDate' | null>('requestedDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filters, setFilters] = useState<LabScriptFilters>({
+    status: [],
+    archType: [],
+    treatmentType: [],
+    applianceType: [],
+    screwType: [],
+    material: []
+  });
   const { labScripts, loading, addLabScript, updateLabScript, deleteLabScript } = useLabScripts();
 
   const handleNewOrder = () => {
@@ -41,18 +62,20 @@ export function LabPage() {
         patient_id: formData.patientId,
         patient_name: formData.patientName,
         arch_type: formData.archType,
-        upper_appliance_type: formData.upperApplianceType,
-        lower_appliance_type: formData.lowerApplianceType,
-        screw_type: formData.screwType,
-        custom_screw_type: formData.customScrewType,
-        material: formData.material,
-        shade: formData.shade,
-        vdo_details: formData.vdoDetails,
-        is_nightguard_needed: formData.isNightguardNeeded,
+        upper_treatment_type: formData.upperTreatmentType || null,
+        lower_treatment_type: formData.lowerTreatmentType || null,
+        upper_appliance_type: formData.upperApplianceType || null,
+        lower_appliance_type: formData.lowerApplianceType || null,
+        screw_type: formData.screwType || null,
+        custom_screw_type: formData.customScrewType || null,
+        material: formData.material || null,
+        shade: formData.shade || null,
+        vdo_details: formData.vdoDetails || null,
+        is_nightguard_needed: formData.isNightguardNeeded || null,
         requested_date: formData.requestedDate,
-        due_date: formData.dueDate,
+        due_date: formData.dueDate || null,
         instructions: formData.instructions,
-        notes: formData.notes,
+        notes: formData.notes || null,
         status: 'pending'
       });
 
@@ -104,6 +127,37 @@ export function LabPage() {
     setSelectedLabScript(null);
   };
 
+  const handleSort = (field: 'patient' | 'requestedDate' | 'dueDate') => {
+    if (sortField === field) {
+      // Toggle sort order if clicking the same field
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and default to ascending
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const handleFilterClick = () => {
+    setShowFilterDialog(true);
+  };
+
+  const handleApplyFilters = (newFilters: LabScriptFilters) => {
+    setFilters(newFilters);
+    setShowFilterDialog(false);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      status: [],
+      archType: [],
+      treatmentType: [],
+      applianceType: [],
+      screwType: [],
+      material: []
+    });
+  };
+
   const handleEditFormSubmit = async (id: string, formData: any) => {
     try {
       // Convert form data to lab script format
@@ -111,18 +165,20 @@ export function LabPage() {
         patient_id: formData.patientId,
         patient_name: formData.patientName,
         arch_type: formData.archType,
-        upper_appliance_type: formData.upperApplianceType,
-        lower_appliance_type: formData.lowerApplianceType,
-        screw_type: formData.screwType,
-        custom_screw_type: formData.customScrewType,
-        material: formData.material,
-        shade: formData.shade,
-        vdo_details: formData.vdoDetails,
-        is_nightguard_needed: formData.isNightguardNeeded,
+        upper_treatment_type: formData.upperTreatmentType || null,
+        lower_treatment_type: formData.lowerTreatmentType || null,
+        upper_appliance_type: formData.upperApplianceType || null,
+        lower_appliance_type: formData.lowerApplianceType || null,
+        screw_type: formData.screwType || null,
+        custom_screw_type: formData.customScrewType || null,
+        material: formData.material || null,
+        shade: formData.shade || null,
+        vdo_details: formData.vdoDetails || null,
+        is_nightguard_needed: formData.isNightguardNeeded || null,
         requested_date: formData.requestedDate,
-        due_date: formData.dueDate,
+        due_date: formData.dueDate || null,
         instructions: formData.instructions,
-        notes: formData.notes
+        notes: formData.notes || null
       };
 
       await updateLabScript(id, updateData);
@@ -358,12 +414,28 @@ export function LabPage() {
     return labOrders.filter(order => order.status === status).length;
   };
 
+  // Calculate delayed count (due date has passed and not completed)
+  const getDelayedCount = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of today
+
+    return labScripts.filter(script => {
+      if (script.status === "completed") return false; // Completed scripts are not delayed
+      if (!script.due_date) return false; // No due date means not delayed
+
+      const dueDate = new Date(script.due_date);
+      dueDate.setHours(0, 0, 0, 0); // Set to start of due date
+
+      return dueDate < today; // Due date is before today
+    }).length;
+  };
+
   // Calculate incomplete count (pending + in-progress + hold + delayed)
   const getIncompleteCount = () => {
-    return labOrders.filter(order => 
-      order.status === "in-progress" || 
-      order.status === "pending" || 
-      order.status === "hold" || 
+    return labOrders.filter(order =>
+      order.status === "in-progress" ||
+      order.status === "pending" ||
+      order.status === "hold" ||
       order.status === "delayed"
     ).length;
   };
@@ -372,30 +444,112 @@ export function LabPage() {
     { title: "New Scripts", value: getOrderCount("pending").toString(), icon: Clock, color: "bg-amber-500", bgColor: "bg-amber-50", filter: "pending" },
     { title: "In-Process", value: getOrderCount("in-progress").toString(), icon: Play, color: "bg-blue-500", bgColor: "bg-blue-50", filter: "in-progress" },
     { title: "Hold", value: getOrderCount("hold").toString(), icon: AlertCircle, color: "bg-purple-500", bgColor: "bg-purple-50", filter: "hold" },
+    { title: "Delayed", value: getDelayedCount().toString(), icon: AlertCircle, color: "bg-red-500", bgColor: "bg-red-50", filter: "delayed" },
     { title: "Incomplete", value: getIncompleteCount().toString(), icon: Clock, color: "bg-orange-500", bgColor: "bg-orange-50", filter: "incomplete" },
     { title: "Completed", value: getOrderCount("completed").toString(), icon: CheckCircle, color: "bg-emerald-500", bgColor: "bg-emerald-50", filter: "completed" },
     { title: "All Lab Scripts", value: labOrders.length.toString(), icon: FlaskConical, color: "bg-indigo-500", bgColor: "bg-indigo-50", filter: "all" },
   ];
 
-  // Filter lab orders based on active filter and search query
+  // Filter lab orders based on active filter, search query, and advanced filters
   const filteredOrders = labOrders.filter(order => {
     // First apply status filter
-    const statusMatch = activeFilter === "all"
-      ? true
-      : activeFilter === "incomplete"
-      ? order.status === "in-progress" ||
+    let statusMatch = false;
+
+    if (activeFilter === "all") {
+      statusMatch = true;
+    } else if (activeFilter === "incomplete") {
+      statusMatch = order.status === "in-progress" ||
         order.status === "pending" ||
         order.status === "hold" ||
-        order.status === "delayed"
-      : order.status === activeFilter;
+        order.status === "delayed";
+    } else if (activeFilter === "delayed") {
+      // Check if due date has passed
+      const script = labScripts.find(s => s.id === order.id);
+      if (!script || script.status === "completed" || !script.due_date) {
+        statusMatch = false;
+      } else {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dueDate = new Date(script.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+        statusMatch = dueDate < today;
+      }
+    } else {
+      statusMatch = order.status === activeFilter;
+    }
 
     // Then apply search filter
     const searchMatch = searchQuery.trim() === ""
       ? true
       : order.patient?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return statusMatch && searchMatch;
+    if (!statusMatch || !searchMatch) return false;
+
+    // Apply advanced filters
+    // Status filter
+    if (filters.status.length > 0 && !filters.status.includes(order.status)) {
+      return false;
+    }
+
+    // Arch type filter
+    if (filters.archType.length > 0 && !filters.archType.includes(order.archType)) {
+      return false;
+    }
+
+    // Treatment type filter - check both upper and lower treatment types
+    if (filters.treatmentType.length > 0) {
+      const script = labScripts.find(s => s.id === order.id);
+      if (!script) return false;
+
+      const hasMatchingTreatmentType =
+        (script.upper_treatment_type && filters.treatmentType.includes(script.upper_treatment_type)) ||
+        (script.lower_treatment_type && filters.treatmentType.includes(script.lower_treatment_type));
+
+      if (!hasMatchingTreatmentType) return false;
+    }
+
+    // Appliance type filter - check both upper and lower appliance types
+    if (filters.applianceType.length > 0) {
+      const hasMatchingApplianceType =
+        (order.upperApplianceType && filters.applianceType.includes(order.upperApplianceType)) ||
+        (order.lowerApplianceType && filters.applianceType.includes(order.lowerApplianceType));
+
+      if (!hasMatchingApplianceType) return false;
+    }
+
+    // Screw type filter
+    if (filters.screwType.length > 0 && (!order.screwType || !filters.screwType.includes(order.screwType))) {
+      return false;
+    }
+
+    // Material filter
+    if (filters.material.length > 0 && (!order.material || !filters.material.includes(order.material))) {
+      return false;
+    }
+
+    return true;
   });
+
+  // Apply sorting if a sort field is selected
+  const sortedOrders = sortField ? [...filteredOrders].sort((a, b) => {
+    let compareResult = 0;
+
+    if (sortField === 'patient') {
+      const nameA = a.patient?.toLowerCase() || '';
+      const nameB = b.patient?.toLowerCase() || '';
+      compareResult = nameA.localeCompare(nameB);
+    } else if (sortField === 'requestedDate') {
+      const dateA = a.requestedDate === 'No date' ? new Date(0) : new Date(labScripts.find(s => s.id === a.id)?.requested_date || 0);
+      const dateB = b.requestedDate === 'No date' ? new Date(0) : new Date(labScripts.find(s => s.id === b.id)?.requested_date || 0);
+      compareResult = dateA.getTime() - dateB.getTime();
+    } else if (sortField === 'dueDate') {
+      const dateA = a.dueDate === 'No due date' ? new Date(0) : new Date(labScripts.find(s => s.id === a.id)?.due_date || 0);
+      const dateB = b.dueDate === 'No due date' ? new Date(0) : new Date(labScripts.find(s => s.id === b.id)?.due_date || 0);
+      compareResult = dateA.getTime() - dateB.getTime();
+    }
+
+    return sortOrder === 'asc' ? compareResult : -compareResult;
+  }) : filteredOrders;
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -407,6 +561,11 @@ export function LabPage() {
             value: searchQuery,
             onChange: setSearchQuery
           }}
+          secondaryAction={{
+            label: "Filter",
+            icon: Filter,
+            onClick: handleFilterClick
+          }}
           action={canCreateLabScripts() ? {
             label: "New Lab Script",
             onClick: handleNewOrder
@@ -415,7 +574,7 @@ export function LabPage() {
       </div>
       <div className="flex-1 px-6 pt-6 pb-2">
         {/* Stats Cards */}
-        <div className="grid grid-cols-6 gap-2 sm:gap-3 lg:gap-4 mb-6">
+        <div className="grid grid-cols-7 gap-2 sm:gap-3 lg:gap-4 mb-6">
           {stats.map((stat, index) => (
             <button
               key={index}
@@ -462,44 +621,71 @@ export function LabPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading lab scripts...</h3>
               <p className="text-gray-500">Please wait while we fetch your lab scripts.</p>
             </div>
-          ) : filteredOrders.length > 0 ? (
+          ) : sortedOrders.length > 0 ? (
             <>
               {/* Table Header - Fixed with responsive columns */}
-              <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex-shrink-0 table-header">
-                <div className="grid text-xs font-semibold text-gray-600 uppercase tracking-wider h-6 gap-2 lg:gap-3"
+              <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0 table-header">
+                <div className="grid text-sm font-bold text-blue-600 h-6 gap-2 lg:gap-3"
                      style={{
-                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(100px, 1fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                       gridTemplateColumns: 'minmax(180px, 2fr) minmax(80px, 0.8fr) minmax(130px, 1.5fr) minmax(100px, 1fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
                      }}>
-                  <div className="border-r border-gray-200 flex items-center px-2">
-                    <span className="truncate">Patient Name</span>
+                  <div className="text-center flex items-center justify-center px-2 border-r border-slate-300 relative">
+                    <span className="truncate uppercase">Patient Name</span>
+                    <button
+                      onClick={() => handleSort('patient')}
+                      className="absolute right-2 flex-shrink-0 hover:bg-blue-50 rounded p-1.5 transition-colors border border-transparent hover:border-blue-200"
+                      title={sortField === 'patient' && sortOrder === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+                    >
+                      {sortField === 'patient' && sortOrder === 'asc' && <ArrowUp className="h-4 w-4 text-blue-600" />}
+                      {sortField === 'patient' && sortOrder === 'desc' && <ArrowDown className="h-4 w-4 text-blue-600" />}
+                      {sortField !== 'patient' && <ArrowUp className="h-4 w-4 text-blue-400" />}
+                    </button>
                   </div>
-                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
-                    <span className="truncate">Arch Type</span>
+                  <div className="border-r border-slate-300 text-center flex items-center justify-center px-2">
+                    <span className="truncate uppercase">Arch Type</span>
                   </div>
-                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
-                    <span className="truncate">Appliance Type</span>
+                  <div className="border-r border-slate-300 text-center flex items-center justify-center px-2">
+                    <span className="truncate uppercase">Appliance Type</span>
                   </div>
-                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
-                    <span className="truncate">Screw Type</span>
+                  <div className="border-r border-slate-300 text-center flex items-center justify-center px-2">
+                    <span className="truncate uppercase">Screw Type</span>
                   </div>
-                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
-                    <span className="truncate">Requested Date</span>
+                  <div className="border-r border-slate-300 text-center flex items-center justify-center px-2 relative">
+                    <span className="truncate pr-6 uppercase">Requested Date</span>
+                    <button
+                      onClick={() => handleSort('requestedDate')}
+                      className="absolute right-1 flex-shrink-0 hover:bg-blue-50 rounded p-1.5 transition-colors border border-transparent hover:border-blue-200"
+                      title={sortField === 'requestedDate' && sortOrder === 'asc' ? 'Sort Newest First' : 'Sort Oldest First'}
+                    >
+                      {sortField === 'requestedDate' && sortOrder === 'asc' && <ArrowUp className="h-4 w-4 text-blue-600" />}
+                      {sortField === 'requestedDate' && sortOrder === 'desc' && <ArrowDown className="h-4 w-4 text-blue-600" />}
+                      {sortField !== 'requestedDate' && <ArrowUp className="h-4 w-4 text-blue-400" />}
+                    </button>
                   </div>
-                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
-                    <span className="truncate">Due Date</span>
+                  <div className="border-r border-slate-300 text-center flex items-center justify-center px-2 relative">
+                    <span className="truncate pr-6 uppercase">Due Date</span>
+                    <button
+                      onClick={() => handleSort('dueDate')}
+                      className="absolute right-1 flex-shrink-0 hover:bg-blue-50 rounded p-1.5 transition-colors border border-transparent hover:border-blue-200"
+                      title={sortField === 'dueDate' && sortOrder === 'asc' ? 'Sort Newest First' : 'Sort Oldest First'}
+                    >
+                      {sortField === 'dueDate' && sortOrder === 'asc' && <ArrowUp className="h-4 w-4 text-blue-600" />}
+                      {sortField === 'dueDate' && sortOrder === 'desc' && <ArrowDown className="h-4 w-4 text-blue-600" />}
+                      {sortField !== 'dueDate' && <ArrowUp className="h-4 w-4 text-blue-400" />}
+                    </button>
                   </div>
-                  <div className="border-r border-gray-200 text-center flex items-center justify-center px-2">
-                    <span className="truncate">Status</span>
+                  <div className="border-r border-slate-300 text-center flex items-center justify-center px-2">
+                    <span className="truncate uppercase">Status</span>
                   </div>
-                  <div className="text-right flex items-center justify-end px-2">
-                    <span className="truncate">Actions</span>
+                  <div className="text-center flex items-center justify-center px-2">
+                    <span className="truncate uppercase">Actions</span>
                   </div>
                 </div>
               </div>
 
               {/* Table Body - Scrollable */}
               <div className="flex-1 overflow-y-auto scrollbar-enhanced table-body">
-                {filteredOrders.map((order) => {
+                {sortedOrders.map((order) => {
                   const originalScript = labScripts.find(script => script.id === order.id);
 
                   // Format appliance type display based on arch type
@@ -542,7 +728,7 @@ export function LabPage() {
                     <div key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 min-h-[64px]">
                       <div className="grid gap-2 lg:gap-3 px-4 py-3 text-sm items-center min-h-[64px]"
                            style={{
-                             gridTemplateColumns: 'minmax(180px, 2fr) minmax(100px, 1fr) minmax(160px, 2fr) minmax(100px, 1fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
+                             gridTemplateColumns: 'minmax(180px, 2fr) minmax(80px, 0.8fr) minmax(130px, 1.5fr) minmax(100px, 1fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(120px, 1.2fr) minmax(140px, 1.4fr)'
                            }}>
 
                         {/* Patient */}
@@ -715,6 +901,15 @@ export function LabPage() {
         onClose={handleEditFormClose}
         onSubmit={handleEditFormSubmit}
         labScript={selectedLabScript}
+      />
+
+      {/* Filter Dialog */}
+      <LabScriptFilterDialog
+        open={showFilterDialog}
+        onOpenChange={setShowFilterDialog}
+        currentFilters={filters}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
       />
     </div>
   );

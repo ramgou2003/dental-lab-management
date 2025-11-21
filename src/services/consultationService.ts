@@ -367,7 +367,8 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
         state: packetData.address_state || null,
         zip_code: packetData.address_zip || null,
         status: 'ACTIVE', // Always set status to ACTIVE
-        treatment_type: 'Consultation Completed'
+        treatment_type: 'Consultation Completed',
+        patient_source: 'Consult' // Patient created from consultation
         // Note: full_name is a generated column and will be automatically created
         // created_at and updated_at have default values, so we don't need to specify them
       };
@@ -582,7 +583,8 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
         state: null,
         zip_code: null,
         status: 'ACTIVE', // Always set status to ACTIVE
-        treatment_type: 'Consultation Completed'
+        treatment_type: 'Consultation Completed',
+        patient_source: 'Consult' // Patient created from consultation
       };
 
       console.log('📝 Patient data to insert:', patientData);
