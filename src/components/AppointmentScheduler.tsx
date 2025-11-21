@@ -84,17 +84,17 @@ export function AppointmentScheduler({
     onClose();
   };
 
-  // Disable past dates
+  // Disable past dates in EST timezone
   const isDateDisabled = (date: Date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
-  };
+    // Get current date in EST timezone
+    const nowEST = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}));
+    nowEST.setHours(0, 0, 0, 0);
 
-  // Disable weekends (optional - remove if you want weekend appointments)
-  const isWeekend = (date: Date) => {
-    const day = date.getDay();
-    return day === 0 || day === 6; // Sunday = 0, Saturday = 6
+    // Convert the date to EST for comparison
+    const dateEST = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    dateEST.setHours(0, 0, 0, 0);
+
+    return dateEST < nowEST;
   };
 
   if (!deliveryItem) return null;
@@ -163,14 +163,14 @@ export function AppointmentScheduler({
           <div className="space-y-3">
             <Label className="text-base font-semibold text-gray-900 flex items-center gap-2">
               <CalendarIcon className="h-4 w-4" />
-              Select Appointment Date
+              Select Appointment Date <span className="text-sm font-normal text-gray-500">(EST)</span>
             </Label>
             <div className="flex justify-center">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
-                disabled={(date) => isDateDisabled(date) || isWeekend(date)}
+                disabled={(date) => isDateDisabled(date)}
                 className="rounded-md border"
               />
             </div>
@@ -182,7 +182,7 @@ export function AppointmentScheduler({
                   month: 'long',
                   day: 'numeric',
                   timeZone: 'America/New_York'
-                })}
+                })} (EST)
               </p>
             )}
           </div>
@@ -191,16 +191,16 @@ export function AppointmentScheduler({
           <div className="space-y-3">
             <Label className="text-base font-semibold text-gray-900 flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Select Appointment Time
+              Select Appointment Time <span className="text-sm font-normal text-gray-500">(EST)</span>
             </Label>
             <Select value={selectedTime} onValueChange={setSelectedTime}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Choose appointment time" />
+                <SelectValue placeholder="Choose appointment time (EST)" />
               </SelectTrigger>
               <SelectContent>
                 {timeSlots.map((slot) => (
                   <SelectItem key={slot.value} value={slot.value}>
-                    {slot.label}
+                    {slot.label} EST
                   </SelectItem>
                 ))}
               </SelectContent>
