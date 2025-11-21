@@ -848,7 +848,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
   const showUpperFields = formData.arch_type === 'upper' || formData.arch_type === 'dual';
   const showLowerFields = formData.arch_type === 'lower' || formData.arch_type === 'dual';
 
-  // Searchable Tooth Library Component
+  // Simple Searchable Tooth Library Component
   const SearchableToothLibrary = ({
     value,
     onValueChange,
@@ -865,142 +865,64 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     hasError?: boolean;
   }) => {
     const [searchValue, setSearchValue] = useState("");
-    const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
-    const [isScrolling, setIsScrolling] = useState(false);
 
     // Filter options based on search
     const filteredOptions = toothLibraryOptions.filter(option =>
       option.toLowerCase().includes(searchValue.toLowerCase())
     );
 
-    const handleOpenChange = (newOpen: boolean) => {
-      setOpen(newOpen);
-      if (!newOpen) {
-        setSearchValue(""); // Reset search when closing
-      }
-    };
-
-    const handleButtonClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setOpen(!open);
-    };
-
-    const handleOptionClick = (option: string) => {
-      onValueChange(value === option ? "" : option);
-      setOpen(false);
-    };
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-      const touch = e.touches[0];
-      setTouchStart({
-        x: touch.clientX,
-        y: touch.clientY,
-        time: Date.now()
-      });
-      setIsScrolling(false);
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-      if (!touchStart) return;
-
-      const touch = e.touches[0];
-      const deltaX = Math.abs(touch.clientX - touchStart.x);
-      const deltaY = Math.abs(touch.clientY - touchStart.y);
-
-      // If moved more than 10px vertically, consider it scrolling
-      if (deltaY > 10 || deltaX > 10) {
-        setIsScrolling(true);
-      }
-    };
-
-    const handleOptionTouch = (option: string, e: React.TouchEvent) => {
-      if (!touchStart) return;
-
-      const touch = e.changedTouches[0];
-      const deltaX = Math.abs(touch.clientX - touchStart.x);
-      const deltaY = Math.abs(touch.clientY - touchStart.y);
-      const deltaTime = Date.now() - touchStart.time;
-
-      // Only trigger selection if:
-      // 1. Not scrolling (moved less than 10px)
-      // 2. Touch duration is less than 500ms (quick tap)
-      if (!isScrolling && deltaX < 10 && deltaY < 10 && deltaTime < 500) {
-        e.preventDefault();
-        handleOptionClick(option);
-      }
-
-      setTouchStart(null);
-      setIsScrolling(false);
-    };
-
     return (
-      <Popover open={open} onOpenChange={handleOpenChange}>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
-            aria-expanded={open}
             type="button"
             className={`w-full justify-between ${hasError ? "border-red-500 focus:border-red-500" : ""}`}
-            onClick={handleButtonClick}
           >
             {value || placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[400px] p-0" align="start">
-          <div className="flex flex-col">
-            {/* Search Input */}
-            <div className="p-3 border-b">
-              <Input
-                placeholder="Type to search tooth library..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="w-full"
-              />
-            </div>
+          {/* Search Input */}
+          <div className="p-3 border-b">
+            <Input
+              placeholder="Search tooth library..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="w-full"
+            />
+          </div>
 
-            {/* Scrollable Options List */}
-            <div
-              className="max-h-[300px] overflow-y-auto overflow-x-hidden touch-pan-y"
-              style={{
-                WebkitOverflowScrolling: 'touch',
-                overscrollBehavior: 'contain',
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#cbd5e1 #f1f5f9',
-                touchAction: 'pan-y'
-              }}
-              onWheel={(e) => e.stopPropagation()}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-            >
-              {filteredOptions.length === 0 ? (
-                <div className="py-6 text-center text-sm text-gray-500">
-                  No tooth library found.
+          {/* Scrollable Options List */}
+          <div className="max-h-[300px] overflow-y-scroll p-1">
+            {filteredOptions.length === 0 ? (
+              <div className="py-6 text-center text-sm text-gray-500">
+                No tooth library found.
+              </div>
+            ) : (
+              filteredOptions.map((option) => (
+                <div
+                  key={option}
+                  className={`flex items-center px-2 py-2 text-sm cursor-pointer rounded hover:bg-gray-100 ${
+                    value === option ? "bg-blue-50 text-blue-700 font-medium" : ""
+                  }`}
+                  onClick={() => {
+                    onValueChange(option);
+                    setOpen(false);
+                    setSearchValue("");
+                  }}
+                >
+                  <Check
+                    className={`mr-2 h-4 w-4 ${
+                      value === option ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                  {option}
                 </div>
-              ) : (
-                <div className="p-1">
-                  {filteredOptions.map((option) => (
-                    <div
-                      key={option}
-                      className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground ${
-                        value === option ? "bg-accent text-accent-foreground" : ""
-                      }`}
-                      onClick={() => handleOptionClick(option)}
-                      onTouchEnd={(e) => handleOptionTouch(option, e)}
-                    >
-                      <Check
-                        className={`mr-2 h-4 w-4 ${
-                          value === option ? "opacity-100" : "opacity-0"
-                        }`}
-                      />
-                      {option}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+              ))
+            )}
           </div>
         </PopoverContent>
       </Popover>
