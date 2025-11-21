@@ -888,14 +888,20 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
           <>
             {/* Backdrop */}
             <div
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-[9999]"
               onClick={() => setOpen(false)}
             />
 
             {/* Dropdown */}
-            <div className="absolute z-50 w-full mt-2 bg-white border rounded-md shadow-lg">
+            <div className="fixed z-[10000] w-[400px] bg-white border rounded-md shadow-xl max-h-[80vh] flex flex-col"
+              style={{
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)'
+              }}
+            >
               {/* Search Input */}
-              <div className="p-3 border-b">
+              <div className="p-3 border-b flex-shrink-0">
                 <Input
                   placeholder="Search tooth library..."
                   value={searchValue}
@@ -905,7 +911,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
               </div>
 
               {/* Scrollable Options List */}
-              <div className="max-h-[300px] overflow-y-auto p-1">
+              <div className="overflow-y-auto p-1 flex-1">
                 {filteredOptions.length === 0 ? (
                   <div className="py-6 text-center text-sm text-gray-500">
                     No tooth library found.
