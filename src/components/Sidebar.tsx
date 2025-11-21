@@ -153,6 +153,8 @@ export function Sidebar({
     const hasSubmenu = item.submenu && item.submenu.length > 0;
     if (hasSubmenu) {
       toggleSubmenu(item.section);
+      // Also navigate to the parent route
+      navigate(item.href);
     } else {
       navigate(item.href);
     }
@@ -388,37 +390,44 @@ export function Sidebar({
               )}
             </button>
 
-            {/* Submenu - Show when expanded */}
-            {hasSubmenu && isExpanded && (
-              <div className={cn(
-                "mt-1 space-y-1",
-                collapsed ? "flex flex-col items-center" : ""
-              )}>
-                {visibleSubmenuItems.map(subItem => {
-                  const isSubActive = activeSection === subItem.section;
-                  return (
-                    <button
-                      key={subItem.section}
-                      onClick={() => navigate(subItem.href)}
-                      className={cn(
-                        "flex items-center text-left rounded-lg transition-colors duration-200 border-2",
-                        collapsed
-                          ? "w-10 h-10 justify-center"
-                          : "w-full px-3 py-2.5 text-sm",
-                        isSubActive
-                          ? "bg-indigo-50 text-indigo-700 border-indigo-500 font-medium"
-                          : "text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-indigo-300"
-                      )}
-                      title={collapsed ? subItem.name : undefined}
-                    >
-                      <subItem.icon className={cn(
-                        "flex-shrink-0",
-                        collapsed ? "h-5 w-5" : "h-4 w-4"
-                      )} />
-                      {!collapsed && <span className="ml-2">{subItem.name}</span>}
-                    </button>
-                  );
-                })}
+            {/* Submenu - Show when expanded with smooth animation */}
+            {hasSubmenu && (
+              <div
+                className={cn(
+                  "overflow-hidden transition-all duration-300 ease-in-out",
+                  isExpanded ? "max-h-96 opacity-100 mt-1" : "max-h-0 opacity-0"
+                )}
+              >
+                <div className={cn(
+                  "space-y-1",
+                  collapsed ? "flex flex-col items-center" : ""
+                )}>
+                  {visibleSubmenuItems.map(subItem => {
+                    const isSubActive = activeSection === subItem.section;
+                    return (
+                      <button
+                        key={subItem.section}
+                        onClick={() => navigate(subItem.href)}
+                        className={cn(
+                          "flex items-center text-left rounded-lg transition-colors duration-200 border-2",
+                          collapsed
+                            ? "w-10 h-10 justify-center"
+                            : "w-full px-3 py-2.5 text-sm",
+                          isSubActive
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-500 font-medium"
+                            : "text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-indigo-300"
+                        )}
+                        title={collapsed ? subItem.name : undefined}
+                      >
+                        <subItem.icon className={cn(
+                          "flex-shrink-0",
+                          collapsed ? "h-5 w-5" : "h-4 w-4"
+                        )} />
+                        {!collapsed && <span className="ml-2">{subItem.name}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>;
