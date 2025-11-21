@@ -19,15 +19,41 @@ interface AppointmentSchedulerProps {
   deliveryItem: DeliveryItem | null;
 }
 
-export function AppointmentScheduler({ 
-  isOpen, 
-  onClose, 
-  onSchedule, 
-  deliveryItem 
+export function AppointmentScheduler({
+  isOpen,
+  onClose,
+  onSchedule,
+  deliveryItem
 }: AppointmentSchedulerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [appointmentNotes, setAppointmentNotes] = useState<string>("");
+
+  // Get current date in EST timezone
+  const getTodayInEST = () => {
+    const now = new Date();
+    const estDateString = now.toLocaleString("en-US", {timeZone: "America/New_York"});
+    const estDate = new Date(estDateString);
+    estDate.setHours(0, 0, 0, 0);
+    return estDate;
+  };
+
+  // Format a date object for display (assumes the date is already correct, just formats it)
+  const formatDateForDisplay = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+
+    // Create a new date with just the year, month, day (no time component)
+    const displayDate = new Date(year, month, day);
+
+    return displayDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   // Generate time slots from 9 AM to 5 PM in 30-minute intervals
   const generateTimeSlots = () => {
@@ -86,15 +112,13 @@ export function AppointmentScheduler({
 
   // Disable past dates in EST timezone
   const isDateDisabled = (date: Date) => {
-    // Get current date in EST timezone
-    const nowEST = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}));
-    nowEST.setHours(0, 0, 0, 0);
+    const todayEST = getTodayInEST();
 
-    // Convert the date to EST for comparison
-    const dateEST = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
-    dateEST.setHours(0, 0, 0, 0);
+    // Normalize the input date to midnight for comparison
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
 
-    return dateEST < nowEST;
+    return checkDate < todayEST;
   };
 
   if (!deliveryItem) return null;
@@ -171,18 +195,21 @@ export function AppointmentScheduler({
                 selected={selectedDate}
                 onSelect={setSelectedDate}
                 disabled={(date) => isDateDisabled(date)}
+                defaultMonth={getTodayInEST()}
                 className="rounded-md border"
               />
             </div>
+            <p className="text-xs text-center text-gray-500 mt-2">
+              Current date in EST: {getTodayInEST().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
             {selectedDate && (
               <p className="text-sm text-gray-600 text-center">
-                Selected: {selectedDate.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  timeZone: 'America/New_York'
-                })} (EST)
+                Selected: {formatDateForDisplay(selectedDate)} (EST)
               </p>
             )}
           </div>
