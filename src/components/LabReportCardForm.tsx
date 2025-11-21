@@ -872,7 +872,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     );
 
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -884,7 +884,11 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0" align="start">
+        <PopoverContent
+          className="w-[400px] p-0"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           {/* Search Input */}
           <div className="p-3 border-b">
             <Input
@@ -897,7 +901,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
 
           {/* Scrollable Options List */}
           <div
-            className="max-h-[300px] overflow-y-scroll p-1"
+            className="max-h-[300px] overflow-y-auto p-1"
             style={{
               WebkitOverflowScrolling: 'touch',
               touchAction: 'pan-y',
