@@ -918,14 +918,18 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
 
             {/* Scrollable Options List */}
             <div
-              className="max-h-[300px] overflow-y-auto overflow-x-hidden"
+              className="max-h-[300px] overflow-y-auto overflow-x-hidden touch-pan-y"
               style={{
                 WebkitOverflowScrolling: 'touch',
                 overscrollBehavior: 'contain',
                 scrollbarWidth: 'thin',
-                scrollbarColor: '#cbd5e1 #f1f5f9'
+                scrollbarColor: '#cbd5e1 #f1f5f9',
+                touchAction: 'pan-y'
               }}
               onWheel={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
             >
               {filteredOptions.length === 0 ? (
                 <div className="py-6 text-center text-sm text-gray-500">
@@ -940,6 +944,10 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
                         value === option ? "bg-accent text-accent-foreground" : ""
                       }`}
                       onClick={() => handleOptionClick(option)}
+                      onTouchEnd={(e) => {
+                        e.stopPropagation();
+                        handleOptionClick(option);
+                      }}
                     >
                       <Check
                         className={`mr-2 h-4 w-4 ${
