@@ -20,9 +20,6 @@ const NewPatientLeadPage = () => {
     phone: "",
     dateOfBirth: "",
     address: "",
-    city: "",
-    state: "",
-    zipCode: "",
     gender: "",
     reasonForVisit: "",
     dentalProblems: [] as string[],
@@ -346,9 +343,6 @@ const NewPatientLeadPage = () => {
           phone: formData.phone || null,
           date_of_birth: formData.dateOfBirth || null,
           address: formData.address || null,
-          city: formData.city || null,
-          state: formData.state || null,
-          zip_code: formData.zipCode || null,
           gender: formData.gender || null,
 
           // Set status for kanban board
