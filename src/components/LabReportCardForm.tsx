@@ -872,78 +872,71 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     );
 
     return (
-      <Popover open={open} onOpenChange={setOpen} modal={false}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            type="button"
-            className={`w-full justify-between ${hasError ? "border-red-500 focus:border-red-500" : ""}`}
-          >
-            {value || placeholder}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-[400px] p-0"
-          align="start"
-          onOpenAutoFocus={(e) => e.preventDefault()}
+      <div className="relative">
+        <Button
+          variant="outline"
+          role="combobox"
+          type="button"
+          className={`w-full justify-between ${hasError ? "border-red-500 focus:border-red-500" : ""}`}
+          onClick={() => setOpen(!open)}
         >
-          {/* Search Input */}
-          <div className="p-3 border-b">
-            <Input
-              placeholder="Search tooth library..."
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="w-full"
-            />
-          </div>
+          {value || placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
 
-          {/* Scrollable Options List */}
-          <div
-            className="max-h-[300px] overflow-y-auto p-1"
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-y',
-              overscrollBehavior: 'contain'
-            }}
-          >
-            {filteredOptions.length === 0 ? (
-              <div className="py-6 text-center text-sm text-gray-500">
-                No tooth library found.
+        {open && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setOpen(false)}
+            />
+
+            {/* Dropdown */}
+            <div className="absolute z-50 w-full mt-2 bg-white border rounded-md shadow-lg">
+              {/* Search Input */}
+              <div className="p-3 border-b">
+                <Input
+                  placeholder="Search tooth library..."
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  className="w-full"
+                />
               </div>
-            ) : (
-              filteredOptions.map((option) => (
-                <div
-                  key={option}
-                  className={`flex items-center px-2 py-2 text-sm cursor-pointer rounded hover:bg-gray-100 ${
-                    value === option ? "bg-blue-50 text-blue-700 font-medium" : ""
-                  }`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onValueChange(option);
-                    setOpen(false);
-                    setSearchValue("");
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    onValueChange(option);
-                    setOpen(false);
-                    setSearchValue("");
-                  }}
-                >
-                  <Check
-                    className={`mr-2 h-4 w-4 ${
-                      value === option ? "opacity-100" : "opacity-0"
-                    }`}
-                  />
-                  {option}
-                </div>
-              ))
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
+
+              {/* Scrollable Options List */}
+              <div className="max-h-[300px] overflow-y-auto p-1">
+                {filteredOptions.length === 0 ? (
+                  <div className="py-6 text-center text-sm text-gray-500">
+                    No tooth library found.
+                  </div>
+                ) : (
+                  filteredOptions.map((option) => (
+                    <div
+                      key={option}
+                      className={`flex items-center px-2 py-2 text-sm cursor-pointer rounded hover:bg-gray-100 ${
+                        value === option ? "bg-blue-50 text-blue-700 font-medium" : ""
+                      }`}
+                      onClick={() => {
+                        onValueChange(option);
+                        setOpen(false);
+                        setSearchValue("");
+                      }}
+                    >
+                      <Check
+                        className={`mr-2 h-4 w-4 ${
+                          value === option ? "opacity-100" : "opacity-0"
+                        }`}
+                      />
+                      {option}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     );
   };
 
