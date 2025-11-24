@@ -162,10 +162,8 @@ export function useReportCards() {
             return value && value.trim() !== '' ? value : null;
           };
 
-          // Get current time in EST
-          const now = new Date();
-          const estDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-          const completedAtTimestamp = estDate.toISOString();
+          // Use the completed_at_timestamp from the form data (already in EST and converted to ISO)
+          const completedAtTimestamp = reportData.completed_at_timestamp;
 
           const clinicalData = {
             report_card_id: reportCardId,

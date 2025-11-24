@@ -25,6 +25,20 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
   const { userProfile } = useAuth();
   const [labReportData, setLabReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Get current date and time in EST
+  const getCurrentESTDateTime = () => {
+    const now = new Date();
+    const estDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const date = estDate.toISOString().split('T')[0];
+    const hours = estDate.getHours().toString().padStart(2, '0');
+    const minutes = estDate.getMinutes().toString().padStart(2, '0');
+    const time = `${hours}:${minutes}`;
+    return { date, time };
+  };
+
+  const { date: currentDate, time: currentTime } = getCurrentESTDateTime();
+
   const [formData, setFormData] = useState({
     // Patient Information (read-only)
     patient_name: reportCard.patient_name,
@@ -55,7 +69,11 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
 
     // Final Assessment
     overall_satisfaction: '',
-    treatment_success: 'successful'
+    treatment_success: 'successful',
+
+    // Completion date and time
+    completion_date: currentDate,
+    completion_time: currentTime
   });
 
   // Load lab report data to show context
@@ -104,7 +122,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
     const requiredFields = [
       'insertion_date', 'fit_assessment', 'occlusion_check',
       'patient_comfort', 'retention_stability', 'aesthetic_satisfaction',
-      'functional_assessment', 'overall_satisfaction'
+      'functional_assessment', 'overall_satisfaction', 'completion_date', 'completion_time'
     ];
 
     const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
@@ -114,11 +132,17 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
       return;
     }
 
-    // Add completed_by and completed_by_name to form data
+    // Combine completion_date and completion_time to create timestamp in EST
+    const dateTimeString = `${formData.completion_date}T${formData.completion_time}:00`;
+    const estDate = new Date(dateTimeString + ' GMT-0500'); // EST is GMT-5
+    const completedAtTimestamp = estDate.toISOString();
+
+    // Add completed_by, completed_by_name, and completed_at to form data
     const formDataWithUser = {
       ...formData,
       completed_by: userProfile?.id || null,
-      completed_by_name: userProfile?.full_name || null
+      completed_by_name: userProfile?.full_name || null,
+      completed_at_timestamp: completedAtTimestamp
     };
 
     // Submit the form data to parent component
@@ -485,6 +509,55 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
               placeholder="Additional clinical observations and notes..."
               rows={4}
             />
+          </div>
+        </div>
+
+        {/* Completion Date and Time */}
+        <div className="space-y-4 border-t pt-6">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-green-600" />
+            Completion Date & Time (EST)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="completion_date">
+                Completion Date <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="completion_date"
+                type="date"
+                value={formData.completion_date}
+                onChange={(e) => handleInputChange('completion_date', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="completion_time">
+                Completion Time <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="completion_time"
+                type="time"
+                value={formData.completion_time}
+                onChange={(e) => handleInputChange('completion_time', e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="flex justify-start">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const { date, time } = getCurrentESTDateTime();
+                handleInputChange('completion_date', date);
+                handleInputChange('completion_time', time);
+              }}
+              className="text-xs"
+            >
+              Use Current Date & Time (EST)
+            </Button>
           </div>
         </div>
 
