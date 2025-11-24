@@ -408,6 +408,14 @@ export function ReportCardsPage() {
                                   </span>
                                 )}
                               </div>
+                              {/* Completed By */}
+                              {card.lab_report_status === 'completed' && card.lab_report_completed_by_name && (
+                                <div className="mt-1">
+                                  <span className="text-xs text-blue-600">
+                                    <span className="font-medium">Completed by:</span> {card.lab_report_completed_by_name}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
 

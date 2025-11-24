@@ -11,6 +11,8 @@ export interface ReportCard {
   clinical_report_data?: any;
   lab_report_completed_at?: string;
   clinical_report_completed_at?: string;
+  lab_report_completed_by?: string;
+  lab_report_completed_by_name?: string;
   created_at: string;
   updated_at: string;
   // Lab script details
@@ -60,7 +62,25 @@ export function useReportCards() {
         return;
       }
 
-      setReportCards(data || []);
+      // Fetch completed_by information from lab_report_cards for each report card
+      const enrichedData = await Promise.all((data || []).map(async (card) => {
+        if (card.lab_report_status === 'completed' && card.lab_script_id) {
+          const { data: labReportData } = await supabase
+            .from('lab_report_cards')
+            .select('completed_by, completed_by_name')
+            .eq('lab_script_id', card.lab_script_id)
+            .single();
+
+          return {
+            ...card,
+            lab_report_completed_by: labReportData?.completed_by,
+            lab_report_completed_by_name: labReportData?.completed_by_name
+          };
+        }
+        return card;
+      }));
+
+      setReportCards(enrichedData);
       setError(null);
     } catch (err) {
       console.error('Error fetching report cards:', err);

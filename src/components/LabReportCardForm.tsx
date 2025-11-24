@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import type { ReportCard } from "@/hooks/useReportCards";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LabReportCardFormProps {
   reportCard: ReportCard;
@@ -22,6 +23,7 @@ interface LabReportCardFormProps {
 // Simple form component like all other forms in the app
 export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportCardFormProps) {
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const [existingLabReport, setExistingLabReport] = useState<any>(null);
 
   // Direct functions without real-time subscription to prevent form re-renders
@@ -68,8 +70,12 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
         custom_tooth_library_lower: formData.custom_tooth_library_lower || null,
         upper_appliance_number: formData.upper_appliance_number || null,
         lower_appliance_number: formData.lower_appliance_number || null,
+        upper_nightguard_number: formData.upper_nightguard_number || null,
+        lower_nightguard_number: formData.lower_nightguard_number || null,
         notes_and_remarks: formData.notes_and_remarks || null,
         submitted_at: new Date().toISOString(),
+        completed_by: userProfile?.id || null,
+        completed_by_name: userProfile?.full_name || null,
         status: 'completed' // Change from pending to completed when user submits
       };
 

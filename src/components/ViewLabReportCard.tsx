@@ -457,7 +457,7 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
             <Calendar className="h-5 w-5 text-indigo-600" />
             Submission & Timeline Details
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label>Lab Report Status</Label>
               <div className="p-3 bg-gray-50 rounded-md border">
@@ -478,6 +478,14 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
                 </div>
                 <div className="text-xs text-gray-500">
                   {new Date(labReportData.submitted_at).toLocaleTimeString()}
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label>Completed By</Label>
+              <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+                <div className="text-sm font-medium text-blue-900">
+                  {labReportData.completed_by_name || 'Not available'}
                 </div>
               </div>
             </div>
