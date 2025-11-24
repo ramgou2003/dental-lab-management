@@ -407,32 +407,34 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
             </div>
           </div>
 
-          {/* Nightguard Numbers Row */}
-          <div className="space-y-2">
-            <h4 className="text-md font-medium text-gray-700">Nightguard Numbers</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {showUpperFields && (
-                <div>
-                  <Label>Upper Nightguard Number</Label>
-                  <div className="p-3 bg-green-50 rounded-md border border-green-200">
-                    <span className="font-mono font-medium text-green-900">
-                      {labReportData.upper_nightguard_number || 'Not applicable'}
-                    </span>
+          {/* Nightguard Numbers Row - Only show if nightguard numbers exist */}
+          {(labReportData.upper_nightguard_number || labReportData.lower_nightguard_number) && (
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Nightguard Numbers</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {showUpperFields && labReportData.upper_nightguard_number && (
+                  <div>
+                    <Label>Upper Nightguard Number</Label>
+                    <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                      <span className="font-mono font-medium text-green-900">
+                        {labReportData.upper_nightguard_number}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              )}
-              {showLowerFields && (
-                <div>
-                  <Label>Lower Nightguard Number</Label>
-                  <div className="p-3 bg-green-50 rounded-md border border-green-200">
-                    <span className="font-mono font-medium text-green-900">
-                      {labReportData.lower_nightguard_number || 'Not applicable'}
-                    </span>
+                )}
+                {showLowerFields && labReportData.lower_nightguard_number && (
+                  <div>
+                    <Label>Lower Nightguard Number</Label>
+                    <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                      <span className="font-mono font-medium text-green-900">
+                        {labReportData.lower_nightguard_number}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Notes & Remarks */}
