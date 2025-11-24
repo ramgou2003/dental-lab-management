@@ -1,0 +1,32 @@
+id,name,description,cdt_code,cpt_code,dental_cost,category,is_active,created_at,updated_at,medical_cost
+96e3da1a-41a4-4bce-a6ad-174a023937d6,"Patient Exam, New Patient level 3 (need head and neck Exam form), diagnostic service provided by dentist or physician other than requesting dentist or physician",,D9310,99203,350,,TRUE,2025-09-15 14:24:27.817274+01,2025-09-15 16:08:07.547881+01,350
+96e3da1a-41a4-4bce-a6ad-174a023937d7,Comprehensive Perio evaluation,,D0180,,350,,TRUE,2025-09-15 14:24:27.817274+00,2025-09-15 16:08:07.547881+00,
+819de16b-4ada-4ed1-9cd6-2e7b907a7599,Periodic Oral Evaluation,,D0120,,150,,TRUE,2025-09-15 14:23:43.962513+00,2025-09-15 14:23:43.962513+00,
+cfb0c2d0-92de-4549-a333-c6c1558792d9,Panoramic radiographic image,,D0330,70320,150,,TRUE,2025-09-15 14:27:59.447747+00,2025-09-15 16:08:30.128244+00,
+363b4830-77c6-4e60-a380-a42fd1aced4f,"Cone Beam CT capture and interpretation with field of view of both jaws; with or without cranium, 26 modifier",,D0367,70486,600,,TRUE,2025-09-22 16:09:09.415309+00,2025-09-22 16:09:09.415309+00,600
+9eccc33c-1dc0-4501-84ba-fd222e69e083,2-D cephalometric radiographic image — image capture only (Effective 01/01/2021),,D0702,70350,350,,TRUE,2025-09-15 14:31:30.176223+00,2025-09-15 16:08:42.624507+00,
+e8a32103-aa76-445e-afc0-4531957532aa,2-D oral/facial photographic image obtained intra-orally or extra-orally — image capture only (Effective 01/01/2021),,D0703,76000,500,,TRUE,2025-09-15 14:31:58.10971+00,2025-09-15 16:08:44.236077+00,
+3faa3a0e-badb-49c8-b5d9-58897e8df135,3-D photographic image — JAW RECORDS,,D0704,76376,100,,TRUE,2025-09-15 14:32:24.8849+00,2025-09-15 16:08:46.135382+00,
+267eae29-1c47-4118-bc08-59b964480c24,Complete denture - maxillary,,D5110,,3000,,TRUE,2025-09-22 16:09:09.415309+00,2025-09-22 16:09:09.415309+00,
+83719cb4-1243-4e77-a15f-e1b902b78b60,Complete denture - mandibular,,D5120,,3000,,TRUE,2025-09-22 16:09:09.415309+00,2025-09-22 16:09:09.415309+00,
+c70dcd8b-088a-4753-96af-3e4a383980dc,Impression and custom preparation for Oral Surgical Splint,,D5982,21085,1184.12,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 16:09:23.323684+00,1184.12
+8979ae6b-8552-4d9b-82b1-3f6940e39866,Surgical placement of implant body: endosteal implant,,D6010,21249,2527.21,,TRUE,2025-09-22 16:09:09.415309+00,2025-09-22 16:09:09.415309+00,2527.21
+a4248008-77ca-4cfa-9469-bc77b354c983,Custom fabricated abutment - includes placement,,D6057,,1014,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 16:09:23.323684+00,
+afc6d687-e9a7-40e9-8c3d-ec34d52f01dd,Abutment supported porcelain/ceramic crown,,D6058,,1598,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 16:09:23.323684+00,
+11343320-5bc7-44ee-91c3-eb4d43a17648,Bone replacement graft for ridge preservation maxilla or mandible,,D7953,21210/21215,750,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 18:31:07.171423+00,
+a157f8f3-3eff-44df-b675-d7960eb61986,Bone graft at time an implant is placed MAXILLA per quadrant,,D6104,21210,750,,TRUE,2025-09-22 16:09:09.415309+00,2025-09-22 16:09:09.415309+00,3302.46
+a157f8f3-3eff-44df-b675-d7960eb61987,Bone graft at time an implant is placed MANDIBLE per quadrant,,D6104,21215,750,,,,,6222.61
+ea0829c5-fa49-483e-a375-140d5a8cbddc,Implant/abutment supported fixed denture for edentulous arch - maxillary,,D6114,21080,7000,,TRUE,2025-09-22 16:10:33.251319+00,2025-09-22 16:21:46.514503+00,7000
+f4930d06-03c4-4908-ab61-73d654242ca7,Implant/abutment supported fixed denture for edentulous arch - mandibular,,D6115,21080,7000,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 16:09:23.323684+00,7000
+3fefb517-b727-4016-9899-50735530b3d5,Implant/abutment supported interim fixed denture for edentulous arch - mandibular,,D6118,21079,6500,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 16:09:23.323684+00,6500
+772446bb-edf3-4674-a85b-06713ab16ae4,Implant/abutment supported interim fixed denture for edentulous arch - maxillary,,D6119,21079,6500,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 16:09:23.323684+00,6500
+12116297-4b3a-41e9-89c5-954a357ed4fd,"Extraction, erupted tooth requiring removal of bone and/or sectioning of tooth, and including elevation of mucoperiosteal flap if indicated",,D7210,,400,,TRUE,2025-09-22 16:09:09.415309+00,2025-09-22 16:09:09.415309+00,
+56a01795-b077-4018-af5e-eec4410391e0,Removal of impacted tooth - completely bony,,D7240,,550,,TRUE,2025-09-22 16:09:09.415309+00,2025-09-22 16:09:09.415309+00,
+1557e427-1e8c-4a9a-b756-7885ece3258a,"Alveoloplasty not in conjunction with extractions - four or more teeth or tooth spaces, per quadrant",,D7320,41874,529.8,,TRUE,2025-09-22 16:09:09.415309+00,2025-09-22 16:09:09.415309+00,
+9695a76f-c7ba-43a9-86b5-063e9ffd7d65,Excision of benign lesion greater than 1.25 cm Maxilla,,D7411,21030,1080,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 16:09:23.323684+00,1940
+44572023-e1b9-46c3-b3e5-4feef7b15d7f,Excision of benign lesion greater than 1.25 cm Mandible,,D7950,21040,1080,,TRUE,2025-09-22 16:10:33.251319+00,2025-09-22 16:21:51.030616+00,1940
+a56ee318-f993-4a5d-88f2-7bd6e72a9692,Partial ostectomy/sequestrectomy for removal of non-vital bone Maxilla,,D7550,21026,800,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 16:09:23.323684+00,2780
+a56ee318-f993-4a5d-88f2-7bd6e72a9693,Partial ostectomy/sequestrectomy for removal of non-vital bone Mandible,,D7550,21025,800,,,,,2780
+36a8c1f0-0825-4ae6-a494-74d8ca9b4b26,Sinus augmentation with bone/bone substitutes,,D7951,,4000,,TRUE,2025-09-22 16:10:33.251319+00,2025-09-22 16:20:56.97424+00,
+fb402d4b-2a1e-4624-95d8-9475394c8200,Intravenous moderate (conscious) sedation/analgesia - first 15 minutes,,D9239,170,1200,,TRUE,2025-09-22 16:09:23.323684+00,2025-09-22 16:09:23.323684+00,21060
+f99edde0-98b1-4c89-9a7f-5b223b1548e0,Intravenous moderate (conscious) sedation/analgesia - each subsequent 15 minute increment,,D9243,170,450,,TRUE,2025-09-22 16:09:09.415309+00,2025-09-22 16:09:09.415309+00,

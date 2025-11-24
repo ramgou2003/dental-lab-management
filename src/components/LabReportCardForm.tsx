@@ -132,6 +132,8 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
     custom_tooth_library_lower: '',
     upper_appliance_number: '',
     lower_appliance_number: '',
+    upper_nightguard_number: '',
+    lower_nightguard_number: '',
     notes_and_remarks: ''
   });
 
@@ -178,6 +180,8 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
             custom_tooth_library_lower: existing.custom_tooth_library_lower || '',
             upper_appliance_number: existing.upper_appliance_number || '',
             lower_appliance_number: existing.lower_appliance_number || '',
+            upper_nightguard_number: existing.upper_nightguard_number || '',
+            lower_nightguard_number: existing.lower_nightguard_number || '',
             notes_and_remarks: existing.notes_and_remarks || ''
           });
         }
@@ -1355,6 +1359,36 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
                   placeholder="Enter lower appliance number"
                   className={fieldErrors.lower_appliance_number ? "border-red-500 focus:border-red-500" : ""}
                   required
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Nightguard Numbers Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {showUpperFields && (
+              <div>
+                <Label htmlFor="upper_nightguard_number">
+                  Upper Nightguard Number
+                </Label>
+                <Input
+                  id="upper_nightguard_number"
+                  value={formData.upper_nightguard_number}
+                  onChange={(e) => handleInputChange('upper_nightguard_number', e.target.value)}
+                  placeholder="Enter upper nightguard number (if applicable)"
+                />
+              </div>
+            )}
+            {showLowerFields && (
+              <div>
+                <Label htmlFor="lower_nightguard_number">
+                  Lower Nightguard Number
+                </Label>
+                <Input
+                  id="lower_nightguard_number"
+                  value={formData.lower_nightguard_number}
+                  onChange={(e) => handleInputChange('lower_nightguard_number', e.target.value)}
+                  placeholder="Enter lower nightguard number (if applicable)"
                 />
               </div>
             )}

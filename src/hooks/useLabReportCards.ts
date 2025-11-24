@@ -23,6 +23,8 @@ export interface LabReportCard {
   custom_tooth_library_lower: string | null;
   upper_appliance_number: string | null;
   lower_appliance_number: string | null;
+  upper_nightguard_number: string | null;
+  lower_nightguard_number: string | null;
   notes_and_remarks: string;
   status: 'completed' | 'submitted';
   submitted_at: string;
@@ -49,6 +51,8 @@ export interface LabReportCardFormData {
   custom_tooth_library_lower: string;
   upper_appliance_number: string;
   lower_appliance_number: string;
+  upper_nightguard_number: string;
+  lower_nightguard_number: string;
   notes_and_remarks: string;
 }
 
@@ -112,6 +116,8 @@ export function useLabReportCards() {
           custom_tooth_library_lower: formData.custom_tooth_library_lower || null,
           upper_appliance_number: formData.upper_appliance_number || null,
           lower_appliance_number: formData.lower_appliance_number || null,
+          upper_nightguard_number: formData.upper_nightguard_number || null,
+          lower_nightguard_number: formData.lower_nightguard_number || null,
           notes_and_remarks: formData.notes_and_remarks,
           status: 'completed'
         }], {

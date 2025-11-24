@@ -28,6 +28,8 @@ interface CompleteLabReportData {
   tooth_library_lower: string | null;
   upper_appliance_number: string | null;
   lower_appliance_number: string | null;
+  upper_nightguard_number: string | null;
+  lower_nightguard_number: string | null;
   notes_and_remarks: string;
   status: string;
   submitted_at: string;
@@ -398,6 +400,33 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
                   <div className="p-3 bg-purple-50 rounded-md border border-purple-200">
                     <span className="font-mono font-medium text-purple-900">
                       {labReportData.lower_appliance_number || 'Not assigned'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Nightguard Numbers Row */}
+          <div className="space-y-2">
+            <h4 className="text-md font-medium text-gray-700">Nightguard Numbers</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {showUpperFields && (
+                <div>
+                  <Label>Upper Nightguard Number</Label>
+                  <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                    <span className="font-mono font-medium text-green-900">
+                      {labReportData.upper_nightguard_number || 'Not applicable'}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {showLowerFields && (
+                <div>
+                  <Label>Lower Nightguard Number</Label>
+                  <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                    <span className="font-mono font-medium text-green-900">
+                      {labReportData.lower_nightguard_number || 'Not applicable'}
                     </span>
                   </div>
                 </div>
