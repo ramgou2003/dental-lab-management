@@ -50,6 +50,11 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
 
   const addLabReportCard = async (formData: any, labScriptId: string) => {
     try {
+      // Get current time in EST
+      const now = new Date();
+      const estDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+      const completedAtTimestamp = estDate.toISOString();
+
       // Prepare the data object
       const labReportData: any = {
         lab_script_id: labScriptId,
@@ -74,7 +79,8 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
         upper_nightguard_number: formData.upper_nightguard_number || null,
         lower_nightguard_number: formData.lower_nightguard_number || null,
         notes_and_remarks: formData.notes_and_remarks || null,
-        submitted_at: new Date().toISOString(),
+        submitted_at: completedAtTimestamp,
+        completed_at: completedAtTimestamp,
         completed_by: userProfile?.id || null,
         completed_by_name: userProfile?.full_name || null,
         status: 'completed' // Change from pending to completed when user submits

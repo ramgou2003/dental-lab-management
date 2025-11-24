@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FileText, Save, User, Stethoscope, Calendar, CheckCircle, AlertCircle } from "lucide-react";
 import type { ReportCard } from "@/hooks/useReportCards";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ClinicalReportCardFormProps {
   reportCard: ReportCard;
@@ -21,6 +22,7 @@ interface ClinicalReportCardFormProps {
 }
 
 export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, insertionStatus }: ClinicalReportCardFormProps) {
+  const { userProfile } = useAuth();
   const [labReportData, setLabReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -112,9 +114,16 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
       return;
     }
 
+    // Add completed_by and completed_by_name to form data
+    const formDataWithUser = {
+      ...formData,
+      completed_by: userProfile?.id || null,
+      completed_by_name: userProfile?.full_name || null
+    };
+
     // Submit the form data to parent component
     // The parent will handle saving to both clinical_report_cards and report_cards tables
-    onSubmit(formData);
+    onSubmit(formDataWithUser);
   };
 
   if (loading) {

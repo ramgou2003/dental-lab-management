@@ -408,12 +408,25 @@ export function ReportCardsPage() {
                                   </span>
                                 )}
                               </div>
-                              {/* Completed By */}
-                              {card.lab_report_status === 'completed' && card.lab_report_completed_by_name && (
-                                <div className="mt-1">
-                                  <span className="text-xs text-blue-600">
-                                    <span className="font-medium">Completed by:</span> {card.lab_report_completed_by_name}
-                                  </span>
+                              {/* Completed By and Completed At */}
+                              {card.lab_report_status === 'completed' && (
+                                <div className="mt-1 space-y-0.5">
+                                  {card.lab_report_completed_by_name && (
+                                    <div>
+                                      <span className="text-xs text-blue-600">
+                                        <span className="font-medium">Completed by:</span> {card.lab_report_completed_by_name}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {card.lab_report_completed_at && (
+                                    <div>
+                                      <span className="text-xs text-gray-600">
+                                        <span className="font-medium">Completed at:</span>{' '}
+                                        {new Date(card.lab_report_completed_at).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}{' '}
+                                        {new Date(card.lab_report_completed_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

@@ -29,6 +29,9 @@ export interface ClinicalReportCard {
   treatment_success: string | null;
   status: 'completed' | 'submitted';
   submitted_at: string;
+  completed_at: string | null;
+  completed_by: string | null;
+  completed_by_name: string | null;
   created_at: string;
   updated_at: string;
 }

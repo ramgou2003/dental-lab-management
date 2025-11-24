@@ -473,13 +473,13 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
               </div>
             </div>
             <div>
-              <Label>Lab Report Submitted</Label>
+              <Label>Completed At (EST)</Label>
               <div className="p-3 bg-gray-50 rounded-md border">
                 <div className="text-sm font-medium">
-                  {new Date(labReportData.submitted_at).toLocaleDateString()}
+                  {labReportData.completed_at ? new Date(labReportData.completed_at).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) : 'Not available'}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {new Date(labReportData.submitted_at).toLocaleTimeString()}
+                  {labReportData.completed_at ? new Date(labReportData.completed_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York' }) : ''}
                 </div>
               </div>
             </div>

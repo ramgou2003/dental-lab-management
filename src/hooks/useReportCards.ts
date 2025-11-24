@@ -13,6 +13,8 @@ export interface ReportCard {
   clinical_report_completed_at?: string;
   lab_report_completed_by?: string;
   lab_report_completed_by_name?: string;
+  clinical_report_completed_by?: string;
+  clinical_report_completed_by_name?: string;
   created_at: string;
   updated_at: string;
   // Lab script details
@@ -62,22 +64,43 @@ export function useReportCards() {
         return;
       }
 
-      // Fetch completed_by information from lab_report_cards for each report card
+      // Fetch completed_by and completed_at information from lab_report_cards and clinical_report_cards for each report card
       const enrichedData = await Promise.all((data || []).map(async (card) => {
+        let enrichedCard = { ...card };
+
+        // Fetch lab report completion info
         if (card.lab_report_status === 'completed' && card.lab_script_id) {
           const { data: labReportData } = await supabase
             .from('lab_report_cards')
-            .select('completed_by, completed_by_name')
+            .select('completed_by, completed_by_name, completed_at')
             .eq('lab_script_id', card.lab_script_id)
             .single();
 
-          return {
-            ...card,
+          enrichedCard = {
+            ...enrichedCard,
             lab_report_completed_by: labReportData?.completed_by,
-            lab_report_completed_by_name: labReportData?.completed_by_name
+            lab_report_completed_by_name: labReportData?.completed_by_name,
+            lab_report_completed_at: labReportData?.completed_at
           };
         }
-        return card;
+
+        // Fetch clinical report completion info
+        if (card.clinical_report_status === 'completed') {
+          const { data: clinicalReportData } = await supabase
+            .from('clinical_report_cards')
+            .select('completed_by, completed_by_name, completed_at')
+            .eq('report_card_id', card.id)
+            .single();
+
+          enrichedCard = {
+            ...enrichedCard,
+            clinical_report_completed_by: clinicalReportData?.completed_by,
+            clinical_report_completed_by_name: clinicalReportData?.completed_by_name,
+            clinical_report_completed_at: clinicalReportData?.completed_at
+          };
+        }
+
+        return enrichedCard;
       }));
 
       setReportCards(enrichedData);
@@ -139,6 +162,11 @@ export function useReportCards() {
             return value && value.trim() !== '' ? value : null;
           };
 
+          // Get current time in EST
+          const now = new Date();
+          const estDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+          const completedAtTimestamp = estDate.toISOString();
+
           const clinicalData = {
             report_card_id: reportCardId,
             lab_script_id: reportCard.lab_script_id,
@@ -163,6 +191,9 @@ export function useReportCards() {
             clinical_notes: handleEmptyString(reportData.clinical_notes),
             overall_satisfaction: reportData.overall_satisfaction,
             treatment_success: reportData.treatment_success || 'successful',
+            completed_at: completedAtTimestamp,
+            completed_by: reportData.completed_by || null,
+            completed_by_name: reportData.completed_by_name || null,
             status: 'completed'
           };
 

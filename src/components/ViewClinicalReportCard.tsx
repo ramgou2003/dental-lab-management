@@ -242,16 +242,39 @@ export function ViewClinicalReportCard({ reportCardId, onClose }: ViewClinicalRe
 
         {/* Report Status */}
         <Separator />
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <span className="font-medium text-gray-700">Report Status:</span>
-            <Badge className="bg-green-100 text-green-800 border-green-200">
-              {formatFieldValue(clinicalReport.status)}
-            </Badge>
-          </div>
-          <div className="text-sm text-gray-500">
-            Submitted: {formatDate(clinicalReport.submitted_at)}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-green-600" />
+            Submission & Timeline Details
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <span className="font-medium text-gray-700">Report Status:</span>
+              <div className="mt-1">
+                <Badge className="bg-green-100 text-green-800 border-green-200">
+                  {formatFieldValue(clinicalReport.status)}
+                </Badge>
+              </div>
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Completed At (EST):</span>
+              <div className="mt-1 text-sm text-gray-900">
+                {clinicalReport.completed_at ? (
+                  <>
+                    <div>{new Date(clinicalReport.completed_at).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}</div>
+                    <div className="text-xs text-gray-500">{new Date(clinicalReport.completed_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York' })}</div>
+                  </>
+                ) : (
+                  'Not available'
+                )}
+              </div>
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Completed By:</span>
+              <div className="mt-1 text-sm text-blue-900 bg-blue-50 p-2 rounded border border-blue-200">
+                {clinicalReport.completed_by_name || 'Not available'}
+              </div>
+            </div>
           </div>
         </div>
 
