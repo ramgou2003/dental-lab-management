@@ -244,10 +244,15 @@ export function useManufacturingItems() {
       const [datePart, timePart] = dateTimeString.split('T');
       const completedAtTimestamp = `${datePart}T${timePart}-05:00`;
 
-      // Get the current item to access lab_script_id and lab_report_card_id
-      const currentItem = manufacturingItems.find(item => item.id === itemId);
+      // Fetch the current item from database to get all details
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('manufacturing_items')
+        .select('*')
+        .eq('id', itemId)
+        .single();
 
-      if (!currentItem) {
+      if (fetchError || !currentItem) {
+        console.error('Error fetching manufacturing item:', fetchError);
         throw new Error('Manufacturing item not found');
       }
 
@@ -281,7 +286,7 @@ export function useManufacturingItems() {
       // Update the current item with inspection data
       const newStatus = inspectionData.inspection_status === 'approved' ? 'completed' : 'completed';
 
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from('manufacturing_items')
         .update({
           status: newStatus,
@@ -297,9 +302,9 @@ export function useManufacturingItems() {
         })
         .eq('id', itemId);
 
-      if (error) {
-        console.error('Error completing inspection:', error);
-        throw error;
+      if (updateError) {
+        console.error('Error completing inspection:', updateError);
+        throw updateError;
       }
 
       // Refresh the manufacturing items list
