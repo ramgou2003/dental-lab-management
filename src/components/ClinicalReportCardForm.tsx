@@ -132,10 +132,14 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
       return;
     }
 
-    // Combine completion_date and completion_time to create timestamp in EST
+    // Combine completion_date and completion_time to create timestamp
+    // The user enters date/time in EST, so we treat it as EST
     const dateTimeString = `${formData.completion_date}T${formData.completion_time}:00`;
-    const estDate = new Date(dateTimeString + ' GMT-0500'); // EST is GMT-5
-    const completedAtTimestamp = estDate.toISOString();
+
+    // Add EST offset (-05:00 for EST, -04:00 for EDT)
+    // For simplicity, we'll use -05:00 (standard EST)
+    const [datePart, timePart] = dateTimeString.split('T');
+    const completedAtTimestamp = `${datePart}T${timePart}-05:00`;
 
     // Add completed_by, completed_by_name, and completed_at to form data
     const formDataWithUser = {

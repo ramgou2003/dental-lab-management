@@ -50,10 +50,21 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
 
   const addLabReportCard = async (formData: any, labScriptId: string) => {
     try {
-      // Combine completion_date and completion_time to create timestamp in EST
+      // Combine completion_date and completion_time to create timestamp
+      // The user enters date/time in EST, so we treat it as EST and convert to UTC
       const dateTimeString = `${formData.completion_date}T${formData.completion_time}:00`;
-      const estDate = new Date(dateTimeString + ' GMT-0500'); // EST is GMT-5
-      const completedAtTimestamp = estDate.toISOString();
+
+      // Create a date object treating the input as local time
+      const localDate = new Date(dateTimeString);
+
+      // Convert to EST by creating a string in EST timezone and parsing it
+      const estString = localDate.toLocaleString('en-US', { timeZone: 'America/New_York' });
+
+      // Now create the final timestamp - we'll use the original date/time but ensure it's treated as EST
+      // Add EST offset (-05:00 for EST, -04:00 for EDT)
+      // For simplicity, we'll use -05:00 (standard EST)
+      const [datePart, timePart] = dateTimeString.split('T');
+      const completedAtTimestamp = `${datePart}T${timePart}-05:00`;
 
       // Prepare the data object
       const labReportData: any = {

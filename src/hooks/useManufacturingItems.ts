@@ -22,6 +22,9 @@ export interface ManufacturingItem {
   cementation: string | null;
   additional_notes: string | null;
   status: 'pending-printing' | 'pending-milling' | 'in-production' | 'milling' | 'in-transit' | 'quality-check' | 'completed';
+  printing_completed_at: string | null;
+  printing_completed_by: string | null;
+  printing_completed_by_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -151,6 +154,68 @@ export function useManufacturingItems() {
     }
   };
 
+  const completePrinting = async (
+    itemId: string,
+    completionData: {
+      completion_date: string;
+      completion_time: string;
+      completed_by: string;
+      completed_by_name: string;
+    }
+  ) => {
+    try {
+      // Combine completion_date and completion_time to create timestamp
+      const dateTimeString = `${completionData.completion_date}T${completionData.completion_time}:00`;
+      const [datePart, timePart] = dateTimeString.split('T');
+      const completedAtTimestamp = `${datePart}T${timePart}-05:00`;
+
+      const { error } = await supabase
+        .from('manufacturing_items')
+        .update({
+          status: 'inspection',
+          printing_completed_at: completedAtTimestamp,
+          printing_completed_by: completionData.completed_by,
+          printing_completed_by_name: completionData.completed_by_name,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error completing printing:', error);
+        throw error;
+      }
+
+      // Update local state
+      setManufacturingItems(prev =>
+        prev.map(item =>
+          item.id === itemId
+            ? {
+                ...item,
+                status: 'inspection',
+                printing_completed_at: completedAtTimestamp,
+                printing_completed_by: completionData.completed_by,
+                printing_completed_by_name: completionData.completed_by_name,
+                updated_at: new Date().toISOString()
+              }
+            : item
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: "Printing completed successfully",
+      });
+    } catch (error) {
+      console.error('Error completing printing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete printing",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const deleteManufacturingItem = async (itemId: string) => {
     try {
       const { error } = await supabase
@@ -268,6 +333,7 @@ export function useManufacturingItems() {
     fetchManufacturingItems,
     updateManufacturingItemStatus,
     updateManufacturingItemWithMillingDetails,
+    completePrinting,
     deleteManufacturingItem,
     getManufacturingItemByLabReportId
   };

@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/sonner";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
 import { useMillingForms } from "@/hooks/useMillingForms";
 import { generateManufacturingScriptPDF } from "@/utils/pdfGenerator";
+import { PrintingCompletionDialog } from "@/components/PrintingCompletionDialog";
 
 export function ManufacturingPage() {
   const [activeFilter, setActiveFilter] = useState("new-script");
@@ -31,7 +32,9 @@ export function ManufacturingPage() {
   const [selectedShippingItem, setSelectedShippingItem] = useState<any>(null);
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingLink, setTrackingLink] = useState("");
-  const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails } = useManufacturingItems();
+  const [showPrintingCompletionDialog, setShowPrintingCompletionDialog] = useState(false);
+  const [selectedPrintingItem, setSelectedPrintingItem] = useState<any>(null);
+  const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails, completePrinting } = useManufacturingItems();
   const { createMillingForm } = useMillingForms();
 
   const handleNewManufacturing = () => {
@@ -139,6 +142,27 @@ export function ManufacturingPage() {
       setTrackingLink("");
     } catch (error) {
       toast.error('Failed to update shipping status');
+    }
+  };
+
+  const handleCompletePrinting = (item: any) => {
+    setSelectedPrintingItem(item);
+    setShowPrintingCompletionDialog(true);
+  };
+
+  const handlePrintingCompletionSubmit = async (completionData: {
+    completion_date: string;
+    completion_time: string;
+    completed_by: string;
+    completed_by_name: string;
+  }) => {
+    try {
+      await completePrinting(selectedPrintingItem.id, completionData);
+      toast.success('Printing completed successfully');
+      setShowPrintingCompletionDialog(false);
+      setSelectedPrintingItem(null);
+    } catch (error) {
+      toast.error('Failed to complete printing');
     }
   };
 
@@ -391,11 +415,11 @@ export function ManufacturingPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleStatusChange(item.id, 'inspection')}
-                                className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
+                                onClick={() => handleCompletePrinting(item)}
+                                className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 px-4 py-2 text-sm font-semibold"
                               >
-                                <AlertCircle className="h-4 w-4 mr-2" />
-                                Start Inspection
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Complete Printing
                               </Button>
                             </div>
                           );
@@ -1142,6 +1166,17 @@ export function ManufacturingPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Printing Completion Dialog */}
+      <PrintingCompletionDialog
+        open={showPrintingCompletionDialog}
+        onClose={() => {
+          setShowPrintingCompletionDialog(false);
+          setSelectedPrintingItem(null);
+        }}
+        onComplete={handlePrintingCompletionSubmit}
+        manufacturingItem={selectedPrintingItem}
+      />
     </div>
   );
 }
