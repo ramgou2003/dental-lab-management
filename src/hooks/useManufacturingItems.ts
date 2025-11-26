@@ -25,6 +25,14 @@ export interface ManufacturingItem {
   printing_completed_at: string | null;
   printing_completed_by: string | null;
   printing_completed_by_name: string | null;
+  inspection_print_quality: 'pass' | 'fail' | null;
+  inspection_physical_defects: 'pass' | 'fail' | null;
+  inspection_screw_access_channel: 'pass' | 'fail' | null;
+  inspection_mua_platform: 'pass' | 'fail' | null;
+  inspection_status: 'approved' | 'rejected' | null;
+  inspection_completed_at: string | null;
+  inspection_completed_by: string | null;
+  inspection_completed_by_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -216,6 +224,106 @@ export function useManufacturingItems() {
     }
   };
 
+  const completeInspection = async (
+    itemId: string,
+    inspectionData: {
+      print_quality: 'pass' | 'fail';
+      physical_defects: 'pass' | 'fail';
+      screw_access_channel: 'pass' | 'fail';
+      mua_platform: 'pass' | 'fail';
+      inspection_status: 'approved' | 'rejected';
+      completion_date: string;
+      completion_time: string;
+      completed_by: string;
+      completed_by_name: string;
+    }
+  ) => {
+    try {
+      // Combine completion_date and completion_time to create timestamp
+      const dateTimeString = `${inspectionData.completion_date}T${inspectionData.completion_time}:00`;
+      const [datePart, timePart] = dateTimeString.split('T');
+      const completedAtTimestamp = `${datePart}T${timePart}-05:00`;
+
+      // Get the current item to access lab_script_id and lab_report_card_id
+      const currentItem = manufacturingItems.find(item => item.id === itemId);
+
+      if (!currentItem) {
+        throw new Error('Manufacturing item not found');
+      }
+
+      // If rejected, create a new manufacturing item
+      if (inspectionData.inspection_status === 'rejected') {
+        // Create new manufacturing item with same details
+        const { error: createError } = await supabase
+          .from('manufacturing_items')
+          .insert({
+            lab_report_card_id: currentItem.lab_report_card_id,
+            lab_script_id: currentItem.lab_script_id,
+            patient_name: currentItem.patient_name,
+            upper_appliance_type: currentItem.upper_appliance_type,
+            lower_appliance_type: currentItem.lower_appliance_type,
+            shade: currentItem.shade,
+            screw: currentItem.screw,
+            material: currentItem.material,
+            arch_type: currentItem.arch_type,
+            upper_appliance_number: currentItem.upper_appliance_number,
+            lower_appliance_number: currentItem.lower_appliance_number,
+            manufacturing_method: currentItem.manufacturing_method,
+            status: 'pending-printing'
+          });
+
+        if (createError) {
+          console.error('Error creating new manufacturing item:', createError);
+          throw createError;
+        }
+      }
+
+      // Update the current item with inspection data
+      const newStatus = inspectionData.inspection_status === 'approved' ? 'completed' : 'completed';
+
+      const { error } = await supabase
+        .from('manufacturing_items')
+        .update({
+          status: newStatus,
+          inspection_print_quality: inspectionData.print_quality,
+          inspection_physical_defects: inspectionData.physical_defects,
+          inspection_screw_access_channel: inspectionData.screw_access_channel,
+          inspection_mua_platform: inspectionData.mua_platform,
+          inspection_status: inspectionData.inspection_status,
+          inspection_completed_at: completedAtTimestamp,
+          inspection_completed_by: inspectionData.completed_by,
+          inspection_completed_by_name: inspectionData.completed_by_name,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error completing inspection:', error);
+        throw error;
+      }
+
+      // Refresh the manufacturing items list
+      await fetchManufacturingItems();
+
+      const statusMessage = inspectionData.inspection_status === 'approved'
+        ? 'Inspection approved - item moved to appliance delivery'
+        : 'Inspection rejected - new manufacturing item created';
+
+      toast({
+        title: "Success",
+        description: statusMessage,
+      });
+    } catch (error) {
+      console.error('Error completing inspection:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete inspection",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const deleteManufacturingItem = async (itemId: string) => {
     try {
       const { error } = await supabase
@@ -334,6 +442,7 @@ export function useManufacturingItems() {
     updateManufacturingItemStatus,
     updateManufacturingItemWithMillingDetails,
     completePrinting,
+    completeInspection,
     deleteManufacturingItem,
     getManufacturingItemByLabReportId
   };

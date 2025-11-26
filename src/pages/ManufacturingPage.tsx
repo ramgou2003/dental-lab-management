@@ -14,6 +14,7 @@ import { useManufacturingItems } from "@/hooks/useManufacturingItems";
 import { useMillingForms } from "@/hooks/useMillingForms";
 import { generateManufacturingScriptPDF } from "@/utils/pdfGenerator";
 import { PrintingCompletionDialog } from "@/components/PrintingCompletionDialog";
+import { InspectionDialog } from "@/components/InspectionDialog";
 
 export function ManufacturingPage() {
   const [activeFilter, setActiveFilter] = useState("new-script");
@@ -34,7 +35,9 @@ export function ManufacturingPage() {
   const [trackingLink, setTrackingLink] = useState("");
   const [showPrintingCompletionDialog, setShowPrintingCompletionDialog] = useState(false);
   const [selectedPrintingItem, setSelectedPrintingItem] = useState<any>(null);
-  const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails, completePrinting } = useManufacturingItems();
+  const [showInspectionDialog, setShowInspectionDialog] = useState(false);
+  const [selectedInspectionItem, setSelectedInspectionItem] = useState<any>(null);
+  const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails, completePrinting, completeInspection } = useManufacturingItems();
   const { createMillingForm } = useMillingForms();
 
   const handleNewManufacturing = () => {
@@ -166,12 +169,28 @@ export function ManufacturingPage() {
     }
   };
 
-  const handleCompleteInspection = async (item: any) => {
+  const handleCompleteInspection = (item: any) => {
+    setSelectedInspectionItem(item);
+    setShowInspectionDialog(true);
+  };
+
+  const handleInspectionSubmit = async (inspectionData: {
+    print_quality: 'pass' | 'fail';
+    physical_defects: 'pass' | 'fail';
+    screw_access_channel: 'pass' | 'fail';
+    mua_platform: 'pass' | 'fail';
+    inspection_status: 'approved' | 'rejected';
+    completion_date: string;
+    completion_time: string;
+    completed_by: string;
+    completed_by_name: string;
+  }) => {
     try {
-      await updateManufacturingItemStatus(item.id, 'completed');
-      toast.success('Manufacturing completed - item moved to appliance delivery');
+      await completeInspection(selectedInspectionItem.id, inspectionData);
+      setShowInspectionDialog(false);
+      setSelectedInspectionItem(null);
     } catch (error) {
-      toast.error('Failed to complete manufacturing');
+      toast.error('Failed to complete inspection');
     }
   };
 
@@ -467,10 +486,10 @@ export function ManufacturingPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleCompleteInspection(item)}
-                                className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 px-4 py-2 text-sm font-semibold"
+                                className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
                               >
                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                Complete
+                                Complete Inspection
                               </Button>
                             </div>
                           );
@@ -1176,6 +1195,17 @@ export function ManufacturingPage() {
         }}
         onComplete={handlePrintingCompletionSubmit}
         manufacturingItem={selectedPrintingItem}
+      />
+
+      {/* Inspection Dialog */}
+      <InspectionDialog
+        open={showInspectionDialog}
+        onClose={() => {
+          setShowInspectionDialog(false);
+          setSelectedInspectionItem(null);
+        }}
+        onComplete={handleInspectionSubmit}
+        manufacturingItem={selectedInspectionItem}
       />
     </div>
   );
