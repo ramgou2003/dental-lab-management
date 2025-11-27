@@ -258,11 +258,12 @@ export function useManufacturingItems() {
 
       // If rejected, create a new manufacturing item
       if (inspectionData.inspection_status === 'rejected') {
-        // Create new manufacturing item with same details but without lab_report_card_id
-        // This allows multiple reprints for the same lab script
+        // Create new manufacturing item with same details for reprinting
+        // Multiple manufacturing items can now reference the same lab_report_card_id
         const { error: createError } = await supabase
           .from('manufacturing_items')
           .insert({
+            lab_report_card_id: currentItem.lab_report_card_id,
             lab_script_id: currentItem.lab_script_id,
             patient_name: currentItem.patient_name,
             upper_appliance_type: currentItem.upper_appliance_type,
