@@ -50,6 +50,11 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
 
   const addLabReportCard = async (formData: any, labScriptId: string) => {
     try {
+      // Validate completion date and time
+      if (!formData.completion_date || !formData.completion_time) {
+        throw new Error('Completion date and time are required');
+      }
+
       // Combine completion_date and completion_time to create timestamp
       // The user enters date/time in EST, so we treat it as EST and convert to UTC
       const dateTimeString = `${formData.completion_date}T${formData.completion_time}:00`;
@@ -66,7 +71,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
       const [datePart, timePart] = dateTimeString.split('T');
       const completedAtTimestamp = `${datePart}T${timePart}-05:00`;
 
-      // Prepare the data object
+      // Prepare the data object - convert empty strings to null for optional fields
       const labReportData: any = {
         lab_script_id: labScriptId,
         patient_name: formData.patient_name,
@@ -89,7 +94,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
         lower_appliance_number: formData.lower_appliance_number || null,
         upper_nightguard_number: formData.upper_nightguard_number || null,
         lower_nightguard_number: formData.lower_nightguard_number || null,
-        notes_and_remarks: formData.notes_and_remarks || null,
+        notes_and_remarks: formData.notes_and_remarks || '',
         submitted_at: completedAtTimestamp,
         completed_at: completedAtTimestamp,
         completed_by: userProfile?.id || null,
@@ -97,22 +102,48 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
         status: 'completed' // Change from pending to completed when user submits
       };
 
-      // If we have an existing lab report, include its ID for proper update
-      if (existingLabReport?.id) {
-        labReportData.id = existingLabReport.id;
-      }
+      console.log('Lab Report Data to be saved:', labReportData);
+      console.log('Existing Lab Report:', existingLabReport);
 
-      const { data, error } = await supabase
-        .from('lab_report_cards')
-        .upsert([labReportData])
-        .select()
-        .single();
+      let data, error;
+
+      // We always have an existing lab report card (created when lab script is created)
+      // So we just UPDATE the existing row with the form data
+      if (existingLabReport?.id) {
+        // Remove lab_script_id from update data as it's the foreign key and shouldn't change
+        const { lab_script_id, ...updateData } = labReportData;
+
+        console.log('Updating existing lab report card with ID:', existingLabReport.id);
+        const updateResult = await supabase
+          .from('lab_report_cards')
+          .update(updateData)
+          .eq('id', existingLabReport.id)
+          .select()
+          .single();
+
+        data = updateResult.data;
+        error = updateResult.error;
+      } else {
+        // This shouldn't happen in normal flow, but handle it as fallback
+        console.log('No existing lab report found, inserting new one');
+        const insertResult = await supabase
+          .from('lab_report_cards')
+          .insert([labReportData])
+          .select()
+          .single();
+
+        data = insertResult.data;
+        error = insertResult.error;
+      }
 
       if (error) {
         console.error('Error adding lab report card:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        console.error('Error message:', error.message);
+        console.error('Error code:', error.code);
         toast({
           title: "Error",
-          description: "Failed to create lab report card",
+          description: error.message || "Failed to create lab report card",
           variant: "destructive",
         });
         throw error;
@@ -228,6 +259,7 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
             upper_appliance_type: existing.upper_appliance_type || '',
             lower_appliance_type: existing.lower_appliance_type || '',
             screw: existing.screw,
+            customScrewType: existing.screw === 'Other' ? existing.screw : '',
             // Use existing material, but fallback to lab script material if empty
             material: existing.material || reportCard.lab_script?.material || '',
             shade: existing.shade,
@@ -245,7 +277,10 @@ export function LabReportCardForm({ reportCard, onSubmit, onCancel }: LabReportC
             lower_appliance_number: existing.lower_appliance_number || '',
             upper_nightguard_number: existing.upper_nightguard_number || '',
             lower_nightguard_number: existing.lower_nightguard_number || '',
-            notes_and_remarks: existing.notes_and_remarks || ''
+            notes_and_remarks: existing.notes_and_remarks || '',
+            // Always use current date/time for completion fields
+            completion_date: currentDate,
+            completion_time: currentTime
           });
         }
       }

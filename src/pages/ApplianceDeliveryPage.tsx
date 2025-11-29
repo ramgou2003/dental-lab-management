@@ -1,22 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ParticleButton } from "@/components/ui/particle-button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { AppointmentScheduler } from "@/components/AppointmentScheduler";
+import { ClinicalReportCardForm } from "@/components/ClinicalReportCardForm";
 import { useDeliveryItems } from "@/hooks/useDeliveryItems";
-import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Package, Truck, MapPin, Calendar as CalendarIcon, Settings, Palette } from "lucide-react";
+import { useReportCards } from "@/hooks/useReportCards";
+import { supabase } from "@/integrations/supabase/client";
+import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Package, Truck, MapPin, Calendar as CalendarIcon, Settings, Palette, X } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import type { DeliveryItem } from "@/hooks/useDeliveryItems";
+import type { ReportCard } from "@/hooks/useReportCards";
 
 export function ApplianceDeliveryPage() {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("ready-to-insert");
   const [showNewDeliveryForm, setShowNewDeliveryForm] = useState(false);
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
   const [showAppointmentScheduler, setShowAppointmentScheduler] = useState(false);
+  const [showInsertionSuccessDialog, setShowInsertionSuccessDialog] = useState(false);
+  const [showClinicalReportForm, setShowClinicalReportForm] = useState(false);
   const [selectedDeliveryItem, setSelectedDeliveryItem] = useState<DeliveryItem | null>(null);
+  const [selectedReportCard, setSelectedReportCard] = useState<ReportCard | null>(null);
+  const [insertionStatus, setInsertionStatus] = useState<{canSubmit: boolean; reason: string; message: string} | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { deliveryItems, loading, updateDeliveryStatus } = useDeliveryItems();
+  const { updateClinicalReportStatus } = useReportCards();
 
   const handleNewDelivery = () => {
     setShowNewDeliveryForm(true);
@@ -72,7 +83,173 @@ export function ApplianceDeliveryPage() {
   };
 
   const handleCompleteDelivery = async (deliveryItem: DeliveryItem) => {
-    await handleUpdateInsertionStatus(deliveryItem, 'inserted');
+    try {
+      await handleUpdateInsertionStatus(deliveryItem, 'inserted');
+      // Show success dialog with option to complete clinical report
+      setSelectedDeliveryItem(deliveryItem);
+      setShowInsertionSuccessDialog(true);
+    } catch (error) {
+      toast.error('Failed to mark as inserted');
+    }
+  };
+
+  const checkInsertionStatus = async (reportCardId: string, labScriptId: string) => {
+    try {
+      // Check if there's a delivery item for this report card and if it's inserted
+      // Get the LATEST delivery item (in case of rejected inspections creating multiple delivery items)
+      const { data: deliveryItems, error } = await supabase
+        .from('delivery_items')
+        .select('delivery_status, patient_name, created_at')
+        .eq('lab_script_id', labScriptId)
+        .order('created_at', { ascending: false });
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (!deliveryItems || deliveryItems.length === 0) {
+        // Check manufacturing status - get the LATEST manufacturing item (in case of rejected inspections)
+        const { data: manufacturingItems, error: mfgError } = await supabase
+          .from('manufacturing_items')
+          .select('status, patient_name, created_at')
+          .eq('lab_script_id', labScriptId)
+          .order('created_at', { ascending: false });
+
+        if (mfgError && mfgError.code !== 'PGRST116') {
+          throw mfgError;
+        }
+
+        if (!manufacturingItems || manufacturingItems.length === 0) {
+          return { canSubmit: false, reason: 'not_manufactured', message: 'Appliance has not been manufactured yet. Please complete manufacturing first.' };
+        }
+
+        // Get the latest manufacturing item (first in the ordered list)
+        const latestManufacturingItem = manufacturingItems[0];
+
+        if (latestManufacturingItem.status !== 'completed') {
+          // Format the manufacturing status for better user experience
+          const statusDisplay = latestManufacturingItem.status === 'pending-printing' ? 'Pending Printing' :
+                                latestManufacturingItem.status === 'pending-milling' ? 'Pending Milling' :
+                                latestManufacturingItem.status === 'in-production' ? 'Printing' :
+                                latestManufacturingItem.status === 'milling' ? 'Milling' :
+                                latestManufacturingItem.status === 'in-transit' ? 'In Transit' :
+                                latestManufacturingItem.status === 'quality-check' ? 'Quality Check' :
+                                latestManufacturingItem.status === 'inspection' ? 'Inspection' :
+                                latestManufacturingItem.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+          // Add helpful context based on the manufacturing stage
+          const contextMessage = latestManufacturingItem.status === 'pending-printing' ? 'The appliance is waiting to start printing.' :
+                                 latestManufacturingItem.status === 'pending-milling' ? 'The appliance is waiting to start milling.' :
+                                 latestManufacturingItem.status === 'in-production' ? 'The appliance is currently being printed.' :
+                                 latestManufacturingItem.status === 'milling' ? 'The appliance is currently being milled.' :
+                                 latestManufacturingItem.status === 'in-transit' ? 'The appliance is in transit from external lab.' :
+                                 latestManufacturingItem.status === 'quality-check' ? 'The appliance is undergoing quality inspection.' :
+                                 latestManufacturingItem.status === 'inspection' ? 'The appliance is undergoing quality inspection.' :
+                                 'The appliance is still being processed.';
+
+          return { canSubmit: false, reason: 'not_completed', message: `Appliance is still in manufacturing (Status: ${statusDisplay}). ${contextMessage} Please complete manufacturing first.` };
+        }
+
+        return { canSubmit: false, reason: 'not_delivered', message: 'Appliance has been manufactured but not yet prepared for delivery. Please check the delivery status.' };
+      }
+
+      // Get the latest delivery item (first in the ordered list)
+      const latestDeliveryItem = deliveryItems[0];
+
+      if (latestDeliveryItem.delivery_status !== 'inserted') {
+        return { canSubmit: false, reason: 'not_inserted', message: `Appliance has not been inserted yet (Status: ${latestDeliveryItem.delivery_status}). Clinical report can only be filled after appliance insertion.` };
+      }
+
+      return { canSubmit: true, reason: 'ready', message: 'Ready for clinical report submission.' };
+    } catch (error) {
+      console.error('Error checking insertion status:', error);
+      return { canSubmit: false, reason: 'error', message: 'Unable to verify appliance status. Please try again.' };
+    }
+  };
+
+  const handleCompleteClinicalReport = async () => {
+    if (!selectedDeliveryItem) return;
+
+    try {
+      // Fetch the report card for this lab script
+      const { data: reportCard, error } = await supabase
+        .from('report_cards')
+        .select(`
+          *,
+          lab_script:lab_scripts(
+            arch_type,
+            upper_appliance_type,
+            lower_appliance_type,
+            screw_type,
+            custom_screw_type,
+            material,
+            shade,
+            notes
+          )
+        `)
+        .eq('lab_script_id', selectedDeliveryItem.lab_script_id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching report card:', error);
+        toast.error('Failed to load report card');
+        return;
+      }
+
+      if (!reportCard) {
+        toast.error('Report card not found for this appliance');
+        return;
+      }
+
+      // Check insertion status
+      const statusCheck = await checkInsertionStatus(reportCard.id, selectedDeliveryItem.lab_script_id);
+      setInsertionStatus(statusCheck);
+
+      // Set the report card and open the form
+      setSelectedReportCard(reportCard as ReportCard);
+      setShowInsertionSuccessDialog(false);
+      setShowClinicalReportForm(true);
+    } catch (error) {
+      console.error('Error opening clinical report form:', error);
+      toast.error('Failed to open clinical report form');
+    }
+  };
+
+  const handleSkipClinicalReport = () => {
+    setShowInsertionSuccessDialog(false);
+    setSelectedDeliveryItem(null);
+    toast.success('You can complete the clinical report card later from the Report Cards page');
+  };
+
+  const handleClinicalReportSubmit = async (formData: any) => {
+    if (!selectedReportCard) return;
+
+    // Check insertion status before allowing submission
+    const statusCheck = await checkInsertionStatus(selectedReportCard.id, selectedReportCard.lab_script_id);
+
+    if (!statusCheck.canSubmit) {
+      toast.error(statusCheck.message);
+      return;
+    }
+
+    try {
+      await updateClinicalReportStatus(selectedReportCard.id, 'completed', formData);
+      toast.success('Clinical report card completed successfully!');
+      setShowClinicalReportForm(false);
+      setSelectedReportCard(null);
+      setSelectedDeliveryItem(null);
+      setInsertionStatus(null);
+    } catch (error) {
+      console.error('Error submitting clinical report:', error);
+      toast.error('Failed to submit clinical report card. Please try again.');
+    }
+  };
+
+  const handleClinicalReportCancel = () => {
+    setShowClinicalReportForm(false);
+    setSelectedReportCard(null);
+    setSelectedDeliveryItem(null);
+    setInsertionStatus(null);
   };
 
   // Helper function to format time from 24-hour to 12-hour format
@@ -677,6 +854,91 @@ export function ApplianceDeliveryPage() {
         onSchedule={handleAppointmentScheduled}
         deliveryItem={selectedDeliveryItem}
       />
+
+      {/* Insertion Success Dialog */}
+      {selectedDeliveryItem && (
+        <Dialog open={showInsertionSuccessDialog} onOpenChange={setShowInsertionSuccessDialog}>
+          <DialogContent className="max-w-md" hideCloseButton>
+            <div className="p-6">
+              {/* Success Icon and Message */}
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="p-4 bg-green-100 rounded-full">
+                  <CheckCircle className="h-16 w-16 text-green-600" />
+                </div>
+
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Successfully Inserted!
+                  </h2>
+                  <p className="text-gray-600">
+                    The appliance has been marked as inserted for <span className="font-semibold">{selectedDeliveryItem.patient_name}</span>
+                  </p>
+                </div>
+
+                {/* Appliance Details */}
+                <div className="w-full bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h3 className="font-semibold text-blue-900 mb-2 text-sm">Appliance Details</h3>
+                  <div className="space-y-1 text-sm text-blue-800">
+                    {selectedDeliveryItem.upper_appliance_type && (
+                      <div className="flex justify-between">
+                        <span className="font-medium">Upper:</span>
+                        <span>{selectedDeliveryItem.upper_appliance_type}</span>
+                      </div>
+                    )}
+                    {selectedDeliveryItem.lower_appliance_type && (
+                      <div className="flex justify-between">
+                        <span className="font-medium">Lower:</span>
+                        <span>{selectedDeliveryItem.lower_appliance_type}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="font-medium">Shade:</span>
+                      <span>{selectedDeliveryItem.shade}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="w-full space-y-3 pt-4">
+                  <Button
+                    onClick={handleCompleteClinicalReport}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-semibold"
+                  >
+                    <FileText className="h-5 w-5 mr-2" />
+                    Complete Clinical Report Card
+                  </Button>
+
+                  <Button
+                    onClick={handleSkipClinicalReport}
+                    variant="outline"
+                    className="w-full border-2 border-gray-300 text-gray-700 hover:bg-gray-50 py-6 text-lg font-semibold"
+                  >
+                    Skip for Now
+                  </Button>
+                </div>
+
+                <p className="text-xs text-gray-500 pt-2">
+                  You can complete the clinical report card later from the Report Cards page
+                </p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Clinical Report Card Form Dialog */}
+      <Dialog open={showClinicalReportForm && !!selectedReportCard} onOpenChange={setShowClinicalReportForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {selectedReportCard && (
+            <ClinicalReportCardForm
+              reportCard={selectedReportCard}
+              onSubmit={handleClinicalReportSubmit}
+              onCancel={handleClinicalReportCancel}
+              insertionStatus={insertionStatus}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -98,43 +98,56 @@ export function ReportCardsPage() {
       }
 
       // Check if there's a delivery item for this report card and if it's inserted
-      const { data: deliveryItem, error } = await supabase
+      // Get the LATEST delivery item (in case of rejected inspections creating multiple delivery items)
+      const { data: deliveryItems, error } = await supabase
         .from('delivery_items')
-        .select('delivery_status, patient_name')
+        .select('delivery_status, patient_name, created_at')
         .eq('lab_script_id', reportCard.lab_script_id)
-        .single();
+        .order('created_at', { ascending: false });
 
       if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
-      if (!deliveryItem) {
-        // Check manufacturing status
-        const { data: manufacturingItem, error: mfgError } = await supabase
+      if (!deliveryItems || deliveryItems.length === 0) {
+        // Check manufacturing status - get the LATEST manufacturing item (in case of rejected inspections)
+        // When an inspection is rejected, a new manufacturing item is created for reprint
+        const { data: manufacturingItems, error: mfgError } = await supabase
           .from('manufacturing_items')
-          .select('status, patient_name')
+          .select('status, patient_name, created_at')
           .eq('lab_script_id', reportCard.lab_script_id)
-          .single();
+          .order('created_at', { ascending: false });
 
         if (mfgError && mfgError.code !== 'PGRST116') {
           throw mfgError;
         }
 
-        if (!manufacturingItem) {
+        if (!manufacturingItems || manufacturingItems.length === 0) {
           return { canSubmit: false, reason: 'not_manufactured', message: 'Appliance has not been manufactured yet. Please complete manufacturing first.' };
         }
 
-        if (manufacturingItem.status !== 'completed') {
+        // Get the latest manufacturing item (first in the ordered list)
+        const latestManufacturingItem = manufacturingItems[0];
+
+        if (latestManufacturingItem.status !== 'completed') {
           // Format the manufacturing status for better user experience
-          const statusDisplay = manufacturingItem.status === 'pending-printing' ? 'Pending Printing' :
-                                manufacturingItem.status === 'in-production' ? 'Printing' :
-                                manufacturingItem.status === 'quality-check' ? 'Quality Check' :
-                                manufacturingItem.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+          const statusDisplay = latestManufacturingItem.status === 'pending-printing' ? 'Pending Printing' :
+                                latestManufacturingItem.status === 'pending-milling' ? 'Pending Milling' :
+                                latestManufacturingItem.status === 'in-production' ? 'Printing' :
+                                latestManufacturingItem.status === 'milling' ? 'Milling' :
+                                latestManufacturingItem.status === 'in-transit' ? 'In Transit' :
+                                latestManufacturingItem.status === 'quality-check' ? 'Quality Check' :
+                                latestManufacturingItem.status === 'inspection' ? 'Inspection' :
+                                latestManufacturingItem.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
 
           // Add helpful context based on the manufacturing stage
-          const contextMessage = manufacturingItem.status === 'pending-printing' ? 'The appliance is waiting to start printing.' :
-                                 manufacturingItem.status === 'in-production' ? 'The appliance is currently being printed.' :
-                                 manufacturingItem.status === 'quality-check' ? 'The appliance is undergoing quality inspection.' :
+          const contextMessage = latestManufacturingItem.status === 'pending-printing' ? 'The appliance is waiting to start printing.' :
+                                 latestManufacturingItem.status === 'pending-milling' ? 'The appliance is waiting to start milling.' :
+                                 latestManufacturingItem.status === 'in-production' ? 'The appliance is currently being printed.' :
+                                 latestManufacturingItem.status === 'milling' ? 'The appliance is currently being milled.' :
+                                 latestManufacturingItem.status === 'in-transit' ? 'The appliance is in transit from external lab.' :
+                                 latestManufacturingItem.status === 'quality-check' ? 'The appliance is undergoing quality inspection.' :
+                                 latestManufacturingItem.status === 'inspection' ? 'The appliance is undergoing quality inspection.' :
                                  'The appliance is still being processed.';
 
           return { canSubmit: false, reason: 'not_completed', message: `Appliance is still in manufacturing (Status: ${statusDisplay}). ${contextMessage} Please complete manufacturing first.` };
@@ -143,8 +156,11 @@ export function ReportCardsPage() {
         return { canSubmit: false, reason: 'not_delivered', message: 'Appliance has been manufactured but not yet prepared for delivery. Please check the delivery status.' };
       }
 
-      if (deliveryItem.delivery_status !== 'inserted') {
-        return { canSubmit: false, reason: 'not_inserted', message: `Appliance has not been inserted yet (Status: ${deliveryItem.delivery_status}). Clinical report can only be filled after appliance insertion.` };
+      // Get the latest delivery item (first in the ordered list)
+      const latestDeliveryItem = deliveryItems[0];
+
+      if (latestDeliveryItem.delivery_status !== 'inserted') {
+        return { canSubmit: false, reason: 'not_inserted', message: `Appliance has not been inserted yet (Status: ${latestDeliveryItem.delivery_status}). Clinical report can only be filled after appliance insertion.` };
       }
 
       return { canSubmit: true, reason: 'ready', message: 'Ready for clinical report submission.' };

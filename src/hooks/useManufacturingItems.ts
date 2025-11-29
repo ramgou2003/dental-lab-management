@@ -15,6 +15,9 @@ export interface ManufacturingItem {
   arch_type: string;
   upper_appliance_number: string | null;
   lower_appliance_number: string | null;
+  upper_nightguard_number: string | null;
+  lower_nightguard_number: string | null;
+  is_nightguard_needed: string | null;
   manufacturing_method: 'milling' | 'printing' | null;
   milling_location: string | null;
   gingiva_color: string | null;
@@ -274,6 +277,9 @@ export function useManufacturingItems() {
             arch_type: currentItem.arch_type,
             upper_appliance_number: currentItem.upper_appliance_number,
             lower_appliance_number: currentItem.lower_appliance_number,
+            upper_nightguard_number: currentItem.upper_nightguard_number,
+            lower_nightguard_number: currentItem.lower_nightguard_number,
+            is_nightguard_needed: currentItem.is_nightguard_needed,
             manufacturing_method: currentItem.manufacturing_method,
             status: 'pending-printing'
           });

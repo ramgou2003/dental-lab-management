@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical } from "lucide-react";
+import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical, ClipboardCheck } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
 import { useMillingForms } from "@/hooks/useMillingForms";
@@ -37,6 +37,8 @@ export function ManufacturingPage() {
   const [selectedPrintingItem, setSelectedPrintingItem] = useState<any>(null);
   const [showInspectionDialog, setShowInspectionDialog] = useState(false);
   const [selectedInspectionItem, setSelectedInspectionItem] = useState<any>(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [selectedReportItem, setSelectedReportItem] = useState<any>(null);
   const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails, completePrinting, completeInspection } = useManufacturingItems();
   const { createMillingForm } = useMillingForms();
 
@@ -172,6 +174,11 @@ export function ManufacturingPage() {
   const handleCompleteInspection = (item: any) => {
     setSelectedInspectionItem(item);
     setShowInspectionDialog(true);
+  };
+
+  const handleViewReport = (item: any) => {
+    setSelectedReportItem(item);
+    setShowReportDialog(true);
   };
 
   const handleInspectionSubmit = async (inspectionData: {
@@ -497,11 +504,12 @@ export function ManufacturingPage() {
                           return (
                             <Button
                               variant="outline"
-                              className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                              disabled
+                              size="sm"
+                              onClick={() => handleViewReport(item)}
+                              className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 text-sm font-semibold"
                             >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Completed
+                              <FileText className="h-4 w-4 mr-2" />
+                              View Report
                             </Button>
                           );
                         default:
@@ -523,21 +531,15 @@ export function ManufacturingPage() {
                             <div className="min-w-0 flex-1">
                               <h3 className="text-sm font-semibold text-gray-900 truncate">{item.patient_name}</h3>
                               <div className="flex items-center space-x-4 mt-1">
-                                {/* Appliance Types with Numbers */}
+                                {/* Appliance Types */}
                                 {item.upper_appliance_type && (
                                   <span className="text-xs text-gray-600">
                                     <span className="font-medium">Upper:</span> {upperAppliance}
-                                    {item.upper_appliance_number && (
-                                      <span className="ml-1 font-mono text-purple-600">({item.upper_appliance_number})</span>
-                                    )}
                                   </span>
                                 )}
                                 {item.lower_appliance_type && (
                                   <span className="text-xs text-gray-600">
                                     <span className="font-medium">Lower:</span> {lowerAppliance}
-                                    {item.lower_appliance_number && (
-                                      <span className="ml-1 font-mono text-purple-600">({item.lower_appliance_number})</span>
-                                    )}
                                   </span>
                                 )}
                                 {/* Shade */}
@@ -545,6 +547,44 @@ export function ManufacturingPage() {
                                   <span className="font-medium">Shade:</span> {item.shade}
                                 </span>
                               </div>
+                              {/* Appliance Numbers */}
+                              {(item.upper_appliance_number || item.lower_appliance_number) && (
+                                <div className="flex items-center space-x-4 mt-1">
+                                  {item.upper_appliance_number && (
+                                    <span className="text-xs text-gray-600">
+                                      <span className="font-medium">Upper #:</span>
+                                      <span className="ml-1 font-mono text-purple-600">{item.upper_appliance_number}</span>
+                                    </span>
+                                  )}
+                                  {item.lower_appliance_number && (
+                                    <span className="text-xs text-gray-600">
+                                      <span className="font-medium">Lower #:</span>
+                                      <span className="ml-1 font-mono text-purple-600">{item.lower_appliance_number}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {/* Nightguard Information */}
+                              {item.is_nightguard_needed === 'yes' && (
+                                <div className="flex items-center space-x-4 mt-1">
+                                  <span className="text-xs text-gray-600">
+                                    <span className="font-medium">Nightguard Needed:</span>
+                                    <span className="ml-1 text-green-600 font-semibold">Yes</span>
+                                  </span>
+                                  {item.upper_nightguard_number && (
+                                    <span className="text-xs text-gray-600">
+                                      <span className="font-medium">Upper NG #:</span>
+                                      <span className="ml-1 font-mono text-green-600">{item.upper_nightguard_number}</span>
+                                    </span>
+                                  )}
+                                  {item.lower_nightguard_number && (
+                                    <span className="text-xs text-gray-600">
+                                      <span className="font-medium">Lower NG #:</span>
+                                      <span className="ml-1 font-mono text-green-600">{item.lower_nightguard_number}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                               {/* Status Badge */}
                               <div className="mt-2">
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
@@ -573,6 +613,80 @@ export function ManufacturingPage() {
                             {renderActionButtons()}
                           </div>
                         </div>
+
+                        {/* Additional info for completed items */}
+                        {item.status === 'completed' && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="grid grid-cols-2 gap-4">
+                              {/* Left column - Printing info */}
+                              <div className="space-y-2">
+                                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Printing Details</h4>
+                                {item.printing_completed_by_name && (
+                                  <div className="flex items-center text-xs text-gray-600">
+                                    <User className="h-3 w-3 mr-2 text-gray-400" />
+                                    <span className="font-medium">Printed by:</span>
+                                    <span className="ml-1">{item.printing_completed_by_name}</span>
+                                  </div>
+                                )}
+                                {item.printing_completed_at && (
+                                  <div className="flex items-center text-xs text-gray-600">
+                                    <Clock className="h-3 w-3 mr-2 text-gray-400" />
+                                    <span className="font-medium">Completed:</span>
+                                    <span className="ml-1">
+                                      {new Date(item.printing_completed_at).toLocaleString('en-US', {
+                                        timeZone: 'America/New_York',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true
+                                      })}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Right column - Inspection info */}
+                              <div className="space-y-2">
+                                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Inspection Details</h4>
+                                {item.inspection_status && (
+                                  <div className="flex items-center text-xs">
+                                    <CheckCircle className={`h-3 w-3 mr-2 ${item.inspection_status === 'approved' ? 'text-green-500' : 'text-red-500'}`} />
+                                    <span className="font-medium">Status:</span>
+                                    <span className={`ml-1 font-semibold ${item.inspection_status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
+                                      {item.inspection_status === 'approved' ? 'Approved' : 'Rejected'}
+                                    </span>
+                                  </div>
+                                )}
+                                {item.inspection_completed_by_name && (
+                                  <div className="flex items-center text-xs text-gray-600">
+                                    <User className="h-3 w-3 mr-2 text-gray-400" />
+                                    <span className="font-medium">Inspected by:</span>
+                                    <span className="ml-1">{item.inspection_completed_by_name}</span>
+                                  </div>
+                                )}
+                                {item.inspection_completed_at && (
+                                  <div className="flex items-center text-xs text-gray-600">
+                                    <Clock className="h-3 w-3 mr-2 text-gray-400" />
+                                    <span className="font-medium">Completed:</span>
+                                    <span className="ml-1">
+                                      {new Date(item.inspection_completed_at).toLocaleString('en-US', {
+                                        timeZone: 'America/New_York',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true
+                                      })}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1207,6 +1321,272 @@ export function ManufacturingPage() {
         onComplete={handleInspectionSubmit}
         manufacturingItem={selectedInspectionItem}
       />
+
+      {/* Manufacturing & Inspection Report Dialog */}
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              Manufacturing & Inspection Report
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedReportItem && (
+            <div className="space-y-6">
+              {/* Patient & Appliance Information */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Patient & Appliance Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Patient Name</p>
+                    <p className="text-base font-semibold text-gray-900">{selectedReportItem.patient_name}</p>
+                  </div>
+                  {selectedReportItem.upper_appliance_type && (
+                    <div>
+                      <p className="text-sm text-gray-600">Upper Appliance</p>
+                      <p className="text-base font-semibold text-gray-900">
+                        {selectedReportItem.upper_appliance_type}
+                      </p>
+                    </div>
+                  )}
+                  {selectedReportItem.lower_appliance_type && (
+                    <div>
+                      <p className="text-sm text-gray-600">Lower Appliance</p>
+                      <p className="text-base font-semibold text-gray-900">
+                        {selectedReportItem.lower_appliance_type}
+                      </p>
+                    </div>
+                  )}
+                  {selectedReportItem.upper_appliance_number && (
+                    <div>
+                      <p className="text-sm text-gray-600">Upper Appliance Number</p>
+                      <p className="text-base font-semibold text-purple-600 font-mono">
+                        {selectedReportItem.upper_appliance_number}
+                      </p>
+                    </div>
+                  )}
+                  {selectedReportItem.lower_appliance_number && (
+                    <div>
+                      <p className="text-sm text-gray-600">Lower Appliance Number</p>
+                      <p className="text-base font-semibold text-purple-600 font-mono">
+                        {selectedReportItem.lower_appliance_number}
+                      </p>
+                    </div>
+                  )}
+                  {selectedReportItem.is_nightguard_needed && (
+                    <div>
+                      <p className="text-sm text-gray-600">Nightguard Needed</p>
+                      <p className="text-base font-semibold text-gray-900">
+                        {selectedReportItem.is_nightguard_needed === 'yes' ? (
+                          <span className="text-green-600">Yes</span>
+                        ) : (
+                          <span className="text-gray-600">No</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  {selectedReportItem.upper_nightguard_number && (
+                    <div>
+                      <p className="text-sm text-gray-600">Upper Nightguard Number</p>
+                      <p className="text-base font-semibold text-green-600 font-mono">
+                        {selectedReportItem.upper_nightguard_number}
+                      </p>
+                    </div>
+                  )}
+                  {selectedReportItem.lower_nightguard_number && (
+                    <div>
+                      <p className="text-sm text-gray-600">Lower Nightguard Number</p>
+                      <p className="text-base font-semibold text-green-600 font-mono">
+                        {selectedReportItem.lower_nightguard_number}
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-gray-600">Shade</p>
+                    <p className="text-base font-semibold text-gray-900">{selectedReportItem.shade}</p>
+                  </div>
+                  {selectedReportItem.screw && (
+                    <div>
+                      <p className="text-sm text-gray-600">Screw</p>
+                      <p className="text-base font-semibold text-gray-900">{selectedReportItem.screw}</p>
+                    </div>
+                  )}
+                  {selectedReportItem.material && (
+                    <div>
+                      <p className="text-sm text-gray-600">Material</p>
+                      <p className="text-base font-semibold text-gray-900">{selectedReportItem.material}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-gray-600">Arch Type</p>
+                    <p className="text-base font-semibold text-gray-900">{selectedReportItem.arch_type}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Manufacturing Method</p>
+                    <p className="text-base font-semibold text-gray-900">
+                      {selectedReportItem.manufacturing_method === 'printing' ? 'Printing' : 'Milling'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Printing Details */}
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center">
+                  <Factory className="h-5 w-5 mr-2" />
+                  Printing Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedReportItem.printing_completed_by_name ? (
+                    <>
+                      <div>
+                        <p className="text-sm text-blue-700">Printed By</p>
+                        <p className="text-base font-semibold text-blue-900">{selectedReportItem.printing_completed_by_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-blue-700">Completed At</p>
+                        <p className="text-base font-semibold text-blue-900">
+                          {new Date(selectedReportItem.printing_completed_at).toLocaleString('en-US', {
+                            timeZone: 'America/New_York',
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })} EST
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="col-span-2">
+                      <p className="text-sm text-blue-700 italic">Printing details not available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Inspection Details */}
+              <div className="bg-purple-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-purple-900 mb-3 flex items-center">
+                  <ClipboardCheck className="h-5 w-5 mr-2" />
+                  Quality Inspection
+                </h3>
+
+                {selectedReportItem.inspection_status ? (
+                  <>
+                    {/* Inspection Status */}
+                    <div className="mb-4 p-3 bg-white rounded-lg border-2 border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-purple-700">Inspection Status</span>
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                          selectedReportItem.inspection_status === 'approved'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {selectedReportItem.inspection_status === 'approved' ? '✓ APPROVED' : '✗ REJECTED'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Checklist Results */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-semibold text-purple-900 mb-2">Checklist Results</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center justify-between p-2 bg-white rounded border border-purple-200">
+                          <span className="text-sm text-purple-700">Print Quality</span>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${
+                            selectedReportItem.inspection_print_quality === 'pass'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {selectedReportItem.inspection_print_quality === 'pass' ? 'PASS' : 'FAIL'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between p-2 bg-white rounded border border-purple-200">
+                          <span className="text-sm text-purple-700">Physical Defects</span>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${
+                            selectedReportItem.inspection_physical_defects === 'pass'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {selectedReportItem.inspection_physical_defects === 'pass' ? 'PASS' : 'FAIL'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between p-2 bg-white rounded border border-purple-200">
+                          <span className="text-sm text-purple-700">Screw Access Channel</span>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${
+                            selectedReportItem.inspection_screw_access_channel === 'pass'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {selectedReportItem.inspection_screw_access_channel === 'pass' ? 'PASS' : 'FAIL'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between p-2 bg-white rounded border border-purple-200">
+                          <span className="text-sm text-purple-700">MUA Platform</span>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${
+                            selectedReportItem.inspection_mua_platform === 'pass'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {selectedReportItem.inspection_mua_platform === 'pass' ? 'PASS' : 'FAIL'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Inspector Info */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-purple-700">Inspected By</p>
+                        <p className="text-base font-semibold text-purple-900">{selectedReportItem.inspection_completed_by_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-purple-700">Inspection Completed At</p>
+                        <p className="text-base font-semibold text-purple-900">
+                          {new Date(selectedReportItem.inspection_completed_at).toLocaleString('en-US', {
+                            timeZone: 'America/New_York',
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })} EST
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <p className="text-sm text-purple-700 italic">Inspection details not available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Additional Notes */}
+              {selectedReportItem.additional_notes && (
+                <div className="bg-amber-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-amber-900 mb-2">Additional Notes</h3>
+                  <p className="text-sm text-amber-800">{selectedReportItem.additional_notes}</p>
+                </div>
+              )}
+
+              {/* Close Button */}
+              <div className="flex justify-end pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowReportDialog(false)}
+                  className="px-6"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

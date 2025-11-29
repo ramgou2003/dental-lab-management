@@ -125,17 +125,17 @@ export function AppointmentScheduler({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <CalendarIcon className="h-6 w-6 text-blue-600" />
+          <div className="flex items-center gap-3 bg-gradient-to-r from-blue-50 to-blue-100 -m-6 mb-0 p-6 rounded-t-lg border-b-2 border-blue-200">
+            <div className="p-3 bg-blue-600 rounded-lg shadow-md">
+              <CalendarIcon className="h-7 w-7 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold text-gray-900">
+              <DialogTitle className="text-2xl font-bold text-blue-900">
                 Schedule Insertion Appointment
               </DialogTitle>
-              <p className="text-gray-600 mt-1">
+              <p className="text-blue-700 mt-1 font-medium">
                 Schedule appointment for {deliveryItem.patient_name}
               </p>
             </div>
@@ -144,122 +144,143 @@ export function AppointmentScheduler({
 
         <div className="p-6 space-y-6">
           {/* Patient and Appliance Information */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <User className="h-4 w-4" />
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-5 border border-blue-200 shadow-sm">
+            <h3 className="font-semibold text-blue-900 mb-4 flex items-center gap-2 text-lg">
+              <User className="h-5 w-5 text-blue-600" />
               Patient & Appliance Details
             </h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium text-gray-700">Patient:</span>
-                <span className="ml-2 text-gray-900">{deliveryItem.patient_name}</span>
+                <span className="font-semibold text-blue-800">Patient:</span>
+                <span className="ml-2 text-blue-900">{deliveryItem.patient_name}</span>
               </div>
               <div>
-                <span className="font-medium text-gray-700">Arch Type:</span>
-                <span className="ml-2 text-gray-900 capitalize">{deliveryItem.arch_type}</span>
+                <span className="font-semibold text-blue-800">Arch Type:</span>
+                <span className="ml-2 text-blue-900 capitalize">{deliveryItem.arch_type}</span>
               </div>
               {deliveryItem.upper_appliance_type && (
                 <div>
-                  <span className="font-medium text-gray-700">Upper Appliance:</span>
-                  <span className="ml-2 text-gray-900">{deliveryItem.upper_appliance_type}</span>
+                  <span className="font-semibold text-blue-800">Upper Appliance:</span>
+                  <span className="ml-2 text-blue-900">{deliveryItem.upper_appliance_type}</span>
                   {deliveryItem.upper_appliance_number && (
-                    <span className="ml-1 text-gray-600">({deliveryItem.upper_appliance_number})</span>
+                    <span className="ml-1 text-blue-700">({deliveryItem.upper_appliance_number})</span>
                   )}
                 </div>
               )}
               {deliveryItem.lower_appliance_type && (
                 <div>
-                  <span className="font-medium text-gray-700">Lower Appliance:</span>
-                  <span className="ml-2 text-gray-900">{deliveryItem.lower_appliance_type}</span>
+                  <span className="font-semibold text-blue-800">Lower Appliance:</span>
+                  <span className="ml-2 text-blue-900">{deliveryItem.lower_appliance_type}</span>
                   {deliveryItem.lower_appliance_number && (
-                    <span className="ml-1 text-gray-600">({deliveryItem.lower_appliance_number})</span>
+                    <span className="ml-1 text-blue-700">({deliveryItem.lower_appliance_number})</span>
                   )}
                 </div>
               )}
               <div>
-                <span className="font-medium text-gray-700">Shade:</span>
-                <span className="ml-2 text-gray-900">{deliveryItem.shade}</span>
+                <span className="font-semibold text-blue-800">Shade:</span>
+                <span className="ml-2 text-blue-900">{deliveryItem.shade}</span>
               </div>
             </div>
           </div>
 
-          {/* Date Selection */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold text-gray-900 flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4" />
-              Select Appointment Date <span className="text-sm font-normal text-gray-500">(EST)</span>
-            </Label>
-            <div className="flex justify-center">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                disabled={(date) => isDateDisabled(date)}
-                defaultMonth={getTodayInEST()}
-                className="rounded-md border"
-              />
+          {/* Date and Time Selection - Side by Side */}
+          <div className="grid grid-cols-12 gap-6">
+            {/* Date Selection - Left Side (Narrower - 4 columns) */}
+            <div className="col-span-4 space-y-3">
+              <Label className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5 text-blue-600" />
+                Select Date <span className="text-sm font-normal text-blue-600">(EST)</span>
+              </Label>
+              <div className="flex justify-center bg-white rounded-lg border-2 border-blue-200 p-4 shadow-sm">
+                <style>{`
+                  .rdp-day_today {
+                    background-color: rgb(219 234 254) !important;
+                    color: rgb(30 64 175) !important;
+                    font-weight: 600 !important;
+                  }
+                  .rdp-day_today:hover {
+                    background-color: rgb(191 219 254) !important;
+                  }
+                `}</style>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  disabled={(date) => isDateDisabled(date)}
+                  defaultMonth={getTodayInEST()}
+                  today={getTodayInEST()}
+                  className="rounded-md"
+                />
+              </div>
+              {selectedDate && (
+                <p className="text-sm text-blue-700 text-center font-semibold bg-blue-50 py-2 rounded-md mt-3">
+                  Selected: {formatDateForDisplay(selectedDate)} (EST)
+                </p>
+              )}
             </div>
-            <p className="text-xs text-center text-gray-500 mt-2">
-              Current date in EST: {getTodayInEST().toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </p>
-            {selectedDate && (
-              <p className="text-sm text-gray-600 text-center">
-                Selected: {formatDateForDisplay(selectedDate)} (EST)
-              </p>
-            )}
-          </div>
 
-          {/* Time Selection */}
-          <div className="space-y-3">
-            <Label className="text-base font-semibold text-gray-900 flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Select Appointment Time <span className="text-sm font-normal text-gray-500">(EST)</span>
-            </Label>
-            <Select value={selectedTime} onValueChange={setSelectedTime}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Choose appointment time (EST)" />
-              </SelectTrigger>
-              <SelectContent>
-                {timeSlots.map((slot) => (
-                  <SelectItem key={slot.value} value={slot.value}>
-                    {slot.label} EST
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Time Selection - Right Side (Wider - 8 columns) */}
+            <div className="col-span-8 space-y-3">
+              <Label className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-600" />
+                Select Appointment Time <span className="text-sm font-normal text-blue-600">(EST)</span>
+              </Label>
+              <div className="bg-white rounded-lg border-2 border-blue-200 p-4 shadow-sm max-h-[400px] overflow-y-auto">
+                <div className="grid grid-cols-4 gap-2">
+                  {timeSlots.map((slot) => (
+                    <Button
+                      key={slot.value}
+                      onClick={() => setSelectedTime(slot.value)}
+                      variant={selectedTime === slot.value ? "default" : "outline"}
+                      className={`
+                        ${selectedTime === slot.value
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600 shadow-md'
+                          : 'bg-white hover:bg-blue-50 text-blue-900 border-blue-300 hover:border-blue-500'
+                        }
+                        font-medium transition-all duration-200
+                      `}
+                    >
+                      <Clock className="h-3 w-3 mr-2" />
+                      {slot.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {selectedTime && (
+                <p className="text-sm text-blue-700 text-center font-semibold bg-blue-50 py-2 rounded-md">
+                  Selected Time: {timeSlots.find(s => s.value === selectedTime)?.label} EST
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Appointment Notes */}
           <div className="space-y-3">
-            <Label className="text-base font-semibold text-gray-900">
-              Appointment Notes (Optional)
+            <Label className="text-lg font-bold text-blue-900 flex items-center gap-2">
+              <Package className="h-5 w-5 text-blue-600" />
+              Additional Notes (Optional)
             </Label>
             <Textarea
               value={appointmentNotes}
               onChange={(e) => setAppointmentNotes(e.target.value)}
               placeholder="Add any special instructions or notes for the appointment..."
-              className="min-h-[80px]"
+              className="min-h-[100px] border-2 border-blue-200 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-3 pt-4 border-t">
+          <div className="flex justify-end space-x-3 pt-4 border-t-2 border-blue-200">
             <Button
               variant="outline"
               onClick={handleCancel}
-              className="px-6"
+              className="px-8 py-2 border-2 border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-500 font-semibold"
             >
               Cancel
             </Button>
             <Button
               onClick={handleScheduleAppointment}
               disabled={!selectedDate || !selectedTime}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 shadow-md disabled:bg-blue-300 disabled:cursor-not-allowed font-semibold"
             >
               <CalendarIcon className="h-4 w-4 mr-2" />
               Schedule Appointment

@@ -5,6 +5,8 @@ import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { EditLabScriptForm } from "@/components/EditLabScriptForm";
 import { LabScriptFilterDialog } from "@/components/LabScriptFilterDialog";
 import { LabScriptCompletionDialog } from "@/components/LabScriptCompletionDialog";
+import { DeleteLabScriptDialog } from "@/components/DeleteLabScriptDialog";
+import { StartLabScriptDialog } from "@/components/StartLabScriptDialog";
 import { useLabScripts } from "@/hooks/useLabScripts";
 import { LabScript } from "@/hooks/useLabScripts";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -39,7 +41,11 @@ export function LabPage() {
   const [showEditLabScriptForm, setShowEditLabScriptForm] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showStartDialog, setShowStartDialog] = useState(false);
   const [completingLabScriptId, setCompletingLabScriptId] = useState<string | null>(null);
+  const [labScriptToDelete, setLabScriptToDelete] = useState<LabScript | null>(null);
+  const [labScriptToStart, setLabScriptToStart] = useState<{ id: string; patientName: string } | null>(null);
   const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [designStates, setDesignStates] = useState<Record<string, 'not-started' | 'in-progress' | 'hold' | 'completed'>>({});
@@ -111,15 +117,20 @@ export function LabPage() {
     setShowEditLabScriptForm(true);
   };
 
-  const handleDeleteLabScript = async (labScript: LabScript) => {
-    if (window.confirm(`Are you sure you want to delete the lab script for ${labScript.patient_name}?`)) {
-      try {
-        await deleteLabScript(labScript.id);
-        toast.success("Lab script deleted successfully!");
-      } catch (error) {
-        console.error('Error deleting lab script:', error);
-        toast.error("Failed to delete lab script");
-      }
+  const handleDeleteLabScript = (labScript: LabScript) => {
+    setLabScriptToDelete(labScript);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteLabScript = async () => {
+    if (!labScriptToDelete) return;
+    try {
+      await deleteLabScript(labScriptToDelete.id);
+      toast.success("Lab script deleted successfully!");
+    } catch (error) {
+      console.error('Error deleting lab script:', error);
+      toast.error("Failed to delete lab script");
+      throw error;
     }
   };
 
@@ -208,7 +219,7 @@ export function LabPage() {
     }
   };
 
-  const handleDesignStateChange = async (orderId: string, newState: 'not-started' | 'in-progress' | 'hold' | 'completed') => {
+  const handleDesignStateChange = async (orderId: string, newState: 'not-started' | 'in-progress' | 'hold' | 'completed', patientName?: string) => {
     // If completing, show the completion dialog
     if (newState === 'completed') {
       setCompletingLabScriptId(orderId);
@@ -216,6 +227,21 @@ export function LabPage() {
       return;
     }
 
+    // If starting (from pending to in-progress), show the start dialog
+    if (newState === 'in-progress' && patientName) {
+      const script = labScripts.find(s => s.id === orderId);
+      if (script?.status === 'pending') {
+        setLabScriptToStart({ id: orderId, patientName });
+        setShowStartDialog(true);
+        return;
+      }
+    }
+
+    // For other state changes, proceed directly
+    await performDesignStateChange(orderId, newState);
+  };
+
+  const performDesignStateChange = async (orderId: string, newState: 'not-started' | 'in-progress' | 'hold' | 'completed') => {
     // Map the design state to lab script status
     const statusMap = {
       'not-started': 'pending',
@@ -249,7 +275,13 @@ export function LabPage() {
     } catch (error) {
       console.error('Error updating lab script status:', error);
       toast.error("Failed to update status");
+      throw error;
     }
+  };
+
+  const confirmStartLabScript = async () => {
+    if (!labScriptToStart) return;
+    await performDesignStateChange(labScriptToStart.id, 'in-progress');
   };
 
   const handleConfirmCompletion = async (completionDate: string) => {
@@ -308,6 +340,7 @@ export function LabPage() {
 
   const renderActionButtons = (orderId: string, originalScript: LabScript | undefined) => {
     const currentStatus = originalScript?.status;
+    const patientName = originalScript?.patient_name || '';
     const isEditingStatus = editingStatus[orderId] || false;
 
     // If lab script is completed, show edit button or hold/complete when editing
@@ -331,7 +364,7 @@ export function LabPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleDesignStateChange(orderId, 'hold')}
+            onClick={() => handleDesignStateChange(orderId, 'hold', patientName)}
             className="h-8 w-8 p-0"
             title="Hold"
           >
@@ -340,7 +373,7 @@ export function LabPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleDesignStateChange(orderId, 'completed')}
+            onClick={() => handleDesignStateChange(orderId, 'completed', patientName)}
             className="h-8 w-8 p-0"
             title="Complete"
           >
@@ -357,7 +390,7 @@ export function LabPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleDesignStateChange(orderId, 'in-progress')}
+            onClick={() => handleDesignStateChange(orderId, 'in-progress', patientName)}
             className="h-8 w-8 p-0"
             title="Start Design"
           >
@@ -371,7 +404,7 @@ export function LabPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleDesignStateChange(orderId, 'hold')}
+              onClick={() => handleDesignStateChange(orderId, 'hold', patientName)}
               className="h-8 w-8 p-0"
               title="Hold"
             >
@@ -380,7 +413,7 @@ export function LabPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleDesignStateChange(orderId, 'completed')}
+              onClick={() => handleDesignStateChange(orderId, 'completed', patientName)}
               className="h-8 w-8 p-0"
               title="Complete"
             >
@@ -395,7 +428,7 @@ export function LabPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleDesignStateChange(orderId, 'in-progress')}
+              onClick={() => handleDesignStateChange(orderId, 'in-progress', patientName)}
               className="h-8 w-8 p-0"
               title="Resume Design"
             >
@@ -404,7 +437,7 @@ export function LabPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleDesignStateChange(orderId, 'completed')}
+              onClick={() => handleDesignStateChange(orderId, 'completed', patientName)}
               className="h-8 w-8 p-0"
               title="Complete"
             >
@@ -971,6 +1004,28 @@ export function LabPage() {
             ? labScripts.find(s => s.id === completingLabScriptId)?.patient_name || ''
             : ''
         }
+      />
+
+      {/* Delete Lab Script Confirmation Dialog */}
+      <DeleteLabScriptDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setLabScriptToDelete(null);
+        }}
+        onConfirm={confirmDeleteLabScript}
+        patientName={labScriptToDelete?.patient_name || ''}
+      />
+
+      {/* Start Lab Script Confirmation Dialog */}
+      <StartLabScriptDialog
+        isOpen={showStartDialog}
+        onClose={() => {
+          setShowStartDialog(false);
+          setLabScriptToStart(null);
+        }}
+        onConfirm={confirmStartLabScript}
+        patientName={labScriptToStart?.patientName || ''}
       />
     </div>
   );
