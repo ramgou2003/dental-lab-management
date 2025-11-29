@@ -31,6 +31,18 @@ export interface LabScriptFilters {
   material: string[];
 }
 
+// Helper function to format date from database without timezone conversion
+const formatDateFromDB = (dateString: string): string => {
+  // Parse the date string and format it as MM/DD/YYYY
+  // This avoids timezone conversion by parsing the date parts directly
+  const parts = dateString.split('T')[0].split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${parseInt(month)}/${parseInt(day)}/${year}`;
+  }
+  return dateString;
+};
+
 export function LabPage() {
   const { canCreateLabScripts, canUpdateLabScripts, canDeleteLabScripts } = usePermissions();
   const { userProfile } = useAuth();
@@ -478,8 +490,8 @@ export function LabPage() {
       vdoDetails: script.vdo_details,
       isNightguardNeeded: script.is_nightguard_needed,
       status: script.status,
-      requestedDate: script.requested_date ? new Date(script.requested_date).toLocaleDateString() : 'No date',
-      dueDate: script.due_date ? new Date(script.due_date).toLocaleDateString() : 'No due date',
+      requestedDate: script.requested_date ? formatDateFromDB(script.requested_date) : 'No date',
+      dueDate: script.due_date ? formatDateFromDB(script.due_date) : 'No due date',
       instructions: script.instructions,
       notes: script.notes
     };
