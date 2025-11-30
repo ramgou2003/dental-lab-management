@@ -34,10 +34,34 @@ export function LabScriptCompletionDialog({
   const [completionTime, setCompletionTime] = useState(initialTime);
 
   const handleConfirm = () => {
-    // Combine date and time and treat it as EST
-    // We'll create a timestamp that represents the selected date/time in EST
-    const dateTimeString = `${completionDate}T${completionTime}:00-05:00`; // EST is UTC-5
-    onConfirm(dateTimeString);
+    // Combine date and time as EST and convert to UTC for storage
+    // Create a date object treating the input as EST/EDT
+    const estDateTimeString = `${completionDate}T${completionTime}:00`;
+
+    // Create formatter to get the offset for the specific date in Eastern time
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      timeZoneName: 'short'
+    });
+
+    // Parse the date parts and create a Date object
+    const [year, month, day] = completionDate.split('-').map(Number);
+    const [hours, minutes] = completionTime.split(':').map(Number);
+
+    // Create a temporary date to check if it's DST
+    const tempDate = new Date(year, month - 1, day, hours, minutes);
+    const parts = formatter.formatToParts(tempDate);
+    const tzPart = parts.find(p => p.type === 'timeZoneName');
+    const isDST = tzPart?.value === 'EDT';
+
+    // EST is UTC-5, EDT is UTC-4
+    const offsetHours = isDST ? 4 : 5;
+
+    // Create UTC date by adding the offset
+    const utcDate = new Date(Date.UTC(year, month - 1, day, hours + offsetHours, minutes, 0));
+
+    // Return ISO string for storage
+    onConfirm(utcDate.toISOString());
     onClose();
   };
 

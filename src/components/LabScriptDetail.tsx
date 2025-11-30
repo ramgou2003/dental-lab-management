@@ -14,6 +14,33 @@ import { useLabScriptComments } from "@/hooks/useLabScriptComments";
 import { FlaskConical, Edit2, Save, X, MessageSquare, Calendar, User, FileText } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 
+// Helper function to format date and time from database, converting UTC to EST/EDT
+const formatDateTimeFromDB = (dateString: string): { date: string; time: string } => {
+  // Parse the UTC date string and convert to Eastern Time
+  const utcDate = new Date(dateString);
+
+  // Use Intl.DateTimeFormat to get the date and time in Eastern timezone
+  const dateFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  const timeFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+
+  const formattedDate = dateFormatter.format(utcDate);
+  const formattedTime = timeFormatter.format(utcDate);
+
+  return { date: formattedDate, time: formattedTime };
+};
+
 interface LabScriptDetailProps {
   open: boolean;
   onClose: () => void;
@@ -615,27 +642,18 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                         </div>
                       </div>
                       <div>
-                        <div className="text-xs text-gray-500 mb-1">Completed Date & Time (EST)</div>
+                        <div className="text-xs text-gray-500 mb-1">Completed Date & Time (Eastern)</div>
                         <div className="text-sm text-gray-900">
                           {labScript.completion_date ? (
-                            <>
-                              <div className="font-medium">
-                                {new Date(labScript.completion_date).toLocaleDateString('en-US', {
-                                  timeZone: 'America/New_York',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                })}
-                              </div>
-                              <div className="text-gray-600">
-                                {new Date(labScript.completion_date).toLocaleTimeString('en-US', {
-                                  timeZone: 'America/New_York',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  second: '2-digit'
-                                })}
-                              </div>
-                            </>
+                            (() => {
+                              const { date, time } = formatDateTimeFromDB(labScript.completion_date);
+                              return (
+                                <>
+                                  <div className="font-medium">{date}</div>
+                                  <div className="text-gray-600">{time}</div>
+                                </>
+                              );
+                            })()
                           ) : (
                             'Not available'
                           )}
