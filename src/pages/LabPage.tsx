@@ -5,9 +5,14 @@ import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { EditLabScriptForm } from "@/components/EditLabScriptForm";
 import { LabScriptFilterDialog } from "@/components/LabScriptFilterDialog";
 import { LabScriptCompletionDialog } from "@/components/LabScriptCompletionDialog";
+import { LabScriptCompletedDialog } from "@/components/LabScriptCompletedDialog";
 import { DeleteLabScriptDialog } from "@/components/DeleteLabScriptDialog";
 import { StartLabScriptDialog } from "@/components/StartLabScriptDialog";
+import { LabReportCardForm } from "@/components/LabReportCardForm";
+import { useReportCards } from "@/hooks/useReportCards";
+import type { ReportCard } from "@/hooks/useReportCards";
 import { useLabScripts } from "@/hooks/useLabScripts";
+import { supabase } from "@/integrations/supabase/client";
 import { LabScript } from "@/hooks/useLabScripts";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/AuthGuard";
@@ -15,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FlaskConical, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, MoreHorizontal, Trash2, ArrowUp, ArrowDown, Filter } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,11 +59,14 @@ export function LabPage() {
   const [showEditLabScriptForm, setShowEditLabScriptForm] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [showCompletedDialog, setShowCompletedDialog] = useState(false);
+  const [showLabReportCardForm, setShowLabReportCardForm] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showStartDialog, setShowStartDialog] = useState(false);
   const [completingLabScriptId, setCompletingLabScriptId] = useState<string | null>(null);
+  const [completedLabScript, setCompletedLabScript] = useState<LabScript | null>(null);
   const [labScriptToDelete, setLabScriptToDelete] = useState<LabScript | null>(null);
-  const [labScriptToStart, setLabScriptToStart] = useState<{ id: string; patientName: string } | null>(null);
+  const [labScriptToStart, setLabScriptToStart] = useState<LabScript | null>(null);
   const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [designStates, setDesignStates] = useState<Record<string, 'not-started' | 'in-progress' | 'hold' | 'completed'>>({});
@@ -74,6 +83,8 @@ export function LabPage() {
     material: []
   });
   const { labScripts, loading, addLabScript, updateLabScript, deleteLabScript } = useLabScripts();
+  const { reportCards, updateLabReportStatus } = useReportCards();
+  const [reportCardForForm, setReportCardForForm] = useState<ReportCard | null>(null);
 
   const handleNewOrder = () => {
     setShowNewScriptForm(true);
@@ -243,7 +254,7 @@ export function LabPage() {
     if (newState === 'in-progress' && patientName) {
       const script = labScripts.find(s => s.id === orderId);
       if (script?.status === 'pending') {
-        setLabScriptToStart({ id: orderId, patientName });
+        setLabScriptToStart(script);
         setShowStartDialog(true);
         return;
       }
@@ -300,6 +311,9 @@ export function LabPage() {
     if (!completingLabScriptId) return;
 
     try {
+      // Find the lab script before updating
+      const completedScript = labScripts.find(s => s.id === completingLabScriptId);
+
       await updateLabScript(completingLabScriptId, {
         status: 'completed',
         completion_date: completionDate,
@@ -317,6 +331,12 @@ export function LabPage() {
       }));
 
       toast.success('Design completed and status updated!');
+
+      // Store the completed lab script and show the completed dialog
+      if (completedScript) {
+        setCompletedLabScript(completedScript);
+        setShowCompletedDialog(true);
+      }
 
       // Reset completion dialog state
       setCompletingLabScriptId(null);
@@ -1037,8 +1057,87 @@ export function LabPage() {
           setLabScriptToStart(null);
         }}
         onConfirm={confirmStartLabScript}
-        patientName={labScriptToStart?.patientName || ''}
+        onViewDetails={() => {
+          if (labScriptToStart) {
+            setSelectedLabScript(labScriptToStart);
+            setShowLabScriptDetail(true);
+          }
+        }}
+        patientName={labScriptToStart?.patient_name || ''}
       />
+
+      {/* Lab Script Completed Dialog */}
+      <LabScriptCompletedDialog
+        isOpen={showCompletedDialog}
+        onClose={() => {
+          setShowCompletedDialog(false);
+          setCompletedLabScript(null);
+        }}
+        onFillReportCard={async () => {
+          if (!completedLabScript) return;
+
+          // Find the report card for this lab script from the reportCards list
+          let reportCard = reportCards.find(rc => rc.lab_script_id === completedLabScript.id);
+
+          if (!reportCard) {
+            // If not found in list, try to fetch from database directly
+            const { data, error } = await supabase
+              .from('report_cards')
+              .select('*')
+              .eq('lab_script_id', completedLabScript.id)
+              .single();
+
+            if (data && !error) {
+              reportCard = data as ReportCard;
+            }
+          }
+
+          if (reportCard) {
+            setReportCardForForm(reportCard);
+            setShowCompletedDialog(false);
+            setShowLabReportCardForm(true);
+          } else {
+            toast.error('Report card not found. Please try from the Report Cards page.');
+            setShowCompletedDialog(false);
+          }
+        }}
+        patientName={completedLabScript?.patient_name || ''}
+      />
+
+      {/* Lab Report Card Form Dialog */}
+      <Dialog open={showLabReportCardForm && !!reportCardForForm} onOpenChange={(open) => {
+        if (!open) {
+          setShowLabReportCardForm(false);
+          setReportCardForForm(null);
+          setCompletedLabScript(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {reportCardForForm && (
+            <LabReportCardForm
+              reportCard={reportCardForForm}
+              onSubmit={async (formData) => {
+                try {
+                  // Use the same updateLabReportStatus as ReportCardsPage
+                  await updateLabReportStatus(reportCardForForm.id, 'completed', formData);
+                  toast.success('Lab report card completed successfully!');
+                  setShowLabReportCardForm(false);
+                  setReportCardForForm(null);
+                  setCompletedLabScript(null);
+                } catch (error) {
+                  console.error('Error completing lab report card:', error);
+                  toast.error('Failed to complete lab report card');
+                }
+              }}
+              onCancel={() => {
+                setShowLabReportCardForm(false);
+                setReportCardForForm(null);
+                setCompletedLabScript(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -41,6 +41,19 @@ const formatDateTimeFromDB = (dateString: string): { date: string; time: string 
   return { date: formattedDate, time: formattedTime };
 };
 
+// Helper function to format date-only fields (like requested_date, due_date) without timezone conversion
+const formatDateFromDB = (dateString: string): string => {
+  // Parse the date string directly without timezone conversion
+  // Expected format: "2025-01-15" or "2025-01-15T00:00:00"
+  const datePart = dateString.split('T')[0];
+  const [year, month, day] = datePart.split('-');
+
+  // Format as "Month Day, Year"
+  const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+};
+
 interface LabScriptDetailProps {
   open: boolean;
   onClose: () => void;
@@ -489,7 +502,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                     />
                   ) : (
                     <div className="text-base font-medium">
-                      {new Date(labScript.requested_date).toLocaleDateString()}
+                      {formatDateFromDB(labScript.requested_date)}
                     </div>
                   )}
                 </div>
@@ -503,7 +516,7 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                     />
                   ) : (
                     <div className="text-base font-medium">
-                      {labScript.due_date ? new Date(labScript.due_date).toLocaleDateString() : 'Not set'}
+                      {labScript.due_date ? formatDateFromDB(labScript.due_date) : 'Not set'}
                     </div>
                   )}
                 </div>
@@ -598,27 +611,18 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500 mb-1">Created Date & Time (EST)</div>
+                      <div className="text-xs text-gray-500 mb-1">Created Date & Time (Eastern)</div>
                       <div className="text-sm text-gray-900">
                         {labScript.created_at ? (
-                          <>
-                            <div className="font-medium">
-                              {new Date(labScript.created_at).toLocaleDateString('en-US', {
-                                timeZone: 'America/New_York',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
-                            </div>
-                            <div className="text-gray-600">
-                              {new Date(labScript.created_at).toLocaleTimeString('en-US', {
-                                timeZone: 'America/New_York',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit'
-                              })}
-                            </div>
-                          </>
+                          (() => {
+                            const { date, time } = formatDateTimeFromDB(labScript.created_at);
+                            return (
+                              <>
+                                <div className="font-medium">{date}</div>
+                                <div className="text-gray-600">{time}</div>
+                              </>
+                            );
+                          })()
                         ) : (
                           'Not available'
                         )}

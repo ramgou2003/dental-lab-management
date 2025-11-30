@@ -6,6 +6,28 @@ import { FileText, User, FlaskConical, Eye, X, Calendar, Stethoscope } from "luc
 import type { ReportCard } from "@/hooks/useReportCards";
 import { supabase } from "@/integrations/supabase/client";
 
+// Helper function to format date-only fields without timezone conversion
+const formatDateFromDB = (dateString: string): string => {
+  if (!dateString) return 'Not specified';
+  // Parse the date string directly without timezone conversion
+  // Expected format: "2025-01-15" or "2025-01-15T00:00:00"
+  const datePart = dateString.split('T')[0];
+  const [year, month, day] = datePart.split('-');
+
+  // Format as "Month Day, Year"
+  const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+};
+
+// Helper function to format date as MM/DD/YYYY for timeline
+const formatDateShort = (dateString: string): string => {
+  if (!dateString) return 'Not specified';
+  const datePart = dateString.split('T')[0];
+  const [year, month, day] = datePart.split('-');
+  return `${parseInt(month)}/${parseInt(day)}/${year}`;
+};
+
 interface ViewLabReportCardProps {
   reportCard: ReportCard;
   onClose: () => void;
@@ -196,15 +218,13 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
             <div>
               <Label className="tablet:text-sm">Requested Date</Label>
               <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border tablet:text-sm">
-                {new Date(labReportData.lab_script_requested_date).toLocaleDateString()}
+                {formatDateFromDB(labReportData.lab_script_requested_date)}
               </div>
             </div>
             <div>
               <Label className="tablet:text-sm">Due Date</Label>
               <div className="p-3 tablet:p-2 bg-gray-50 rounded-md tablet:rounded border tablet:text-sm">
-                {labReportData.lab_script_due_date ?
-                  new Date(labReportData.lab_script_due_date).toLocaleDateString() :
-                  'Not specified'}
+                {formatDateFromDB(labReportData.lab_script_due_date || '')}
               </div>
             </div>
           </div>
@@ -507,22 +527,34 @@ export function ViewLabReportCard({ reportCard, onClose }: ViewLabReportCardProp
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Lab Script Requested:</span>
-                <span className="font-medium">{new Date(labReportData.lab_script_requested_date).toLocaleDateString()}</span>
+                <span className="font-medium">{formatDateShort(labReportData.lab_script_requested_date)}</span>
               </div>
               {labReportData.lab_script_due_date && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Original Due Date:</span>
-                  <span className="font-medium">{new Date(labReportData.lab_script_due_date).toLocaleDateString()}</span>
+                  <span className="font-medium">{formatDateShort(labReportData.lab_script_due_date)}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Lab Report Completed:</span>
-                <span className="font-medium">{new Date(labReportData.submitted_at).toLocaleDateString()}</span>
+                <span className="font-medium">{new Date(labReportData.submitted_at).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}</span>
               </div>
               <div className="flex justify-between border-t pt-2">
                 <span className="text-gray-600 font-medium">Total Processing Time:</span>
                 <span className="font-medium text-indigo-600">
-                  {Math.ceil((new Date(labReportData.submitted_at).getTime() - new Date(labReportData.lab_script_requested_date).getTime()) / (1000 * 60 * 60 * 24))} days
+                  {(() => {
+                    // Parse requested date directly without timezone conversion
+                    const requestedParts = labReportData.lab_script_requested_date.split('T')[0].split('-');
+                    const requestedDate = new Date(parseInt(requestedParts[0]), parseInt(requestedParts[1]) - 1, parseInt(requestedParts[2]));
+                    // Parse submitted date and extract just the date part in EST
+                    const submittedDateObj = new Date(labReportData.submitted_at);
+                    const submittedInEST = new Date(submittedDateObj.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+                    const submittedDate = new Date(submittedInEST.getFullYear(), submittedInEST.getMonth(), submittedInEST.getDate());
+                    // Calculate difference in days (comparing dates only, not times)
+                    const diffTime = submittedDate.getTime() - requestedDate.getTime();
+                    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    return days === 0 ? '0 days (Same day)' : days === 1 ? '1 day' : `${days} days`;
+                  })()}
                 </span>
               </div>
             </div>

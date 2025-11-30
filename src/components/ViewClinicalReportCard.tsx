@@ -6,6 +6,20 @@ import { Separator } from "@/components/ui/separator";
 import { FileText, User, Stethoscope, Calendar, CheckCircle, Clock, Eye } from "lucide-react";
 import { useClinicalReportCards, type ClinicalReportCard } from "@/hooks/useClinicalReportCards";
 
+// Helper function to format date-only fields without timezone conversion
+const formatDateFromDB = (dateString: string): string => {
+  if (!dateString) return 'Not specified';
+  // Parse the date string directly without timezone conversion
+  // Expected format: "2025-01-15" or "2025-01-15T00:00:00"
+  const datePart = dateString.split('T')[0];
+  const [year, month, day] = datePart.split('-');
+
+  // Format as "Month Day, Year"
+  const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+};
+
 interface ViewClinicalReportCardProps {
   reportCardId: string;
   onClose: () => void;
@@ -57,14 +71,6 @@ export function ViewClinicalReportCard({ reportCardId, onClose }: ViewClinicalRe
       </div>
     );
   }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
 
   const formatFieldValue = (value: string) => {
     return value.split('_').map(word => 
@@ -123,7 +129,7 @@ export function ViewClinicalReportCard({ reportCardId, onClose }: ViewClinicalRe
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="font-medium text-gray-700">Insertion Date:</span>
-                <span className="text-gray-900">{formatDate(clinicalReport.insertion_date)}</span>
+                <span className="text-gray-900">{formatDateFromDB(clinicalReport.insertion_date)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium text-gray-700">Fit Assessment:</span>
@@ -210,7 +216,7 @@ export function ViewClinicalReportCard({ reportCardId, onClose }: ViewClinicalRe
                   </div>
                   {clinicalReport.follow_up_date && (
                     <div className="text-sm text-yellow-700">
-                      <span className="font-medium">Follow-up Date:</span> {formatDate(clinicalReport.follow_up_date)}
+                      <span className="font-medium">Follow-up Date:</span> {formatDateFromDB(clinicalReport.follow_up_date)}
                     </div>
                   )}
                 </div>

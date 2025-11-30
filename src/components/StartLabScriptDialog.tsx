@@ -1,12 +1,13 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Play } from "lucide-react";
+import { Play, Eye } from "lucide-react";
 import { useState } from "react";
 
 interface StartLabScriptDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
+  onViewDetails: () => void;
   patientName: string;
 }
 
@@ -14,6 +15,7 @@ export function StartLabScriptDialog({
   isOpen,
   onClose,
   onConfirm,
+  onViewDetails,
   patientName
 }: StartLabScriptDialogProps) {
   const [isStarting, setIsStarting] = useState(false);
@@ -34,6 +36,10 @@ export function StartLabScriptDialog({
     if (!isStarting) {
       onClose();
     }
+  };
+
+  const handleViewDetails = () => {
+    onViewDetails();
   };
 
   return (
@@ -60,34 +66,46 @@ export function StartLabScriptDialog({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-between gap-3">
           <Button
             type="button"
             variant="outline"
-            onClick={handleCancel}
+            onClick={handleViewDetails}
             disabled={isStarting}
-            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
           >
-            Cancel
+            <Eye className="h-4 w-4 mr-2" />
+            View Details
           </Button>
-          <Button
-            type="button"
-            onClick={handleStart}
-            disabled={isStarting}
-            className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-          >
-            {isStarting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Starting...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Start Design
-              </>
-            )}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isStarting}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleStart}
+              disabled={isStarting}
+              className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+            >
+              {isStarting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Starting...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Start Design
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
