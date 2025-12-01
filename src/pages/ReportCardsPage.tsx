@@ -424,6 +424,23 @@ export function ReportCardsPage() {
                                   </span>
                                 )}
                               </div>
+                              {/* Requested Date and Due Date */}
+                              {(card.lab_script?.requested_date || card.lab_script?.due_date) && (
+                                <div className="flex items-center space-x-4 mt-1">
+                                  {card.lab_script?.requested_date && (
+                                    <span className="text-xs text-gray-500 flex items-center">
+                                      <Calendar className="h-3 w-3 mr-1 text-gray-400" />
+                                      <span className="font-medium">Req:</span>&nbsp;{card.lab_script.requested_date.split('T')[0].split('-').slice(1).concat(card.lab_script.requested_date.split('T')[0].split('-')[0]).join('/')}
+                                    </span>
+                                  )}
+                                  {card.lab_script?.due_date && (
+                                    <span className="text-xs text-orange-600 flex items-center">
+                                      <Clock className="h-3 w-3 mr-1 text-orange-500" />
+                                      <span className="font-medium">Due:</span>&nbsp;{card.lab_script.due_date.split('T')[0].split('-').slice(1).concat(card.lab_script.due_date.split('T')[0].split('-')[0]).join('/')}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                               {/* Completed By and Completed At */}
                               {card.lab_report_status === 'completed' && (
                                 <div className="mt-1 space-y-0.5">

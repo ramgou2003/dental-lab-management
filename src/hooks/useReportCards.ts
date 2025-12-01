@@ -27,6 +27,8 @@ export interface ReportCard {
     material?: string;
     shade?: string;
     notes?: string;
+    requested_date?: string;
+    due_date?: string;
   };
 }
 
@@ -51,7 +53,9 @@ export function useReportCards() {
             custom_screw_type,
             material,
             shade,
-            notes
+            notes,
+            requested_date,
+            due_date
           )
         `)
         .order('created_at', { ascending: false });
