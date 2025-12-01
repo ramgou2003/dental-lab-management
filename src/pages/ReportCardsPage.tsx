@@ -7,7 +7,9 @@ import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
 import { ClinicalReportCardForm } from "@/components/ClinicalReportCardForm";
 import { ViewClinicalReportCard } from "@/components/ViewClinicalReportCard";
+import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { useReportCards } from "@/hooks/useReportCards";
+import { useLabScripts, LabScript } from "@/hooks/useLabScripts";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Stethoscope } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
@@ -20,11 +22,14 @@ export function ReportCardsPage() {
   const [showViewLabReport, setShowViewLabReport] = useState(false);
   const [showClinicalReportForm, setShowClinicalReportForm] = useState(false);
   const [showViewClinicalReport, setShowViewClinicalReport] = useState(false);
+  const [showLabScriptPreview, setShowLabScriptPreview] = useState(false);
+  const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
   const [selectedReportCard, setSelectedReportCard] = useState<ReportCard | null>(null);
   const [stableSelectedReportCard, setStableSelectedReportCard] = useState<ReportCard | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [insertionStatus, setInsertionStatus] = useState<{canSubmit: boolean; reason: string; message: string} | null>(null);
   const { reportCards, loading, updateLabReportStatus, updateClinicalReportStatus } = useReportCards();
+  const { updateLabScript } = useLabScripts();
 
 
 
@@ -87,6 +92,39 @@ export function ReportCardsPage() {
     setShowViewLabReport(false);
     setSelectedReportCard(null);
     setStableSelectedReportCard(null);
+  };
+
+  const handleViewLabScript = async (card: ReportCard) => {
+    if (!card.lab_script_id) {
+      toast.error('No lab script associated with this report card');
+      return;
+    }
+
+    try {
+      // Fetch the complete lab script data
+      const { data, error } = await supabase
+        .from('lab_scripts')
+        .select('*')
+        .eq('id', card.lab_script_id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching lab script:', error);
+        toast.error('Failed to load lab script');
+        return;
+      }
+
+      setSelectedLabScript(data as LabScript);
+      setShowLabScriptPreview(true);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to load lab script');
+    }
+  };
+
+  const handleLabScriptPreviewClose = () => {
+    setShowLabScriptPreview(false);
+    setSelectedLabScript(null);
   };
 
   const checkInsertionStatus = async (reportCardId: string) => {
@@ -488,6 +526,16 @@ export function ReportCardsPage() {
                               </ParticleButton>
                             )}
 
+                            {/* View Lab Script Button */}
+                            <Button
+                              variant="outline"
+                              className="border-2 border-gray-400 text-gray-600 hover:border-gray-500 hover:text-gray-700 hover:bg-gray-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                              onClick={() => handleViewLabScript(card)}
+                            >
+                              <FlaskConical className="h-4 w-4 mr-2" />
+                              View Lab Script
+                            </Button>
+
                             {/* Clinical Report Button - Show only for pending by clinic filter or when lab is completed */}
                             {(activeFilter === "pending-clinic" || card.lab_report_status === 'completed') && (
                               <>
@@ -617,6 +665,15 @@ export function ReportCardsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Lab Script Preview Dialog */}
+      <LabScriptDetail
+        open={showLabScriptPreview}
+        onClose={handleLabScriptPreviewClose}
+        labScript={selectedLabScript}
+        onUpdate={updateLabScript}
+        initialEditMode={false}
+      />
     </div>
   );
 }
