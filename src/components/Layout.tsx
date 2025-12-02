@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 
+export type ViewMode = 'desktop' | 'tablet';
+
 const Layout = () => {
   // Initialize sidebar state from localStorage or default to false (expanded)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -22,6 +24,17 @@ const Layout = () => {
     } catch (error) {
       console.warn('Failed to load sidebar width from localStorage:', error);
       return 208;
+    }
+  });
+
+  // Initialize view mode from localStorage or default to 'desktop'
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('view-mode');
+      return (saved === 'tablet' ? 'tablet' : 'desktop') as ViewMode;
+    } catch (error) {
+      console.warn('Failed to load view mode from localStorage:', error);
+      return 'desktop';
     }
   });
 
@@ -47,6 +60,15 @@ const Layout = () => {
       console.warn('Failed to save sidebar width to localStorage:', error);
     }
   }, [sidebarWidth]);
+
+  // Save view mode to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('view-mode', viewMode);
+    } catch (error) {
+      console.warn('Failed to save view mode to localStorage:', error);
+    }
+  }, [viewMode]);
 
   // Extract the current section from the pathname
   const getCurrentSection = () => {
@@ -88,8 +110,25 @@ const Layout = () => {
     setTimeout(() => setIsResizing(false), 100);
   };
 
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'desktop' ? 'tablet' : 'desktop');
+  };
+
+  // Calculate zoom based on view mode
+  const zoomLevel = viewMode === 'tablet' ? 0.75 : 1;
+
   return (
-    <div className={`min-h-screen flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}>
+    <div
+      className={`min-h-screen flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}
+      style={{
+        zoom: zoomLevel,
+        // For browsers that don't support zoom, use transform as fallback
+        // transform: `scale(${zoomLevel})`,
+        // transformOrigin: 'top left',
+        // width: viewMode === 'tablet' ? `${100 / zoomLevel}%` : '100%',
+        // height: viewMode === 'tablet' ? `${100 / zoomLevel}vh` : 'auto',
+      }}
+    >
       <Sidebar
         activeSection={getCurrentSection()}
         collapsed={sidebarCollapsed}
@@ -98,6 +137,8 @@ const Layout = () => {
         onWidthChange={handleWidthChange}
         onResizeStart={handleResizeStart}
         onResizeEnd={handleResizeEnd}
+        viewMode={viewMode}
+        onToggleViewMode={toggleViewMode}
       />
       <main
         className="flex-1 bg-white overflow-auto"
