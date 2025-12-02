@@ -116,14 +116,17 @@ const Layout = () => {
 
   // Calculate zoom based on view mode
   const zoomLevel = viewMode === 'tablet' ? 0.8 : 1;
+  const scaledSize = 100 / zoomLevel; // 125% when zoomed to 80%
 
   return (
     <div
-      className={`flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}
+      className={`flex bg-gray-50 ${isResizing ? 'resize-active' : ''}`}
       style={{
-        zoom: zoomLevel,
-        height: `${100 / zoomLevel}vh`,
-        minHeight: `${100 / zoomLevel}vh`,
+        transform: `scale(${zoomLevel})`,
+        transformOrigin: 'top left',
+        width: `${scaledSize}vw`,
+        height: `${scaledSize}vh`,
+        minHeight: `${scaledSize}vh`,
       }}
     >
       <Sidebar
