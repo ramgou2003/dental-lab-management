@@ -1,7 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface SortOption {
+  label: string;
+  value: string;
+}
 
 interface PageHeaderProps {
   title: string;
@@ -21,6 +32,12 @@ interface PageHeaderProps {
     value: string;
     onChange: (value: string) => void;
   };
+  sortAction?: {
+    options: SortOption[];
+    currentField: string | null;
+    currentOrder: 'asc' | 'desc';
+    onSort: (field: string) => void;
+  };
 }
 export function PageHeader({
   title,
@@ -28,8 +45,15 @@ export function PageHeader({
   badge,
   action,
   secondaryAction,
-  search
+  search,
+  sortAction
 }: PageHeaderProps) {
+  const getCurrentSortLabel = () => {
+    if (!sortAction?.currentField) return 'Sort';
+    const option = sortAction.options.find(o => o.value === sortAction.currentField);
+    return option?.label || 'Sort';
+  };
+
   return <div className="flex items-center justify-between px-6 py-3.5">
       <div>
         <div className="flex items-center gap-3">
@@ -58,6 +82,35 @@ export function PageHeader({
               </svg>
             </div>
           </div>
+        )}
+
+        {sortAction && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4" />
+                {getCurrentSortLabel()}
+                {sortAction.currentField && (
+                  sortAction.currentOrder === 'asc'
+                    ? <ArrowUp className="h-3 w-3" />
+                    : <ArrowDown className="h-3 w-3" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {sortAction.options.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => sortAction.onSort(option.value)}
+                >
+                  {option.label}
+                  {sortAction.currentField === option.value && (
+                    <span className="ml-2">{sortAction.currentOrder === 'asc' ? '↑' : '↓'}</span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         {secondaryAction && (

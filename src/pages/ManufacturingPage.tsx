@@ -220,11 +220,12 @@ export function ManufacturingPage() {
     }
   };
 
-  const handleSort = (field: 'patient' | 'createdDate') => {
-    if (sortField === field) {
+  const handleSort = (field: string) => {
+    const typedField = field as 'patient' | 'createdDate';
+    if (sortField === typedField) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortField(field);
+      setSortField(typedField);
       setSortOrder('asc');
     }
   };
@@ -422,6 +423,15 @@ export function ManufacturingPage() {
             value: searchQuery,
             onChange: setSearchQuery
           }}
+          sortAction={{
+            options: [
+              { label: 'Patient Name', value: 'patient' },
+              { label: 'Created Date', value: 'createdDate' }
+            ],
+            currentField: sortField,
+            currentOrder: sortOrder,
+            onSort: handleSort
+          }}
           secondaryAction={{
             label: activeFilterCount > 0 ? `Filter (${activeFilterCount})` : "Filter",
             icon: Filter,
@@ -484,31 +494,6 @@ export function ManufacturingPage() {
             </div>
           ) : sortedManufacturingItems.length > 0 ? (
             <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
-                {/* Sort Controls */}
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-sm text-gray-600 font-medium">Sort by:</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2">
-                        <ArrowUpDown className="h-4 w-4" />
-                        {sortField === 'patient' ? 'Patient Name' : sortField === 'createdDate' ? 'Created Date' : 'Select'}
-                        {sortField && (sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => handleSort('patient')}>
-                        Patient Name {sortField === 'patient' && (sortOrder === 'asc' ? '↑' : '↓')}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleSort('createdDate')}>
-                        Created Date {sortField === 'createdDate' && (sortOrder === 'asc' ? '↑' : '↓')}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <span className="text-sm text-gray-500 ml-2">
-                    ({sortedManufacturingItems.length} items)
-                  </span>
-                </div>
-
                 <div className="space-y-4">
                   {sortedManufacturingItems.map((item) => {
                     // Format appliance types for display
