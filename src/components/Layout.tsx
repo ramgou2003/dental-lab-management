@@ -1,8 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 
 export type ViewMode = 'desktop' | 'tablet';
+
+// Context to share view mode with child components
+interface ViewModeContextType {
+  viewMode: ViewMode;
+  zoomLevel: number;
+}
+
+const ViewModeContext = createContext<ViewModeContextType>({ viewMode: 'desktop', zoomLevel: 1 });
+
+export const useViewMode = () => useContext(ViewModeContext);
 
 const Layout = () => {
   // Initialize sidebar state from localStorage or default to false (expanded)
@@ -116,40 +126,41 @@ const Layout = () => {
 
   // Calculate zoom based on view mode
   const zoomLevel = viewMode === 'tablet' ? 0.8 : 1;
-  const scaledSize = 100 / zoomLevel; // 125% when zoomed to 80%
 
   return (
-    <div
-      className={`flex bg-gray-50 ${isResizing ? 'resize-active' : ''}`}
-      style={{
-        transform: `scale(${zoomLevel})`,
-        transformOrigin: 'top left',
-        width: `${scaledSize}vw`,
-        height: `${scaledSize}vh`,
-        minHeight: `${scaledSize}vh`,
-      }}
-    >
-      <Sidebar
-        activeSection={getCurrentSection()}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        width={sidebarWidth}
-        onWidthChange={handleWidthChange}
-        onResizeStart={handleResizeStart}
-        onResizeEnd={handleResizeEnd}
-        viewMode={viewMode}
-        onToggleViewMode={toggleViewMode}
-      />
-      <main
-        className="flex-1 bg-white overflow-auto"
+    <ViewModeContext.Provider value={{ viewMode, zoomLevel }}>
+      <div
+        className={`flex bg-gray-50 ${isResizing ? 'resize-active' : ''}`}
         style={{
-          marginLeft: `${mainMarginLeft}px`,
-          transition: 'none' // Remove all transitions for smooth real-time resizing
+          transform: `scale(${zoomLevel})`,
+          transformOrigin: 'top left',
+          width: `${100 / zoomLevel}vw`,
+          height: `${100 / zoomLevel}vh`,
         }}
       >
-        <Outlet />
-      </main>
-    </div>
+        <Sidebar
+          activeSection={getCurrentSection()}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          width={sidebarWidth}
+          onWidthChange={handleWidthChange}
+          onResizeStart={handleResizeStart}
+          onResizeEnd={handleResizeEnd}
+          viewMode={viewMode}
+          onToggleViewMode={toggleViewMode}
+        />
+        <main
+          className="flex-1 bg-white overflow-hidden"
+          style={{
+            marginLeft: `${mainMarginLeft}px`,
+            transition: 'none',
+            height: '100%',
+          }}
+        >
+          <Outlet />
+        </main>
+      </div>
+    </ViewModeContext.Provider>
   );
 };
 
