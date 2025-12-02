@@ -26,7 +26,8 @@ function SelectableButtonGroup({ options, value, onChange, columns = 4 }: Select
       columns === 2 && "grid-cols-2",
       columns === 3 && "grid-cols-3",
       columns === 4 && "grid-cols-4",
-      columns === 5 && "grid-cols-5"
+      columns === 5 && "grid-cols-5",
+      columns === 6 && "grid-cols-6"
     )}>
       {options.map((option) => (
         <Button
@@ -35,7 +36,7 @@ function SelectableButtonGroup({ options, value, onChange, columns = 4 }: Select
           variant={value === option.value ? "default" : "outline"}
           className={cn(
             "h-auto py-2 px-3 text-xs whitespace-normal text-center",
-            value === option.value && "bg-green-600 hover:bg-green-700 text-white"
+            value === option.value && "bg-blue-600 hover:bg-blue-700 text-white"
           )}
           onClick={() => onChange(option.value)}
         >
@@ -190,7 +191,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
       <div className="p-6">
         <DialogHeader className="pb-4">
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <FileText className="h-5 w-5 text-green-600" />
+            <FileText className="h-5 w-5 text-blue-600" />
             Clinical Report Card - {reportCard.patient_name}
           </DialogTitle>
         </DialogHeader>
@@ -207,8 +208,8 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
     <div className="p-6">
       <DialogHeader className="mb-6">
         <DialogTitle className="flex items-center gap-3 text-xl">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <Stethoscope className="h-6 w-6 text-green-600" />
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Stethoscope className="h-6 w-6 text-blue-600" />
           </div>
           <div>
             <span>Clinical Report Card</span>
@@ -269,7 +270,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
         {/* Patient Information */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <User className="h-5 w-5 text-green-600" />
+            <User className="h-5 w-5 text-blue-600" />
             Patient Information
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -298,10 +299,10 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
         {/* Clinical Assessment */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CheckCircle className="h-5 w-5 text-blue-600" />
             Clinical Assessment
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
             <div>
               <Label>Fit Assessment *</Label>
               <SelectableButtonGroup
@@ -323,8 +324,8 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
                 options={[
                   { value: 'optimal', label: 'Optimal' },
                   { value: 'acceptable', label: 'Acceptable' },
-                  { value: 'minor_adjustment', label: 'Minor Adj.' },
-                  { value: 'major_adjustment', label: 'Major Adj.' },
+                  { value: 'minor_adjustment', label: 'Minor Adjustment Needed' },
+                  { value: 'major_adjustment', label: 'Major Adjustment Needed' },
                 ]}
                 value={formData.occlusion_check}
                 onChange={(value) => handleInputChange('occlusion_check', value)}
@@ -359,12 +360,6 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
                 columns={4}
               />
             </div>
-          </div>
-        </div>
-
-        {/* Aesthetic and Functional Assessment */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <Label>Aesthetic Satisfaction *</Label>
               <SelectableButtonGroup
@@ -399,7 +394,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
         {/* Follow-up and Recommendations */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-green-600" />
+            <Calendar className="h-5 w-5 text-blue-600" />
             Follow-up & Recommendations
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -452,8 +447,11 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
 
         {/* Final Assessment */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Final Assessment</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-blue-600" />
+            Final Assessment
+          </h3>
+          <div className="space-y-4">
             <div>
               <Label>Overall Satisfaction *</Label>
               <SelectableButtonGroup
@@ -498,7 +496,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
         {/* Completion Date and Time */}
         <div className="space-y-4 border-t pt-6">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-green-600" />
+            <Calendar className="h-5 w-5 text-blue-600" />
             Completion Date & Time (EST)
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
