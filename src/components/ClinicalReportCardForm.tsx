@@ -6,9 +6,45 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Save, User, Stethoscope, Calendar, CheckCircle, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ReportCard } from "@/hooks/useReportCards";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Selectable button group component
+interface SelectableButtonGroupProps {
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  columns?: number;
+}
+
+function SelectableButtonGroup({ options, value, onChange, columns = 4 }: SelectableButtonGroupProps) {
+  return (
+    <div className={cn(
+      "grid gap-2 mt-2",
+      columns === 2 && "grid-cols-2",
+      columns === 3 && "grid-cols-3",
+      columns === 4 && "grid-cols-4",
+      columns === 5 && "grid-cols-5"
+    )}>
+      {options.map((option) => (
+        <Button
+          key={option.value}
+          type="button"
+          variant={value === option.value ? "default" : "outline"}
+          className={cn(
+            "h-auto py-2 px-3 text-xs whitespace-normal text-center",
+            value === option.value && "bg-green-600 hover:bg-green-700 text-white"
+          )}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
 
 interface ClinicalReportCardFormProps {
   reportCard: ReportCard;
@@ -265,97 +301,97 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
             <CheckCircle className="h-5 w-5 text-green-600" />
             Clinical Assessment
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="fit_assessment">Fit Assessment *</Label>
-              <Select value={formData.fit_assessment} onValueChange={(value) => handleInputChange('fit_assessment', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select fit assessment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="excellent">Excellent</SelectItem>
-                  <SelectItem value="good">Good</SelectItem>
-                  <SelectItem value="fair">Fair</SelectItem>
-                  <SelectItem value="poor">Poor</SelectItem>
-                  <SelectItem value="requires_adjustment">Requires Adjustment</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Fit Assessment *</Label>
+              <SelectableButtonGroup
+                options={[
+                  { value: 'excellent', label: 'Excellent' },
+                  { value: 'good', label: 'Good' },
+                  { value: 'fair', label: 'Fair' },
+                  { value: 'poor', label: 'Poor' },
+                  { value: 'requires_adjustment', label: 'Requires Adjustment' },
+                ]}
+                value={formData.fit_assessment}
+                onChange={(value) => handleInputChange('fit_assessment', value)}
+                columns={5}
+              />
             </div>
             <div>
-              <Label htmlFor="occlusion_check">Occlusion Check *</Label>
-              <Select value={formData.occlusion_check} onValueChange={(value) => handleInputChange('occlusion_check', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select occlusion status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="optimal">Optimal</SelectItem>
-                  <SelectItem value="acceptable">Acceptable</SelectItem>
-                  <SelectItem value="minor_adjustment">Minor Adjustment Needed</SelectItem>
-                  <SelectItem value="major_adjustment">Major Adjustment Needed</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Occlusion Check *</Label>
+              <SelectableButtonGroup
+                options={[
+                  { value: 'optimal', label: 'Optimal' },
+                  { value: 'acceptable', label: 'Acceptable' },
+                  { value: 'minor_adjustment', label: 'Minor Adj.' },
+                  { value: 'major_adjustment', label: 'Major Adj.' },
+                ]}
+                value={formData.occlusion_check}
+                onChange={(value) => handleInputChange('occlusion_check', value)}
+                columns={4}
+              />
             </div>
             <div>
-              <Label htmlFor="patient_comfort">Patient Comfort *</Label>
-              <Select value={formData.patient_comfort} onValueChange={(value) => handleInputChange('patient_comfort', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select comfort level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="very_comfortable">Very Comfortable</SelectItem>
-                  <SelectItem value="comfortable">Comfortable</SelectItem>
-                  <SelectItem value="mild_discomfort">Mild Discomfort</SelectItem>
-                  <SelectItem value="uncomfortable">Uncomfortable</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Patient Comfort *</Label>
+              <SelectableButtonGroup
+                options={[
+                  { value: 'very_comfortable', label: 'Very Comfortable' },
+                  { value: 'comfortable', label: 'Comfortable' },
+                  { value: 'mild_discomfort', label: 'Mild Discomfort' },
+                  { value: 'uncomfortable', label: 'Uncomfortable' },
+                ]}
+                value={formData.patient_comfort}
+                onChange={(value) => handleInputChange('patient_comfort', value)}
+                columns={4}
+              />
             </div>
             <div>
-              <Label htmlFor="retention_stability">Retention & Stability *</Label>
-              <Select value={formData.retention_stability} onValueChange={(value) => handleInputChange('retention_stability', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select retention status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="excellent">Excellent</SelectItem>
-                  <SelectItem value="good">Good</SelectItem>
-                  <SelectItem value="adequate">Adequate</SelectItem>
-                  <SelectItem value="poor">Poor</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Retention & Stability *</Label>
+              <SelectableButtonGroup
+                options={[
+                  { value: 'excellent', label: 'Excellent' },
+                  { value: 'good', label: 'Good' },
+                  { value: 'adequate', label: 'Adequate' },
+                  { value: 'poor', label: 'Poor' },
+                ]}
+                value={formData.retention_stability}
+                onChange={(value) => handleInputChange('retention_stability', value)}
+                columns={4}
+              />
             </div>
           </div>
         </div>
 
         {/* Aesthetic and Functional Assessment */}
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="aesthetic_satisfaction">Aesthetic Satisfaction *</Label>
-              <Select value={formData.aesthetic_satisfaction} onValueChange={(value) => handleInputChange('aesthetic_satisfaction', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select aesthetic rating" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="excellent">Excellent</SelectItem>
-                  <SelectItem value="good">Good</SelectItem>
-                  <SelectItem value="acceptable">Acceptable</SelectItem>
-                  <SelectItem value="needs_improvement">Needs Improvement</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Aesthetic Satisfaction *</Label>
+              <SelectableButtonGroup
+                options={[
+                  { value: 'excellent', label: 'Excellent' },
+                  { value: 'good', label: 'Good' },
+                  { value: 'acceptable', label: 'Acceptable' },
+                  { value: 'needs_improvement', label: 'Needs Improvement' },
+                ]}
+                value={formData.aesthetic_satisfaction}
+                onChange={(value) => handleInputChange('aesthetic_satisfaction', value)}
+                columns={4}
+              />
             </div>
             <div>
-              <Label htmlFor="functional_assessment">Functional Assessment *</Label>
-              <Select value={formData.functional_assessment} onValueChange={(value) => handleInputChange('functional_assessment', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select functional status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fully_functional">Fully Functional</SelectItem>
-                  <SelectItem value="mostly_functional">Mostly Functional</SelectItem>
-                  <SelectItem value="limited_function">Limited Function</SelectItem>
-                  <SelectItem value="non_functional">Non-Functional</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Functional Assessment *</Label>
+              <SelectableButtonGroup
+                options={[
+                  { value: 'fully_functional', label: 'Fully Functional' },
+                  { value: 'mostly_functional', label: 'Mostly Functional' },
+                  { value: 'limited_function', label: 'Limited Function' },
+                  { value: 'non_functional', label: 'Non-Functional' },
+                ]}
+                value={formData.functional_assessment}
+                onChange={(value) => handleInputChange('functional_assessment', value)}
+                columns={4}
+              />
             </div>
           </div>
         </div>
@@ -417,34 +453,34 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
         {/* Final Assessment */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">Final Assessment</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="overall_satisfaction">Overall Satisfaction *</Label>
-              <Select value={formData.overall_satisfaction} onValueChange={(value) => handleInputChange('overall_satisfaction', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select overall satisfaction" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="very_satisfied">Very Satisfied</SelectItem>
-                  <SelectItem value="satisfied">Satisfied</SelectItem>
-                  <SelectItem value="neutral">Neutral</SelectItem>
-                  <SelectItem value="dissatisfied">Dissatisfied</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Overall Satisfaction *</Label>
+              <SelectableButtonGroup
+                options={[
+                  { value: 'very_satisfied', label: 'Very Satisfied' },
+                  { value: 'satisfied', label: 'Satisfied' },
+                  { value: 'neutral', label: 'Neutral' },
+                  { value: 'dissatisfied', label: 'Dissatisfied' },
+                ]}
+                value={formData.overall_satisfaction}
+                onChange={(value) => handleInputChange('overall_satisfaction', value)}
+                columns={4}
+              />
             </div>
             <div>
-              <Label htmlFor="treatment_success">Treatment Success</Label>
-              <Select value={formData.treatment_success} onValueChange={(value) => handleInputChange('treatment_success', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select treatment outcome" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="successful">Successful</SelectItem>
-                  <SelectItem value="partially_successful">Partially Successful</SelectItem>
-                  <SelectItem value="needs_revision">Needs Revision</SelectItem>
-                  <SelectItem value="unsuccessful">Unsuccessful</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Treatment Success</Label>
+              <SelectableButtonGroup
+                options={[
+                  { value: 'successful', label: 'Successful' },
+                  { value: 'partially_successful', label: 'Partially Successful' },
+                  { value: 'needs_revision', label: 'Needs Revision' },
+                  { value: 'unsuccessful', label: 'Unsuccessful' },
+                ]}
+                value={formData.treatment_success}
+                onChange={(value) => handleInputChange('treatment_success', value)}
+                columns={4}
+              />
             </div>
           </div>
           <div>
