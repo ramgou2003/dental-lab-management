@@ -207,44 +207,48 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
   }
 
   return (
-    <div className="p-6">
-      <DialogHeader className="mb-6">
-        <DialogTitle className="flex items-center gap-3 text-xl">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Stethoscope className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <span>Clinical Report Card</span>
-            <p className="text-sm font-normal text-gray-600 mt-1">
-              Complete the clinical assessment for {reportCard.patient_name}
-            </p>
-          </div>
-        </DialogTitle>
-      </DialogHeader>
-
-      {/* Insertion Status Warning */}
-      {insertionStatus && !insertionStatus.canSubmit && (
-        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <div className="p-1 bg-amber-100 rounded-full">
-              <AlertCircle className="h-5 w-5 text-amber-600" />
+    <div className="flex flex-col h-[85vh]">
+      {/* Sticky Header */}
+      <div className="sticky top-0 bg-white z-10 px-6 pt-6 pb-4 border-b">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3 text-xl text-blue-700">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Stethoscope className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-amber-900 mb-1">
-                Appliance Not Ready for Clinical Assessment
-              </h3>
-              <p className="text-sm text-amber-800">
-                {insertionStatus.message}
-              </p>
-              <p className="text-xs text-amber-700 mt-2">
-                You can preview the form below, but submission will be disabled until the appliance is inserted.
+              <span>Clinical Report Card</span>
+              <p className="text-sm font-normal text-gray-600 mt-1">
+                Complete the clinical assessment for {reportCard.patient_name}
               </p>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogTitle>
+        </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Insertion Status Warning */}
+        {insertionStatus && !insertionStatus.canSubmit && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="p-1 bg-amber-100 rounded-full">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-amber-900 mb-1">
+                  Appliance Not Ready for Clinical Assessment
+                </h3>
+                <p className="text-sm text-amber-800">
+                  {insertionStatus.message}
+                </p>
+                <p className="text-xs text-amber-700 mt-2">
+                  You can preview the form below, but submission will be disabled until the appliance is inserted.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Scrollable Content */}
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
         {/* Lab Report Context */}
         {labReportData && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -551,25 +555,33 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
           </div>
         </div>
 
-        {/* Form Actions */}
-        <div className="flex justify-end gap-3 pt-6 border-t">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-            disabled={insertionStatus && !insertionStatus.canSubmit}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {insertionStatus && !insertionStatus.canSubmit ? 'Awaiting Appliance Insertion' : 'Complete Clinical Report'}
-          </Button>
-        </div>
       </form>
+
+      {/* Sticky Footer */}
+      <div className="sticky bottom-0 bg-white z-10 px-6 py-4 border-t flex justify-end gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          className="border-blue-300 hover:bg-blue-50"
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          form="clinical-report-form"
+          className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+          disabled={insertionStatus && !insertionStatus.canSubmit}
+          onClick={(e) => {
+            e.preventDefault();
+            const form = document.querySelector('form');
+            if (form) form.requestSubmit();
+          }}
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {insertionStatus && !insertionStatus.canSubmit ? 'Awaiting Appliance Insertion' : 'Complete Clinical Report'}
+        </Button>
+      </div>
     </div>
   );
 }
