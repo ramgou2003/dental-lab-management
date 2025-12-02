@@ -35,8 +35,10 @@ function SelectableButtonGroup({ options, value, onChange, columns = 4 }: Select
           type="button"
           variant={value === option.value ? "default" : "outline"}
           className={cn(
-            "h-auto py-2 px-3 text-xs whitespace-normal text-center",
-            value === option.value && "bg-blue-600 hover:bg-blue-700 text-white"
+            "h-auto py-2 px-3 text-xs whitespace-normal text-center border-blue-300",
+            value === option.value
+              ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              : "hover:bg-blue-50 hover:border-blue-400"
           )}
           onClick={() => onChange(option.value)}
         >
@@ -269,7 +271,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
 
         {/* Patient Information */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
             <User className="h-5 w-5 text-blue-600" />
             Patient Information
           </h3>
@@ -280,7 +282,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
                 id="patient_name"
                 value={formData.patient_name}
                 disabled
-                className="bg-gray-50"
+                className="bg-gray-50 border-blue-300 focus:border-blue-500"
               />
             </div>
             <div>
@@ -291,6 +293,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
                 value={formData.insertion_date}
                 onChange={(e) => handleInputChange('insertion_date', e.target.value)}
                 required
+                className="border-blue-300 focus:border-blue-500"
               />
             </div>
           </div>
@@ -298,7 +301,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
 
         {/* Clinical Assessment */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-blue-600" />
             Clinical Assessment
           </h3>
@@ -393,7 +396,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
 
         {/* Follow-up and Recommendations */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
             <Calendar className="h-5 w-5 text-blue-600" />
             Follow-up & Recommendations
           </h3>
@@ -401,7 +404,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
             <div>
               <Label htmlFor="follow_up_required">Follow-up Required</Label>
               <Select value={formData.follow_up_required} onValueChange={(value) => handleInputChange('follow_up_required', value)}>
-                <SelectTrigger>
+                <SelectTrigger className="border-blue-300 focus:border-blue-500">
                   <SelectValue placeholder="Select follow-up requirement" />
                 </SelectTrigger>
                 <SelectContent>
@@ -419,6 +422,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
                   type="date"
                   value={formData.follow_up_date}
                   onChange={(e) => handleInputChange('follow_up_date', e.target.value)}
+                  className="border-blue-300 focus:border-blue-500"
                 />
               </div>
             ) : null}
@@ -431,6 +435,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
               onChange={(e) => handleInputChange('adjustments_made', e.target.value)}
               placeholder="Describe any adjustments made during the appointment..."
               rows={3}
+              className="border-blue-300 focus:border-blue-500"
             />
           </div>
           <div>
@@ -441,13 +446,14 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
               onChange={(e) => handleInputChange('patient_instructions', e.target.value)}
               placeholder="Instructions given to the patient for care and maintenance..."
               rows={3}
+              className="border-blue-300 focus:border-blue-500"
             />
           </div>
         </div>
 
         {/* Final Assessment */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-blue-600" />
             Final Assessment
           </h3>
@@ -489,13 +495,14 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
               onChange={(e) => handleInputChange('clinical_notes', e.target.value)}
               placeholder="Additional clinical observations and notes..."
               rows={4}
+              className="border-blue-300 focus:border-blue-500"
             />
           </div>
         </div>
 
         {/* Completion Date and Time */}
         <div className="space-y-4 border-t pt-6">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-blue-700 flex items-center gap-2">
             <Calendar className="h-5 w-5 text-blue-600" />
             Completion Date & Time (EST)
           </h3>
@@ -510,6 +517,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
                 value={formData.completion_date}
                 onChange={(e) => handleInputChange('completion_date', e.target.value)}
                 required
+                className="border-blue-300 focus:border-blue-500"
               />
             </div>
             <div>
@@ -522,6 +530,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
                 value={formData.completion_time}
                 onChange={(e) => handleInputChange('completion_time', e.target.value)}
                 required
+                className="border-blue-300 focus:border-blue-500"
               />
             </div>
           </div>
@@ -535,7 +544,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
                 handleInputChange('completion_date', date);
                 handleInputChange('completion_time', time);
               }}
-              className="text-xs"
+              className="text-xs border-blue-300 hover:bg-blue-50"
             >
               Use Current Date & Time (EST)
             </Button>
