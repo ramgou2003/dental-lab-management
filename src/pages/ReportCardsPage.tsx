@@ -8,10 +8,11 @@ import { ViewLabReportCard } from "@/components/ViewLabReportCard";
 import { ClinicalReportCardForm } from "@/components/ClinicalReportCardForm";
 import { ViewClinicalReportCard } from "@/components/ViewClinicalReportCard";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
+import { ReportCardFilterDialog, ReportCardFilters } from "@/components/ReportCardFilterDialog";
 import { useReportCards } from "@/hooks/useReportCards";
 import { useLabScripts, LabScript } from "@/hooks/useLabScripts";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Stethoscope } from "lucide-react";
+import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Stethoscope, Filter } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import type { ReportCard } from "@/hooks/useReportCards";
 
@@ -27,6 +28,17 @@ export function ReportCardsPage() {
   const [selectedReportCard, setSelectedReportCard] = useState<ReportCard | null>(null);
   const [stableSelectedReportCard, setStableSelectedReportCard] = useState<ReportCard | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [sortField, setSortField] = useState<'patient' | 'createdDate' | 'dueDate' | null>('createdDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filters, setFilters] = useState<ReportCardFilters>({
+    labReportStatus: [],
+    clinicalReportStatus: [],
+    archType: [],
+    applianceType: [],
+    material: [],
+    shade: [],
+  });
   const [insertionStatus, setInsertionStatus] = useState<{canSubmit: boolean; reason: string; message: string} | null>(null);
   const { reportCards, loading, updateLabReportStatus, updateClinicalReportStatus } = useReportCards();
   const { updateLabScript } = useLabScripts();
@@ -262,6 +274,39 @@ export function ReportCardsPage() {
     }
   };
 
+  // Sort and filter handlers
+  const handleSort = (field: string) => {
+    const typedField = field as 'patient' | 'createdDate' | 'dueDate';
+    if (sortField === typedField) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(typedField);
+      setSortOrder('asc');
+    }
+  };
+
+  const handleFilterClick = () => {
+    setShowFilterDialog(true);
+  };
+
+  const handleApplyFilters = (newFilters: ReportCardFilters) => {
+    setFilters(newFilters);
+    setShowFilterDialog(false);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      labReportStatus: [],
+      clinicalReportStatus: [],
+      archType: [],
+      applianceType: [],
+      material: [],
+      shade: [],
+    });
+  };
+
+  const activeFilterCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0);
+
   // Calculate dynamic counts - updated for 5 filters
   const getReportCount = (status: string) => {
     if (status === "all-report-cards") return reportCards.length;
@@ -354,8 +399,40 @@ export function ReportCardsPage() {
     }
     // "all-report-cards" shows everything
 
-    return searchMatch && statusMatch;
+    if (!searchMatch || !statusMatch) return false;
+
+    // Apply advanced filters
+    if (filters.labReportStatus.length > 0 && !filters.labReportStatus.includes(card.lab_report_status)) return false;
+    if (filters.clinicalReportStatus.length > 0 && !filters.clinicalReportStatus.includes(card.clinical_report_status)) return false;
+    if (filters.archType.length > 0 && (!card.lab_script?.arch_type || !filters.archType.includes(card.lab_script.arch_type))) return false;
+    if (filters.applianceType.length > 0) {
+      const hasMatchingAppliance =
+        (card.lab_script?.upper_appliance_type && filters.applianceType.includes(card.lab_script.upper_appliance_type)) ||
+        (card.lab_script?.lower_appliance_type && filters.applianceType.includes(card.lab_script.lower_appliance_type));
+      if (!hasMatchingAppliance) return false;
+    }
+    if (filters.material.length > 0 && (!card.lab_script?.material || !filters.material.includes(card.lab_script.material))) return false;
+    if (filters.shade.length > 0 && (!card.lab_script?.shade || !filters.shade.includes(card.lab_script.shade))) return false;
+
+    return true;
   });
+
+  // Sort filtered items
+  const sortedReportCards = sortField ? [...filteredReportCards].sort((a, b) => {
+    let compareResult = 0;
+    if (sortField === 'patient') {
+      compareResult = (a.patient_name || '').localeCompare(b.patient_name || '');
+    } else if (sortField === 'createdDate') {
+      const dateA = new Date(a.created_at || 0);
+      const dateB = new Date(b.created_at || 0);
+      compareResult = dateA.getTime() - dateB.getTime();
+    } else if (sortField === 'dueDate') {
+      const dateA = a.lab_script?.due_date ? new Date(a.lab_script.due_date) : new Date(0);
+      const dateB = b.lab_script?.due_date ? new Date(b.lab_script.due_date) : new Date(0);
+      compareResult = dateA.getTime() - dateB.getTime();
+    }
+    return sortOrder === 'asc' ? compareResult : -compareResult;
+  }) : filteredReportCards;
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -366,6 +443,21 @@ export function ReportCardsPage() {
             placeholder: "Search by patient name...",
             value: searchQuery,
             onChange: setSearchQuery
+          }}
+          sortAction={{
+            options: [
+              { label: 'Patient Name', value: 'patient' },
+              { label: 'Created Date', value: 'createdDate' },
+              { label: 'Due Date', value: 'dueDate' }
+            ],
+            currentField: sortField,
+            currentOrder: sortOrder,
+            onSort: handleSort
+          }}
+          secondaryAction={{
+            label: activeFilterCount > 0 ? `Filter (${activeFilterCount})` : "Filter",
+            icon: Filter,
+            onClick: handleFilterClick
           }}
           action={{
             label: "New Report Card",
@@ -422,10 +514,10 @@ export function ReportCardsPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading report cards...</h3>
               <p className="text-gray-500">Please wait while we fetch report cards.</p>
             </div>
-          ) : filteredReportCards.length > 0 ? (
+          ) : sortedReportCards.length > 0 ? (
             <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
                 <div className="space-y-4">
-                  {filteredReportCards.map((card) => {
+                  {sortedReportCards.map((card) => {
                     // Format appliance types for display
                     const formatApplianceType = (type: string | undefined) => {
                       if (!type) return 'N/A';
@@ -673,6 +765,15 @@ export function ReportCardsPage() {
         labScript={selectedLabScript}
         onUpdate={updateLabScript}
         initialEditMode={false}
+      />
+
+      {/* Filter Dialog */}
+      <ReportCardFilterDialog
+        open={showFilterDialog}
+        onOpenChange={setShowFilterDialog}
+        currentFilters={filters}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
       />
     </div>
   );
