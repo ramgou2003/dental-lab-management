@@ -1,18 +1,6 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
-
-export type ViewMode = 'desktop' | 'tablet';
-
-// Context to share view mode with child components
-interface ViewModeContextType {
-  viewMode: ViewMode;
-  zoomLevel: number;
-}
-
-const ViewModeContext = createContext<ViewModeContextType>({ viewMode: 'desktop', zoomLevel: 1 });
-
-export const useViewMode = () => useContext(ViewModeContext);
 
 const Layout = () => {
   // Initialize sidebar state from localStorage or default to false (expanded)
@@ -34,17 +22,6 @@ const Layout = () => {
     } catch (error) {
       console.warn('Failed to load sidebar width from localStorage:', error);
       return 208;
-    }
-  });
-
-  // Initialize view mode from localStorage or default to 'desktop'
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    try {
-      const saved = localStorage.getItem('view-mode');
-      return (saved === 'tablet' ? 'tablet' : 'desktop') as ViewMode;
-    } catch (error) {
-      console.warn('Failed to load view mode from localStorage:', error);
-      return 'desktop';
     }
   });
 
@@ -70,15 +47,6 @@ const Layout = () => {
       console.warn('Failed to save sidebar width to localStorage:', error);
     }
   }, [sidebarWidth]);
-
-  // Save view mode to localStorage whenever it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem('view-mode', viewMode);
-    } catch (error) {
-      console.warn('Failed to save view mode to localStorage:', error);
-    }
-  }, [viewMode]);
 
   // Extract the current section from the pathname
   const getCurrentSection = () => {
@@ -120,47 +88,27 @@ const Layout = () => {
     setTimeout(() => setIsResizing(false), 100);
   };
 
-  const toggleViewMode = () => {
-    setViewMode(prev => prev === 'desktop' ? 'tablet' : 'desktop');
-  };
-
-  // Calculate zoom based on view mode
-  const zoomLevel = viewMode === 'tablet' ? 0.8 : 1;
-
   return (
-    <ViewModeContext.Provider value={{ viewMode, zoomLevel }}>
-      <div
-        className={`flex bg-gray-50 ${isResizing ? 'resize-active' : ''}`}
+    <div className={`min-h-screen flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}>
+      <Sidebar
+        activeSection={getCurrentSection()}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        width={sidebarWidth}
+        onWidthChange={handleWidthChange}
+        onResizeStart={handleResizeStart}
+        onResizeEnd={handleResizeEnd}
+      />
+      <main
+        className="flex-1 bg-white overflow-auto"
         style={{
-          transform: `scale(${zoomLevel})`,
-          transformOrigin: 'top left',
-          width: `${100 / zoomLevel}vw`,
-          height: `${100 / zoomLevel}vh`,
+          marginLeft: `${mainMarginLeft}px`,
+          transition: 'none' // Remove all transitions for smooth real-time resizing
         }}
       >
-        <Sidebar
-          activeSection={getCurrentSection()}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-          width={sidebarWidth}
-          onWidthChange={handleWidthChange}
-          onResizeStart={handleResizeStart}
-          onResizeEnd={handleResizeEnd}
-          viewMode={viewMode}
-          onToggleViewMode={toggleViewMode}
-        />
-        <main
-          className="flex-1 bg-white overflow-hidden"
-          style={{
-            marginLeft: `${mainMarginLeft}px`,
-            transition: 'none',
-            height: '100%',
-          }}
-        >
-          <Outlet />
-        </main>
-      </div>
-    </ViewModeContext.Provider>
+        <Outlet />
+      </main>
+    </div>
   );
 };
 

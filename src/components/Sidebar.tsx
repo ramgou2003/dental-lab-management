@@ -1,4 +1,4 @@
-import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, ChevronDown, GripVertical, Shield, UserPlus, Stethoscope, Microscope, Monitor, Tablet } from "lucide-react";
+import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, ChevronDown, GripVertical, Shield, UserPlus, Stethoscope, Microscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { isFeatureEnabled } from "@/config/featureFlags";
 import { isPageVisible } from "@/config/pageVisibility";
-import type { ViewMode } from "./Layout";
 
 interface SidebarProps {
   activeSection: string;
@@ -16,8 +15,6 @@ interface SidebarProps {
   onWidthChange: (width: number) => void;
   onResizeStart: () => void;
   onResizeEnd: () => void;
-  viewMode?: ViewMode;
-  onToggleViewMode?: () => void;
 }
 
 interface NavigationItem {
@@ -132,9 +129,7 @@ export function Sidebar({
   width,
   onWidthChange,
   onResizeStart,
-  onResizeEnd,
-  viewMode = 'desktop',
-  onToggleViewMode
+  onResizeEnd
 }: SidebarProps) {
   const navigate = useNavigate();
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -441,29 +436,6 @@ export function Sidebar({
       
       {/* Footer */}
       <div className="p-4 border-t border-gray-100 space-y-1 px-[11px]">
-
-        {/* View Mode Toggle */}
-        {onToggleViewMode && (
-          <button
-            onClick={onToggleViewMode}
-            className={cn(
-              "flex items-center w-full text-left px-3 py-2 rounded-lg transition-colors duration-200",
-              viewMode === 'tablet'
-                ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            )}
-            title={collapsed ? (viewMode === 'desktop' ? "Switch to Tablet Mode" : "Switch to Desktop Mode") : undefined}
-          >
-            {viewMode === 'desktop' ? (
-              <Monitor className="h-5 w-5 flex-shrink-0" />
-            ) : (
-              <Tablet className="h-5 w-5 flex-shrink-0" />
-            )}
-            <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-              {viewMode === 'desktop' ? "Desktop Mode" : "Tablet Mode"}
-            </span>
-          </button>
-        )}
 
         <button onClick={onToggleCollapse} className="flex items-center w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200" title={collapsed ? "Expand" : "Collapse"}>
           {collapsed ? <ChevronRight className="h-5 w-5 flex-shrink-0" /> : <ChevronLeft className="h-5 w-5 flex-shrink-0" />}

@@ -271,9 +271,9 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="h-full overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+    <div className="h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       {/* Main Dashboard Content - Responsive padding and height */}
-      <div className="h-full p-2 sm:p-3 lg:p-4 overflow-hidden">
+      <div className="h-screen p-2 sm:p-3 lg:p-4 overflow-hidden">
         {/* Top Row with Greeting and New Container */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3 lg:gap-4 mb-2 sm:mb-3 lg:mb-4">
           {/* Greeting Container - Responsive columns */}
