@@ -25,6 +25,7 @@ import { PermissionGuard } from '@/components/auth/AuthGuard';
 import { toast } from 'sonner';
 import { EditRoleDialog } from './EditRoleDialog';
 import { ManageRolePermissionsDialog } from './ManageRolePermissionsDialog';
+import { CreateRoleDialog } from './CreateRoleDialog';
 
 interface Role {
   id: string;
@@ -46,6 +47,7 @@ export function RoleManagement() {
 
   // Dialog states
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
 
@@ -161,7 +163,10 @@ export function RoleManagement() {
             Role Management
           </CardTitle>
           <PermissionGuard permission="roles.create">
-            <Button className="bg-indigo-600 hover:bg-indigo-700">
+            <Button
+              className="bg-indigo-600 hover:bg-indigo-700"
+              onClick={() => setShowCreateDialog(true)}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Role
             </Button>
@@ -317,6 +322,13 @@ export function RoleManagement() {
             onPermissionsUpdated={fetchRoles}
           />
         )}
+
+        {/* Create Role Dialog */}
+        <CreateRoleDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onRoleCreated={fetchRoles}
+        />
       </CardContent>
     </Card>
   );
