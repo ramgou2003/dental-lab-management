@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -8,13 +7,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical, ClipboardCheck } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical, ClipboardCheck, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
 import { useMillingForms } from "@/hooks/useMillingForms";
 import { generateManufacturingScriptPDF } from "@/utils/pdfGenerator";
 import { PrintingCompletionDialog } from "@/components/PrintingCompletionDialog";
 import { InspectionDialog } from "@/components/InspectionDialog";
+import { ManufacturingFilterDialog, ManufacturingFilters } from "@/components/ManufacturingFilterDialog";
 
 export function ManufacturingPage() {
   const [activeFilter, setActiveFilter] = useState("new-script");
@@ -39,6 +45,19 @@ export function ManufacturingPage() {
   const [selectedInspectionItem, setSelectedInspectionItem] = useState<any>(null);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [selectedReportItem, setSelectedReportItem] = useState<any>(null);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [sortField, setSortField] = useState<'patient' | 'createdDate' | null>('createdDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filters, setFilters] = useState<ManufacturingFilters>({
+    status: [],
+    archType: [],
+    applianceType: [],
+    material: [],
+    shade: [],
+    manufacturingMethod: [],
+    millingLocation: [],
+    inspectionStatus: [],
+  });
   const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails, completePrinting, completeInspection } = useManufacturingItems();
   const { createMillingForm } = useMillingForms();
 
@@ -201,6 +220,39 @@ export function ManufacturingPage() {
     }
   };
 
+  const handleSort = (field: 'patient' | 'createdDate') => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const handleFilterClick = () => {
+    setShowFilterDialog(true);
+  };
+
+  const handleApplyFilters = (newFilters: ManufacturingFilters) => {
+    setFilters(newFilters);
+    setShowFilterDialog(false);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      status: [],
+      archType: [],
+      applianceType: [],
+      material: [],
+      shade: [],
+      manufacturingMethod: [],
+      millingLocation: [],
+      inspectionStatus: [],
+    });
+  };
+
+  const activeFilterCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0);
+
   // Calculate dynamic counts for manufacturing items
   const getManufacturingCount = (status: string) => {
     if (status === "all-cam-scripts") return manufacturingItems.length;
@@ -327,8 +379,38 @@ export function ManufacturingPage() {
     }
     // "all-cam-scripts" shows everything
 
-    return searchMatch && statusMatch;
+    if (!searchMatch || !statusMatch) return false;
+
+    // Apply advanced filters
+    if (filters.status.length > 0 && !filters.status.includes(item.status)) return false;
+    if (filters.archType.length > 0 && !filters.archType.includes(item.arch_type)) return false;
+    if (filters.applianceType.length > 0) {
+      const hasMatchingAppliance =
+        (item.upper_appliance_type && filters.applianceType.includes(item.upper_appliance_type)) ||
+        (item.lower_appliance_type && filters.applianceType.includes(item.lower_appliance_type));
+      if (!hasMatchingAppliance) return false;
+    }
+    if (filters.material.length > 0 && (!item.material || !filters.material.includes(item.material))) return false;
+    if (filters.shade.length > 0 && (!item.shade || !filters.shade.includes(item.shade))) return false;
+    if (filters.manufacturingMethod.length > 0 && (!item.manufacturing_method || !filters.manufacturingMethod.includes(item.manufacturing_method))) return false;
+    if (filters.millingLocation.length > 0 && (!item.milling_location || !filters.millingLocation.includes(item.milling_location))) return false;
+    if (filters.inspectionStatus.length > 0 && (!item.inspection_status || !filters.inspectionStatus.includes(item.inspection_status))) return false;
+
+    return true;
   });
+
+  // Sort filtered items
+  const sortedManufacturingItems = sortField ? [...filteredManufacturingItems].sort((a, b) => {
+    let compareResult = 0;
+    if (sortField === 'patient') {
+      compareResult = (a.patient_name || '').localeCompare(b.patient_name || '');
+    } else if (sortField === 'createdDate') {
+      const dateA = new Date(a.created_at || 0);
+      const dateB = new Date(b.created_at || 0);
+      compareResult = dateA.getTime() - dateB.getTime();
+    }
+    return sortOrder === 'asc' ? compareResult : -compareResult;
+  }) : filteredManufacturingItems;
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -339,6 +421,11 @@ export function ManufacturingPage() {
             placeholder: "Search by patient name...",
             value: searchQuery,
             onChange: setSearchQuery
+          }}
+          secondaryAction={{
+            label: activeFilterCount > 0 ? `Filter (${activeFilterCount})` : "Filter",
+            icon: Filter,
+            onClick: handleFilterClick
           }}
           action={{
             label: "New Manufacturing",
@@ -395,10 +482,35 @@ export function ManufacturingPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading manufacturing items...</h3>
               <p className="text-gray-500">Please wait while we fetch manufacturing data.</p>
             </div>
-          ) : filteredManufacturingItems.length > 0 ? (
+          ) : sortedManufacturingItems.length > 0 ? (
             <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
+                {/* Sort Controls */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-sm text-gray-600 font-medium">Sort by:</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <ArrowUpDown className="h-4 w-4" />
+                        {sortField === 'patient' ? 'Patient Name' : sortField === 'createdDate' ? 'Created Date' : 'Select'}
+                        {sortField && (sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => handleSort('patient')}>
+                        Patient Name {sortField === 'patient' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSort('createdDate')}>
+                        Created Date {sortField === 'createdDate' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <span className="text-sm text-gray-500 ml-2">
+                    ({sortedManufacturingItems.length} items)
+                  </span>
+                </div>
+
                 <div className="space-y-4">
-                  {filteredManufacturingItems.map((item) => {
+                  {sortedManufacturingItems.map((item) => {
                     // Format appliance types for display
                     const formatApplianceType = (type: string | null | undefined) => {
                       if (!type) return 'N/A';
@@ -1587,6 +1699,15 @@ export function ManufacturingPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Filter Dialog */}
+      <ManufacturingFilterDialog
+        open={showFilterDialog}
+        onOpenChange={setShowFilterDialog}
+        currentFilters={filters}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
+      />
     </div>
   );
 }
