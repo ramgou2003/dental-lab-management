@@ -3,12 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Shield, 
-  Search, 
-  Plus, 
-  MoreHorizontal, 
-  Edit, 
+import {
+  Shield,
+  Search,
+  Plus,
+  MoreHorizontal,
+  Edit,
   Trash2,
   Users,
   Lock
@@ -23,6 +23,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionGuard } from '@/components/auth/AuthGuard';
 import { toast } from 'sonner';
+import { EditRoleDialog } from './EditRoleDialog';
+import { ManageRolePermissionsDialog } from './ManageRolePermissionsDialog';
 
 interface Role {
   id: string;
@@ -41,6 +43,11 @@ export function RoleManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { canCreateRoles, canUpdateRoles, canDeleteRoles } = usePermissions();
+
+  // Dialog states
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
 
   const fetchRoles = async () => {
     try {
@@ -229,14 +236,26 @@ export function RoleManagement() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <PermissionGuard permission="roles.update">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setSelectedRole(role);
+                          setShowEditDialog(true);
+                        }}
+                      >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit Role
                       </DropdownMenuItem>
                     </PermissionGuard>
-                    
+
                     <PermissionGuard permission="roles.manage_permissions">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setSelectedRole(role);
+                          setShowPermissionsDialog(true);
+                        }}
+                      >
                         <Shield className="h-4 w-4 mr-2" />
                         Manage Permissions
                       </DropdownMenuItem>
@@ -245,9 +264,9 @@ export function RoleManagement() {
                     {!role.is_system_role && (
                       <>
                         <PermissionGuard permission="roles.update">
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleStatusChange(
-                              role.id, 
+                              role.id,
                               role.status === 'active' ? 'inactive' : 'active'
                             )}
                           >
@@ -256,7 +275,7 @@ export function RoleManagement() {
                         </PermissionGuard>
 
                         <PermissionGuard permission="roles.delete">
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleDeleteRole(role.id, role.display_name)}
                           >
@@ -271,6 +290,32 @@ export function RoleManagement() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Edit Role Dialog */}
+        {selectedRole && (
+          <EditRoleDialog
+            role={selectedRole}
+            open={showEditDialog}
+            onOpenChange={(open) => {
+              setShowEditDialog(open);
+              if (!open) setSelectedRole(null);
+            }}
+            onRoleUpdated={fetchRoles}
+          />
+        )}
+
+        {/* Manage Permissions Dialog */}
+        {selectedRole && (
+          <ManageRolePermissionsDialog
+            role={selectedRole}
+            open={showPermissionsDialog}
+            onOpenChange={(open) => {
+              setShowPermissionsDialog(open);
+              if (!open) setSelectedRole(null);
+            }}
+            onPermissionsUpdated={fetchRoles}
+          />
         )}
       </CardContent>
     </Card>
