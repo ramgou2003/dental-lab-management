@@ -6,10 +6,11 @@ import { ParticleButton } from "@/components/ui/particle-button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { AppointmentScheduler } from "@/components/AppointmentScheduler";
 import { ClinicalReportCardForm } from "@/components/ClinicalReportCardForm";
+import { DeliveryFilterDialog, DeliveryFilters } from "@/components/DeliveryFilterDialog";
 import { useDeliveryItems } from "@/hooks/useDeliveryItems";
 import { useReportCards } from "@/hooks/useReportCards";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Package, Truck, MapPin, Calendar as CalendarIcon, Settings, Palette, X } from "lucide-react";
+import { FileText, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FlaskConical, User, Package, Truck, MapPin, Calendar as CalendarIcon, Settings, Palette, X, Filter } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import type { DeliveryItem } from "@/hooks/useDeliveryItems";
 import type { ReportCard } from "@/hooks/useReportCards";
@@ -22,10 +23,19 @@ export function ApplianceDeliveryPage() {
   const [showAppointmentScheduler, setShowAppointmentScheduler] = useState(false);
   const [showInsertionSuccessDialog, setShowInsertionSuccessDialog] = useState(false);
   const [showClinicalReportForm, setShowClinicalReportForm] = useState(false);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [selectedDeliveryItem, setSelectedDeliveryItem] = useState<DeliveryItem | null>(null);
   const [selectedReportCard, setSelectedReportCard] = useState<ReportCard | null>(null);
   const [insertionStatus, setInsertionStatus] = useState<{canSubmit: boolean; reason: string; message: string} | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<'patient' | 'createdDate' | 'scheduledDate' | null>('createdDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filters, setFilters] = useState<DeliveryFilters>({
+    status: [],
+    archType: [],
+    applianceType: [],
+    shade: [],
+  });
   const { deliveryItems, loading, updateDeliveryStatus } = useDeliveryItems();
   const { updateClinicalReportStatus } = useReportCards();
 
@@ -261,6 +271,37 @@ export function ApplianceDeliveryPage() {
     return `${hour12}:${minutes} ${ampm}`;
   };
 
+  // Sort and filter handlers
+  const handleSort = (field: string) => {
+    const typedField = field as 'patient' | 'createdDate' | 'scheduledDate';
+    if (sortField === typedField) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(typedField);
+      setSortOrder('asc');
+    }
+  };
+
+  const handleFilterClick = () => {
+    setShowFilterDialog(true);
+  };
+
+  const handleApplyFilters = (newFilters: DeliveryFilters) => {
+    setFilters(newFilters);
+    setShowFilterDialog(false);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      status: [],
+      archType: [],
+      applianceType: [],
+      shade: [],
+    });
+  };
+
+  const activeFilterCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0);
+
   // Calculate dynamic counts for appliance insertion appointments
   const getInsertionCount = (status: string) => {
     if (status === "all-deliveries") return deliveryItems.length;
@@ -354,8 +395,38 @@ export function ApplianceDeliveryPage() {
     }
     // "all-deliveries" shows everything
 
-    return searchMatch && statusMatch;
+    if (!searchMatch || !statusMatch) return false;
+
+    // Apply advanced filters
+    if (filters.status.length > 0 && !filters.status.includes(item.delivery_status)) return false;
+    if (filters.archType.length > 0 && !filters.archType.includes(item.arch_type)) return false;
+    if (filters.applianceType.length > 0) {
+      const hasMatchingAppliance =
+        (item.upper_appliance_type && filters.applianceType.includes(item.upper_appliance_type)) ||
+        (item.lower_appliance_type && filters.applianceType.includes(item.lower_appliance_type));
+      if (!hasMatchingAppliance) return false;
+    }
+    if (filters.shade.length > 0 && (!item.shade || !filters.shade.includes(item.shade))) return false;
+
+    return true;
   });
+
+  // Sort filtered items
+  const sortedDeliveries = sortField ? [...filteredDeliveries].sort((a, b) => {
+    let compareResult = 0;
+    if (sortField === 'patient') {
+      compareResult = (a.patient_name || '').localeCompare(b.patient_name || '');
+    } else if (sortField === 'createdDate') {
+      const dateA = new Date(a.created_at || 0);
+      const dateB = new Date(b.created_at || 0);
+      compareResult = dateA.getTime() - dateB.getTime();
+    } else if (sortField === 'scheduledDate') {
+      const dateA = a.scheduled_delivery_date ? new Date(a.scheduled_delivery_date) : new Date(0);
+      const dateB = b.scheduled_delivery_date ? new Date(b.scheduled_delivery_date) : new Date(0);
+      compareResult = dateA.getTime() - dateB.getTime();
+    }
+    return sortOrder === 'asc' ? compareResult : -compareResult;
+  }) : filteredDeliveries;
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -366,6 +437,21 @@ export function ApplianceDeliveryPage() {
             placeholder: "Search by patient name...",
             value: searchQuery,
             onChange: setSearchQuery
+          }}
+          sortAction={{
+            options: [
+              { label: 'Patient Name', value: 'patient' },
+              { label: 'Created Date', value: 'createdDate' },
+              { label: 'Scheduled Date', value: 'scheduledDate' }
+            ],
+            currentField: sortField,
+            currentOrder: sortOrder,
+            onSort: handleSort
+          }}
+          secondaryAction={{
+            label: activeFilterCount > 0 ? `Filter (${activeFilterCount})` : "Filter",
+            icon: Filter,
+            onClick: handleFilterClick
           }}
           action={{
             label: "Schedule Appointment",
@@ -422,10 +508,10 @@ export function ApplianceDeliveryPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading appliance insertions...</h3>
               <p className="text-gray-500">Please wait while we fetch insertion appointments.</p>
             </div>
-          ) : filteredDeliveries.length > 0 ? (
+          ) : sortedDeliveries.length > 0 ? (
             <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
                 <div className="space-y-4">
-                  {filteredDeliveries.map((item) => {
+                  {sortedDeliveries.map((item) => {
                     // Format appliance types for display
                     const formatApplianceType = (type: string | null) => {
                       if (!type) return 'N/A';
@@ -939,6 +1025,15 @@ export function ApplianceDeliveryPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Filter Dialog */}
+      <DeliveryFilterDialog
+        open={showFilterDialog}
+        onOpenChange={setShowFilterDialog}
+        currentFilters={filters}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
+      />
     </div>
   );
 }
