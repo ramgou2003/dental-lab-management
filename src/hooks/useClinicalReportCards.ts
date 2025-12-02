@@ -17,9 +17,6 @@ export interface ClinicalReportCard {
   retention_stability: string;
   aesthetic_satisfaction: string;
   functional_assessment: string;
-  tissue_response: string | null;
-  speech_impact: string | null;
-  eating_comfort: string | null;
   follow_up_required: string | null;
   follow_up_date: string | null;
   adjustments_made: string | null;
@@ -48,9 +45,6 @@ export interface ClinicalReportCardFormData {
   retention_stability: string;
   aesthetic_satisfaction: string;
   functional_assessment: string;
-  tissue_response?: string;
-  speech_impact?: string;
-  eating_comfort?: string;
   follow_up_required?: string;
   follow_up_date?: string;
   adjustments_made?: string;

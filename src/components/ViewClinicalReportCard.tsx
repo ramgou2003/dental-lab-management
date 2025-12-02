@@ -166,36 +166,6 @@ export function ViewClinicalReportCard({ reportCardId, onClose }: ViewClinicalRe
           </div>
         </div>
 
-        {/* Clinical Observations */}
-        {(clinicalReport.tissue_response || clinicalReport.speech_impact || clinicalReport.eating_comfort) && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Clinical Observations</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {clinicalReport.tissue_response && (
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-700">Tissue Response:</span>
-                    <Badge variant="outline">{formatFieldValue(clinicalReport.tissue_response)}</Badge>
-                  </div>
-                )}
-                {clinicalReport.speech_impact && (
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-700">Speech Impact:</span>
-                    <Badge variant="outline">{formatFieldValue(clinicalReport.speech_impact)}</Badge>
-                  </div>
-                )}
-                {clinicalReport.eating_comfort && (
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-700">Eating Comfort:</span>
-                    <Badge variant="outline">{formatFieldValue(clinicalReport.eating_comfort)}</Badge>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-
         {/* Follow-up and Notes */}
         {(clinicalReport.follow_up_required !== 'no' || clinicalReport.adjustments_made || clinicalReport.patient_instructions || clinicalReport.clinical_notes) && (
           <>

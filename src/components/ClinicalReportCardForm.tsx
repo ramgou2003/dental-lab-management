@@ -55,11 +55,6 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
     aesthetic_satisfaction: '',
     functional_assessment: '',
 
-    // Clinical Observations
-    tissue_response: '',
-    speech_impact: '',
-    eating_comfort: '',
-
     // Follow-up and Recommendations
     follow_up_required: 'no',
     follow_up_date: '',
@@ -359,58 +354,6 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
                   <SelectItem value="mostly_functional">Mostly Functional</SelectItem>
                   <SelectItem value="limited_function">Limited Function</SelectItem>
                   <SelectItem value="non_functional">Non-Functional</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
-        {/* Clinical Observations */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Stethoscope className="h-5 w-5 text-green-600" />
-            Clinical Observations
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="tissue_response">Tissue Response</Label>
-              <Select value={formData.tissue_response} onValueChange={(value) => handleInputChange('tissue_response', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select tissue response" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="mild_irritation">Mild Irritation</SelectItem>
-                  <SelectItem value="moderate_irritation">Moderate Irritation</SelectItem>
-                  <SelectItem value="severe_irritation">Severe Irritation</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="speech_impact">Speech Impact</Label>
-              <Select value={formData.speech_impact} onValueChange={(value) => handleInputChange('speech_impact', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select speech impact" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="no_impact">No Impact</SelectItem>
-                  <SelectItem value="minimal_impact">Minimal Impact</SelectItem>
-                  <SelectItem value="moderate_impact">Moderate Impact</SelectItem>
-                  <SelectItem value="significant_impact">Significant Impact</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="eating_comfort">Eating Comfort</Label>
-              <Select value={formData.eating_comfort} onValueChange={(value) => handleInputChange('eating_comfort', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select eating comfort" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="comfortable">Comfortable</SelectItem>
-                  <SelectItem value="mild_difficulty">Mild Difficulty</SelectItem>
-                  <SelectItem value="moderate_difficulty">Moderate Difficulty</SelectItem>
-                  <SelectItem value="significant_difficulty">Significant Difficulty</SelectItem>
                 </SelectContent>
               </Select>
             </div>
