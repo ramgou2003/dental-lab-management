@@ -115,18 +115,15 @@ const Layout = () => {
   };
 
   // Calculate zoom based on view mode
-  const zoomLevel = viewMode === 'tablet' ? 0.75 : 1;
+  const zoomLevel = viewMode === 'tablet' ? 0.8 : 1;
 
   return (
     <div
-      className={`min-h-screen flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}
+      className={`flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}
       style={{
         zoom: zoomLevel,
-        // For browsers that don't support zoom, use transform as fallback
-        // transform: `scale(${zoomLevel})`,
-        // transformOrigin: 'top left',
-        // width: viewMode === 'tablet' ? `${100 / zoomLevel}%` : '100%',
-        // height: viewMode === 'tablet' ? `${100 / zoomLevel}vh` : 'auto',
+        height: `${100 / zoomLevel}vh`,
+        minHeight: `${100 / zoomLevel}vh`,
       }}
     >
       <Sidebar
