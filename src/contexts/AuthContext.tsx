@@ -437,9 +437,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign out function
   const signOut = async () => {
-    // Clear cached data on sign out
-    authCache.clear();
-    await supabase.auth.signOut();
+    try {
+      // Clear all local state first
+      setUser(null);
+      setUserProfile(null);
+      setUserRoles([]);
+      setUserPermissions([]);
+      setSession(null);
+
+      // Clear cached data
+      authCache.clear();
+
+      // Clear session manager
+      sessionManager.cleanup();
+
+      // Clear all auth-related localStorage items
+      const keysToRemove = [
+        'auth_user_data',
+        'supabase.auth.token',
+        'sb-tofoatpggdudjvgoixwp-auth-token'
+      ];
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn(`Failed to remove ${key} from localStorage`);
+        }
+      });
+
+      // Sign out from Supabase
+      await supabase.auth.signOut({ scope: 'global' });
+
+      console.log('User signed out successfully');
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Even if there's an error, try to force clear everything
+      authCache.clear();
+      localStorage.removeItem('auth_user_data');
+      throw error;
+    }
   };
 
   // Check if user has specific permission

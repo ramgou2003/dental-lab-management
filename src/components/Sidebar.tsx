@@ -1,4 +1,4 @@
-import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, ChevronDown, GripVertical, Shield, UserPlus, Stethoscope, Microscope } from "lucide-react";
+import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, ChevronDown, GripVertical, Shield, UserPlus, Stethoscope, Microscope, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -173,12 +173,23 @@ export function Sidebar({
     });
   }, [userProfile, loading]);
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    if (loggingOut) return; // Prevent double clicks
+
+    setLoggingOut(true);
     try {
       await signOut();
-      navigate('/login');
+
+      // Force redirect using window.location to ensure complete page reload
+      // This clears any in-memory state and React Query cache
+      window.location.href = '/login';
     } catch (error) {
       console.error('Error signing out:', error);
+      setLoggingOut(false);
+      // Even if signOut fails, try to redirect
+      window.location.href = '/login';
     }
   };
 
@@ -444,10 +455,24 @@ export function Sidebar({
           </span>
         </button>
 
-        <button onClick={handleLogout} className="flex items-center w-full text-left px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors duration-200" title={collapsed ? "Logout" : undefined}>
-          <LogOut className="h-5 w-5 flex-shrink-0" />
+        <button
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className={cn(
+            "flex items-center w-full text-left px-3 py-2 rounded-lg transition-colors duration-200",
+            loggingOut
+              ? "text-gray-400 bg-gray-50 cursor-not-allowed"
+              : "text-red-600 hover:bg-red-50"
+          )}
+          title={collapsed ? (loggingOut ? "Logging out..." : "Logout") : undefined}
+        >
+          {loggingOut ? (
+            <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin" />
+          ) : (
+            <LogOut className="h-5 w-5 flex-shrink-0" />
+          )}
           <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-            Logout
+            {loggingOut ? "Logging out..." : "Logout"}
           </span>
         </button>
 
