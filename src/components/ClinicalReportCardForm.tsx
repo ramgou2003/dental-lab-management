@@ -207,7 +207,7 @@ export function ClinicalReportCardForm({ reportCard, onSubmit, onCancel, inserti
   }
 
   return (
-    <div className="flex flex-col h-[85vh]">
+    <div className="flex flex-col h-[85vh] overflow-hidden">
       {/* Sticky Header */}
       <div className="sticky top-0 bg-white z-10 px-6 pt-6 pb-4 border-b">
         <DialogHeader>
