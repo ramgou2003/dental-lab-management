@@ -107,6 +107,29 @@ export function ConsultationPreviewDialog({
     }
   };
 
+  // Helper function to get procedure cost based on cost_type
+  const getProcedureCost = (proc: any): number => {
+    const costType = proc.cost_type || 'dental';
+    return parseFloat(
+      proc.unit_price ||
+      (costType === 'medical' ? proc.medical_cost : proc.dental_cost) ||
+      proc.cost ||
+      0
+    );
+  };
+
+  // Helper function to calculate treatment total from procedures
+  const calculateTreatmentTotal = (treatment: any): number => {
+    if (!treatment.procedures || treatment.procedures.length === 0) {
+      return treatment.total_cost || 0;
+    }
+    return treatment.procedures.reduce((sum: number, proc: any) => {
+      const quantity = proc.quantity || 1;
+      const unitPrice = getProcedureCost(proc);
+      return sum + (quantity * unitPrice);
+    }, 0);
+  };
+
   const formatTreatmentRecommendations = (recommendations: any) => {
     if (!recommendations) return 'No treatment recommendations';
 
@@ -291,32 +314,38 @@ export function ConsultationPreviewDialog({
                   <div>
                     <p className="text-sm font-medium text-gray-700">Total Procedures</p>
                     <p className="text-2xl font-bold text-blue-600">
-                      {consultationData.treatment_plan.treatments.reduce((sum: number, t: any) => sum + (t.procedure_count || 0), 0)}
+                      {consultationData.treatment_plan.treatments.reduce((sum: number, t: any) =>
+                        sum + (t.procedures?.length || t.procedure_count || 0), 0)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700">Total Cost</p>
                     <p className="text-2xl font-bold text-blue-600">
-                      {formatCurrency(consultationData.treatment_plan.treatments.reduce((sum: number, t: any) => sum + (t.total_cost || 0), 0))}
+                      {formatCurrency(consultationData.treatment_plan.treatments.reduce((sum: number, t: any) =>
+                        sum + calculateTreatmentTotal(t), 0))}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  {consultationData.treatment_plan.treatments.map((treatment: any, index: number) => (
-                    <div key={treatment.id || index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{treatment.name}</h4>
-                          {treatment.description && (
-                            <p className="text-sm text-gray-600 mt-1">{treatment.description}</p>
-                          )}
+                  {consultationData.treatment_plan.treatments.map((treatment: any, index: number) => {
+                    const treatmentTotal = calculateTreatmentTotal(treatment);
+                    const procedureCount = treatment.procedures?.length || treatment.procedure_count || 0;
+
+                    return (
+                      <div key={treatment.id || index} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{treatment.name}</h4>
+                            {treatment.description && (
+                              <p className="text-sm text-gray-600 mt-1">{treatment.description}</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold text-gray-900">{formatCurrency(treatmentTotal)}</p>
+                            <p className="text-xs text-gray-500">{procedureCount} procedure{procedureCount !== 1 ? 's' : ''}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-900">{formatCurrency(treatment.total_cost)}</p>
-                          <p className="text-xs text-gray-500">{treatment.procedure_count} procedure{treatment.procedure_count !== 1 ? 's' : ''}</p>
-                        </div>
-                      </div>
 
                       {treatment.procedures && treatment.procedures.length > 0 && (
                         <div className="mt-4 pt-4 border-t border-gray-200">
@@ -332,33 +361,46 @@ export function ConsultationPreviewDialog({
                                 </tr>
                               </thead>
                               <tbody>
-                                {treatment.procedures.map((proc: any, procIndex: number) => (
-                                  <tr key={proc.id || procIndex} className="border-b border-gray-100 hover:bg-gray-50">
-                                    <td className="py-3 px-3">
-                                      {proc.cdt_code && (
-                                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-0 text-xs">
-                                          {proc.cdt_code}
-                                        </Badge>
-                                      )}
-                                      {proc.cpt_code && (
-                                        <Badge className="bg-pink-100 text-pink-700 hover:bg-pink-100 border-0 text-xs ml-1">
-                                          {proc.cpt_code}
-                                        </Badge>
-                                      )}
-                                    </td>
-                                    <td className="py-3 px-3 text-gray-900 font-medium">{proc.name}</td>
-                                    <td className="py-3 px-3 text-center text-gray-700">{proc.quantity || 1}</td>
-                                    <td className="py-3 px-3 text-right text-gray-700">{formatCurrency(proc.unit_price || proc.cost || 0)}</td>
-                                    <td className="py-3 px-3 text-right font-semibold text-gray-900">{formatCurrency((proc.quantity || 1) * (proc.unit_price || proc.cost || 0))}</td>
-                                  </tr>
-                                ))}
+                                {treatment.procedures.map((proc: any, procIndex: number) => {
+                                  const costType = proc.cost_type || 'dental';
+                                  const unitPrice = parseFloat(
+                                    proc.unit_price ||
+                                    (costType === 'medical' ? proc.medical_cost : proc.dental_cost) ||
+                                    proc.cost ||
+                                    0
+                                  );
+                                  const quantity = proc.quantity || 1;
+                                  const totalCost = quantity * unitPrice;
+
+                                  return (
+                                    <tr key={proc.id || procIndex} className="border-b border-gray-100 hover:bg-gray-50">
+                                      <td className="py-3 px-3">
+                                        {proc.cdt_code && (
+                                          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-0 text-xs">
+                                            {proc.cdt_code}
+                                          </Badge>
+                                        )}
+                                        {proc.cpt_code && (
+                                          <Badge className="bg-pink-100 text-pink-700 hover:bg-pink-100 border-0 text-xs ml-1">
+                                            {proc.cpt_code}
+                                          </Badge>
+                                        )}
+                                      </td>
+                                      <td className="py-3 px-3 text-gray-900 font-medium">{proc.name}</td>
+                                      <td className="py-3 px-3 text-center text-gray-700">{quantity}</td>
+                                      <td className="py-3 px-3 text-right text-gray-700">{formatCurrency(unitPrice)}</td>
+                                      <td className="py-3 px-3 text-right font-semibold text-gray-900">{formatCurrency(totalCost)}</td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           </div>
                         </div>
                       )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
