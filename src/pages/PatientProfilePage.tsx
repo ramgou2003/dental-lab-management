@@ -5296,12 +5296,20 @@ export function PatientProfilePage() {
             </TabsContent>
 
             {/* Document Center Tab */}
+            {/* Document Center Tab */}
             <TabsContent value="documents" className="flex-1 mt-2 overflow-hidden">
               <div className="h-full flex flex-col">
-                <div className="pl-0 pr-0 pt-2 pb-2" style={{ height: 'calc(100vh - 280px)' }}>
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col items-center justify-center">
+                <div className="pl-0 pr-0 pt-2 pb-2 flex gap-4" style={{ height: 'calc(100vh - 280px)' }}>
+                  {/* Left Container - 1/3 width */}
+                  <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col items-center justify-center">
+                    <FolderOpen className="h-12 w-12 text-gray-300 mb-3" />
+                    <h3 className="text-base font-semibold text-gray-500">Categories</h3>
+                    <p className="text-sm text-gray-400 mt-1">Coming soon</p>
+                  </div>
+                  {/* Right Container - 2/3 width */}
+                  <div className="w-2/3 bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col items-center justify-center">
                     <FolderOpen className="h-16 w-16 text-gray-300 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-500">Document Center</h3>
+                    <h3 className="text-lg font-semibold text-gray-500">Documents</h3>
                     <p className="text-sm text-gray-400 mt-2">Coming soon</p>
                   </div>
                 </div>
