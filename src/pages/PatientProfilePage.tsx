@@ -5298,7 +5298,7 @@ export function PatientProfilePage() {
 
             {/* Document Center Tab */}
             <TabsContent value="documents" className="flex-1 mt-2 overflow-hidden">
-              <DocumentCenter patientId={id!} patientName={patient?.first_name + ' ' + patient?.last_name} />
+              <DocumentCenter patientId={patientId!} patientName={patient?.first_name + ' ' + patient?.last_name} />
             </TabsContent>
 
             <TabsContent value="clinical" className="flex-1 mt-2 overflow-hidden">
