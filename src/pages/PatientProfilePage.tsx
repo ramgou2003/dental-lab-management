@@ -52,7 +52,7 @@ import {
   FileText,
   FlaskConical,
   Factory,
-
+  FolderOpen,
   Mail,
   Heart,
   ArrowLeft,
@@ -4263,10 +4263,14 @@ export function PatientProfilePage() {
         {/* Fixed Tabs Navigation and Content */}
         <div className="flex-1 flex flex-col min-h-0">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col h-full">
-            <TabsList className="grid w-full grid-cols-7 bg-white border border-gray-200 p-0.5 rounded-xl shadow-sm flex-shrink-0">
+            <TabsList className="grid w-full grid-cols-8 bg-white border border-gray-200 p-0.5 rounded-xl shadow-sm flex-shrink-0">
               <TabsTrigger value="basic" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
                 <User className="h-3.5 w-3.5" />
                 Basic Details
+              </TabsTrigger>
+              <TabsTrigger value="documents" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
+                <FolderOpen className="h-3.5 w-3.5" />
+                Document Center
               </TabsTrigger>
               <TabsTrigger value="clinical" className="flex items-center gap-1.5 px-2 py-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 rounded-lg transition-all text-xs">
                 <FileText className="h-3.5 w-3.5" />
@@ -5288,6 +5292,19 @@ export function PatientProfilePage() {
                     </div>
                   </div>
                 )}
+              </div>
+            </TabsContent>
+
+            {/* Document Center Tab */}
+            <TabsContent value="documents" className="flex-1 mt-2 overflow-hidden">
+              <div className="h-full flex flex-col">
+                <div className="pl-0 pr-0 pt-2 pb-2" style={{ height: 'calc(100vh - 280px)' }}>
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col items-center justify-center">
+                    <FolderOpen className="h-16 w-16 text-gray-300 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-500">Document Center</h3>
+                    <p className="text-sm text-gray-400 mt-2">Coming soon</p>
+                  </div>
+                </div>
               </div>
             </TabsContent>
 
