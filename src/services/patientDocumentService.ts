@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Cast to any to access tables not in TypeScript types
+const db = supabase as any;
+
 export interface PatientDocument {
   id: string;
   patient_id: string;
@@ -39,7 +42,7 @@ export async function uploadPatientDocument(
     const filePath = `${patientId}/${fileName}`;
 
     // Upload to storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await db.storage
       .from('patient-documents')
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -53,12 +56,12 @@ export async function uploadPatientDocument(
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = db.storage
       .from('patient-documents')
       .getPublicUrl(filePath);
 
     // Save record to database
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('patient_documents')
       .insert({
         patient_id: patientId,
@@ -76,7 +79,7 @@ export async function uploadPatientDocument(
     if (error) {
       console.error('Error saving document record:', error);
       // Try to delete the uploaded file
-      await supabase.storage.from('patient-documents').remove([filePath]);
+      await db.storage.from('patient-documents').remove([filePath]);
       return null;
     }
 
@@ -90,7 +93,7 @@ export async function uploadPatientDocument(
 // Get all documents for a patient
 export async function getPatientDocuments(patientId: string): Promise<PatientDocument[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('patient_documents')
       .select('*')
       .eq('patient_id', patientId)
@@ -115,14 +118,14 @@ export async function deletePatientDocument(document: PatientDocument): Promise<
     const url = new URL(document.file_url);
     const pathParts = url.pathname.split('/').filter(part => part !== '');
     const bucketIndex = pathParts.findIndex(part => part === 'patient-documents');
-    
+
     if (bucketIndex !== -1) {
       const filePath = pathParts.slice(bucketIndex + 1).join('/');
-      await supabase.storage.from('patient-documents').remove([filePath]);
+      await db.storage.from('patient-documents').remove([filePath]);
     }
 
     // Delete database record
-    const { error } = await supabase
+    const { error } = await db
       .from('patient_documents')
       .delete()
       .eq('id', document.id);
@@ -145,7 +148,7 @@ export async function updatePatientDocument(
   updates: { category?: string; description?: string }
 ): Promise<boolean> {
   try {
-    const { error } = await supabase
+    const { error } = await db
       .from('patient_documents')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', documentId);
