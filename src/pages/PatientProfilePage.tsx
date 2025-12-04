@@ -86,7 +86,6 @@ import { AppointmentScheduler } from "@/components/AppointmentScheduler";
 import { SurgicalRecallSheetForm } from "@/components/SurgicalRecallSheetForm";
 import { ViewSurgicalRecallSheet } from "@/components/ViewSurgicalRecallSheet";
 import { DeleteSurgicalRecallSheetDialog } from "@/components/DeleteSurgicalRecallSheetDialog";
-import { DocumentCenter } from "@/components/DocumentCenter";
 import { useToast } from "@/hooks/use-toast";
 import { useSurgicalRecallSheets } from "@/hooks/useSurgicalRecallSheets";
 import { savePatientPacket, getPatientPacketsByPatientId, updatePatientPacket, deletePatientPacket } from "@/services/patientPacketService";
@@ -5298,7 +5297,15 @@ export function PatientProfilePage() {
 
             {/* Document Center Tab */}
             <TabsContent value="documents" className="flex-1 mt-2 overflow-hidden">
-              <DocumentCenter patientId={patientId!} patientName={patient?.first_name + ' ' + patient?.last_name} />
+              <div className="h-full flex flex-col">
+                <div className="pl-0 pr-0 pt-2 pb-2" style={{ height: 'calc(100vh - 280px)' }}>
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col items-center justify-center">
+                    <FolderOpen className="h-16 w-16 text-gray-300 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-500">Document Center</h3>
+                    <p className="text-sm text-gray-400 mt-2">Coming soon</p>
+                  </div>
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="clinical" className="flex-1 mt-2 overflow-hidden">
