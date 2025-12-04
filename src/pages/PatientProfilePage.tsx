@@ -123,7 +123,7 @@ export function PatientProfilePage() {
   const getInitialTab = () => {
     const urlParams = new URLSearchParams(location.search);
     const tabFromUrl = urlParams.get('tab');
-    const validTabs = ['basic', 'clinical', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery'];
+    const validTabs = ['basic', 'documents', 'clinical', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery'];
     return validTabs.includes(tabFromUrl || '') ? tabFromUrl : 'basic';
   };
 
@@ -140,7 +140,7 @@ export function PatientProfilePage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const tabFromUrl = urlParams.get('tab');
-    const validTabs = ['basic', 'clinical', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery'];
+    const validTabs = ['basic', 'documents', 'clinical', 'appointments', 'lab', 'reports', 'manufacturing', 'delivery'];
     const newTab = validTabs.includes(tabFromUrl || '') ? tabFromUrl : 'basic';
     if (newTab !== activeTab) {
       setActiveTab(newTab);
