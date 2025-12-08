@@ -12,6 +12,7 @@ export interface PatientDocument {
   description?: string;
   document_date?: string;
   uploaded_by?: string;
+  uploaded_by_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +32,7 @@ export const patientDocumentService = {
     description?: string,
     documentDate?: string,
     uploadedBy?: string,
+    uploadedById?: string,
     onProgress?: (info: UploadProgressInfo) => void
   ): Promise<PatientDocument> {
     const fileExt = file.name.split('.').pop();
@@ -100,6 +102,7 @@ export const patientDocumentService = {
         description,
         document_date: documentDate || new Date().toISOString().split('T')[0],
         uploaded_by: uploadedBy,
+        uploaded_by_id: uploadedById,
       })
       .select()
       .single();

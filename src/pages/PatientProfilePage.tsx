@@ -123,6 +123,8 @@ import { generateNewPatientPacketPdf } from "@/utils/newPatientPacketPdfGenerato
 import { generateConsentFullArchPdf } from "@/utils/consentFullArchPdfGenerator";
 import { generateSurgicalRecallPdf } from "@/utils/surgicalRecallPdfGenerator";
 import { patientDocumentService, PatientDocument } from "@/services/patientDocumentService";
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 
 export function PatientProfilePage() {
@@ -145,6 +147,10 @@ export function PatientProfilePage() {
   const [showCaptureDialog, setShowCaptureDialog] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [captureStep, setCaptureStep] = useState<'camera' | 'crop' | 'details'>('camera');
+  const [crop, setCrop] = useState<Crop>();
+  const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [imgRef, setImgRef] = useState<HTMLImageElement | null>(null);
   const [docTitle, setDocTitle] = useState('');
   const [docDescription, setDocDescription] = useState('');
   const [docDate, setDocDate] = useState(new Date().toISOString().split('T')[0]);
@@ -232,6 +238,56 @@ export function PatientProfilePage() {
     };
     fetchDocuments();
   }, [patientId, selectedDocCategory]);
+
+  // Function to crop the image based on the current crop selection
+  const getCroppedImg = async (): Promise<string | null> => {
+    if (!imgRef || !crop) return null;
+
+    const canvas = document.createElement('canvas');
+    const scaleX = imgRef.naturalWidth / imgRef.width;
+    const scaleY = imgRef.naturalHeight / imgRef.height;
+
+    canvas.width = crop.width * scaleX;
+    canvas.height = crop.height * scaleY;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.drawImage(
+      imgRef,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      crop.width * scaleX,
+      crop.height * scaleY
+    );
+
+    return canvas.toDataURL('image/jpeg', 0.9);
+  };
+
+  // Initialize crop when image loads
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    setImgRef(e.currentTarget);
+    // Set initial crop to center 80% of the image
+    const crop = centerCrop(
+      makeAspectCrop(
+        {
+          unit: '%',
+          width: 90,
+        },
+        width / height,
+        width,
+        height
+      ),
+      width,
+      height
+    );
+    setCrop(crop);
+  };
 
   // Treatment options for IV sedation form
   const treatmentOptions = [
@@ -7526,6 +7582,7 @@ export function PatientProfilePage() {
                             docDescription,
                             docDate,
                             userProfile?.full_name || user?.email || 'Unknown',
+                            userProfile?.id || user?.id,
                             (info) => setUploadProgress(info)
                           );
                           setPatientDocuments(prev => [newDoc, ...prev]);
@@ -7572,21 +7629,31 @@ export function PatientProfilePage() {
               setShowCaptureDialog(open);
               if (!open) {
                 setCapturedImage(null);
+                setCroppedImage(null);
+                setCaptureStep('camera');
+                setCrop(undefined);
+                setImgRef(null);
                 setDocTitle('');
                 setDocDescription('');
                 setDocDate(new Date().toISOString().split('T')[0]);
+                setDocType('');
+                setCustomDocType('');
               }
             }}>
-              <DialogContent className="sm:max-w-xl">
+              <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-lg font-semibold flex items-center gap-2">
                     <Camera className="h-5 w-5 text-blue-600" />
                     Capture Document
                   </DialogTitle>
-                  <p className="text-gray-500 text-sm">Take a photo of your document</p>
+                  <p className="text-gray-500 text-sm">
+                    {captureStep === 'camera' && 'Take a photo of your document'}
+                    {captureStep === 'crop' && 'Adjust the crop area'}
+                    {captureStep === 'details' && 'Add document details'}
+                  </p>
                 </DialogHeader>
                 <div className="space-y-4">
-                  {!capturedImage ? (
+                  {captureStep === 'camera' ? (
                     <>
                       {/* Camera Preview */}
                       <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
@@ -7619,27 +7686,114 @@ export function PatientProfilePage() {
                             setCapturedImage(canvas.toDataURL('image/jpeg'));
                             const stream = video.srcObject as MediaStream;
                             stream?.getTracks().forEach(track => track.stop());
+                            setCaptureStep('crop');
                           }}
                         >
                           <div className="w-12 h-12 rounded-full bg-blue-500" />
                         </button>
                       </div>
                     </>
+                  ) : captureStep === 'crop' ? (
+                    <>
+                      {/* Cropping Interface */}
+                      <div className="relative rounded-xl overflow-hidden bg-gray-100">
+                        {capturedImage && (
+                          <ReactCrop
+                            crop={crop}
+                            onChange={(c) => setCrop(c)}
+                            className="max-h-[50vh]"
+                          >
+                            <img
+                              src={capturedImage}
+                              alt="Crop preview"
+                              onLoad={onImageLoad}
+                              className="max-w-full max-h-[50vh] object-contain mx-auto"
+                            />
+                          </ReactCrop>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 text-center">Drag the corners to adjust the crop area</p>
+                      {/* Crop Actions */}
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            setCapturedImage(null);
+                            setCrop(undefined);
+                            setImgRef(null);
+                            setCaptureStep('camera');
+                            // Restart camera
+                            setTimeout(() => {
+                              const video = document.getElementById('docCameraPreview') as HTMLVideoElement;
+                              if (video) {
+                                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                                  .then(stream => { video.srcObject = stream; })
+                                  .catch(err => console.error('Camera error:', err));
+                              }
+                            }, 100);
+                          }}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Retake
+                        </Button>
+                        <Button
+                          className="flex-1 bg-blue-600 hover:bg-blue-700"
+                          onClick={async () => {
+                            // Get cropped image or use original if no crop
+                            const cropped = await getCroppedImg();
+                            setCroppedImage(cropped || capturedImage);
+                            setCaptureStep('details');
+                          }}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Continue
+                        </Button>
+                      </div>
+                    </>
                   ) : (
                     <>
-                      {/* Captured Image Preview */}
+                      {/* Details Step with Document Type Dropdown */}
                       <div className="relative rounded-xl overflow-hidden bg-gray-100 aspect-video">
-                        <img src={capturedImage} alt="Captured" className="w-full h-full object-contain" />
+                        <img src={croppedImage || capturedImage} alt="Cropped" className="w-full h-full object-contain" />
                       </div>
-                      {/* Title */}
+                      {/* Document Type Dropdown - same as upload dialog */}
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-gray-700">Title</Label>
-                        <Input
-                          value={docTitle}
-                          onChange={(e) => setDocTitle(e.target.value)}
-                          placeholder="Enter document title..."
-                        />
+                        <Label className="text-sm font-medium text-gray-700">Document Type <span className="text-red-500">*</span></Label>
+                        <Select value={docType} onValueChange={setDocType}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select document type..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedDocCategory === 'administrative' && adminDocumentTypes.map((type) => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                            {selectedDocCategory === 'data-collection' && dataCollectionReasons.map((type) => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                            {selectedDocCategory === 'surgical' && surgicalDocumentTypes.map((type) => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                            {selectedDocCategory === 'post-surgery' && postSurgeryDocumentTypes.map((type) => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                            {selectedDocCategory === 'miscellaneous' && miscellaneousDocumentTypes.map((type) => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
+                      {/* Custom document type input */}
+                      {(docType === 'Custom' || docType === 'OTHERS') && (
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium text-gray-700">Custom Type <span className="text-red-500">*</span></Label>
+                          <Input
+                            value={customDocType}
+                            onChange={(e) => setCustomDocType(e.target.value)}
+                            placeholder="Enter custom document type..."
+                          />
+                        </div>
+                      )}
                       {/* Date */}
                       <div className="space-y-1.5">
                         <Label className="text-sm font-medium text-gray-700">Date</Label>
@@ -7665,44 +7819,43 @@ export function PatientProfilePage() {
                           variant="outline"
                           className="flex-1"
                           onClick={() => {
-                            setCapturedImage(null);
-                            // Restart camera
-                            setTimeout(() => {
-                              const video = document.getElementById('docCameraPreview') as HTMLVideoElement;
-                              if (video) {
-                                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                                  .then(stream => { video.srcObject = stream; })
-                                  .catch(err => console.error('Camera error:', err));
-                              }
-                            }, 100);
+                            setCaptureStep('crop');
                           }}
                         >
                           <RotateCcw className="h-4 w-4 mr-2" />
-                          Retake
+                          Back
                         </Button>
                         <Button
                           className="flex-1 bg-blue-600 hover:bg-blue-700"
-                          disabled={uploadingDoc}
+                          disabled={uploadingDoc || !docType || ((docType === 'Custom' || docType === 'OTHERS') && !customDocType)}
                           onClick={async () => {
-                            if (!patientId || !selectedDocCategory || !capturedImage) return;
+                            if (!patientId || !selectedDocCategory) return;
+                            const imageToUpload = croppedImage || capturedImage;
+                            if (!imageToUpload) return;
                             setUploadingDoc(true);
                             try {
-                              const res = await fetch(capturedImage);
+                              const res = await fetch(imageToUpload);
                               const blob = await res.blob();
                               const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                              const finalDocType = (docType === 'Custom' || docType === 'OTHERS') ? customDocType : docType;
                               const newDoc = await patientDocumentService.uploadDocument(
                                 patientId,
                                 file,
                                 selectedDocCategory,
-                                docTitle,
+                                finalDocType,
                                 docDescription,
                                 docDate,
-                                userProfile?.full_name || user?.email || 'Unknown'
+                                userProfile?.full_name || user?.email || 'Unknown',
+                                userProfile?.id || user?.id
                               );
                               setPatientDocuments(prev => [newDoc, ...prev]);
                               setShowCaptureDialog(false);
                               setCapturedImage(null);
+                              setCroppedImage(null);
+                              setCaptureStep('camera');
                               setDocTitle('');
+                              setDocType('');
+                              setCustomDocType('');
                               setDocDescription('');
                               setDocDate(new Date().toISOString().split('T')[0]);
                               toast({ title: "Document captured and saved" });
