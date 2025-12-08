@@ -78,12 +78,12 @@ export function AppointmentScheduler({
       return;
     }
 
-    // Format date in EST timezone
+    // Format date directly from the selected date without timezone conversion
+    // This preserves the exact date the user selected in the calendar
     const formatDateForDatabase = (date: Date) => {
-      const estDate = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
-      const year = estDate.getFullYear();
-      const month = String(estDate.getMonth() + 1).padStart(2, '0');
-      const day = String(estDate.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
 
@@ -110,15 +110,10 @@ export function AppointmentScheduler({
     onClose();
   };
 
-  // Disable past dates in EST timezone
+  // Allow all dates (past and future) to be selected
   const isDateDisabled = (date: Date) => {
-    const todayEST = getTodayInEST();
-
-    // Normalize the input date to midnight for comparison
-    const checkDate = new Date(date);
-    checkDate.setHours(0, 0, 0, 0);
-
-    return checkDate < todayEST;
+    // No dates are disabled - allow selecting past dates for backdated appointments
+    return false;
   };
 
   if (!deliveryItem) return null;

@@ -550,3 +550,42 @@ export async function syncChartNumberToFinancialAgreements(
     return { data: null, error };
   }
 }
+
+/**
+ * Format financial agreement for PDF generation
+ */
+export function formatFinancialAgreementForPdf(agreement: any) {
+  return {
+    patientName: agreement.patient_name || 'Unknown Patient',
+    chartNumber: agreement.chart_number || '',
+    dateOfBirth: agreement.date_of_birth || '',
+    dateOfExecution: agreement.date_of_execution || new Date().toISOString().split('T')[0],
+    timeOfExecution: agreement.time_of_execution || '',
+    acceptedTreatments: Array.isArray(agreement.accepted_treatments) ? agreement.accepted_treatments : [],
+    totalCostOfTreatment: agreement.total_cost_of_treatment?.toString() || '0',
+    patientPaymentToday: agreement.patient_payment_today?.toString() || '0',
+    remainingBalance: agreement.remaining_balance?.toString() || '0',
+    remainingPaymentPlan: agreement.remaining_payment_plan || '',
+    paymentAmount: agreement.payment_amount?.toString() || '0',
+    paymentTermsInitials: agreement.payment_terms_initials || '',
+    labFeeInitials: agreement.lab_fee_initials || '',
+    carePackageFee: agreement.care_package_fee?.toString() || '0',
+    carePackageElection: agreement.care_package_election || '',
+    warrantyInitials: agreement.warranty_initials || '',
+    capacityConfirmed: agreement.capacity_confirmed || false,
+    hipaaAcknowledged: agreement.hipaa_acknowledged || false,
+    capacityInitials: agreement.capacity_initials || '',
+    disputeInitials: agreement.dispute_initials || '',
+    termsAgreed: agreement.terms_agreed || false,
+    patientSignature: agreement.patient_signature || '',
+    patientSignatureDate: agreement.patient_signature_date || '',
+    patientSignatureTime: agreement.patient_signature_time || '',
+    witnessName: agreement.witness_name || '',
+    witnessRole: agreement.witness_role || '',
+    witnessSignature: agreement.witness_signature || '',
+    witnessSignatureDate: agreement.witness_signature_date || '',
+    witnessSignatureTime: agreement.witness_signature_time || '',
+    downloadedToDentalManagementSoftware: agreement.downloaded_to_dental_management_software || false,
+    confirmedByStaffInitials: agreement.confirmed_by_staff_initials || ''
+  };
+}

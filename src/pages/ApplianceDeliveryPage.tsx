@@ -15,6 +15,13 @@ import { toast } from "@/components/ui/sonner";
 import type { DeliveryItem } from "@/hooks/useDeliveryItems";
 import type { ReportCard } from "@/hooks/useReportCards";
 
+// Helper to format date string (YYYY-MM-DD) without timezone shift
+const formatDateStr = (dateStr: string, options?: Intl.DateTimeFormatOptions): string => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString('en-US', options || { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 export function ApplianceDeliveryPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("ready-to-insert");
