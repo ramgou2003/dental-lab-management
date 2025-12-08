@@ -76,7 +76,18 @@ import {
   Trash2,
   X,
   AlertTriangle,
-  Download
+  Download,
+  Stethoscope,
+  Syringe,
+  HeartPulse,
+  ClipboardList,
+  ClipboardCheck,
+  ChevronRight,
+  Upload,
+  Camera,
+  FileImage,
+  ExternalLink,
+  RefreshCw
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -90,10 +101,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useSurgicalRecallSheets } from "@/hooks/useSurgicalRecallSheets";
 import { savePatientPacket, getPatientPacketsByPatientId, updatePatientPacket, deletePatientPacket } from "@/services/patientPacketService";
 import { convertDatabaseToFormData, convertFormDataToDatabase } from "@/utils/patientPacketConverter";
-import { getFinancialAgreementsByPatientId, deleteFinancialAgreement, updateFinancialAgreement } from "@/services/financialAgreementService";
+import { getFinancialAgreementsByPatientId, deleteFinancialAgreement, updateFinancialAgreement, formatFinancialAgreementForPdf } from "@/services/financialAgreementService";
 import { getConsentFormsByPatientId, getConsentForm, deleteConsentForm, formatConsentFormForDisplay, ConsentFullArchFormData } from "@/services/consentFullArchService";
-import { getMedicalRecordsReleaseFormsByPatientId, deleteMedicalRecordsReleaseForm, formatMedicalRecordsReleaseFormForDisplay, MedicalRecordsReleaseFormData } from "@/services/medicalRecordsReleaseService";
-import { getInformedConsentSmokingFormsByPatientId, deleteInformedConsentSmokingForm, formatInformedConsentSmokingFormForDisplay, InformedConsentSmokingFormData } from "@/services/informedConsentSmokingService";
+import { getMedicalRecordsReleaseFormsByPatientId, getMedicalRecordsReleaseForm, deleteMedicalRecordsReleaseForm, formatMedicalRecordsReleaseFormForDisplay, MedicalRecordsReleaseFormData } from "@/services/medicalRecordsReleaseService";
+import { getInformedConsentSmokingFormsByPatientId, getInformedConsentSmokingForm, deleteInformedConsentSmokingForm, formatInformedConsentSmokingFormForDisplay, InformedConsentSmokingFormData } from "@/services/informedConsentSmokingService";
 import { generateInformedConsentSmokingPdf } from "@/utils/informedConsentSmokingPdfGenerator";
 import { generateMedicalRecordsReleasePdf } from "@/utils/medicalRecordsReleasePdfGenerator";
 import { generateFinancialAgreementPdf } from "@/utils/financialAgreementPdfGenerator";
@@ -111,6 +122,7 @@ import { generateFinalDesignApprovalPdf } from "@/utils/finalDesignApprovalPdfGe
 import { generateNewPatientPacketPdf } from "@/utils/newPatientPacketPdfGenerator";
 import { generateConsentFullArchPdf } from "@/utils/consentFullArchPdfGenerator";
 import { generateSurgicalRecallPdf } from "@/utils/surgicalRecallPdfGenerator";
+import { patientDocumentService, PatientDocument } from "@/services/patientDocumentService";
 
 
 export function PatientProfilePage() {
@@ -127,6 +139,43 @@ export function PatientProfilePage() {
   };
 
   const [activeTab, setActiveTab] = useState(getInitialTab);
+  const [selectedDocCategory, setSelectedDocCategory] = useState<string | null>(null);
+  const [patientDocuments, setPatientDocuments] = useState<PatientDocument[]>([]);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showCaptureDialog, setShowCaptureDialog] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [docTitle, setDocTitle] = useState('');
+  const [docDescription, setDocDescription] = useState('');
+  const [docDate, setDocDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [docType, setDocType] = useState('');
+  const [customDocType, setCustomDocType] = useState('');
+  const [showFilePreviewDialog, setShowFilePreviewDialog] = useState(false);
+  const [previewFileData, setPreviewFileData] = useState<PatientDocument | null>(null);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<PatientDocument | null>(null);
+  const [deletingDocument, setDeletingDocument] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ progress: 0, loaded: 0, total: 0 });
+  const [previewLoading, setPreviewLoading] = useState(true);
+
+  // Administrative document types list
+  const adminDocumentTypes = [
+    'New Patient Packet',
+    'Financial Agreement',
+    'Consent Packet',
+    'Medical Records Release Form',
+    'Informed Consent Form For Smoking',
+    '3-Year Care Package Enrollment Form',
+    'Partial Payment Agreement for Future Treatment',
+    'Final Design Approval Form',
+    'Thank You and Pre-Surgery Form',
+    'Create Treatment Plan',
+    'Custom'
+  ];
+  const [patientConsultations, setPatientConsultations] = useState<any[]>([]);
+  const [loadingConsultations, setLoadingConsultations] = useState(false);
 
   // Update URL when tab changes
   const handleTabChange = (newTab: string) => {
@@ -145,6 +194,44 @@ export function PatientProfilePage() {
       setActiveTab(newTab);
     }
   }, [location.search, activeTab]);
+
+  // Fetch patient consultations when consultation category is selected
+  useEffect(() => {
+    const fetchConsultations = async () => {
+      if (!patientId || selectedDocCategory !== 'consultation') return;
+      setLoadingConsultations(true);
+      try {
+        // Fetch consultations for this patient
+        const { data, error } = await (supabase as any)
+          .from('consultations')
+          .select('*')
+          .eq('patient_id', patientId)
+          .order('consultation_date', { ascending: false });
+
+        if (error) throw error;
+        setPatientConsultations(data || []);
+      } catch (error) {
+        console.error('Error fetching consultations:', error);
+      } finally {
+        setLoadingConsultations(false);
+      }
+    };
+    fetchConsultations();
+  }, [patientId, selectedDocCategory]);
+
+  // Fetch patient documents when category changes
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      if (!patientId || !selectedDocCategory || selectedDocCategory === 'consultation') return;
+      try {
+        const docs = await patientDocumentService.getDocumentsByCategory(patientId, selectedDocCategory);
+        setPatientDocuments(docs);
+      } catch (error) {
+        console.error('Error fetching documents:', error);
+      }
+    };
+    fetchDocuments();
+  }, [patientId, selectedDocCategory]);
 
   // Treatment options for IV sedation form
   const treatmentOptions = [
@@ -171,6 +258,31 @@ export function PatientProfilePage() {
     "FINAL DATA COLLECTION",
     "OTHERS"
   ];
+
+  // Surgical document types
+  const surgicalDocumentTypes = [
+    "IV Sedation Flow Chart",
+    "Surgical Recall Sheet",
+    "OTHERS"
+  ];
+
+  // Post Surgery document types
+  const postSurgeryDocumentTypes = [
+    "Post-Op Instructions",
+    "Follow-Up Notes",
+    "Healing Progress Photos",
+    "Medication Records",
+    "OTHERS"
+  ];
+
+  // Miscellaneous document types
+  const miscellaneousDocumentTypes = [
+    "Insurance Documents",
+    "Referral Letters",
+    "Patient Correspondence",
+    "Other Clinical Notes",
+    "OTHERS"
+  ];
   const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -195,7 +307,7 @@ export function PatientProfilePage() {
   const { isAdminUser } = usePermissions();
 
   // Auth context for user information
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
 
   // Filter report cards for this specific patient
   const patientReportCards = reportCards.filter(card => {
@@ -1772,6 +1884,205 @@ export function PatientProfilePage() {
     // Store the selected agreement and show preview
     setSelectedFinancialAgreementForPreview(agreement);
     setShowFinancialAgreementPreview(true);
+  };
+
+  // Handler for viewing Consent Full Arch forms in Document Center
+  const handleViewConsentForm = async (form: any) => {
+    try {
+      const freshData = await getConsentForm(form.id);
+      if (freshData.data) {
+        const formattedData = formatConsentFormForDisplay(freshData.data);
+        setSelectedConsentForm(formattedData);
+        setIsViewingConsentForm(true);
+        setShowConsentFullArchForm(true);
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not load form data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching consent form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load form data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler for viewing Medical Records Release forms in Document Center
+  const handleViewMedicalRecordsReleaseForm = async (form: any) => {
+    try {
+      const freshData = await getMedicalRecordsReleaseForm(form.id);
+      if (freshData.data) {
+        const formattedData = formatMedicalRecordsReleaseFormForDisplay(freshData.data);
+        setEditingMedicalRecordsReleaseForm(formattedData);
+        setIsEditingMedicalRecordsReleaseForm(false);
+        setIsViewingMedicalRecordsReleaseForm(true);
+        setShowMedicalRecordsReleaseForm(true);
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not load form data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching medical records release form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load form data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler for viewing Informed Consent Smoking forms in Document Center
+  const handleViewInformedConsentSmokingForm = async (form: any) => {
+    try {
+      const freshData = await getInformedConsentSmokingForm(form.id);
+      if (freshData.data) {
+        const formattedData = formatInformedConsentSmokingFormForDisplay(freshData.data);
+        setEditingInformedConsentSmokingForm(formattedData);
+        setIsEditingInformedConsentSmokingForm(false);
+        setIsViewingInformedConsentSmokingForm(true);
+        setShowInformedConsentSmokingForm(true);
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not load form data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching informed consent smoking form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load form data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler for viewing Final Design Approval forms in Document Center
+  const handleViewFinalDesignApprovalForm = async (form: any) => {
+    try {
+      const freshData = await getFinalDesignApprovalForm(form.id);
+      if (freshData.data) {
+        const formattedData = formatFinalDesignApprovalFormForDisplay(freshData.data);
+        setSelectedFinalDesignApprovalForm(formattedData);
+        setIsViewingFinalDesignApprovalForm(true);
+        setShowFinalDesignApprovalForm(true);
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not load form data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching final design approval form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load form data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler for viewing Thank You Pre-Surgery forms in Document Center
+  const handleViewThankYouPreSurgeryForm = async (form: any) => {
+    try {
+      const freshData = await getThankYouPreSurgeryForm(form.id);
+      if (freshData.data) {
+        const formattedData = formatThankYouPreSurgeryFormForDisplay(freshData.data);
+        setSelectedThankYouPreSurgeryForm(formattedData);
+        setIsViewingThankYouPreSurgeryForm(true);
+        setShowThankYouPreSurgeryForm(true);
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not load form data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching thank you pre-surgery form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load form data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler for viewing 3-Year Care Package forms in Document Center
+  const handleViewThreeYearCarePackageForm = (form: any) => {
+    const formattedData = formatThreeYearCarePackageFormForDisplay(form);
+    setSelectedThreeYearCarePackageForm(formattedData);
+    setIsViewingThreeYearCarePackageForm(true);
+    setShowThreeYearCarePackageForm(true);
+  };
+
+  // Handler for viewing 5-Year Warranty forms in Document Center
+  const handleViewFiveYearWarrantyForm = (form: any) => {
+    const formattedData = formatFiveYearWarrantyFormForDisplay(form);
+    setSelectedFiveYearWarrantyForm(formattedData);
+    setIsViewingFiveYearWarrantyForm(true);
+    setShowFiveYearWarrantyForm(true);
+  };
+
+  // Handler for viewing Partial Payment Agreement forms in Document Center
+  const handleViewPartialPaymentAgreementForm = async (form: any) => {
+    try {
+      const freshData = await partialPaymentAgreementService.getFormById(form.id);
+      if (freshData) {
+        const formattedData = formatPartialPaymentAgreementFormForDisplay(freshData);
+        setSelectedPartialPaymentAgreementForm(formattedData);
+        setIsViewingPartialPaymentAgreementForm(true);
+        setShowPartialPaymentAgreementForm(true);
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not load form data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching partial payment agreement form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load form data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handler for viewing Treatment Plan forms in Document Center
+  const handleViewTreatmentPlanForm = async (form: any) => {
+    try {
+      const { data: freshFormData, error } = await getTreatmentPlanForm(form.id);
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Could not load form data. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setSelectedTreatmentPlanForm(freshFormData);
+      setIsViewingTreatmentPlanForm(true);
+      setShowTreatmentPlanForm(true);
+    } catch (error) {
+      console.error('Error fetching treatment plan form data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load form data. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeletePatientPacket = (packet: any) => {
@@ -4696,10 +5007,10 @@ export function PatientProfilePage() {
                                 </div>
                               </div>
 
-                              {/* Right side - Action Buttons */}
+                              {/* Right side - View Buttons (only show when completed) */}
                               <div className="ml-4 flex gap-2">
-                                {/* Lab Report Button */}
-                                {card.lab_report_status === 'completed' ? (
+                                {/* Lab Report View Button - Only show when completed */}
+                                {card.lab_report_status === 'completed' && (
                                   <Button
                                     className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                                     onClick={() => handleViewLabReport(card)}
@@ -4707,37 +5018,17 @@ export function PatientProfilePage() {
                                     <Eye className="h-4 w-4 mr-2" />
                                     View Lab Report
                                   </Button>
-                                ) : (
-                                  <Button
-                                    className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                    onClick={() => handleFillLabReport(card)}
-                                  >
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    Fill Lab Report
-                                  </Button>
                                 )}
 
-                                {/* Clinical Report Button - Show only when lab is completed */}
-                                {card.lab_report_status === 'completed' && (
-                                  <>
-                                    {card.clinical_report_status === 'completed' ? (
-                                      <Button
-                                        className="border-2 border-purple-600 text-purple-600 hover:border-purple-700 hover:text-purple-700 hover:bg-purple-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                        onClick={() => handleViewClinicalReport(card)}
-                                      >
-                                        <Eye className="h-4 w-4 mr-2" />
-                                        View Clinical Report
-                                      </Button>
-                                    ) : (
-                                      <Button
-                                        className="border-2 border-orange-600 text-orange-600 hover:border-orange-700 hover:text-orange-700 hover:bg-orange-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                                        onClick={() => handleFillClinicalReport(card)}
-                                      >
-                                        <Activity className="h-4 w-4 mr-2" />
-                                        Fill Clinical Report
-                                      </Button>
-                                    )}
-                                  </>
+                                {/* Clinical Report View Button - Only show when completed */}
+                                {card.clinical_report_status === 'completed' && (
+                                  <Button
+                                    className="border-2 border-purple-600 text-purple-600 hover:border-purple-700 hover:text-purple-700 hover:bg-purple-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                    onClick={() => handleViewClinicalReport(card)}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Clinical Report
+                                  </Button>
                                 )}
                               </div>
                             </div>
@@ -4855,119 +5146,6 @@ export function PatientProfilePage() {
                               {/* Actions */}
                               <div className="col-span-2 h-full flex items-center justify-end pr-2">
                                 <div className="flex gap-1">
-                                {(() => {
-                                  const currentStatus = script.status;
-                                  const isEditingStatus = editingStatus[script.id] || false;
-
-                                  // If lab script is completed, show edit button or hold/complete when editing
-                                  if (currentStatus === 'completed' && !isEditingStatus) {
-                                    return (
-                                      <>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleEditStatus(script.id)}
-                                          className="h-8 w-8 p-0"
-                                          title="Edit Status"
-                                        >
-                                          <Edit className="h-4 w-4" />
-                                        </Button>
-                                      </>
-                                    );
-                                  }
-
-                                  if (currentStatus === 'completed' && isEditingStatus) {
-                                    return (
-                                      <>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleDesignStateChange(script.id, 'hold')}
-                                          className="h-8 w-8 p-0"
-                                          title="Hold"
-                                        >
-                                          <Square className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleDesignStateChange(script.id, 'completed')}
-                                          className="h-8 w-8 p-0"
-                                          title="Complete"
-                                        >
-                                          <CheckCircle className="h-4 w-4" />
-                                        </Button>
-                                      </>
-                                    );
-                                  }
-
-                                  // Use actual lab script status
-                                  switch (currentStatus) {
-                                    case 'pending':
-                                      return (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleDesignStateChange(script.id, 'in-progress')}
-                                          className="h-8 w-8 p-0"
-                                          title="Start Design"
-                                        >
-                                          <Play className="h-4 w-4" />
-                                        </Button>
-                                      );
-
-                                    case 'in-progress':
-                                      return (
-                                        <>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDesignStateChange(script.id, 'hold')}
-                                            className="h-8 w-8 p-0"
-                                            title="Hold"
-                                          >
-                                            <Square className="h-4 w-4" />
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDesignStateChange(script.id, 'completed')}
-                                            className="h-8 w-8 p-0"
-                                            title="Complete"
-                                          >
-                                            <CheckCircle className="h-4 w-4" />
-                                          </Button>
-                                        </>
-                                      );
-
-                                    case 'hold':
-                                      return (
-                                        <>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDesignStateChange(script.id, 'in-progress')}
-                                            className="h-8 w-8 p-0"
-                                            title="Resume Design"
-                                          >
-                                            <RotateCcw className="h-4 w-4" />
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDesignStateChange(script.id, 'completed')}
-                                            className="h-8 w-8 p-0"
-                                            title="Complete"
-                                          >
-                                            <CheckCircle className="h-4 w-4" />
-                                          </Button>
-                                        </>
-                                      );
-
-                                    default:
-                                      return null;
-                                  }
-                                })()}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -5015,48 +5193,8 @@ export function PatientProfilePage() {
                         const upperAppliance = item.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
                         const lowerAppliance = item.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
 
-                        // Get status-specific button configuration
-                        const getStatusButton = () => {
-                          switch (item.status) {
-                            case 'pending-printing':
-                              return {
-                                text: 'Start Printing',
-                                icon: Play,
-                                color: 'border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50',
-                                onClick: () => handleManufacturingStatusChange(item.id, 'in-production')
-                              };
-                            case 'in-production':
-                              return {
-                                text: 'Quality Check',
-                                icon: CheckCircle,
-                                color: 'border-purple-600 text-purple-600 hover:border-purple-700 hover:text-purple-700 hover:bg-purple-50',
-                                onClick: () => handleManufacturingStatusChange(item.id, 'quality-check')
-                              };
-                            case 'quality-check':
-                              return {
-                                text: 'Complete',
-                                icon: CheckCircle,
-                                color: 'border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50',
-                                onClick: () => handleManufacturingStatusChange(item.id, 'completed')
-                              };
-                            case 'completed':
-                              return {
-                                text: 'Completed',
-                                icon: CheckCircle,
-                                color: 'border-emerald-600 text-emerald-600 bg-emerald-50',
-                                onClick: () => {}
-                              };
-                            default:
-                              return {
-                                text: 'View Details',
-                                icon: Eye,
-                                color: 'border-gray-600 text-gray-600 hover:border-gray-700 hover:text-gray-700 hover:bg-gray-50',
-                                onClick: () => {}
-                              };
-                          }
-                        };
-
-                        const statusButton = getStatusButton();
+                        // Find the related lab script for viewing
+                        const relatedLabScript = labScripts.find(script => script.id === item.lab_script_id);
 
                         return (
                           <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
@@ -5112,16 +5250,17 @@ export function PatientProfilePage() {
                                 </div>
                               </div>
 
-                              {/* Right side - Action Button */}
+                              {/* Right side - View Button */}
                               <div className="ml-4 flex gap-2">
-                                <Button
-                                  className={`border-2 ${statusButton.color} bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200`}
-                                  onClick={statusButton.onClick}
-                                  disabled={item.status === 'completed'}
-                                >
-                                  <statusButton.icon className="h-4 w-4 mr-2" />
-                                  {statusButton.text}
-                                </Button>
+                                {relatedLabScript && (
+                                  <Button
+                                    className="border-2 border-gray-600 text-gray-600 hover:border-gray-700 hover:text-gray-700 hover:bg-gray-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                    onClick={() => handleViewLabScript(relatedLabScript)}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View Details
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -5165,42 +5304,6 @@ export function PatientProfilePage() {
                         // Format appliance type display
                         const upperAppliance = item.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
                         const lowerAppliance = item.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
-
-                        // Get status-specific button configuration
-                        const getStatusButton = () => {
-                          switch (item.delivery_status) {
-                            case 'ready-for-delivery':
-                              return {
-                                text: 'Schedule Appointment',
-                                icon: Calendar,
-                                color: 'border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50',
-                                onClick: () => handleScheduleAppointment(item)
-                              };
-                            case 'patient-scheduled':
-                              return {
-                                text: 'Mark Inserted',
-                                icon: CheckCircle,
-                                color: 'border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50',
-                                onClick: () => handleCompleteDelivery(item)
-                              };
-                            case 'inserted':
-                              return {
-                                text: 'Inserted',
-                                icon: CheckCircle,
-                                color: 'border-emerald-600 text-emerald-600 bg-emerald-50',
-                                onClick: () => handleViewDeliveryDetails(item)
-                              };
-                            default:
-                              return {
-                                text: 'View Details',
-                                icon: Eye,
-                                color: 'border-gray-600 text-gray-600 hover:border-gray-700 hover:text-gray-700 hover:bg-gray-50',
-                                onClick: () => handleViewDeliveryDetails(item)
-                              };
-                          }
-                        };
-
-                        const statusButton = getStatusButton();
 
                         return (
                           <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
@@ -5246,7 +5349,7 @@ export function PatientProfilePage() {
                                 </div>
                               </div>
 
-                              {/* Right side - Status and Action Button */}
+                              {/* Right side - Status and View Button */}
                               <div className="ml-4 flex items-center gap-3">
                                 {/* Status Badge */}
                                 <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
@@ -5261,13 +5364,13 @@ export function PatientProfilePage() {
                                    item.delivery_status}
                                 </span>
 
-                                {/* Status Action Button */}
+                                {/* View Details Button */}
                                 <Button
-                                  className={`border-2 ${statusButton.color} bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200`}
-                                  onClick={statusButton.onClick}
+                                  className="border-2 border-gray-600 text-gray-600 hover:border-gray-700 hover:text-gray-700 hover:bg-gray-50 bg-white px-4 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                                  onClick={() => handleViewDeliveryDetails(item)}
                                 >
-                                  <statusButton.icon className="h-4 w-4 mr-2" />
-                                  {statusButton.text}
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
                                 </Button>
                               </div>
                             </div>
@@ -5296,25 +5399,2519 @@ export function PatientProfilePage() {
             </TabsContent>
 
             {/* Document Center Tab */}
-            {/* Document Center Tab */}
             <TabsContent value="documents" className="flex-1 mt-2 overflow-hidden">
               <div className="h-full flex flex-col">
                 <div className="pl-0 pr-0 pt-2 pb-2 flex gap-4" style={{ height: 'calc(100vh - 280px)' }}>
                   {/* Left Container - 1/3 width */}
-                  <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col items-center justify-center">
-                    <FolderOpen className="h-12 w-12 text-gray-300 mb-3" />
-                    <h3 className="text-base font-semibold text-gray-500">Categories</h3>
-                    <p className="text-sm text-gray-400 mt-1">Coming soon</p>
+                  <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-blue-200 h-full flex flex-col">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 bg-blue-50 rounded-t-2xl">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <FolderOpen className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-blue-700">Categories</h3>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                        onClick={() => {
+                          // TODO: Add category dialog
+                          toast({ title: "Coming soon", description: "Add custom category functionality" });
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Category
+                      </Button>
+                    </div>
+                    <div className="border-b border-gray-200" />
+                    {/* Categories List */}
+                    <div className="flex-1 overflow-y-auto p-2">
+                      {[
+                        { id: 'consultation', name: 'Consultation', icon: Stethoscope },
+                        { id: 'administrative', name: 'Administrative Documents', icon: FileText },
+                        { id: 'data-collection', name: 'Data Collection Sheets', icon: ClipboardCheck },
+                        { id: 'surgical', name: 'Surgical Day Workflow', icon: Syringe },
+                        { id: 'post-surgery', name: 'Post Surgery Workflow', icon: HeartPulse },
+                        { id: 'lab', name: 'Lab', icon: FlaskConical },
+                        { id: 'report-cards', name: 'Report Cards', icon: ClipboardList },
+                        { id: 'miscellaneous', name: 'Miscellaneous', icon: FolderOpen },
+                      ].map((category) => (
+                        <div
+                          key={category.id}
+                          onClick={() => setSelectedDocCategory(category.id)}
+                          className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors mb-1 border ${
+                            selectedDocCategory === category.id
+                              ? 'bg-blue-50 border-blue-300'
+                              : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-1.5 rounded-lg ${
+                              selectedDocCategory === category.id ? 'bg-blue-100' : 'bg-gray-100'
+                            }`}>
+                              <category.icon className={`h-4 w-4 ${
+                                selectedDocCategory === category.id ? 'text-blue-600' : 'text-gray-600'
+                              }`} />
+                            </div>
+                            <span className={`text-sm ${
+                              selectedDocCategory === category.id ? 'text-blue-700 font-medium' : 'text-gray-700'
+                            }`}>{category.name}</span>
+                          </div>
+                          <ChevronRight className={`h-4 w-4 ${
+                            selectedDocCategory === category.id ? 'text-blue-500' : 'text-gray-400'
+                          }`} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   {/* Right Container - 2/3 width */}
-                  <div className="w-2/3 bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col items-center justify-center">
-                    <FolderOpen className="h-16 w-16 text-gray-300 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-500">Documents</h3>
-                    <p className="text-sm text-gray-400 mt-2">Coming soon</p>
+                  <div className="w-2/3 bg-white rounded-2xl shadow-sm border border-blue-200 h-full flex flex-col">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-2 bg-blue-50 rounded-t-2xl">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-blue-700">
+                          {selectedDocCategory
+                            ? [
+                                { id: 'consultation', name: 'Consultation' },
+                                { id: 'administrative', name: 'Administrative Documents' },
+                                { id: 'data-collection', name: 'Data Collection Sheets' },
+                                { id: 'surgical', name: 'Surgical Day Workflow' },
+                                { id: 'post-surgery', name: 'Post Surgery Workflow' },
+                                { id: 'lab', name: 'Lab' },
+                                { id: 'report-cards', name: 'Report Cards' },
+                                { id: 'miscellaneous', name: 'Miscellaneous' },
+                              ].find(c => c.id === selectedDocCategory)?.name + ' Documents'
+                            : 'Documents'
+                          }
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {selectedDocCategory !== 'consultation' && selectedDocCategory !== 'lab' && selectedDocCategory !== 'report-cards' && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-9 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-100 border-blue-300 hover:border-blue-400"
+                              onClick={() => {
+                                if (!selectedDocCategory) {
+                                  toast({ title: "Please select a category first", variant: "destructive" });
+                                  return;
+                                }
+                                setShowUploadDialog(true);
+                              }}
+                            >
+                              <Upload className="h-4 w-4 mr-1" />
+                              Upload
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-9 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-100 border-blue-300 hover:border-blue-400"
+                              onClick={() => {
+                                if (!selectedDocCategory) {
+                                  toast({ title: "Please select a category first", variant: "destructive" });
+                                  return;
+                                }
+                                setShowCaptureDialog(true);
+                              }}
+                            >
+                              <Camera className="h-4 w-4 mr-1" />
+                              Capture
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="border-b border-blue-100" />
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-4">
+                      {!selectedDocCategory ? (
+                        <div className="h-full flex flex-col items-center justify-center">
+                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4">
+                            <FolderOpen className="h-10 w-10 text-blue-400" />
+                          </div>
+                          <p className="text-base font-medium text-gray-500">Select a category</p>
+                          <p className="text-sm text-gray-400 mt-1">Choose a category from the left to view documents</p>
+                        </div>
+                      ) : selectedDocCategory === 'consultation' ? (
+                        // Show consultations list
+                        loadingConsultations ? (
+                          <div className="h-full flex flex-col items-center justify-center">
+                            <div className="h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+                            <p className="text-sm text-gray-500">Loading consultations...</p>
+                          </div>
+                        ) : patientConsultations.length === 0 ? (
+                          <div className="h-full flex flex-col items-center justify-center">
+                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mb-4">
+                              <Stethoscope className="h-10 w-10 text-gray-300" />
+                            </div>
+                            <p className="text-base font-medium text-gray-500">No consultations yet</p>
+                            <p className="text-sm text-gray-400 mt-1">Consultations will appear here</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {patientConsultations.map((consultation) => (
+                              <div
+                                key={consultation.id}
+                                className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-start gap-3">
+                                    <div className={`p-2.5 rounded-xl ${
+                                      consultation.consultation_status === 'completed' ? 'bg-green-100' :
+                                      consultation.consultation_status === 'in_progress' ? 'bg-blue-100' :
+                                      'bg-gray-100'
+                                    }`}>
+                                      <Stethoscope className={`h-5 w-5 ${
+                                        consultation.consultation_status === 'completed' ? 'text-green-600' :
+                                        consultation.consultation_status === 'in_progress' ? 'text-blue-600' :
+                                        'text-gray-600'
+                                      }`} />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-sm font-semibold text-gray-900">
+                                        Consultation - {new Date(consultation.consultation_date).toLocaleDateString('en-US', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric'
+                                        })}
+                                      </h4>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                          consultation.consultation_status === 'completed' ? 'bg-green-100 text-green-700' :
+                                          consultation.consultation_status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                          consultation.consultation_status === 'scheduled' ? 'bg-purple-100 text-purple-700' :
+                                          'bg-gray-100 text-gray-700'
+                                        }`}>
+                                          {consultation.consultation_status === 'completed' ? 'Completed' :
+                                           consultation.consultation_status === 'in_progress' ? 'In Progress' :
+                                           consultation.consultation_status === 'scheduled' ? 'Scheduled' :
+                                           consultation.consultation_status?.charAt(0).toUpperCase() + consultation.consultation_status?.slice(1) || 'Draft'}
+                                        </span>
+                                        {consultation.treatment_decision && (
+                                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                            consultation.treatment_decision === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
+                                            consultation.treatment_decision === 'not-accepted' ? 'bg-red-100 text-red-700' :
+                                            'bg-yellow-100 text-yellow-700'
+                                          }`}>
+                                            {consultation.treatment_decision === 'accepted' ? 'Accepted' :
+                                             consultation.treatment_decision === 'not-accepted' ? 'Not Accepted' :
+                                             'Follow-up Required'}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {consultation.clinical_assessment && (
+                                        <p className="text-xs text-gray-500 mt-2 line-clamp-2">{consultation.clinical_assessment}</p>
+                                      )}
+                                      {consultation.treatment_cost && (
+                                        <p className="text-xs text-gray-600 mt-1">
+                                          <span className="font-medium">Treatment Cost:</span> ${consultation.treatment_cost.toLocaleString()}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0"
+                                      onClick={() => {
+                                        // Navigate to consultation or open details
+                                        toast({ title: "View consultation details coming soon" });
+                                      }}
+                                    >
+                                      <Eye className="h-4 w-4 text-gray-500" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      ) : selectedDocCategory === 'administrative' ? (
+                        // Show administrative forms list - only completed/submitted forms (exclude draft and void)
+                        (() => {
+                          const completedPackets = patientPackets.filter(p => p.form_status !== 'draft');
+                          const completedFinancial = financialAgreements.filter(f => f.status !== 'draft' && f.status !== 'void');
+                          const completedConsent = consentForms.filter(f => f.status !== 'draft' && f.status !== 'void');
+                          const completedMedical = medicalRecordsReleaseForms.filter(f => f.status !== 'draft' && f.status !== 'void');
+                          const completedSmoking = informedConsentSmokingForms.filter(f => f.status !== 'draft' && f.status !== 'void');
+                          const completedFinalDesign = finalDesignApprovalForms.filter(f => f.status !== 'draft' && f.status !== 'void');
+                          const completedThankYou = thankYouPreSurgeryForms.filter(f => f.status !== 'draft' && f.status !== 'void');
+                          const completedThreeYear = threeYearCarePackageForms.filter(f => f.status !== 'draft' && f.status !== 'void');
+                          const completedFiveYear = fiveYearWarrantyForms.filter(f => f.status !== 'draft' && f.status !== 'void');
+                          const completedPartial = partialPaymentAgreementForms.filter(f => f.status !== 'draft' && f.status !== 'void');
+                          const completedTreatment = treatmentPlanForms.filter(f => f.form_status === 'completed');
+                          const uploadedDocs = patientDocuments.filter(d => d.category === 'administrative');
+
+                          const totalCompleted = completedPackets.length + completedFinancial.length + completedConsent.length +
+                            completedMedical.length + completedSmoking.length + completedFinalDesign.length +
+                            completedThankYou.length + completedThreeYear.length + completedFiveYear.length +
+                            completedPartial.length + completedTreatment.length + uploadedDocs.length;
+
+                          const isLoading = loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms ||
+                            loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms ||
+                            loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms || loadingFiveYearWarrantyForms ||
+                            loadingPartialPaymentAgreementForms || loadingTreatmentPlanForms;
+
+                          return isLoading ? (
+                            <div className="h-full flex flex-col items-center justify-center">
+                              <div className="h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+                              <p className="text-sm text-gray-500">Loading administrative forms...</p>
+                            </div>
+                          ) : totalCompleted === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center">
+                              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mb-4">
+                                <FileText className="h-10 w-10 text-gray-300" />
+                              </div>
+                              <p className="text-base font-medium text-gray-500">No completed forms yet</p>
+                              <p className="text-sm text-gray-400 mt-1">Submitted forms will appear here</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {/* Patient Packets */}
+                              {completedPackets.map((packet) => (
+                                <div
+                                  key={packet.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewPatientPacket(packet)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">New Patient Packet</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                            packet.form_status === 'completed' ? 'bg-green-100 text-green-700' :
+                                            packet.form_status === 'reviewed' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                                          }`}>
+                                            {packet.form_status === 'completed' ? 'Completed' : packet.form_status === 'reviewed' ? 'Reviewed' : 'Submitted'}
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(packet.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const formData = convertDatabaseToFormData(packet);
+                                            await generateNewPatientPacketPdf(formData);
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Financial Agreements */}
+                              {completedFinancial.map((agreement) => (
+                                <div
+                                  key={agreement.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewFinancialAgreement(agreement)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Financial Agreement</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(agreement.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const pdfData = formatFinancialAgreementForPdf(agreement);
+                                            await generateFinancialAgreementPdf(pdfData);
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            console.error('Error exporting Financial Agreement PDF:', error);
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Consent Forms */}
+                              {completedConsent.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewConsentForm(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Consent Full Arch</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const displayData = formatConsentFormForDisplay(form);
+                                            await generateConsentFullArchPdf(displayData);
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Medical Records Release Forms */}
+                              {completedMedical.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewMedicalRecordsReleaseForm(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Medical Records Release</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const displayData = formatMedicalRecordsReleaseFormForDisplay(form);
+                                            await generateMedicalRecordsReleasePdf(displayData);
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Informed Consent Smoking Forms */}
+                              {completedSmoking.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewInformedConsentSmokingForm(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Informed Consent - Nicotine Use</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const displayData = formatInformedConsentSmokingFormForDisplay(form);
+                                            await generateInformedConsentSmokingPdf(displayData);
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Final Design Approval Forms */}
+                              {completedFinalDesign.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewFinalDesignApprovalForm(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Final Design Approval</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const displayData = formatFinalDesignApprovalFormForDisplay(form);
+                                            await generateFinalDesignApprovalPdf(displayData);
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Thank You Pre-Surgery Forms */}
+                              {completedThankYou.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewThankYouPreSurgeryForm(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Thank You Pre-Surgery</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const displayData = formatThankYouPreSurgeryFormForDisplay(form);
+                                            await generateThankYouPreSurgeryPdf(displayData);
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* 3-Year Care Package Forms */}
+                              {completedThreeYear.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewThreeYearCarePackageForm(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">3-Year Care Package</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const displayData = formatThreeYearCarePackageFormForDisplay(form);
+                                            await generateThreeYearCarePackagePdf(displayData);
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* 5-Year Warranty Forms */}
+                              {completedFiveYear.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewFiveYearWarrantyForm(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">5-Year Warranty</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toast({ title: "Coming Soon", description: "PDF export for 5-Year Warranty forms will be available soon!" });
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF (Coming Soon)"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-400" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Partial Payment Agreement Forms */}
+                              {completedPartial.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewPartialPaymentAgreementForm(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Partial Payment Agreement</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            const formattedData = formatPartialPaymentAgreementFormForDisplay(form);
+                                            await generatePartialPaymentAgreementPdf(formattedData);
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Treatment Plan Forms */}
+                              {completedTreatment.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewTreatmentPlanForm(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-green-100">
+                                        <FileText className="h-5 w-5 text-green-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Treatment Plan</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">Completed</span>
+                                          <span className="text-xs text-gray-400">{new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            await generateTreatmentPlanPDF({
+                                              ...form,
+                                              patientName: patient?.first_name && patient?.last_name ? `${patient.first_name} ${patient.last_name}` : 'Unknown Patient',
+                                              patientDOB: patient?.date_of_birth || '',
+                                            });
+                                            toast({ title: "PDF exported successfully" });
+                                          } catch (error) {
+                                            toast({ title: "Failed to export PDF", variant: "destructive" });
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Uploaded Documents */}
+                              {uploadedDocs.map((doc) => {
+                                const isImage = doc.file_type.startsWith('image/');
+                                const isPdf = doc.file_type === 'application/pdf';
+                                const getFileTypeLabel = () => {
+                                  if (isImage) return 'Image';
+                                  if (isPdf) return 'PDF';
+                                  if (doc.file_type.includes('word') || doc.file_type.includes('document')) return 'Document';
+                                  if (doc.file_type.includes('sheet') || doc.file_type.includes('excel')) return 'Spreadsheet';
+                                  return doc.file_type.split('/')[1]?.toUpperCase() || 'File';
+                                };
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex items-start gap-3">
+                                        <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-orange-100'}`}>
+                                          {isImage ? (
+                                            <FileImage className="h-5 w-5 text-purple-600" />
+                                          ) : isPdf ? (
+                                            <FileText className="h-5 w-5 text-red-600" />
+                                          ) : (
+                                            <Upload className="h-5 w-5 text-orange-600" />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-semibold text-gray-900">{doc.title || doc.file_name}</h4>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
+                                              Uploaded
+                                            </span>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                              isImage ? 'bg-purple-100 text-purple-700' :
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                              'bg-gray-100 text-gray-700'
+                                            }`}>
+                                              {getFileTypeLabel()}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                              {doc.document_date ? new Date(doc.document_date).toLocaleDateString() : new Date(doc.created_at).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {patientDocumentService.formatFileSize(doc.file_size)}
+                                            {doc.uploaded_by && ` • By: ${doc.uploaded_by}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {/* Preview button */}
+                                        <button
+                                          onClick={() => {
+                                            if (isImage || isPdf) {
+                                              setPreviewFileData(doc);
+                                              setShowFilePreviewDialog(true);
+                                            } else {
+                                              toast({ title: "Preview not available for this file type" });
+                                            }
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Preview"
+                                        >
+                                          <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                        </button>
+                                        {/* Download button */}
+                                        <button
+                                          onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = doc.file_url;
+                                            link.download = doc.file_name;
+                                            link.target = '_blank';
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Download"
+                                        >
+                                          <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                        </button>
+                                        {/* Delete button - only for uploaded files */}
+                                        <button
+                                          onClick={() => {
+                                            setDocumentToDelete(doc);
+                                            setShowDeleteConfirmDialog(true);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      ) : selectedDocCategory === 'data-collection' ? (
+                        // Show data collection sheets and uploaded documents
+                        (() => {
+                          const uploadedDataCollectionDocs = patientDocuments.filter(d => d.category === 'data-collection');
+                          const totalItems = dataCollectionSheets.length + uploadedDataCollectionDocs.length;
+
+                          if (totalItems === 0) {
+                            return (
+                              <div className="h-full flex flex-col items-center justify-center">
+                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4">
+                                  <ClipboardCheck className="h-10 w-10 text-blue-300" />
+                                </div>
+                                <p className="text-base font-medium text-gray-500">No data collection sheets yet</p>
+                                <p className="text-sm text-gray-400 mt-1">Data collection sheets will appear here</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-4">
+                              {dataCollectionSheets.map((sheet) => (
+                                <div
+                                  key={sheet.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewDataCollectionSheet(sheet)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-blue-100">
+                                        <ClipboardCheck className="h-5 w-5 text-blue-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Data Collection Sheet</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{sheet.collection_date ? new Date(sheet.collection_date).toLocaleDateString() : 'No date'}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">
+                                          {sheet.reasons_for_collection?.[0] || 'Data Collection'}
+                                          {sheet.reasons_for_collection?.length > 1 && ` +${sheet.reasons_for_collection.length - 1} more`}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            await generateDataCollectionPdf({
+                                              patientName: sheet.patient_name,
+                                              collectionDate: sheet.collection_date,
+                                              reasonsForCollection: sheet.reasons_for_collection || [],
+                                              customReason: sheet.custom_reason,
+                                              currentUpperAppliance: sheet.current_upper_appliance,
+                                              currentLowerAppliance: sheet.current_lower_appliance,
+                                              preSurgicalPictures: sheet.pre_surgical_pictures,
+                                              surgicalPictures: sheet.surgical_pictures,
+                                              followUpPictures: sheet.follow_up_pictures,
+                                              fracturedAppliancePictures: sheet.fractured_appliance_pictures,
+                                              cbctTaken: sheet.cbct_taken,
+                                              preSurgicalJawRecordsUpper: sheet.pre_surgical_jaw_records_upper,
+                                              preSurgicalJawRecordsLower: sheet.pre_surgical_jaw_records_lower,
+                                              facialScan: sheet.facial_scan,
+                                              jawRecordsUpper: sheet.jaw_records_upper,
+                                              jawRecordsLower: sheet.jaw_records_lower,
+                                              tissueScanUpper: sheet.tissue_scan_upper,
+                                              tissueScanLower: sheet.tissue_scan_lower,
+                                              photogrammetryUpper: sheet.photogrammetry_upper,
+                                              photogrammetryLower: sheet.photogrammetry_lower,
+                                              dcRefScanUpper: sheet.dc_ref_scan_upper,
+                                              dcRefScanLower: sheet.dc_ref_scan_lower,
+                                              appliance360Upper: sheet.appliance_360_upper,
+                                              appliance360Lower: sheet.appliance_360_lower,
+                                              additionalNotes: sheet.additional_notes
+                                            });
+                                          } catch (error) {
+                                            console.error('Error generating PDF:', error);
+                                          }
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Uploaded Documents for Data Collection */}
+                              {uploadedDataCollectionDocs.map((doc) => {
+                                const isImage = doc.file_type.startsWith('image/');
+                                const isPdf = doc.file_type === 'application/pdf';
+                                const getFileTypeLabel = () => {
+                                  if (isImage) return 'Image';
+                                  if (isPdf) return 'PDF';
+                                  if (doc.file_type.includes('word') || doc.file_type.includes('document')) return 'Document';
+                                  if (doc.file_type.includes('sheet') || doc.file_type.includes('excel')) return 'Spreadsheet';
+                                  return doc.file_type.split('/')[1]?.toUpperCase() || 'File';
+                                };
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex items-start gap-3">
+                                        <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-orange-100'}`}>
+                                          {isImage ? (
+                                            <FileImage className="h-5 w-5 text-purple-600" />
+                                          ) : isPdf ? (
+                                            <FileText className="h-5 w-5 text-red-600" />
+                                          ) : (
+                                            <Upload className="h-5 w-5 text-orange-600" />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-semibold text-gray-900">{doc.title || doc.file_name}</h4>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
+                                              Uploaded
+                                            </span>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                              isImage ? 'bg-purple-100 text-purple-700' :
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                              'bg-gray-100 text-gray-700'
+                                            }`}>
+                                              {getFileTypeLabel()}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                              {doc.document_date ? new Date(doc.document_date).toLocaleDateString() : new Date(doc.created_at).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {patientDocumentService.formatFileSize(doc.file_size)}
+                                            {doc.uploaded_by && ` • By: ${doc.uploaded_by}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {/* Preview button */}
+                                        <button
+                                          onClick={() => {
+                                            if (isImage || isPdf) {
+                                              setPreviewFileData(doc);
+                                              setShowFilePreviewDialog(true);
+                                            } else {
+                                              toast({ title: "Preview not available for this file type" });
+                                            }
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Preview"
+                                        >
+                                          <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                        </button>
+                                        {/* Download button */}
+                                        <button
+                                          onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = doc.file_url;
+                                            link.download = doc.file_name;
+                                            link.target = '_blank';
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Download"
+                                        >
+                                          <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                        </button>
+                                        {/* Delete button - only for uploaded files */}
+                                        <button
+                                          onClick={() => {
+                                            setDocumentToDelete(doc);
+                                            setShowDeleteConfirmDialog(true);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      ) : selectedDocCategory === 'surgical' ? (
+                        // Show surgical day workflow forms - IV Sedation and Surgical Recall Sheets
+                        (() => {
+                          const completedIVSedation = ivSedationSheets.filter(f => f.status === 'completed');
+                          const completedSurgicalRecall = surgicalRecallSheets.filter(s => s.status === 'completed');
+                          const uploadedSurgicalDocs = patientDocuments.filter(d => d.category === 'surgical');
+                          const totalSurgicalForms = completedIVSedation.length + completedSurgicalRecall.length + uploadedSurgicalDocs.length;
+
+                          if (totalSurgicalForms === 0) {
+                            return (
+                              <div className="h-full flex flex-col items-center justify-center">
+                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4">
+                                  <Syringe className="h-10 w-10 text-purple-300" />
+                                </div>
+                                <p className="text-base font-medium text-gray-500">No completed surgical forms yet</p>
+                                <p className="text-sm text-gray-400 mt-1">Completed IV Sedation forms and Surgical Recall sheets will appear here</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-4">
+                              {/* IV Sedation Forms */}
+                              {completedIVSedation.map((form) => (
+                                <div
+                                  key={form.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewIVSedationSheet(form)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-purple-100">
+                                        <Syringe className="h-5 w-5 text-purple-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">IV Sedation Form</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(form.sedation_date || form.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          await handleDownloadIVSedationPDF(form);
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Surgical Recall Sheets */}
+                              {completedSurgicalRecall.map((sheet) => (
+                                <div
+                                  key={sheet.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                  onClick={() => handleViewSurgicalRecallSheet(sheet)}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className="p-2.5 rounded-xl bg-blue-100">
+                                        <ClipboardList className="h-5 w-5 text-blue-600" />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">Surgical Recall Sheet</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                            Completed
+                                          </span>
+                                          <span className="text-xs text-gray-400">{new Date(sheet.surgery_date || sheet.created_at).toLocaleDateString()}</span>
+                                          {sheet.arch_type && (
+                                            <span className="text-xs text-gray-400">• {sheet.arch_type === 'dual' ? 'Dual Arch' : sheet.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          await handleDownloadSurgicalRecallPdf(sheet);
+                                        }}
+                                        className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="Export PDF"
+                                      >
+                                        <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                      </button>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Uploaded Surgical Documents */}
+                              {uploadedSurgicalDocs.map((doc) => {
+                                const isImage = doc.file_type.startsWith('image/');
+                                const isPdf = doc.file_type === 'application/pdf';
+                                const getFileTypeLabel = () => {
+                                  if (isImage) return 'Image';
+                                  if (isPdf) return 'PDF';
+                                  if (doc.file_type.includes('word') || doc.file_type.includes('document')) return 'Document';
+                                  if (doc.file_type.includes('sheet') || doc.file_type.includes('excel')) return 'Spreadsheet';
+                                  return doc.file_type.split('/')[1]?.toUpperCase() || 'File';
+                                };
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex items-start gap-3">
+                                        <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-orange-100'}`}>
+                                          {isImage ? (
+                                            <FileImage className="h-5 w-5 text-purple-600" />
+                                          ) : isPdf ? (
+                                            <FileText className="h-5 w-5 text-red-600" />
+                                          ) : (
+                                            <Upload className="h-5 w-5 text-orange-600" />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-semibold text-gray-900">{doc.title || doc.file_name}</h4>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
+                                              Uploaded
+                                            </span>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                              isImage ? 'bg-purple-100 text-purple-700' :
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                              'bg-gray-100 text-gray-700'
+                                            }`}>
+                                              {getFileTypeLabel()}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                              {doc.document_date ? new Date(doc.document_date).toLocaleDateString() : new Date(doc.created_at).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {patientDocumentService.formatFileSize(doc.file_size)}
+                                            {doc.uploaded_by && ` • By: ${doc.uploaded_by}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {/* Preview button */}
+                                        <button
+                                          onClick={() => {
+                                            if (isImage || isPdf) {
+                                              setPreviewFileData(doc);
+                                              setShowFilePreviewDialog(true);
+                                            } else {
+                                              toast({ title: "Preview not available for this file type" });
+                                            }
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Preview"
+                                        >
+                                          <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                        </button>
+                                        {/* Download button */}
+                                        <button
+                                          onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = doc.file_url;
+                                            link.download = doc.file_name;
+                                            link.target = '_blank';
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Download"
+                                        >
+                                          <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                        </button>
+                                        {/* Delete button - only for uploaded files */}
+                                        <button
+                                          onClick={() => {
+                                            setDocumentToDelete(doc);
+                                            setShowDeleteConfirmDialog(true);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      ) : selectedDocCategory === 'lab' ? (
+                        // Show lab scripts
+                        (() => {
+                          const completedLabScripts = labScripts.filter(s => s.status === 'completed');
+
+                          if (completedLabScripts.length === 0) {
+                            return (
+                              <div className="h-full flex flex-col items-center justify-center">
+                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center mb-4">
+                                  <FlaskConical className="h-10 w-10 text-indigo-300" />
+                                </div>
+                                <p className="text-base font-medium text-gray-500">No completed lab scripts yet</p>
+                                <p className="text-sm text-gray-400 mt-1">Completed lab scripts will appear here</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-4">
+                              {completedLabScripts.map((script) => {
+                                const upper = script.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
+                                const lower = script.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A';
+
+                                return (
+                                  <div
+                                    key={script.id}
+                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                    onClick={() => handleViewLabScript(script)}
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex items-start gap-3">
+                                        <div className="p-2.5 rounded-xl bg-indigo-100">
+                                          <FlaskConical className="h-5 w-5 text-indigo-600" />
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-semibold text-gray-900">Lab Script</h4>
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                              Completed
+                                            </span>
+                                            <span className="text-xs text-gray-400">{script.requested_date ? new Date(script.requested_date).toLocaleDateString() : 'No date'}</span>
+                                            <span className="text-xs text-gray-400">• {script.arch_type === 'dual' ? 'Dual Arch' : script.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}</span>
+                                          </div>
+                                          <p className="text-xs text-gray-500 mt-1">Upper: {upper} | Lower: {lower}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleViewLabScript(script);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Preview"
+                                        >
+                                          <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      ) : selectedDocCategory === 'report-cards' ? (
+                        // Show report cards with completed lab and/or clinical reports
+                        (() => {
+                          const completedReportCards = patientReportCards.filter(card =>
+                            card.lab_report_status === 'completed' || card.clinical_report_status === 'completed'
+                          );
+
+                          if (completedReportCards.length === 0) {
+                            return (
+                              <div className="h-full flex flex-col items-center justify-center">
+                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center mb-4">
+                                  <ClipboardList className="h-10 w-10 text-purple-300" />
+                                </div>
+                                <p className="text-base font-medium text-gray-500">No completed report cards yet</p>
+                                <p className="text-sm text-gray-400 mt-1">Completed lab and clinical reports will appear here</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-4">
+                              {completedReportCards.map((card) => {
+                                const upperAppliance = (card as any).lab_scripts?.upper_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || '';
+                                const lowerAppliance = (card as any).lab_scripts?.lower_appliance_type?.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || '';
+                                const hasBothReports = card.lab_report_status === 'completed' && card.clinical_report_status === 'completed';
+                                const hasOnlyLabReport = card.lab_report_status === 'completed' && card.clinical_report_status !== 'completed';
+                                const hasOnlyClinicalReport = card.clinical_report_status === 'completed' && card.lab_report_status !== 'completed';
+
+                                return (
+                                  <div key={card.id}>
+                                    {/* Combined Report Card - Both Lab and Clinical completed */}
+                                    {hasBothReports && (
+                                      <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200">
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex items-start gap-3">
+                                            <div className="p-2.5 rounded-xl bg-indigo-100">
+                                              <ClipboardList className="h-5 w-5 text-indigo-600" />
+                                            </div>
+                                            <div>
+                                              <h4 className="text-sm font-semibold text-gray-900">Report Card</h4>
+                                              <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                                  Completed
+                                                </span>
+                                                <span className="text-xs text-gray-400">{card.created_at ? new Date(card.created_at).toLocaleDateString() : 'No date'}</span>
+                                              </div>
+                                              {(upperAppliance || lowerAppliance) && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                  {upperAppliance && `Upper: ${upperAppliance}`}
+                                                  {upperAppliance && lowerAppliance && ' | '}
+                                                  {lowerAppliance && `Lower: ${lowerAppliance}`}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={() => handleViewLabReport(card)}
+                                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                                              title="View Lab Report"
+                                            >
+                                              <FileText className="h-3.5 w-3.5" />
+                                              Lab Report
+                                            </button>
+                                            <button
+                                              onClick={() => handleViewClinicalReport(card)}
+                                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                                              title="View Clinical Report"
+                                            >
+                                              <Activity className="h-3.5 w-3.5" />
+                                              Clinical Report
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Lab Report Card Only */}
+                                    {hasOnlyLabReport && (
+                                      <div
+                                        className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                        onClick={() => handleViewLabReport(card)}
+                                      >
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex items-start gap-3">
+                                            <div className="p-2.5 rounded-xl bg-green-100">
+                                              <FileText className="h-5 w-5 text-green-600" />
+                                            </div>
+                                            <div>
+                                              <h4 className="text-sm font-semibold text-gray-900">Lab Report Card</h4>
+                                              <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                                  Completed
+                                                </span>
+                                                <span className="text-xs text-gray-400">{card.created_at ? new Date(card.created_at).toLocaleDateString() : 'No date'}</span>
+                                              </div>
+                                              {(upperAppliance || lowerAppliance) && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                  {upperAppliance && `Upper: ${upperAppliance}`}
+                                                  {upperAppliance && lowerAppliance && ' | '}
+                                                  {lowerAppliance && `Lower: ${lowerAppliance}`}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleViewLabReport(card);
+                                              }}
+                                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                              title="Preview Lab Report"
+                                            >
+                                              <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Clinical Report Card Only */}
+                                    {hasOnlyClinicalReport && (
+                                      <div
+                                        className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                        onClick={() => handleViewClinicalReport(card)}
+                                      >
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex items-start gap-3">
+                                            <div className="p-2.5 rounded-xl bg-purple-100">
+                                              <Activity className="h-5 w-5 text-purple-600" />
+                                            </div>
+                                            <div>
+                                              <h4 className="text-sm font-semibold text-gray-900">Clinical Report Card</h4>
+                                              <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                                                  Completed
+                                                </span>
+                                                <span className="text-xs text-gray-400">{card.created_at ? new Date(card.created_at).toLocaleDateString() : 'No date'}</span>
+                                              </div>
+                                              {(upperAppliance || lowerAppliance) && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                  {upperAppliance && `Upper: ${upperAppliance}`}
+                                                  {upperAppliance && lowerAppliance && ' | '}
+                                                  {lowerAppliance && `Lower: ${lowerAppliance}`}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleViewClinicalReport(card);
+                                              }}
+                                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                              title="Preview Clinical Report"
+                                            >
+                                              <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      ) : selectedDocCategory === 'post-surgery' ? (
+                        // Show post surgery workflow documents
+                        (() => {
+                          const uploadedPostSurgeryDocs = patientDocuments.filter(d => d.category === 'post-surgery');
+
+                          if (uploadedPostSurgeryDocs.length === 0) {
+                            return (
+                              <div className="h-full flex flex-col items-center justify-center">
+                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center mb-4">
+                                  <HeartPulse className="h-10 w-10 text-pink-300" />
+                                </div>
+                                <p className="text-base font-medium text-gray-500">No post surgery documents yet</p>
+                                <p className="text-sm text-gray-400 mt-1">Upload post surgery workflow documents to get started</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-4">
+                              {uploadedPostSurgeryDocs.map((doc) => {
+                                const isImage = doc.file_type.startsWith('image/');
+                                const isPdf = doc.file_type === 'application/pdf';
+                                const getFileTypeLabel = () => {
+                                  if (isImage) return 'Image';
+                                  if (isPdf) return 'PDF';
+                                  if (doc.file_type.includes('word') || doc.file_type.includes('document')) return 'Document';
+                                  if (doc.file_type.includes('sheet') || doc.file_type.includes('excel')) return 'Spreadsheet';
+                                  return doc.file_type.split('/')[1]?.toUpperCase() || 'File';
+                                };
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex items-start gap-3">
+                                        <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-pink-100'}`}>
+                                          {isImage ? (
+                                            <FileImage className="h-5 w-5 text-purple-600" />
+                                          ) : isPdf ? (
+                                            <FileText className="h-5 w-5 text-red-600" />
+                                          ) : (
+                                            <HeartPulse className="h-5 w-5 text-pink-600" />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-semibold text-gray-900">{doc.title || doc.file_name}</h4>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
+                                              Uploaded
+                                            </span>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                              isImage ? 'bg-purple-100 text-purple-700' :
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                              'bg-gray-100 text-gray-700'
+                                            }`}>
+                                              {getFileTypeLabel()}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                              {doc.document_date ? new Date(doc.document_date).toLocaleDateString() : new Date(doc.created_at).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {patientDocumentService.formatFileSize(doc.file_size)}
+                                            {doc.uploaded_by && ` • By: ${doc.uploaded_by}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => {
+                                            if (isImage || isPdf) {
+                                              setPreviewFileData(doc);
+                                              setShowFilePreviewDialog(true);
+                                            } else {
+                                              toast({ title: "Preview not available for this file type" });
+                                            }
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Preview"
+                                        >
+                                          <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = doc.file_url;
+                                            link.download = doc.file_name;
+                                            link.target = '_blank';
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Download"
+                                        >
+                                          <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setDocumentToDelete(doc);
+                                            setShowDeleteConfirmDialog(true);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      ) : selectedDocCategory === 'miscellaneous' ? (
+                        // Show miscellaneous documents
+                        (() => {
+                          const uploadedMiscDocs = patientDocuments.filter(d => d.category === 'miscellaneous');
+
+                          if (uploadedMiscDocs.length === 0) {
+                            return (
+                              <div className="h-full flex flex-col items-center justify-center">
+                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-50 to-amber-100 flex items-center justify-center mb-4">
+                                  <FolderOpen className="h-10 w-10 text-amber-300" />
+                                </div>
+                                <p className="text-base font-medium text-gray-500">No miscellaneous documents yet</p>
+                                <p className="text-sm text-gray-400 mt-1">Upload miscellaneous documents to get started</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-4">
+                              {uploadedMiscDocs.map((doc) => {
+                                const isImage = doc.file_type.startsWith('image/');
+                                const isPdf = doc.file_type === 'application/pdf';
+                                const getFileTypeLabel = () => {
+                                  if (isImage) return 'Image';
+                                  if (isPdf) return 'PDF';
+                                  if (doc.file_type.includes('word') || doc.file_type.includes('document')) return 'Document';
+                                  if (doc.file_type.includes('sheet') || doc.file_type.includes('excel')) return 'Spreadsheet';
+                                  return doc.file_type.split('/')[1]?.toUpperCase() || 'File';
+                                };
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex items-start gap-3">
+                                        <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-amber-100'}`}>
+                                          {isImage ? (
+                                            <FileImage className="h-5 w-5 text-purple-600" />
+                                          ) : isPdf ? (
+                                            <FileText className="h-5 w-5 text-red-600" />
+                                          ) : (
+                                            <FolderOpen className="h-5 w-5 text-amber-600" />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-semibold text-gray-900">{doc.title || doc.file_name}</h4>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
+                                              Uploaded
+                                            </span>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                              isImage ? 'bg-purple-100 text-purple-700' :
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                              'bg-gray-100 text-gray-700'
+                                            }`}>
+                                              {getFileTypeLabel()}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                              {doc.document_date ? new Date(doc.document_date).toLocaleDateString() : new Date(doc.created_at).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {patientDocumentService.formatFileSize(doc.file_size)}
+                                            {doc.uploaded_by && ` • By: ${doc.uploaded_by}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => {
+                                            if (isImage || isPdf) {
+                                              setPreviewFileData(doc);
+                                              setShowFilePreviewDialog(true);
+                                            } else {
+                                              toast({ title: "Preview not available for this file type" });
+                                            }
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Preview"
+                                        >
+                                          <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = doc.file_url;
+                                            link.download = doc.file_name;
+                                            link.target = '_blank';
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Download"
+                                        >
+                                          <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setDocumentToDelete(doc);
+                                            setShowDeleteConfirmDialog(true);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
+                      ) : patientDocuments.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center">
+                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mb-4">
+                            <FileText className="h-10 w-10 text-gray-300" />
+                          </div>
+                          <p className="text-base font-medium text-gray-500">No documents yet</p>
+                          <p className="text-sm text-gray-400 mt-1">Upload or capture documents to get started</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {patientDocuments.map((doc) => {
+                            const isImage = doc.file_type.startsWith('image/');
+                            return (
+                              <div
+                                key={doc.id}
+                                className="group bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-lg hover:border-blue-200 transition-all duration-200"
+                              >
+                                {/* Thumbnail/Preview */}
+                                <div className="relative h-32 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+                                  {isImage ? (
+                                    <img src={doc.file_url} alt={doc.file_name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="flex flex-col items-center">
+                                      <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg">
+                                        <FileText className="h-6 w-6 text-white" />
+                                      </div>
+                                      <span className="mt-2 text-xs font-medium text-gray-500 uppercase">
+                                        {doc.file_name.split('.').pop()}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {/* Hover overlay with actions */}
+                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                    <Button
+                                      size="sm"
+                                      className="h-9 px-4 bg-white text-gray-900 hover:bg-gray-100"
+                                      onClick={() => window.open(doc.file_url, '_blank')}
+                                    >
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      View
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      className="h-9 px-4"
+                                      onClick={async () => {
+                                        try {
+                                          await patientDocumentService.deleteDocument(doc);
+                                          setPatientDocuments(prev => prev.filter(d => d.id !== doc.id));
+                                          toast({ title: "Document deleted" });
+                                        } catch (error) {
+                                          toast({ title: "Error deleting document", variant: "destructive" });
+                                        }
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                {/* Info */}
+                                <div className="p-3">
+                                  <p className="text-sm font-medium text-gray-900 truncate">{doc.title || doc.file_name}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs text-gray-400">{patientDocumentService.formatFileSize(doc.file_size)}</span>
+                                    <span className="text-gray-300">•</span>
+                                    <span className="text-xs text-gray-400">{doc.document_date ? new Date(doc.document_date).toLocaleDateString() : new Date(doc.created_at).toLocaleDateString()}</span>
+                                  </div>
+                                  {doc.description && (
+                                    <p className="text-xs text-gray-500 mt-2 line-clamp-1">{doc.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </TabsContent>
+
+            {/* Upload Document Dialog */}
+            <Dialog open={showUploadDialog} onOpenChange={(open) => {
+              setShowUploadDialog(open);
+              if (!open) {
+                setSelectedFile(null);
+                setDocTitle('');
+                setDocDescription('');
+                setDocDate(new Date().toISOString().split('T')[0]);
+                setDragActive(false);
+                setDocType('');
+                setCustomDocType('');
+              }
+            }}>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Upload className="h-5 w-5 text-blue-600" />
+                    Upload Document
+                  </DialogTitle>
+                  <p className="text-gray-500 text-sm">Add a document to this category</p>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {/* Drag & Drop Zone */}
+                  <div
+                    className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
+                      dragActive
+                        ? 'border-blue-500 bg-blue-50'
+                        : selectedFile
+                          ? 'border-green-300 bg-green-50'
+                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                    }`}
+                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                    onDragLeave={() => setDragActive(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragActive(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) setSelectedFile(file);
+                    }}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setSelectedFile(file);
+                      }}
+                    />
+                    {selectedFile ? (
+                      <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-2">
+                          <CheckCircle className="h-6 w-6 text-green-500" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+                        <p className="text-xs text-gray-500 mt-1">{patientDocumentService.formatFileSize(selectedFile.size)}</p>
+                        <button
+                          className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                          onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                        >
+                          Choose a different file
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2">
+                          <Upload className="h-6 w-6 text-blue-500" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-700">Drag & drop your file here</p>
+                        <p className="text-xs text-gray-400 mt-1">or click to browse</p>
+                      </div>
+                    )}
+                  </div>
+                  {/* Document Type */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Document Type</Label>
+                    {selectedDocCategory === 'administrative' ? (
+                      <div className="space-y-2">
+                        <select
+                          value={docType}
+                          onChange={(e) => {
+                            setDocType(e.target.value);
+                            if (e.target.value !== 'Custom') {
+                              setDocTitle(e.target.value);
+                              setCustomDocType('');
+                            } else {
+                              setDocTitle('');
+                            }
+                          }}
+                          className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select document type...</option>
+                          {adminDocumentTypes.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                        {docType === 'Custom' && (
+                          <Input
+                            value={customDocType}
+                            onChange={(e) => {
+                              setCustomDocType(e.target.value);
+                              setDocTitle(e.target.value);
+                            }}
+                            placeholder="Enter custom document type..."
+                          />
+                        )}
+                      </div>
+                    ) : selectedDocCategory === 'data-collection' ? (
+                      <div className="space-y-2">
+                        <select
+                          value={docType}
+                          onChange={(e) => {
+                            setDocType(e.target.value);
+                            if (e.target.value !== 'OTHERS') {
+                              setDocTitle(e.target.value);
+                              setCustomDocType('');
+                            } else {
+                              setDocTitle('');
+                            }
+                          }}
+                          className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select reason for data collection...</option>
+                          {dataCollectionReasons.map((reason) => (
+                            <option key={reason} value={reason}>{reason}</option>
+                          ))}
+                        </select>
+                        {docType === 'OTHERS' && (
+                          <Input
+                            value={customDocType}
+                            onChange={(e) => {
+                              setCustomDocType(e.target.value);
+                              setDocTitle(e.target.value);
+                            }}
+                            placeholder="Enter custom reason..."
+                          />
+                        )}
+                      </div>
+                    ) : selectedDocCategory === 'surgical' ? (
+                      <div className="space-y-2">
+                        <select
+                          value={docType}
+                          onChange={(e) => {
+                            setDocType(e.target.value);
+                            if (e.target.value !== 'OTHERS') {
+                              setDocTitle(e.target.value);
+                              setCustomDocType('');
+                            } else {
+                              setDocTitle('');
+                            }
+                          }}
+                          className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select document type...</option>
+                          {surgicalDocumentTypes.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                        {docType === 'OTHERS' && (
+                          <Input
+                            value={customDocType}
+                            onChange={(e) => {
+                              setCustomDocType(e.target.value);
+                              setDocTitle(e.target.value);
+                            }}
+                            placeholder="Enter custom document type..."
+                          />
+                        )}
+                      </div>
+                    ) : selectedDocCategory === 'post-surgery' ? (
+                      <div className="space-y-2">
+                        <select
+                          value={docType}
+                          onChange={(e) => {
+                            setDocType(e.target.value);
+                            if (e.target.value !== 'OTHERS') {
+                              setDocTitle(e.target.value);
+                              setCustomDocType('');
+                            } else {
+                              setDocTitle('');
+                            }
+                          }}
+                          className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select document type...</option>
+                          {postSurgeryDocumentTypes.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                        {docType === 'OTHERS' && (
+                          <Input
+                            value={customDocType}
+                            onChange={(e) => {
+                              setCustomDocType(e.target.value);
+                              setDocTitle(e.target.value);
+                            }}
+                            placeholder="Enter custom document type..."
+                          />
+                        )}
+                      </div>
+                    ) : selectedDocCategory === 'miscellaneous' ? (
+                      <div className="space-y-2">
+                        <select
+                          value={docType}
+                          onChange={(e) => {
+                            setDocType(e.target.value);
+                            if (e.target.value !== 'OTHERS') {
+                              setDocTitle(e.target.value);
+                              setCustomDocType('');
+                            } else {
+                              setDocTitle('');
+                            }
+                          }}
+                          className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select document type...</option>
+                          {miscellaneousDocumentTypes.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                        {docType === 'OTHERS' && (
+                          <Input
+                            value={customDocType}
+                            onChange={(e) => {
+                              setCustomDocType(e.target.value);
+                              setDocTitle(e.target.value);
+                            }}
+                            placeholder="Enter custom document type..."
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <Input
+                        value={docTitle}
+                        onChange={(e) => setDocTitle(e.target.value)}
+                        placeholder="Enter document type..."
+                      />
+                    )}
+                  </div>
+                  {/* Date */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Date</Label>
+                    <Input
+                      type="date"
+                      value={docDate}
+                      onChange={(e) => setDocDate(e.target.value)}
+                    />
+                  </div>
+                  {/* Description */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Description (optional)</Label>
+                    <Textarea
+                      value={docDescription}
+                      onChange={(e) => setDocDescription(e.target.value)}
+                      placeholder="Add a description..."
+                      className="resize-none h-16"
+                    />
+                  </div>
+                  {/* Upload Progress */}
+                  {uploadingDoc && (
+                    <div className="space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <span className="font-medium text-blue-700">Uploading...</span>
+                        </div>
+                        <span className="text-sm font-semibold text-blue-600">{uploadProgress.progress}%</span>
+                      </div>
+                      <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-150 ease-out"
+                          style={{ width: `${uploadProgress.progress}%` }}
+                        />
+                      </div>
+                      {selectedFile && (
+                        <div className="flex items-center justify-between text-xs text-blue-600">
+                          <span className="truncate max-w-[200px]">{selectedFile.name}</span>
+                          <span className="font-medium">
+                            {patientDocumentService.formatFileSize(uploadProgress.loaded)} / {patientDocumentService.formatFileSize(uploadProgress.total)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowUploadDialog(false)}
+                      disabled={uploadingDoc}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      disabled={!selectedFile || uploadingDoc}
+                      onClick={async () => {
+                        if (!selectedFile || !patientId || !selectedDocCategory) return;
+                        setUploadingDoc(true);
+                        setUploadProgress({ progress: 0, loaded: 0, total: selectedFile.size });
+                        try {
+                          const newDoc = await patientDocumentService.uploadDocument(
+                            patientId,
+                            selectedFile,
+                            selectedDocCategory,
+                            docTitle,
+                            docDescription,
+                            docDate,
+                            userProfile?.full_name || user?.email || 'Unknown',
+                            (info) => setUploadProgress(info)
+                          );
+                          setPatientDocuments(prev => [newDoc, ...prev]);
+                          setShowUploadDialog(false);
+                          setSelectedFile(null);
+                          setDocTitle('');
+                          setDocDescription('');
+                          setDocDate(new Date().toISOString().split('T')[0]);
+                          setDocType('');
+                          setCustomDocType('');
+                          setUploadProgress({ progress: 0, loaded: 0, total: 0 });
+                          toast({
+                            title: "Document uploaded successfully",
+                            description: `${newDoc.title || newDoc.file_name} has been uploaded.`
+                          });
+                        } catch (error) {
+                          console.error('Upload error:', error);
+                          toast({ title: "Error uploading document", variant: "destructive" });
+                        } finally {
+                          setUploadingDoc(false);
+                          setUploadProgress({ progress: 0, loaded: 0, total: 0 });
+                        }
+                      }}
+                    >
+                      {uploadingDoc ? (
+                        <>
+                          <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          Uploading {uploadProgress.progress}%
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Capture Document Dialog */}
+            <Dialog open={showCaptureDialog} onOpenChange={(open) => {
+              setShowCaptureDialog(open);
+              if (!open) {
+                setCapturedImage(null);
+                setDocTitle('');
+                setDocDescription('');
+                setDocDate(new Date().toISOString().split('T')[0]);
+              }
+            }}>
+              <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                  <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Camera className="h-5 w-5 text-blue-600" />
+                    Capture Document
+                  </DialogTitle>
+                  <p className="text-gray-500 text-sm">Take a photo of your document</p>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {!capturedImage ? (
+                    <>
+                      {/* Camera Preview */}
+                      <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
+                        <video
+                          id="docCameraPreview"
+                          autoPlay
+                          playsInline
+                          className="w-full h-full object-cover"
+                          ref={(video) => {
+                            if (video && !video.srcObject) {
+                              navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                                .then(stream => { video.srcObject = stream; })
+                                .catch(err => console.error('Camera error:', err));
+                            }
+                          }}
+                        />
+                        {/* Camera frame overlay */}
+                        <div className="absolute inset-4 border-2 border-white/30 rounded-lg pointer-events-none" />
+                      </div>
+                      {/* Capture Button */}
+                      <div className="flex justify-center">
+                        <button
+                          className="w-16 h-16 rounded-full bg-white border-4 border-blue-500 flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
+                          onClick={() => {
+                            const video = document.getElementById('docCameraPreview') as HTMLVideoElement;
+                            const canvas = document.createElement('canvas');
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            canvas.getContext('2d')?.drawImage(video, 0, 0);
+                            setCapturedImage(canvas.toDataURL('image/jpeg'));
+                            const stream = video.srcObject as MediaStream;
+                            stream?.getTracks().forEach(track => track.stop());
+                          }}
+                        >
+                          <div className="w-12 h-12 rounded-full bg-blue-500" />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Captured Image Preview */}
+                      <div className="relative rounded-xl overflow-hidden bg-gray-100 aspect-video">
+                        <img src={capturedImage} alt="Captured" className="w-full h-full object-contain" />
+                      </div>
+                      {/* Title */}
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium text-gray-700">Title</Label>
+                        <Input
+                          value={docTitle}
+                          onChange={(e) => setDocTitle(e.target.value)}
+                          placeholder="Enter document title..."
+                        />
+                      </div>
+                      {/* Date */}
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium text-gray-700">Date</Label>
+                        <Input
+                          type="date"
+                          value={docDate}
+                          onChange={(e) => setDocDate(e.target.value)}
+                        />
+                      </div>
+                      {/* Description */}
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-medium text-gray-700">Description (optional)</Label>
+                        <Textarea
+                          value={docDescription}
+                          onChange={(e) => setDocDescription(e.target.value)}
+                          placeholder="Add a description..."
+                          className="resize-none h-16"
+                        />
+                      </div>
+                      {/* Actions */}
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            setCapturedImage(null);
+                            // Restart camera
+                            setTimeout(() => {
+                              const video = document.getElementById('docCameraPreview') as HTMLVideoElement;
+                              if (video) {
+                                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                                  .then(stream => { video.srcObject = stream; })
+                                  .catch(err => console.error('Camera error:', err));
+                              }
+                            }, 100);
+                          }}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Retake
+                        </Button>
+                        <Button
+                          className="flex-1 bg-blue-600 hover:bg-blue-700"
+                          disabled={uploadingDoc}
+                          onClick={async () => {
+                            if (!patientId || !selectedDocCategory || !capturedImage) return;
+                            setUploadingDoc(true);
+                            try {
+                              const res = await fetch(capturedImage);
+                              const blob = await res.blob();
+                              const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                              const newDoc = await patientDocumentService.uploadDocument(
+                                patientId,
+                                file,
+                                selectedDocCategory,
+                                docTitle,
+                                docDescription,
+                                docDate,
+                                userProfile?.full_name || user?.email || 'Unknown'
+                              );
+                              setPatientDocuments(prev => [newDoc, ...prev]);
+                              setShowCaptureDialog(false);
+                              setCapturedImage(null);
+                              setDocTitle('');
+                              setDocDescription('');
+                              setDocDate(new Date().toISOString().split('T')[0]);
+                              toast({ title: "Document captured and saved" });
+                            } catch (error) {
+                              console.error('Upload error:', error);
+                              toast({ title: "Error saving document", variant: "destructive" });
+                            } finally {
+                              setUploadingDoc(false);
+                            }
+                          }}
+                        >
+                          {uploadingDoc ? (
+                            <>
+                              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Save
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* File Preview Dialog */}
+            <Dialog open={showFilePreviewDialog} onOpenChange={(open) => {
+              setShowFilePreviewDialog(open);
+              if (!open) {
+                setPreviewFileData(null);
+                setPreviewLoading(true);
+              }
+            }}>
+              <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col bg-white rounded-2xl">
+                {/* Clean Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-blue-100 rounded-xl">
+                      {previewFileData?.file_type.startsWith('image/') ? (
+                        <FileImage className="h-5 w-5 text-blue-600" />
+                      ) : (
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">
+                        {previewFileData?.title || previewFileData?.file_name || 'Document Preview'}
+                      </h2>
+                      <p className="text-sm text-gray-500">
+                        {previewFileData?.file_type.startsWith('image/') ? 'Image' : 'PDF Document'}
+                        {previewFileData?.document_date && ` • ${new Date(previewFileData.document_date).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-blue-200 hover:bg-blue-50"
+                      onClick={() => {
+                        if (previewFileData) {
+                          const link = document.createElement('a');
+                          link.href = previewFileData.file_url;
+                          link.download = previewFileData.file_name;
+                          link.target = '_blank';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-1.5" />
+                      Download
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-gray-200 hover:bg-gray-50"
+                      onClick={() => window.open(previewFileData?.file_url, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1.5" />
+                      Open
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Preview Content Area */}
+                <div className="flex-1 overflow-hidden bg-gray-50 relative">
+                  {/* Loading Overlay */}
+                  {previewLoading && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+                      <div className="relative">
+                        <div className="h-16 w-16 border-4 border-blue-200 rounded-full"></div>
+                        <div className="absolute top-0 left-0 h-16 w-16 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                      </div>
+                      <p className="mt-4 text-gray-600 font-medium">Loading document...</p>
+                      <p className="mt-1 text-sm text-gray-400">Please wait</p>
+                    </div>
+                  )}
+
+                  {previewFileData && (
+                    previewFileData.file_type.startsWith('image/') ? (
+                      <div className="h-full w-full flex items-center justify-center p-6 overflow-auto">
+                        <img
+                          src={previewFileData.file_url}
+                          alt={previewFileData.title || previewFileData.file_name}
+                          className={`max-w-full max-h-full object-contain rounded-xl shadow-2xl border border-gray-200 transition-opacity duration-300 ${previewLoading ? 'opacity-0' : 'opacity-100'}`}
+                          style={{ background: 'white' }}
+                          onLoad={() => setPreviewLoading(false)}
+                          onError={() => setPreviewLoading(false)}
+                        />
+                      </div>
+                    ) : previewFileData.file_type === 'application/pdf' ? (
+                      <iframe
+                        src={previewFileData.file_url}
+                        title={previewFileData.title || previewFileData.file_name}
+                        className={`w-full h-full border-0 transition-opacity duration-300 ${previewLoading ? 'opacity-0' : 'opacity-100'}`}
+                        onLoad={() => setPreviewLoading(false)}
+                        onError={() => setPreviewLoading(false)}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                        <FileText className="h-16 w-16 mb-4 text-gray-300" />
+                        <p className="text-lg font-medium">Preview not available</p>
+                        <p className="text-sm text-gray-400">This file type cannot be previewed</p>
+                      </div>
+                    )
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={showDeleteConfirmDialog} onOpenChange={(open) => {
+              if (!deletingDocument) {
+                setShowDeleteConfirmDialog(open);
+                if (!open) setDocumentToDelete(null);
+              }
+            }}>
+              <DialogContent className="max-w-md">
+                <div className="flex flex-col items-center text-center py-4">
+                  <div className="p-4 bg-red-100 rounded-full mb-4">
+                    <Trash2 className="h-8 w-8 text-red-600" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Delete Document?</h2>
+                  <p className="text-gray-500 mb-2">
+                    Are you sure you want to delete this document?
+                  </p>
+                  {documentToDelete && (
+                    <p className="text-sm font-medium text-gray-700 bg-gray-100 px-3 py-1.5 rounded-lg mb-4">
+                      "{documentToDelete.title || documentToDelete.file_name}"
+                    </p>
+                  )}
+                  <p className="text-sm text-red-500 mb-6">
+                    This action cannot be undone.
+                  </p>
+                  <div className="flex gap-3 w-full">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowDeleteConfirmDialog(false);
+                        setDocumentToDelete(null);
+                      }}
+                      disabled={deletingDocument}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1 bg-red-600 hover:bg-red-700"
+                      onClick={async () => {
+                        if (!documentToDelete) return;
+                        setDeletingDocument(true);
+                        try {
+                          await patientDocumentService.deleteDocument(documentToDelete);
+                          setPatientDocuments(prev => prev.filter(d => d.id !== documentToDelete.id));
+                          toast({ title: "Document deleted successfully" });
+                          setShowDeleteConfirmDialog(false);
+                          setDocumentToDelete(null);
+                        } catch (error) {
+                          toast({ title: "Error deleting document", variant: "destructive" });
+                        } finally {
+                          setDeletingDocument(false);
+                        }
+                      }}
+                      disabled={deletingDocument}
+                    >
+                      {deletingDocument ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             <TabsContent value="clinical" className="flex-1 mt-2 overflow-hidden">
               <div className="h-full flex flex-col">
