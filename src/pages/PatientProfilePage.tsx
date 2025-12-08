@@ -66,6 +66,7 @@ import {
   Play,
   Square,
   RotateCcw,
+  RotateCw,
   Package,
   Truck,
   Settings,
@@ -151,6 +152,7 @@ export function PatientProfilePage() {
   const [crop, setCrop] = useState<Crop>();
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [imgRef, setImgRef] = useState<HTMLImageElement | null>(null);
+  const [rotation, setRotation] = useState(0);
   const [docTitle, setDocTitle] = useState('');
   const [docDescription, setDocDescription] = useState('');
   const [docDate, setDocDate] = useState(new Date().toISOString().split('T')[0]);
@@ -287,6 +289,33 @@ export function PatientProfilePage() {
       height
     );
     setCrop(crop);
+  };
+
+  // Rotate the captured image by specified degrees
+  const rotateImage = (degrees: number) => {
+    if (!capturedImage) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Swap width/height for 90 or 270 degree rotations
+      const isVerticalRotation = Math.abs(degrees) === 90 || Math.abs(degrees) === 270;
+      canvas.width = isVerticalRotation ? img.height : img.width;
+      canvas.height = isVerticalRotation ? img.width : img.height;
+
+      // Move to center, rotate, then draw
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((degrees * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      setCapturedImage(canvas.toDataURL('image/jpeg', 0.9));
+      setCrop(undefined); // Reset crop after rotation
+      setImgRef(null);
+    };
+    img.src = capturedImage;
   };
 
   // Treatment options for IV sedation form
@@ -7633,6 +7662,7 @@ export function PatientProfilePage() {
                 setCaptureStep('camera');
                 setCrop(undefined);
                 setImgRef(null);
+                setRotation(0);
                 setDocTitle('');
                 setDocDescription('');
                 setDocDate(new Date().toISOString().split('T')[0]);
@@ -7712,6 +7742,27 @@ export function PatientProfilePage() {
                           </ReactCrop>
                         )}
                       </div>
+                      {/* Rotation Buttons */}
+                      <div className="flex justify-center gap-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => rotateImage(-90)}
+                          className="flex items-center gap-2"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Rotate Left
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => rotateImage(90)}
+                          className="flex items-center gap-2"
+                        >
+                          <RotateCw className="h-4 w-4" />
+                          Rotate Right
+                        </Button>
+                      </div>
                       <p className="text-xs text-gray-500 text-center">Drag the corners to adjust the crop area</p>
                       {/* Crop Actions */}
                       <div className="flex gap-3">
@@ -7722,6 +7773,7 @@ export function PatientProfilePage() {
                             setCapturedImage(null);
                             setCrop(undefined);
                             setImgRef(null);
+                            setRotation(0);
                             setCaptureStep('camera');
                             // Restart camera
                             setTimeout(() => {
