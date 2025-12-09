@@ -154,6 +154,18 @@ export const patientDocumentService = {
     if (error) throw error;
   },
 
+  async updateDocumentCategory(documentId: string, newCategory: string): Promise<PatientDocument> {
+    const { data, error } = await (supabase as any)
+      .from('patient_documents')
+      .update({ category: newCategory })
+      .eq('id', documentId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
   formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;

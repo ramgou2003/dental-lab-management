@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { EditPatientForm } from "@/components/EditPatientForm";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
@@ -165,6 +166,9 @@ export function PatientProfilePage() {
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<PatientDocument | null>(null);
   const [deletingDocument, setDeletingDocument] = useState(false);
+  const [showMoveDocumentDialog, setShowMoveDocumentDialog] = useState(false);
+  const [documentToMove, setDocumentToMove] = useState<PatientDocument | null>(null);
+  const [targetCategory, setTargetCategory] = useState<string>('');
   const [uploadProgress, setUploadProgress] = useState({ progress: 0, loaded: 0, total: 0 });
   const [previewLoading, setPreviewLoading] = useState(true);
 
@@ -6335,17 +6339,38 @@ export function PatientProfilePage() {
                                         >
                                           <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
                                         </button>
-                                        {/* Delete button - only for uploaded files */}
-                                        <button
-                                          onClick={() => {
-                                            setDocumentToDelete(doc);
-                                            setShowDeleteConfirmDialog(true);
-                                          }}
-                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                                          title="Delete"
-                                        >
-                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
-                                        </button>
+                                        {/* Options menu */}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <button
+                                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                              title="More options"
+                                            >
+                                              <MoreVertical className="h-4 w-4 text-gray-500" />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToMove(doc);
+                                                setShowMoveDocumentDialog(true);
+                                              }}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Move to Category
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToDelete(doc);
+                                                setShowDeleteConfirmDialog(true);
+                                              }}
+                                              className="text-red-600 focus:text-red-600"
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </div>
                                     </div>
                                   </div>
@@ -6528,17 +6553,38 @@ export function PatientProfilePage() {
                                         >
                                           <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
                                         </button>
-                                        {/* Delete button - only for uploaded files */}
-                                        <button
-                                          onClick={() => {
-                                            setDocumentToDelete(doc);
-                                            setShowDeleteConfirmDialog(true);
-                                          }}
-                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                                          title="Delete"
-                                        >
-                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
-                                        </button>
+                                        {/* Options menu */}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <button
+                                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                              title="More options"
+                                            >
+                                              <MoreVertical className="h-4 w-4 text-gray-500" />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToMove(doc);
+                                                setShowMoveDocumentDialog(true);
+                                              }}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Move to Category
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToDelete(doc);
+                                                setShowDeleteConfirmDialog(true);
+                                              }}
+                                              className="text-red-600 focus:text-red-600"
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </div>
                                     </div>
                                   </div>
@@ -6732,17 +6778,38 @@ export function PatientProfilePage() {
                                         >
                                           <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
                                         </button>
-                                        {/* Delete button - only for uploaded files */}
-                                        <button
-                                          onClick={() => {
-                                            setDocumentToDelete(doc);
-                                            setShowDeleteConfirmDialog(true);
-                                          }}
-                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                                          title="Delete"
-                                        >
-                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
-                                        </button>
+                                        {/* Options menu */}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <button
+                                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                              title="More options"
+                                            >
+                                              <MoreVertical className="h-4 w-4 text-gray-500" />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToMove(doc);
+                                                setShowMoveDocumentDialog(true);
+                                              }}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Move to Category
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToDelete(doc);
+                                                setShowDeleteConfirmDialog(true);
+                                              }}
+                                              className="text-red-600 focus:text-red-600"
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </div>
                                     </div>
                                   </div>
@@ -7084,16 +7151,38 @@ export function PatientProfilePage() {
                                         >
                                           <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
                                         </button>
-                                        <button
-                                          onClick={() => {
-                                            setDocumentToDelete(doc);
-                                            setShowDeleteConfirmDialog(true);
-                                          }}
-                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                                          title="Delete"
-                                        >
-                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
-                                        </button>
+                                        {/* Options menu */}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <button
+                                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                              title="More options"
+                                            >
+                                              <MoreVertical className="h-4 w-4 text-gray-500" />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToMove(doc);
+                                                setShowMoveDocumentDialog(true);
+                                              }}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Move to Category
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToDelete(doc);
+                                                setShowDeleteConfirmDialog(true);
+                                              }}
+                                              className="text-red-600 focus:text-red-600"
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </div>
                                     </div>
                                   </div>
@@ -7200,16 +7289,38 @@ export function PatientProfilePage() {
                                         >
                                           <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
                                         </button>
-                                        <button
-                                          onClick={() => {
-                                            setDocumentToDelete(doc);
-                                            setShowDeleteConfirmDialog(true);
-                                          }}
-                                          className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                                          title="Delete"
-                                        >
-                                          <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-600" />
-                                        </button>
+                                        {/* Options menu */}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <button
+                                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                              title="More options"
+                                            >
+                                              <MoreVertical className="h-4 w-4 text-gray-500" />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToMove(doc);
+                                                setShowMoveDocumentDialog(true);
+                                              }}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Move to Category
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToDelete(doc);
+                                                setShowDeleteConfirmDialog(true);
+                                              }}
+                                              className="text-red-600 focus:text-red-600"
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </div>
                                     </div>
                                   </div>
@@ -7259,22 +7370,42 @@ export function PatientProfilePage() {
                                       <Eye className="h-4 w-4 mr-1" />
                                       View
                                     </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      className="h-9 px-4"
-                                      onClick={async () => {
-                                        try {
-                                          await patientDocumentService.deleteDocument(doc);
-                                          setPatientDocuments(prev => prev.filter(d => d.id !== doc.id));
-                                          toast({ title: "Document deleted" });
-                                        } catch (error) {
-                                          toast({ title: "Error deleting document", variant: "destructive" });
-                                        }
-                                      }}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          className="h-9 px-3 bg-white text-gray-900 hover:bg-gray-100"
+                                        >
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setDocumentToMove(doc);
+                                            setShowMoveDocumentDialog(true);
+                                          }}
+                                        >
+                                          <FileText className="h-4 w-4 mr-2" />
+                                          Move to Category
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={async () => {
+                                            try {
+                                              await patientDocumentService.deleteDocument(doc);
+                                              setPatientDocuments(prev => prev.filter(d => d.id !== doc.id));
+                                              toast({ title: "Document deleted" });
+                                            } catch (error) {
+                                              toast({ title: "Error deleting document", variant: "destructive" });
+                                            }
+                                          }}
+                                          className="text-red-600 focus:text-red-600"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </div>
                                 </div>
                                 {/* Info */}
@@ -8112,6 +8243,80 @@ export function PatientProfilePage() {
                           Delete
                         </>
                       )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Move Document Dialog */}
+            <Dialog open={showMoveDocumentDialog} onOpenChange={setShowMoveDocumentDialog}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Move Document</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  {documentToMove && (
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm font-medium text-gray-700">
+                        {documentToMove.title || documentToMove.file_name}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Current category: <span className="font-medium capitalize">{documentToMove.category.replace('-', ' ')}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="target-category">Move to Category</Label>
+                    <Select value={targetCategory} onValueChange={setTargetCategory}>
+                      <SelectTrigger id="target-category">
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {documentToMove && ['consultation', 'administrative', 'data-collection', 'surgical', 'post-surgery', 'lab', 'report-cards', 'miscellaneous']
+                          .filter(cat => cat !== documentToMove.category)
+                          .map(category => (
+                            <SelectItem key={category} value={category}>
+                              {category.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowMoveDocumentDialog(false);
+                        setDocumentToMove(null);
+                        setTargetCategory('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={async () => {
+                        if (!documentToMove || !targetCategory) return;
+                        try {
+                          await patientDocumentService.updateDocumentCategory(documentToMove.id, targetCategory);
+                          setPatientDocuments(prev => prev.map(d =>
+                            d.id === documentToMove.id ? { ...d, category: targetCategory } : d
+                          ));
+                          toast({ title: "Document moved successfully" });
+                          setShowMoveDocumentDialog(false);
+                          setDocumentToMove(null);
+                          setTargetCategory('');
+                        } catch (error) {
+                          toast({ title: "Error moving document", variant: "destructive" });
+                        }
+                      }}
+                      disabled={!targetCategory}
+                    >
+                      Move Document
                     </Button>
                   </div>
                 </div>
