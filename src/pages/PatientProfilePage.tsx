@@ -234,7 +234,7 @@ export function PatientProfilePage() {
   // Fetch patient documents when category changes
   useEffect(() => {
     const fetchDocuments = async () => {
-      if (!patientId || !selectedDocCategory || selectedDocCategory === 'consultation') return;
+      if (!patientId || !selectedDocCategory) return;
       try {
         const docs = await patientDocumentService.getDocumentsByCategory(patientId, selectedDocCategory);
         setPatientDocuments(docs);
@@ -5580,7 +5580,7 @@ export function PatientProfilePage() {
                         </h3>
                       </div>
                       <div className="flex items-center gap-2">
-                        {selectedDocCategory !== 'consultation' && selectedDocCategory !== 'lab' && selectedDocCategory !== 'report-cards' && (
+                        {selectedDocCategory !== 'lab' && selectedDocCategory !== 'report-cards' && (
                           <>
                             <Button
                               variant="outline"
@@ -5628,100 +5628,232 @@ export function PatientProfilePage() {
                           <p className="text-sm text-gray-400 mt-1">Choose a category from the left to view documents</p>
                         </div>
                       ) : selectedDocCategory === 'consultation' ? (
-                        // Show consultations list
-                        loadingConsultations ? (
-                          <div className="h-full flex flex-col items-center justify-center">
-                            <div className="h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
-                            <p className="text-sm text-gray-500">Loading consultations...</p>
-                          </div>
-                        ) : patientConsultations.length === 0 ? (
-                          <div className="h-full flex flex-col items-center justify-center">
-                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mb-4">
-                              <Stethoscope className="h-10 w-10 text-gray-300" />
-                            </div>
-                            <p className="text-base font-medium text-gray-500">No consultations yet</p>
-                            <p className="text-sm text-gray-400 mt-1">Consultations will appear here</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            {patientConsultations.map((consultation) => (
-                              <div
-                                key={consultation.id}
-                                className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex items-start gap-3">
-                                    <div className={`p-2.5 rounded-xl ${
-                                      consultation.consultation_status === 'completed' ? 'bg-green-100' :
-                                      consultation.consultation_status === 'in_progress' ? 'bg-blue-100' :
-                                      'bg-gray-100'
-                                    }`}>
-                                      <Stethoscope className={`h-5 w-5 ${
-                                        consultation.consultation_status === 'completed' ? 'text-green-600' :
-                                        consultation.consultation_status === 'in_progress' ? 'text-blue-600' :
-                                        'text-gray-600'
-                                      }`} />
-                                    </div>
-                                    <div>
-                                      <h4 className="text-sm font-semibold text-gray-900">
-                                        Consultation - {new Date(consultation.consultation_date).toLocaleDateString('en-US', {
-                                          year: 'numeric',
-                                          month: 'long',
-                                          day: 'numeric'
-                                        })}
-                                      </h4>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                          consultation.consultation_status === 'completed' ? 'bg-green-100 text-green-700' :
-                                          consultation.consultation_status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                                          consultation.consultation_status === 'scheduled' ? 'bg-purple-100 text-purple-700' :
-                                          'bg-gray-100 text-gray-700'
-                                        }`}>
-                                          {consultation.consultation_status === 'completed' ? 'Completed' :
-                                           consultation.consultation_status === 'in_progress' ? 'In Progress' :
-                                           consultation.consultation_status === 'scheduled' ? 'Scheduled' :
-                                           consultation.consultation_status?.charAt(0).toUpperCase() + consultation.consultation_status?.slice(1) || 'Draft'}
-                                        </span>
-                                        {consultation.treatment_decision && (
+                        // Show consultations list and uploaded documents
+                        (() => {
+                          const uploadedConsultationDocs = patientDocuments.filter(d => d.category === 'consultation');
+                          const totalItems = patientConsultations.length + uploadedConsultationDocs.length;
+
+                          if (loadingConsultations) {
+                            return (
+                              <div className="h-full flex flex-col items-center justify-center">
+                                <div className="h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+                                <p className="text-sm text-gray-500">Loading consultations...</p>
+                              </div>
+                            );
+                          }
+
+                          if (totalItems === 0) {
+                            return (
+                              <div className="h-full flex flex-col items-center justify-center">
+                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mb-4">
+                                  <Stethoscope className="h-10 w-10 text-gray-300" />
+                                </div>
+                                <p className="text-base font-medium text-gray-500">No consultations yet</p>
+                                <p className="text-sm text-gray-400 mt-1">Consultations and documents will appear here</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="space-y-3">
+                              {/* Consultation Forms */}
+                              {patientConsultations.map((consultation) => (
+                                <div
+                                  key={consultation.id}
+                                  className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3">
+                                      <div className={`p-2.5 rounded-xl ${
+                                        consultation.consultation_status === 'completed' ? 'bg-green-100' :
+                                        consultation.consultation_status === 'in_progress' ? 'bg-blue-100' :
+                                        'bg-gray-100'
+                                      }`}>
+                                        <Stethoscope className={`h-5 w-5 ${
+                                          consultation.consultation_status === 'completed' ? 'text-green-600' :
+                                          consultation.consultation_status === 'in_progress' ? 'text-blue-600' :
+                                          'text-gray-600'
+                                        }`} />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-gray-900">
+                                          Consultation - {new Date(consultation.consultation_date).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                          })}
+                                        </h4>
+                                        <div className="flex items-center gap-2 mt-1">
                                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                            consultation.treatment_decision === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
-                                            consultation.treatment_decision === 'not-accepted' ? 'bg-red-100 text-red-700' :
-                                            'bg-yellow-100 text-yellow-700'
+                                            consultation.consultation_status === 'completed' ? 'bg-green-100 text-green-700' :
+                                            consultation.consultation_status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                            consultation.consultation_status === 'scheduled' ? 'bg-purple-100 text-purple-700' :
+                                            'bg-gray-100 text-gray-700'
                                           }`}>
-                                            {consultation.treatment_decision === 'accepted' ? 'Accepted' :
-                                             consultation.treatment_decision === 'not-accepted' ? 'Not Accepted' :
-                                             'Follow-up Required'}
+                                            {consultation.consultation_status === 'completed' ? 'Completed' :
+                                             consultation.consultation_status === 'in_progress' ? 'In Progress' :
+                                             consultation.consultation_status === 'scheduled' ? 'Scheduled' :
+                                             consultation.consultation_status?.charAt(0).toUpperCase() + consultation.consultation_status?.slice(1) || 'Draft'}
                                           </span>
+                                          {consultation.treatment_decision && (
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                              consultation.treatment_decision === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
+                                              consultation.treatment_decision === 'not-accepted' ? 'bg-red-100 text-red-700' :
+                                              'bg-yellow-100 text-yellow-700'
+                                            }`}>
+                                              {consultation.treatment_decision === 'accepted' ? 'Accepted' :
+                                               consultation.treatment_decision === 'not-accepted' ? 'Not Accepted' :
+                                               'Follow-up Required'}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {consultation.clinical_assessment && (
+                                          <p className="text-xs text-gray-500 mt-2 line-clamp-2">{consultation.clinical_assessment}</p>
+                                        )}
+                                        {consultation.treatment_cost && (
+                                          <p className="text-xs text-gray-600 mt-1">
+                                            <span className="font-medium">Treatment Cost:</span> ${consultation.treatment_cost.toLocaleString()}
+                                          </p>
                                         )}
                                       </div>
-                                      {consultation.clinical_assessment && (
-                                        <p className="text-xs text-gray-500 mt-2 line-clamp-2">{consultation.clinical_assessment}</p>
-                                      )}
-                                      {consultation.treatment_cost && (
-                                        <p className="text-xs text-gray-600 mt-1">
-                                          <span className="font-medium">Treatment Cost:</span> ${consultation.treatment_cost.toLocaleString()}
-                                        </p>
-                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => {
+                                          // Navigate to consultation or open details
+                                          toast({ title: "View consultation details coming soon" });
+                                        }}
+                                      >
+                                        <Eye className="h-4 w-4 text-gray-500" />
+                                      </Button>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0"
-                                      onClick={() => {
-                                        // Navigate to consultation or open details
-                                        toast({ title: "View consultation details coming soon" });
-                                      }}
-                                    >
-                                      <Eye className="h-4 w-4 text-gray-500" />
-                                    </Button>
-                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        )
+                              ))}
+
+                              {/* Uploaded Consultation Documents */}
+                              {uploadedConsultationDocs.map((doc) => {
+                                const isImage = doc.file_type.startsWith('image/');
+                                const isPdf = doc.file_type === 'application/pdf';
+                                const getFileTypeLabel = () => {
+                                  if (isImage) return 'Image';
+                                  if (isPdf) return 'PDF';
+                                  if (doc.file_type.includes('word') || doc.file_type.includes('document')) return 'Document';
+                                  if (doc.file_type.includes('sheet') || doc.file_type.includes('excel')) return 'Spreadsheet';
+                                  return doc.file_type.split('/')[1]?.toUpperCase() || 'File';
+                                };
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex items-start gap-3">
+                                        <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-blue-100'}`}>
+                                          {isImage ? (
+                                            <FileImage className="h-5 w-5 text-purple-600" />
+                                          ) : isPdf ? (
+                                            <FileText className="h-5 w-5 text-red-600" />
+                                          ) : (
+                                            <FolderOpen className="h-5 w-5 text-blue-600" />
+                                          )}
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-semibold text-gray-900">{doc.title || doc.file_name}</h4>
+                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
+                                              Uploaded
+                                            </span>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                              isImage ? 'bg-purple-100 text-purple-700' :
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                              'bg-gray-100 text-gray-700'
+                                            }`}>
+                                              {getFileTypeLabel()}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                              {doc.document_date ? new Date(doc.document_date).toLocaleDateString() : new Date(doc.created_at).toLocaleDateString()}
+                                            </span>
+                                          </div>
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            {patientDocumentService.formatFileSize(doc.file_size)}
+                                            {doc.uploaded_by && ` • By: ${doc.uploaded_by}`}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => {
+                                            if (isImage || isPdf) {
+                                              setPreviewFileData(doc);
+                                              setShowFilePreviewDialog(true);
+                                            } else {
+                                              toast({ title: "Preview not available for this file type" });
+                                            }
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Preview"
+                                        >
+                                          <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = doc.file_url;
+                                            link.download = doc.file_name;
+                                            link.target = '_blank';
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                          }}
+                                          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                          title="Download"
+                                        >
+                                          <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                        </button>
+                                        {/* Options menu */}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <button
+                                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                              title="More options"
+                                            >
+                                              <MoreVertical className="h-4 w-4 text-gray-500" />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToMove(doc);
+                                                setShowMoveDocumentDialog(true);
+                                              }}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Move to Category
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setDocumentToDelete(doc);
+                                                setShowDeleteConfirmDialog(true);
+                                              }}
+                                              className="text-red-600 focus:text-red-600"
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
                       ) : selectedDocCategory === 'administrative' ? (
                         // Show administrative forms list - only completed/submitted forms (exclude draft and void)
                         (() => {
