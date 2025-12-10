@@ -81,14 +81,6 @@ const navigation: NavigationItem[] = [
         pageKey: "lab"
       },
       {
-        name: "Report Cards",
-        href: "/lab/report-cards",
-        section: "report-cards",
-        icon: FileText,
-        featureFlag: "reportCards",
-        pageKey: "reportCards"
-      },
-      {
         name: "Manufacturing",
         href: "/lab/manufacturing",
         section: "manufacturing",
@@ -103,6 +95,14 @@ const navigation: NavigationItem[] = [
         icon: Package,
         featureFlag: "applianceDelivery",
         pageKey: "applianceDelivery"
+      },
+      {
+        name: "Report Cards",
+        href: "/lab/report-cards",
+        section: "report-cards",
+        icon: FileText,
+        featureFlag: "reportCards",
+        pageKey: "reportCards"
       }
     ]
   }, {

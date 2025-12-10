@@ -172,6 +172,12 @@ export function PatientProfilePage() {
   const [uploadProgress, setUploadProgress] = useState({ progress: 0, loaded: 0, total: 0 });
   const [previewLoading, setPreviewLoading] = useState(true);
 
+  // Consultation document types list
+  const consultationDocumentTypes = [
+    'Consultation',
+    'Other'
+  ];
+
   // Administrative document types list
   const adminDocumentTypes = [
     'New Patient Packet',
@@ -7639,7 +7645,38 @@ export function PatientProfilePage() {
                   {/* Document Type */}
                   <div className="space-y-1.5">
                     <Label className="text-sm font-medium text-gray-700">Document Type</Label>
-                    {selectedDocCategory === 'administrative' ? (
+                    {selectedDocCategory === 'consultation' ? (
+                      <div className="space-y-2">
+                        <select
+                          value={docType}
+                          onChange={(e) => {
+                            setDocType(e.target.value);
+                            if (e.target.value !== 'Other') {
+                              setDocTitle(e.target.value);
+                              setCustomDocType('');
+                            } else {
+                              setDocTitle('');
+                            }
+                          }}
+                          className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select document type...</option>
+                          {consultationDocumentTypes.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                        {docType === 'Other' && (
+                          <Input
+                            value={customDocType}
+                            onChange={(e) => {
+                              setCustomDocType(e.target.value);
+                              setDocTitle(e.target.value);
+                            }}
+                            placeholder="Enter custom document type..."
+                          />
+                        )}
+                      </div>
+                    ) : selectedDocCategory === 'administrative' ? (
                       <div className="space-y-2">
                         <select
                           value={docType}
@@ -8080,6 +8117,9 @@ export function PatientProfilePage() {
                             <SelectValue placeholder="Select document type..." />
                           </SelectTrigger>
                           <SelectContent>
+                            {selectedDocCategory === 'consultation' && consultationDocumentTypes.map((type) => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
                             {selectedDocCategory === 'administrative' && adminDocumentTypes.map((type) => (
                               <SelectItem key={type} value={type}>{type}</SelectItem>
                             ))}
@@ -8099,7 +8139,7 @@ export function PatientProfilePage() {
                         </Select>
                       </div>
                       {/* Custom document type input */}
-                      {(docType === 'Custom' || docType === 'OTHERS') && (
+                      {(docType === 'Custom' || docType === 'OTHERS' || docType === 'Other') && (
                         <div className="space-y-1.5">
                           <Label className="text-sm font-medium text-gray-700">Custom Type <span className="text-red-500">*</span></Label>
                           <Input
@@ -8142,7 +8182,7 @@ export function PatientProfilePage() {
                         </Button>
                         <Button
                           className="flex-1 bg-blue-600 hover:bg-blue-700"
-                          disabled={uploadingDoc || !docType || ((docType === 'Custom' || docType === 'OTHERS') && !customDocType)}
+                          disabled={uploadingDoc || !docType || ((docType === 'Custom' || docType === 'OTHERS' || docType === 'Other') && !customDocType)}
                           onClick={async () => {
                             if (!patientId || !selectedDocCategory) return;
                             const imageToUpload = croppedImage || capturedImage;
@@ -8152,7 +8192,7 @@ export function PatientProfilePage() {
                               const res = await fetch(imageToUpload);
                               const blob = await res.blob();
                               const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
-                              const finalDocType = (docType === 'Custom' || docType === 'OTHERS') ? customDocType : docType;
+                              const finalDocType = (docType === 'Custom' || docType === 'OTHERS' || docType === 'Other') ? customDocType : docType;
                               const newDoc = await patientDocumentService.uploadDocument(
                                 patientId,
                                 file,
@@ -10895,65 +10935,6 @@ export function PatientProfilePage() {
                     </div>
                   </div>
 
-                  {/* Encounter Form */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <Activity className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">Encounter Form (0)</h3>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                      <div className="space-y-3 pb-2">
-                        {/* Add Button */}
-                        <button
-                          className="w-full px-4 py-2 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-                        >
-                          <Plus className="h-4 w-4" />
-                          <span className="text-sm font-medium">Add Encounter Form</span>
-                        </button>
-
-                        {/* Empty State */}
-                        <div className="text-center py-8">
-                          <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm font-medium text-gray-500 mb-1">No encounter forms</p>
-                          <p className="text-xs text-gray-400">Use the button above to create your first encounter form</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Consultation Forms */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">Consultation Forms (0)</h3>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                      <div className="space-y-3 pb-2">
-                        {/* Add Button */}
-                        <button
-                          className="w-full px-4 py-2 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-                        >
-                          <Plus className="h-4 w-4" />
-                          <span className="text-sm font-medium">Add Consultation Form</span>
-                        </button>
-
-                        {/* Empty State */}
-                        <div className="text-center py-8">
-                          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm font-medium text-gray-500 mb-1">No consultation forms</p>
-                          <p className="text-xs text-gray-400">Use the button above to create your first consultation form</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
 
                   </div>
