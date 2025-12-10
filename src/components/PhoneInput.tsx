@@ -36,9 +36,10 @@ interface PhoneInputProps {
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  hideLabel?: boolean;
 }
 
-export function PhoneInput({ value, onChange, required }: PhoneInputProps) {
+export function PhoneInput({ value, onChange, required, hideLabel = false }: PhoneInputProps) {
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // Default to US
   const [phoneNumber, setPhoneNumber] = useState("");
 
@@ -104,7 +105,7 @@ export function PhoneInput({ value, onChange, required }: PhoneInputProps) {
 
   return (
     <div className="space-y-2">
-      <Label>Phone Number</Label>
+      {!hideLabel && <Label>Phone Number</Label>}
       <div className="flex gap-2">
         <Select value={selectedCountry.code} onValueChange={handleCountryChange}>
           <SelectTrigger className="w-48">

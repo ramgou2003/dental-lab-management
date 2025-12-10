@@ -34,6 +34,9 @@ interface Patient {
   upper_surgery_date: string | null;
   lower_surgery_date: string | null;
   profile_picture?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  emergency_contact_relationship?: string | null;
 }
 
 interface EditPatientFormProps {
@@ -53,7 +56,10 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
     state: '',
     zipCode: '',
     chartNumber: '',
-    gender: 'male'
+    gender: 'male',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    emergencyContactRelationship: ''
   });
 
   const [errors, setErrors] = useState({
@@ -78,7 +84,10 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
         state: patient.state || '',
         zipCode: patient.zip_code || '',
         chartNumber: patient.chart_number || '',
-        gender: patient.gender || 'male'
+        gender: patient.gender || 'male',
+        emergencyContactName: patient.emergency_contact_name || '',
+        emergencyContactPhone: patient.emergency_contact_phone || '',
+        emergencyContactRelationship: patient.emergency_contact_relationship || ''
       });
     }
   }, [patient]);
@@ -117,6 +126,9 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
         zip_code: formData.zipCode || null,
         chart_number: formData.chartNumber || null,
         gender: formData.gender,
+        emergency_contact_name: formData.emergencyContactName || null,
+        emergency_contact_phone: formData.emergencyContactPhone || null,
+        emergency_contact_relationship: formData.emergencyContactRelationship || null,
         updated_at: new Date().toISOString()
       };
 
@@ -272,6 +284,43 @@ export function EditPatientForm({ patient, onSubmit }: EditPatientFormProps) {
             zipCode={formData.zipCode}
             onAddressChange={handleInputChange}
           />
+
+          {/* Emergency Contact Section */}
+          <div className="col-span-2 mt-4">
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contact</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor="emergencyContactName">Contact Name</Label>
+                  <Input
+                    id="emergencyContactName"
+                    placeholder="Emergency contact name"
+                    value={formData.emergencyContactName}
+                    onChange={(e) => handleInputChange('emergencyContactName', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="emergencyContactRelationship">Relationship</Label>
+                  <Input
+                    id="emergencyContactRelationship"
+                    placeholder="e.g., Spouse, Parent, Sibling"
+                    value={formData.emergencyContactRelationship}
+                    onChange={(e) => handleInputChange('emergencyContactRelationship', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="emergencyContactPhone">Emergency Contact Phone No</Label>
+                  <PhoneInput
+                    value={formData.emergencyContactPhone}
+                    onChange={(value) => handleInputChange('emergencyContactPhone', value)}
+                    hideLabel={true}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="flex justify-end pt-4">
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6" disabled={isSubmitting}>

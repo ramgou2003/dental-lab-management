@@ -30,7 +30,10 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
     chartNumber: '',
     gender: 'male',
     status: 'ACTIVE',
-    treatmentStatus: ''
+    treatmentStatus: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    emergencyContactRelationship: ''
   });
 
   const [errors, setErrors] = useState({
@@ -75,7 +78,10 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
         chart_number: formData.chartNumber || null,
         status: formData.status,
         treatment_status: formData.treatmentStatus || null,
-        patient_source: 'Direct'
+        patient_source: 'Direct',
+        emergency_contact_name: formData.emergencyContactName || null,
+        emergency_contact_phone: formData.emergencyContactPhone || null,
+        emergency_contact_relationship: formData.emergencyContactRelationship || null
       };
 
       const { data, error } = await supabase
@@ -222,6 +228,43 @@ export function NewPatientForm({ onSubmit, onCancel }: NewPatientFormProps) {
             zipCode={formData.zipCode}
             onAddressChange={handleInputChange}
           />
+
+          {/* Emergency Contact Section */}
+          <div className="col-span-2 mt-4">
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contact</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor="emergencyContactName">Contact Name</Label>
+                  <Input
+                    id="emergencyContactName"
+                    placeholder="Emergency contact name"
+                    value={formData.emergencyContactName}
+                    onChange={(e) => handleInputChange('emergencyContactName', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="emergencyContactRelationship">Relationship</Label>
+                  <Input
+                    id="emergencyContactRelationship"
+                    placeholder="e.g., Spouse, Parent, Sibling"
+                    value={formData.emergencyContactRelationship}
+                    onChange={(e) => handleInputChange('emergencyContactRelationship', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="emergencyContactPhone">Emergency Contact Phone No</Label>
+                  <PhoneInput
+                    value={formData.emergencyContactPhone}
+                    onChange={(value) => handleInputChange('emergencyContactPhone', value)}
+                    hideLabel={true}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="col-span-2">
             <Label htmlFor="treatmentStatus">

@@ -302,7 +302,7 @@ export function TreatmentDialog({ isOpen, onClose, onSubmit, initialData }: Trea
               disabled={isSubmitting || !formData.archType}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6"
             >
-              {isSubmitting ? "Saving..." : (initialData ? "Update Treatment" : "Save Treatment")}
+              {isSubmitting ? "Saving..." : "Add Treatment"}
             </Button>
           </div>
         </form>

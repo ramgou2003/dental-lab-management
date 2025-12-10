@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { EditPatientForm } from "@/components/EditPatientForm";
+import { EditEmergencyContactDialog } from "@/components/EditEmergencyContactDialog";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
 import { TreatmentDialog, TreatmentData } from "@/components/TreatmentDialog";
 import { ConsentFullArchDialog } from "@/components/ConsentFullArchDialog";
@@ -89,7 +90,8 @@ import {
   Camera,
   FileImage,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Pencil
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -379,8 +381,10 @@ export function PatientProfilePage() {
     "OTHERS"
   ];
   const [patient, setPatient] = useState<any>(null);
+  const [patientTreatments, setPatientTreatments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showEditEmergencyContact, setShowEditEmergencyContact] = useState(false);
   const [showLabScriptDetail, setShowLabScriptDetail] = useState(false);
   const [selectedLabScript, setSelectedLabScript] = useState<LabScript | null>(null);
   const [editingStatus, setEditingStatus] = useState<Record<string, boolean>>({});
@@ -969,6 +973,7 @@ export function PatientProfilePage() {
   useEffect(() => {
     if (patientId) {
       fetchPatientData();
+      fetchPatientTreatments();
       fetchDataCollectionSheets();
       fetchIVSedationSheets();
       fetchPatientPackets();
@@ -1040,6 +1045,29 @@ export function PatientProfilePage() {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPatientTreatments = async () => {
+    if (!patientId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('patient_treatments')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching patient treatments:', error);
+        setPatientTreatments([]);
+        return;
+      }
+
+      setPatientTreatments(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+      setPatientTreatments([]);
     }
   };
 
@@ -2241,40 +2269,47 @@ export function PatientProfilePage() {
     setShowTreatmentDialog(true);
   };
 
-  const handleEditTreatment = (treatmentType: 'upper' | 'lower') => {
-    // Check if both treatments exist
-    const hasUpper = patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT";
-    const hasLower = patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT";
+  const handleEditTreatment = (treatmentId: string) => {
+    const treatment = patientTreatments.find(t => t.id === treatmentId);
 
-    // Determine arch type based on what treatments exist
+    if (!treatment) {
+      console.error('Treatment not found');
+      return;
+    }
+
+    // Determine arch type based on the treatment data
     let archType: string;
+    const hasUpper = treatment.upper_treatment && treatment.upper_treatment !== "NO TREATMENT";
+    const hasLower = treatment.lower_treatment && treatment.lower_treatment !== "NO TREATMENT";
+
     if (hasUpper && hasLower) {
-      archType = 'dual'; // Both treatments exist, show dual arch
+      archType = 'dual';
     } else if (hasUpper) {
-      archType = 'upper'; // Only upper treatment exists
+      archType = 'upper';
     } else if (hasLower) {
-      archType = 'lower'; // Only lower treatment exists
+      archType = 'lower';
     } else {
-      archType = treatmentType; // Fallback to the clicked treatment type
+      archType = '';
     }
 
     const treatmentData = {
+      id: treatment.id,
       archType: archType,
-      upperTreatment: hasUpper ? patient.upper_treatment || '' : '',
-      lowerTreatment: hasLower ? patient.lower_treatment || '' : '',
-      upperSurgeryDate: hasUpper ? patient.upper_surgery_date || '' : '',
-      lowerSurgeryDate: hasLower ? patient.lower_surgery_date || '' : ''
+      upperTreatment: treatment.upper_treatment || '',
+      lowerTreatment: treatment.lower_treatment || '',
+      upperSurgeryDate: treatment.upper_surgery_date || '',
+      lowerSurgeryDate: treatment.lower_surgery_date || ''
     };
 
-    console.log('Editing treatment data:', treatmentData); // Debug log
+    console.log('Editing treatment data:', treatmentData);
 
     setEditingTreatment(treatmentData);
     setIsEditingTreatment(true);
     setShowTreatmentDialog(true);
   };
 
-  const handleDeleteTreatment = (treatmentType: 'upper' | 'lower') => {
-    setTreatmentToDelete({ type: treatmentType });
+  const handleDeleteTreatment = (treatmentId: string) => {
+    setTreatmentToDelete({ id: treatmentId });
     setShowDeleteTreatmentConfirmation(true);
   };
 
@@ -2282,36 +2317,24 @@ export function PatientProfilePage() {
     if (!treatmentToDelete || !patient) return;
 
     try {
-      let updateData: any = {
-        updated_at: new Date().toISOString()
-      };
-
-      if (treatmentToDelete.type === 'upper') {
-        updateData.upper_treatment = null;
-        updateData.upper_surgery_date = null;
-      } else if (treatmentToDelete.type === 'lower') {
-        updateData.lower_treatment = null;
-        updateData.lower_surgery_date = null;
-      }
-
-      const { data, error } = await supabase
-        .from('patients')
-        .update(updateData)
-        .eq('id', patient.id)
-        .select()
-        .single();
+      const { error } = await supabase
+        .from('patient_treatments')
+        .delete()
+        .eq('id', treatmentToDelete.id);
 
       if (error) {
         throw error;
       }
 
-      setPatient(data);
+      // Refresh the treatments list
+      await fetchPatientTreatments();
+
       setShowDeleteTreatmentConfirmation(false);
       setTreatmentToDelete(null);
 
       toast({
         title: "Success",
-        description: `${treatmentToDelete.type.charAt(0).toUpperCase() + treatmentToDelete.type.slice(1)} arch treatment deleted successfully!`,
+        description: "Treatment deleted successfully!",
       });
 
     } catch (error) {
@@ -2324,63 +2347,80 @@ export function PatientProfilePage() {
     }
   };
 
-  const handleTreatmentSubmit = async (treatmentData: TreatmentData) => {
+  const handleTreatmentSubmit = async (treatmentData: any) => {
     if (!patient) return;
 
     try {
-      // Prepare update data based on arch type
-      let updateData: any = {
+      // Prepare treatment data based on arch type
+      let treatmentInsertData: any = {
+        patient_id: patient.id,
         updated_at: new Date().toISOString()
       };
 
       if (treatmentData.archType === 'upper') {
-        updateData.upper_treatment = treatmentData.upperTreatment || null;
-        updateData.upper_surgery_date = treatmentData.upperSurgeryDate || null;
-        // Clear lower treatment if switching from dual to upper only during edit
-        if (isEditingTreatment) {
-          updateData.lower_treatment = null;
-          updateData.lower_surgery_date = null;
-        }
+        treatmentInsertData.upper_treatment = treatmentData.upperTreatment || null;
+        treatmentInsertData.upper_surgery_date = treatmentData.upperSurgeryDate || null;
+        treatmentInsertData.upper_arch = true;
+        treatmentInsertData.lower_arch = false;
       } else if (treatmentData.archType === 'lower') {
-        updateData.lower_treatment = treatmentData.lowerTreatment || null;
-        updateData.lower_surgery_date = treatmentData.lowerSurgeryDate || null;
-        // Clear upper treatment if switching from dual to lower only during edit
-        if (isEditingTreatment) {
-          updateData.upper_treatment = null;
-          updateData.upper_surgery_date = null;
-        }
+        treatmentInsertData.lower_treatment = treatmentData.lowerTreatment || null;
+        treatmentInsertData.lower_surgery_date = treatmentData.lowerSurgeryDate || null;
+        treatmentInsertData.lower_arch = true;
+        treatmentInsertData.upper_arch = false;
       } else if (treatmentData.archType === 'dual') {
-        updateData.upper_treatment = treatmentData.upperTreatment || null;
-        updateData.lower_treatment = treatmentData.lowerTreatment || null;
-        updateData.upper_surgery_date = treatmentData.upperSurgeryDate || null;
-        updateData.lower_surgery_date = treatmentData.lowerSurgeryDate || null;
+        treatmentInsertData.upper_treatment = treatmentData.upperTreatment || null;
+        treatmentInsertData.lower_treatment = treatmentData.lowerTreatment || null;
+        treatmentInsertData.upper_surgery_date = treatmentData.upperSurgeryDate || null;
+        treatmentInsertData.lower_surgery_date = treatmentData.lowerSurgeryDate || null;
+        treatmentInsertData.upper_arch = true;
+        treatmentInsertData.lower_arch = true;
       }
 
-      const { data, error } = await supabase
-        .from('patients')
-        .update(updateData)
-        .eq('id', patient.id)
-        .select()
-        .single();
+      // Check if we're editing an existing treatment
+      if (isEditingTreatment && treatmentData.id) {
+        // Update existing treatment record
+        const { data, error } = await supabase
+          .from('patient_treatments')
+          .update(treatmentInsertData)
+          .eq('id', treatmentData.id)
+          .select()
+          .single();
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
+
+        // Refresh the treatments list
+        await fetchPatientTreatments();
+      } else {
+        // Create new treatment record
+        const { data, error } = await supabase
+          .from('patient_treatments')
+          .insert([treatmentInsertData])
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        // Refresh the treatments list
+        await fetchPatientTreatments();
       }
 
-      setPatient(data);
       setShowTreatmentDialog(false);
       setEditingTreatment(null);
       setIsEditingTreatment(false);
 
       toast({
         title: "Success",
-        description: isEditingTreatment ? "Treatment information updated successfully!" : "Treatment information added successfully!",
+        description: isEditingTreatment ? "Treatment updated successfully!" : "Treatment added successfully!",
       });
     } catch (error) {
-      console.error('Error updating treatment information:', error);
+      console.error('Error saving treatment:', error);
       toast({
         title: "Error",
-        description: "Failed to update treatment information",
+        description: "Failed to save treatment",
         variant: "destructive",
       });
     }
@@ -4780,14 +4820,27 @@ export function PatientProfilePage() {
 
                       {/* Emergency Contact Section */}
                       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-2.5 border border-blue-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                          <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Emergency Contact</h4>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                            <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Emergency Contact</h4>
+                          </div>
+                          <button
+                            onClick={() => setShowEditEmergencyContact(true)}
+                            className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
+                            title="Edit emergency contact"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-blue-600 hover:text-blue-700" />
+                          </button>
                         </div>
                         <div className="grid grid-cols-1 gap-2">
                           <div className="bg-white rounded-md p-2 border border-blue-200">
                             <p className="text-xs font-medium text-blue-600 mb-0.5">Contact Name</p>
                             <p className="text-sm font-semibold text-gray-900">{patient.emergency_contact_name || "Not provided"}</p>
+                          </div>
+                          <div className="bg-white rounded-md p-2 border border-blue-200">
+                            <p className="text-xs font-medium text-blue-600 mb-0.5">Relationship</p>
+                            <p className="text-sm font-semibold text-gray-900">{patient.emergency_contact_relationship || "Not provided"}</p>
                           </div>
                           <div className="bg-white rounded-md p-2 border border-blue-200">
                             <p className="text-xs font-medium text-blue-600 mb-0.5">Contact Phone</p>
@@ -4829,101 +4882,74 @@ export function PatientProfilePage() {
                   </div>
                   <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0">
                     <div className="space-y-3 pb-2">
-                      {/* Upper and Lower Treatment Information - Separated */}
-                      {((patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT") ||
-                        (patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT")) && (
-                        <div className="space-y-4">
-                          {/* Upper Treatment Section */}
-                          {patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT" && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                  <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Upper Arch Treatment</p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    onClick={() => handleEditTreatment('upper')}
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleDeleteTreatment('upper')}
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-800 hover:bg-red-100"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
+                      {/* Display all treatments */}
+                      {patientTreatments.length > 0 ? (
+                        patientTreatments.map((treatment, index) => (
+                          <div key={treatment.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">
+                                  {treatment.upper_arch && treatment.lower_arch ? 'Dual Arch Treatment' :
+                                   treatment.upper_arch ? 'Upper Arch Treatment' :
+                                   treatment.lower_arch ? 'Lower Arch Treatment' : 'Treatment'}
+                                </p>
                               </div>
-                              <div className="space-y-2">
-                                <Badge variant="outline" className="bg-white border-blue-300 text-blue-800 text-xs font-medium">
-                                  {patient.upper_treatment}
-                                </Badge>
-                                {patient.upper_surgery_date && (
-                                  <div className="text-xs text-blue-700 font-medium">
-                                    Surgery Date: {new Date(patient.upper_surgery_date).toLocaleDateString('en-US')}
-                                  </div>
-                                )}
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  onClick={() => handleEditTreatment(treatment.id)}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  onClick={() => handleDeleteTreatment(treatment.id)}
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-800 hover:bg-red-100"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
                               </div>
                             </div>
-                          )}
 
-                          {/* Divider - Only show if both treatments exist */}
-                          {patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT" &&
-                           patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT" && (
-                            <div className="flex items-center">
-                              <div className="flex-1 border-t border-gray-300"></div>
-                              <div className="px-3">
-                                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                              </div>
-                              <div className="flex-1 border-t border-gray-300"></div>
-                            </div>
-                          )}
+                            <div className="space-y-2">
+                              {/* Upper Treatment */}
+                              {treatment.upper_treatment && treatment.upper_treatment !== "NO TREATMENT" && (
+                                <div className="space-y-1">
+                                  <Badge variant="outline" className="bg-white border-blue-300 text-blue-800 text-xs font-medium">
+                                    Upper: {treatment.upper_treatment}
+                                  </Badge>
+                                  {treatment.upper_surgery_date && (
+                                    <div className="text-xs text-blue-700 font-medium">
+                                      Upper Surgery: {new Date(treatment.upper_surgery_date).toLocaleDateString('en-US')}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
-                          {/* Lower Treatment Section */}
-                          {patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT" && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                  <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Lower Arch Treatment</p>
+                              {/* Lower Treatment */}
+                              {treatment.lower_treatment && treatment.lower_treatment !== "NO TREATMENT" && (
+                                <div className="space-y-1">
+                                  <Badge variant="outline" className="bg-white border-blue-300 text-blue-800 text-xs font-medium">
+                                    Lower: {treatment.lower_treatment}
+                                  </Badge>
+                                  {treatment.lower_surgery_date && (
+                                    <div className="text-xs text-blue-700 font-medium">
+                                      Lower Surgery: {new Date(treatment.lower_surgery_date).toLocaleDateString('en-US')}
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    onClick={() => handleEditTreatment('lower')}
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleDeleteTreatment('lower')}
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-800 hover:bg-red-100"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <Badge variant="outline" className="bg-white border-blue-300 text-blue-800 text-xs font-medium">
-                                  {patient.lower_treatment}
-                                </Badge>
-                                {patient.lower_surgery_date && (
-                                  <div className="text-xs text-blue-700 font-medium">
-                                    Surgery Date: {new Date(patient.lower_surgery_date).toLocaleDateString('en-US')}
-                                  </div>
-                                )}
-                              </div>
+                              )}
                             </div>
-                          )}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-sm text-gray-500">No treatment information available</p>
+                          <p className="text-xs text-gray-400 mt-1">Click the + button to add treatment details</p>
                         </div>
                       )}
                     </div>
@@ -10961,6 +10987,18 @@ export function PatientProfilePage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Emergency Contact Dialog */}
+      {patient && (
+        <EditEmergencyContactDialog
+          open={showEditEmergencyContact}
+          onOpenChange={setShowEditEmergencyContact}
+          patient={patient}
+          onSuccess={(updatedPatient) => {
+            setPatient(updatedPatient);
+          }}
+        />
+      )}
 
       {/* Lab Script Detail Dialog */}
       <LabScriptDetail
