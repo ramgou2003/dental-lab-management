@@ -92,7 +92,10 @@ import {
   ExternalLink,
   RefreshCw,
   Pencil,
-  GripVertical
+  GripVertical,
+  Pill,
+  Shield,
+  Smile
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -106,6 +109,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useSurgicalRecallSheets } from "@/hooks/useSurgicalRecallSheets";
 import { savePatientPacket, getPatientPacketsByPatientId, updatePatientPacket, deletePatientPacket } from "@/services/patientPacketService";
 import { convertDatabaseToFormData, convertFormDataToDatabase } from "@/utils/patientPacketConverter";
+import { MedicalHistoryForm } from "@/components/MedicalHistoryForm";
+import { getActiveMedicalHistory, MedicalHistoryData } from "@/services/medicalHistoryService";
 import { getFinancialAgreementsByPatientId, deleteFinancialAgreement, updateFinancialAgreement, formatFinancialAgreementForPdf } from "@/services/financialAgreementService";
 import { getConsentFormsByPatientId, getConsentForm, deleteConsentForm, formatConsentFormForDisplay, ConsentFullArchFormData } from "@/services/consentFullArchService";
 import { getMedicalRecordsReleaseFormsByPatientId, getMedicalRecordsReleaseForm, deleteMedicalRecordsReleaseForm, formatMedicalRecordsReleaseFormForDisplay, MedicalRecordsReleaseFormData } from "@/services/medicalRecordsReleaseService";
@@ -613,6 +618,11 @@ export function PatientProfilePage() {
   const [showDeletePacketConfirm, setShowDeletePacketConfirm] = useState(false);
   const [packetToDelete, setPacketToDelete] = useState<any | null>(null);
 
+  // State for Medical History
+  const [medicalHistory, setMedicalHistory] = useState<MedicalHistoryData | null>(null);
+  const [loadingMedicalHistory, setLoadingMedicalHistory] = useState(false);
+  const [showMedicalHistoryForm, setShowMedicalHistoryForm] = useState(false);
+
   // State for Consultation Forms
   const [consultationForms, setConsultationForms] = useState<any[]>([]);
   const [loadingConsultationForms, setLoadingConsultationForms] = useState(false);
@@ -1117,6 +1127,158 @@ export function PatientProfilePage() {
     return documentCounts[categoryId] || 0;
   };
 
+  // Health History Data Extraction from medical_history table
+  const patientHealthHistory = useMemo(() => {
+    if (!medicalHistory) {
+      return {
+        hasData: false,
+        medicalConditions: [],
+        allergies: {
+          dental: [],
+          medications: [],
+          other: [],
+          food: '',
+          none: false
+        },
+        currentMedications: {
+          emergency: [],
+          bone: [],
+          specialized: [],
+          complete: '',
+          none: false
+        },
+        currentPharmacy: {
+          name: '',
+          city: ''
+        },
+        comfortPreferences: {
+          anxietyControl: [],
+          painInjection: [],
+          communication: [],
+          sensorySensitivities: [],
+          physicalComfort: [],
+          servicePreferences: [],
+          otherConcerns: ''
+        },
+        source: null,
+        createdAt: null,
+        historyId: null
+      };
+    }
+
+    // Extract medical conditions
+    const medicalConditions: Array<{ name: string; critical: boolean; details?: string }> = [];
+
+    // Critical conditions
+    if (medicalHistory.critical_conditions) {
+      const critical = medicalHistory.critical_conditions;
+
+      if (critical.acidReflux) medicalConditions.push({ name: 'Acid Reflux/GERD', critical: false });
+      if (critical.cancer?.has) medicalConditions.push({
+        name: 'Cancer',
+        critical: true,
+        details: critical.cancer.type || undefined
+      });
+      if (critical.depressionAnxiety) medicalConditions.push({ name: 'Depression/Anxiety', critical: false });
+      if (critical.diabetes?.has) medicalConditions.push({
+        name: 'Diabetes',
+        critical: true,
+        details: critical.diabetes.type ? `Type ${critical.diabetes.type}${critical.diabetes.a1cLevel ? `, A1C: ${critical.diabetes.a1cLevel}` : ''}` : undefined
+      });
+      if (critical.heartDisease) medicalConditions.push({ name: 'Heart Disease', critical: true });
+      if (critical.periodontalDisease) medicalConditions.push({ name: 'Periodontal Disease', critical: false });
+      if (critical.substanceAbuse) medicalConditions.push({ name: 'Substance Abuse', critical: true });
+      if (critical.highBloodPressure) medicalConditions.push({ name: 'High Blood Pressure', critical: false });
+      if (critical.other) medicalConditions.push({ name: critical.other, critical: false });
+    }
+
+    // System specific conditions
+    if (medicalHistory.system_specific) {
+      const systems = medicalHistory.system_specific;
+
+      if (systems.respiratory && Array.isArray(systems.respiratory)) {
+        systems.respiratory.forEach((condition: string) =>
+          medicalConditions.push({ name: condition, critical: false })
+        );
+      }
+      if (systems.cardiovascular && Array.isArray(systems.cardiovascular)) {
+        systems.cardiovascular.forEach((condition: string) =>
+          medicalConditions.push({ name: condition, critical: false })
+        );
+      }
+      if (systems.gastrointestinal && Array.isArray(systems.gastrointestinal)) {
+        systems.gastrointestinal.forEach((condition: string) =>
+          medicalConditions.push({ name: condition, critical: false })
+        );
+      }
+      if (systems.neurological && Array.isArray(systems.neurological)) {
+        systems.neurological.forEach((condition: string) =>
+          medicalConditions.push({ name: condition, critical: false })
+        );
+      }
+      if (systems.endocrineRenal && Array.isArray(systems.endocrineRenal)) {
+        systems.endocrineRenal.forEach((condition: string) =>
+          medicalConditions.push({ name: condition, critical: false })
+        );
+      }
+    }
+
+    // Additional conditions
+    if (medicalHistory.additional_conditions && Array.isArray(medicalHistory.additional_conditions)) {
+      medicalHistory.additional_conditions.forEach((condition: string) =>
+        medicalConditions.push({ name: condition, critical: false })
+      );
+    }
+
+    // Extract allergies
+    const allergies = {
+      dental: (medicalHistory.allergies?.dentalRelated || []) as string[],
+      medications: (medicalHistory.allergies?.medications || []) as string[],
+      other: (medicalHistory.allergies?.other || []) as string[],
+      food: medicalHistory.allergies?.food || '',
+      none: medicalHistory.allergies?.none || false
+    };
+
+    // Extract medications
+    const currentMedications = {
+      emergency: (medicalHistory.current_medications?.emergency || []) as string[],
+      bone: (medicalHistory.current_medications?.boneOsteoporosis || []) as string[],
+      specialized: (medicalHistory.current_medications?.specialized || []) as string[],
+      complete: medicalHistory.current_medications?.complete || '',
+      none: medicalHistory.current_medications?.none || false
+    };
+
+    // Extract pharmacy information
+    const currentPharmacy = {
+      name: medicalHistory.current_pharmacy?.name || '',
+      city: medicalHistory.current_pharmacy?.city || ''
+    };
+
+    // Extract comfort preferences
+    const comfortPreferences = {
+      anxietyControl: medicalHistory.anxiety_control || [],
+      painInjection: medicalHistory.pain_injection || [],
+      communication: medicalHistory.communication || [],
+      sensorySensitivities: medicalHistory.sensory_sensitivities || [],
+      physicalComfort: medicalHistory.physical_comfort || [],
+      servicePreferences: medicalHistory.service_preferences || [],
+      otherConcerns: medicalHistory.other_concerns || ''
+    };
+
+    return {
+      hasData: true,
+      medicalConditions,
+      allergies,
+      currentMedications,
+      currentPharmacy,
+      comfortPreferences,
+      recentHealthChanges: medicalHistory.recent_health_changes || null,
+      source: medicalHistory.source || 'manual',
+      createdAt: medicalHistory.created_at,
+      historyId: medicalHistory.id
+    };
+  }, [medicalHistory]);
+
   useEffect(() => {
     if (patientId) {
       fetchPatientData();
@@ -1125,6 +1287,7 @@ export function PatientProfilePage() {
       fetchDataCollectionSheets();
       fetchIVSedationSheets();
       fetchPatientPackets();
+      fetchMedicalHistory();
       fetchFinancialAgreements();
       fetchConsentForms();
       fetchMedicalRecordsReleaseForms();
@@ -1276,6 +1439,26 @@ export function PatientProfilePage() {
       console.error('Error fetching patient packets:', error);
     } finally {
       setLoadingPatientPackets(false);
+    }
+  };
+
+  const fetchMedicalHistory = async () => {
+    if (!patientId) return;
+
+    try {
+      setLoadingMedicalHistory(true);
+      const { data, error } = await getActiveMedicalHistory(patientId);
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error fetching medical history:', error);
+        return;
+      }
+
+      setMedicalHistory(data || null);
+    } catch (error) {
+      console.error('Error fetching medical history:', error);
+    } finally {
+      setLoadingMedicalHistory(false);
     }
   };
 
@@ -3145,8 +3328,31 @@ export function PatientProfilePage() {
         'internal'
       );
 
-      // Always save as draft during auto-save
-      dbData.form_status = 'draft';
+      // ABSOLUTE RULE: If editing an existing packet, preserve its status
+      // Completed forms NEVER go back to draft
+      if (currentPatientPacketId) {
+        // Check current status before auto-saving
+        const { data: currentPacket } = await supabase
+          .from('new_patient_packets')
+          .select('form_status')
+          .eq('id', currentPatientPacketId)
+          .single();
+
+        const currentStatus = currentPacket?.form_status;
+
+        // ABSOLUTE RULE: Completed forms stay completed forever
+        if (currentStatus === 'completed') {
+          dbData.form_status = 'completed';
+          console.log('🔒 Auto-save preserving completed status');
+        } else {
+          dbData.form_status = 'draft';
+          console.log('🔄 Auto-save keeping draft status');
+        }
+      } else {
+        // New packet - save as draft
+        dbData.form_status = 'draft';
+        console.log('📝 Auto-save creating new draft');
+      }
 
       console.log('Auto-save data:', {
         first_name: dbData.first_name,
@@ -5104,32 +5310,416 @@ export function PatientProfilePage() {
                   </div>
                 </div>
 
-                {/* Medical Information */}
+                {/* Health History */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
-                  <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                    <div className="p-1.5 bg-blue-100 rounded-lg">
-                      <Heart className="h-4 w-4 text-blue-600" />
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-blue-100 rounded-lg">
+                        <Heart className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">Health History</h3>
                     </div>
-                    <h3 className="text-base font-semibold text-gray-900">Health History</h3>
+                    {patientHealthHistory.hasData ? (
+                      <button
+                        onClick={() => setShowMedicalHistoryForm(true)}
+                        className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
+                        title="Edit health history"
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-blue-600 hover:text-blue-700" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowMedicalHistoryForm(true)}
+                        className="text-xs px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center gap-1"
+                        title="Add health history"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add
+                      </button>
+                    )}
                   </div>
-                  <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0">
+                  <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
                     <div className="space-y-3 pb-2">
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Medical History</p>
-                        <p className="text-sm font-semibold text-gray-900">No medical history recorded</p>
+                      {patientHealthHistory.hasData ? (
+                        <>
+                          {/* Medical Conditions */}
+                          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-2.5 border border-red-100">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                              <h4 className="text-xs font-bold text-red-900 uppercase tracking-wide">Medical Conditions</h4>
+                            </div>
+                            {patientHealthHistory.medicalConditions.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {patientHealthHistory.medicalConditions.map((condition, index) => (
+                                  <Badge
+                                    key={index}
+                                    variant={condition.critical ? "destructive" : "secondary"}
+                                    className={`text-xs ${
+                                      condition.critical
+                                        ? 'bg-red-100 text-red-800 border-red-300'
+                                        : 'bg-blue-100 text-blue-800 border-blue-300'
+                                    }`}
+                                  >
+                                    {condition.critical && <AlertTriangle className="h-3 w-3 mr-1 inline" />}
+                                    {condition.name}
+                                    {condition.details && ` (${condition.details})`}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-600 italic">No medical conditions reported</p>
+                            )}
+                          </div>
+
+                          {/* Allergies */}
+                          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-2.5 border border-yellow-100">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></div>
+                              <h4 className="text-xs font-bold text-yellow-900 uppercase tracking-wide">Allergies</h4>
+                            </div>
+                            {patientHealthHistory.allergies.none ? (
+                              <p className="text-xs text-gray-600 italic">No known allergies</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {patientHealthHistory.allergies.dental.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-yellow-800 mb-1">Dental:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {patientHealthHistory.allergies.dental.map((allergy, index) => (
+                                        <Badge key={index} className="text-xs bg-orange-100 text-orange-800 border-orange-300">
+                                          <Shield className="h-3 w-3 mr-1 inline" />
+                                          {allergy}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {patientHealthHistory.allergies.medications.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-yellow-800 mb-1">Medications:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {patientHealthHistory.allergies.medications.map((allergy, index) => (
+                                        <Badge key={index} className="text-xs bg-red-100 text-red-800 border-red-300">
+                                          <Pill className="h-3 w-3 mr-1 inline" />
+                                          {allergy}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {patientHealthHistory.allergies.other.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-yellow-800 mb-1">Other:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {patientHealthHistory.allergies.other.map((allergy, index) => (
+                                        <Badge key={index} className="text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
+                                          {allergy}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {patientHealthHistory.allergies.food && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-yellow-800 mb-1">Food:</p>
+                                    <p className="text-xs text-gray-700">{patientHealthHistory.allergies.food}</p>
+                                  </div>
+                                )}
+                                {patientHealthHistory.allergies.dental.length === 0 &&
+                                 patientHealthHistory.allergies.medications.length === 0 &&
+                                 patientHealthHistory.allergies.other.length === 0 &&
+                                 !patientHealthHistory.allergies.food && (
+                                  <p className="text-xs text-gray-600 italic">No allergies reported</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Current Medications */}
+                          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-2.5 border border-purple-100">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-1.5 h-1.5 bg-purple-600 rounded-full"></div>
+                              <h4 className="text-xs font-bold text-purple-900 uppercase tracking-wide">Current Medications</h4>
+                            </div>
+                            {patientHealthHistory.currentMedications.none ? (
+                              <p className="text-xs text-gray-600 italic">Not taking any medications</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {patientHealthHistory.currentMedications.emergency.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-purple-800 mb-1 flex items-center gap-1">
+                                      <AlertTriangle className="h-3 w-3 text-red-600" />
+                                      Emergency:
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {patientHealthHistory.currentMedications.emergency.map((med, index) => (
+                                        <Badge key={index} className="text-xs bg-red-100 text-red-800 border-red-300">
+                                          {med}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {patientHealthHistory.currentMedications.bone.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-purple-800 mb-1">Bone/Osteoporosis:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {patientHealthHistory.currentMedications.bone.map((med, index) => (
+                                        <Badge key={index} className="text-xs bg-purple-100 text-purple-800 border-purple-300">
+                                          {med}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {patientHealthHistory.currentMedications.specialized.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-purple-800 mb-1">Specialized:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {patientHealthHistory.currentMedications.specialized.map((med, index) => (
+                                        <Badge key={index} className="text-xs bg-indigo-100 text-indigo-800 border-indigo-300">
+                                          {med}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {patientHealthHistory.currentMedications.complete && (
+                                  <div className="bg-white rounded-md p-2 border border-purple-200">
+                                    <p className="text-xs font-semibold text-purple-800 mb-1">Complete List:</p>
+                                    <p className="text-xs text-gray-700 whitespace-pre-wrap">{patientHealthHistory.currentMedications.complete}</p>
+                                  </div>
+                                )}
+                                {patientHealthHistory.currentMedications.emergency.length === 0 &&
+                                 patientHealthHistory.currentMedications.bone.length === 0 &&
+                                 patientHealthHistory.currentMedications.specialized.length === 0 &&
+                                 !patientHealthHistory.currentMedications.complete && (
+                                  <p className="text-xs text-gray-600 italic">No medications reported</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Current Pharmacy */}
+                          {(patientHealthHistory.currentPharmacy.name || patientHealthHistory.currentPharmacy.city) && (
+                            <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg p-2.5 border border-teal-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="p-1 bg-teal-100 rounded">
+                                  <svg className="h-3.5 w-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                  </svg>
+                                </div>
+                                <h4 className="text-xs font-semibold text-teal-900">Current Pharmacy</h4>
+                              </div>
+                              <div className="space-y-1.5 pl-6">
+                                {patientHealthHistory.currentPharmacy.name && (
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-xs font-medium text-teal-700 min-w-[60px]">Name:</span>
+                                    <span className="text-xs text-gray-700">{patientHealthHistory.currentPharmacy.name}</span>
+                                  </div>
+                                )}
+                                {patientHealthHistory.currentPharmacy.city && (
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-xs font-medium text-teal-700 min-w-[60px]">City:</span>
+                                    <span className="text-xs text-gray-700">{patientHealthHistory.currentPharmacy.city}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Source Information */}
+                          <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
+                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                              <FileText className="h-3 w-3" />
+                              <span className="font-medium">Source:</span>
+                              <span>New Patient Packet</span>
+                              {patientHealthHistory.packetDate && (
+                                <>
+                                  <span>•</span>
+                                  <span>{new Date(patientHealthHistory.packetDate).toLocaleDateString()}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mx-auto mb-3">
+                            <Heart className="h-8 w-8 text-gray-300" />
+                          </div>
+                          <p className="text-sm font-medium text-gray-500 mb-1">No Health History Available</p>
+                          <p className="text-xs text-gray-400 mb-3">Add medical history, allergies, and medications</p>
+                          <button
+                            onClick={() => setShowMedicalHistoryForm(true)}
+                            className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 inline-flex items-center gap-1"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Add Health History
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Comfort Preferences */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-pink-100 rounded-lg">
+                        <Smile className="h-4 w-4 text-pink-600" />
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Allergies</p>
-                        <p className="text-sm font-semibold text-gray-900">No known allergies</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Emergency Contact</p>
-                        <p className="text-sm font-semibold text-gray-900">Not provided</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Insurance</p>
-                        <p className="text-sm font-semibold text-gray-900">Not provided</p>
-                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">Preferences</h3>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                    <div className="space-y-3 pb-2">
+                      {patientHealthHistory.hasData && (
+                        patientHealthHistory.comfortPreferences.anxietyControl.length > 0 ||
+                        patientHealthHistory.comfortPreferences.painInjection.length > 0 ||
+                        patientHealthHistory.comfortPreferences.communication.length > 0 ||
+                        patientHealthHistory.comfortPreferences.sensorySensitivities.length > 0 ||
+                        patientHealthHistory.comfortPreferences.physicalComfort.length > 0 ||
+                        patientHealthHistory.comfortPreferences.servicePreferences.length > 0 ||
+                        patientHealthHistory.comfortPreferences.otherConcerns
+                      ) ? (
+                        <>
+                          {/* Anxiety Control */}
+                          {patientHealthHistory.comfortPreferences.anxietyControl.length > 0 && (
+                            <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg p-2.5 border border-pink-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 bg-pink-600 rounded-full"></div>
+                                <h4 className="text-xs font-bold text-pink-900 uppercase tracking-wide">Anxiety Control</h4>
+                              </div>
+                              <div className="space-y-1">
+                                {patientHealthHistory.comfortPreferences.anxietyControl.map((item, index) => (
+                                  <div key={index} className="flex items-start gap-1.5">
+                                    <div className="w-1 h-1 bg-pink-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                    <p className="text-xs text-gray-700">{item}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Pain & Injection */}
+                          {patientHealthHistory.comfortPreferences.painInjection.length > 0 && (
+                            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2.5 border border-purple-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 bg-purple-600 rounded-full"></div>
+                                <h4 className="text-xs font-bold text-purple-900 uppercase tracking-wide">Pain & Injection</h4>
+                              </div>
+                              <div className="space-y-1">
+                                {patientHealthHistory.comfortPreferences.painInjection.map((item, index) => (
+                                  <div key={index} className="flex items-start gap-1.5">
+                                    <div className="w-1 h-1 bg-purple-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                    <p className="text-xs text-gray-700">{item}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Communication */}
+                          {patientHealthHistory.comfortPreferences.communication.length > 0 && (
+                            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-2.5 border border-blue-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                                <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Communication</h4>
+                              </div>
+                              <div className="space-y-1">
+                                {patientHealthHistory.comfortPreferences.communication.map((item, index) => (
+                                  <div key={index} className="flex items-start gap-1.5">
+                                    <div className="w-1 h-1 bg-blue-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                    <p className="text-xs text-gray-700">{item}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Sensory Sensitivities */}
+                          {patientHealthHistory.comfortPreferences.sensorySensitivities.length > 0 && (
+                            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-2.5 border border-amber-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 bg-amber-600 rounded-full"></div>
+                                <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wide">Sensory Sensitivities</h4>
+                              </div>
+                              <div className="space-y-1">
+                                {patientHealthHistory.comfortPreferences.sensorySensitivities.map((item, index) => (
+                                  <div key={index} className="flex items-start gap-1.5">
+                                    <div className="w-1 h-1 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                    <p className="text-xs text-gray-700">{item}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Physical Comfort */}
+                          {patientHealthHistory.comfortPreferences.physicalComfort.length > 0 && (
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-2.5 border border-green-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                <h4 className="text-xs font-bold text-green-900 uppercase tracking-wide">Physical Comfort</h4>
+                              </div>
+                              <div className="space-y-1">
+                                {patientHealthHistory.comfortPreferences.physicalComfort.map((item, index) => (
+                                  <div key={index} className="flex items-start gap-1.5">
+                                    <div className="w-1 h-1 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                    <p className="text-xs text-gray-700">{item}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Service Preferences */}
+                          {patientHealthHistory.comfortPreferences.servicePreferences.length > 0 && (
+                            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-2.5 border border-indigo-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full"></div>
+                                <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wide">Service Preferences</h4>
+                              </div>
+                              <div className="space-y-1">
+                                {patientHealthHistory.comfortPreferences.servicePreferences.map((item, index) => (
+                                  <div key={index} className="flex items-start gap-1.5">
+                                    <div className="w-1 h-1 bg-indigo-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                    <p className="text-xs text-gray-700">{item}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Other Concerns */}
+                          {patientHealthHistory.comfortPreferences.otherConcerns && (
+                            <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-2.5 border border-gray-200">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 bg-gray-600 rounded-full"></div>
+                                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Other Concerns</h4>
+                              </div>
+                              <p className="text-xs text-gray-700 leading-relaxed">{patientHealthHistory.comfortPreferences.otherConcerns}</p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-8">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center mx-auto mb-3">
+                            <Smile className="h-8 w-8 text-pink-300" />
+                          </div>
+                          <p className="text-sm font-medium text-gray-500 mb-1">No Preferences Available</p>
+                          <p className="text-xs text-gray-400 mb-3">Add comfort preferences in health history</p>
+                          <button
+                            onClick={() => setShowMedicalHistoryForm(true)}
+                            className="text-xs px-3 py-1.5 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition-colors duration-200 inline-flex items-center gap-1"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Add Preferences
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -18965,20 +19555,13 @@ export function PatientProfilePage() {
                 try {
                   let result;
 
-                  if (isEditingPatientPacket && editingPatientPacket) {
-                    // Update existing packet
-                    const packetId = patientPackets.find(p =>
-                      p.first_name === editingPatientPacket.firstName &&
-                      p.last_name === editingPatientPacket.lastName
-                    )?.id;
-
-                    if (!packetId) {
-                      throw new Error('Could not find packet ID for update');
-                    }
-
-                    result = await updatePatientPacket(packetId, formData, 'internal');
+                  if (isEditingPatientPacket && currentPatientPacketId) {
+                    // Update existing packet using currentPatientPacketId
+                    console.log('Updating patient packet with ID:', currentPatientPacketId);
+                    result = await updatePatientPacket(currentPatientPacketId, formData, 'internal');
                   } else {
                     // Create new packet
+                    console.log('Creating new patient packet for patient:', patient.id);
                     result = await savePatientPacket(
                       formData,
                       patient.id, // patient_id for internal submissions
@@ -18998,6 +19581,8 @@ export function PatientProfilePage() {
                   }
 
                   console.log('Patient packet saved successfully:', result.data);
+                  console.log('Form status after save:', result.data?.form_status);
+
                   setShowNewPatientPacketForm(false);
                   setSelectedAdminFormType("");
                   setEditingPatientPacket(null);
@@ -19005,6 +19590,9 @@ export function PatientProfilePage() {
 
                   // Refresh the patient packets list
                   await fetchPatientPackets();
+
+                  // Also refresh medical history since it may have been synced
+                  await fetchMedicalHistory();
 
                   // Show success message
                   toast({
@@ -20069,6 +20657,21 @@ export function PatientProfilePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Medical History Form Dialog */}
+      <MedicalHistoryForm
+        open={showMedicalHistoryForm}
+        onOpenChange={setShowMedicalHistoryForm}
+        patientId={patientId}
+        existingData={medicalHistory}
+        onSuccess={() => {
+          fetchMedicalHistory();
+          toast({
+            title: "Success",
+            description: "Medical history updated successfully"
+          });
+        }}
+      />
     </div>
   );
 }

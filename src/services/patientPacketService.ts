@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { NewPatientFormData } from '@/types/newPatientPacket';
 import { NewPatientPacketDB, PatientPacketSummary } from '@/types/supabasePatientPacket';
 import { convertFormDataToDatabase, convertDatabaseToFormData } from '@/utils/patientPacketConverter';
+import { syncMedicalHistoryFromPacket } from './medicalHistoryService';
 
 /**
  * Save a new patient packet to the database
@@ -44,6 +45,25 @@ export async function savePatientPacket(
     }
 
     console.log('Patient packet saved successfully:', data);
+
+    // Sync medical history if patient_id is available and form is completed
+    if (data && data.patient_id && data.form_status === 'completed') {
+      console.log('Syncing medical history from patient packet...');
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        await syncMedicalHistoryFromPacket(
+          data.patient_id,
+          data.id,
+          data,
+          user?.user?.id
+        );
+        console.log('Medical history synced successfully');
+      } catch (syncError) {
+        console.error('Error syncing medical history (non-critical):', syncError);
+        // Don't fail the whole operation if sync fails
+      }
+    }
+
     return { data, error: null };
   } catch (error) {
     console.error('Unexpected error saving patient packet:', error);
@@ -97,6 +117,25 @@ export async function updatePatientPacket(
     }
 
     console.log('Patient packet updated successfully:', data);
+
+    // Sync medical history if patient_id is available and form is completed
+    if (data && data.patient_id && data.form_status === 'completed') {
+      console.log('Syncing medical history from updated patient packet...');
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        await syncMedicalHistoryFromPacket(
+          data.patient_id,
+          data.id,
+          data,
+          user?.user?.id
+        );
+        console.log('Medical history synced successfully');
+      } catch (syncError) {
+        console.error('Error syncing medical history (non-critical):', syncError);
+        // Don't fail the whole operation if sync fails
+      }
+    }
+
     return { data, error: null };
   } catch (error) {
     console.error('Unexpected error updating patient packet:', error);
@@ -183,6 +222,26 @@ export async function autoSavePatientPacket(
     }
 
     console.log('✅ Patient packet auto-saved successfully with preserved status:', data.form_status);
+
+    // Sync medical history if patient_id is available and form is completed
+    // Only sync when status is completed (not for drafts)
+    if (data && data.patient_id && data.form_status === 'completed') {
+      console.log('Syncing medical history from auto-saved patient packet...');
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        await syncMedicalHistoryFromPacket(
+          data.patient_id,
+          data.id,
+          data,
+          user?.user?.id
+        );
+        console.log('Medical history synced successfully');
+      } catch (syncError) {
+        console.error('Error syncing medical history (non-critical):', syncError);
+        // Don't fail the whole operation if sync fails
+      }
+    }
+
     return { data, error: null };
   } catch (error) {
     console.error('❌ Unexpected error auto-saving patient packet:', error);
