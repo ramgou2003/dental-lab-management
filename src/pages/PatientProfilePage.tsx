@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,7 +91,8 @@ import {
   FileImage,
   ExternalLink,
   RefreshCw,
-  Pencil
+  Pencil,
+  GripVertical
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -147,6 +148,7 @@ export function PatientProfilePage() {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   const [selectedDocCategory, setSelectedDocCategory] = useState<string | null>(null);
   const [patientDocuments, setPatientDocuments] = useState<PatientDocument[]>([]);
+  const [documentSearchTerm, setDocumentSearchTerm] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showCaptureDialog, setShowCaptureDialog] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -160,7 +162,11 @@ export function PatientProfilePage() {
   const [docDescription, setDocDescription] = useState('');
   const [docDate, setDocDate] = useState(new Date().toISOString().split('T')[0]);
   const [dragActive, setDragActive] = useState(false);
+  const [docAreaDragActive, setDocAreaDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
+  const [bulkUploadDescription, setBulkUploadDescription] = useState('');
   const [docType, setDocType] = useState('');
   const [customDocType, setCustomDocType] = useState('');
   const [showFilePreviewDialog, setShowFilePreviewDialog] = useState(false);
@@ -171,7 +177,15 @@ export function PatientProfilePage() {
   const [showMoveDocumentDialog, setShowMoveDocumentDialog] = useState(false);
   const [documentToMove, setDocumentToMove] = useState<PatientDocument | null>(null);
   const [targetCategory, setTargetCategory] = useState<string>('');
+  const [draggedDocument, setDraggedDocument] = useState<PatientDocument | null>(null);
+  const [dragOverCategory, setDragOverCategory] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState({ progress: 0, loaded: 0, total: 0 });
+  const [multiFileUploadProgress, setMultiFileUploadProgress] = useState<{
+    currentFile: number;
+    totalFiles: number;
+    currentFileName: string;
+    overallProgress: number;
+  }>({ currentFile: 0, totalFiles: 0, currentFileName: '', overallProgress: 0 });
   const [previewLoading, setPreviewLoading] = useState(true);
 
   // Consultation document types list
@@ -204,6 +218,44 @@ export function PatientProfilePage() {
     navigate(newUrl, { replace: true });
   };
 
+  // Handler for drag and drop in document area
+  const handleDocAreaFileDrop = (files: FileList | File[]) => {
+    if (!selectedDocCategory) {
+      toast({
+        title: "Please select a category first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const fileArray = Array.from(files);
+
+    if (fileArray.length === 0) return;
+
+    // If multiple files, open bulk upload dialog
+    if (fileArray.length > 1) {
+      setSelectedFiles(fileArray);
+      setBulkUploadDescription('');
+      setShowBulkUploadDialog(true);
+    } else {
+      // Single file - use original upload dialog
+      setSelectedFile(fileArray[0]);
+
+      // Auto-populate document type with filename (without extension)
+      const fileNameWithoutExt = fileArray[0].name.replace(/\.[^/.]+$/, '');
+      setDocType(fileNameWithoutExt);
+      setDocTitle(fileNameWithoutExt);
+
+      // Auto-populate date with current date
+      const now = new Date();
+      const formattedDate = now.toISOString().split('T')[0];
+      setDocDate(formattedDate);
+
+      // Open the upload dialog
+      setShowUploadDialog(true);
+    }
+  };
+
   // Update tab state when URL changes (e.g., browser back/forward)
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -216,42 +268,53 @@ export function PatientProfilePage() {
   }, [location.search, activeTab]);
 
   // Fetch patient consultations when consultation category is selected
+  // Fetch patient consultations
+  const fetchPatientConsultations = async () => {
+    if (!patientId) return;
+    setLoadingConsultations(true);
+    try {
+      // Fetch consultations for this patient
+      const { data, error } = await (supabase as any)
+        .from('consultations')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('consultation_date', { ascending: false });
+
+      if (error) throw error;
+      setPatientConsultations(data || []);
+    } catch (error) {
+      console.error('Error fetching consultations:', error);
+    } finally {
+      setLoadingConsultations(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchConsultations = async () => {
-      if (!patientId || selectedDocCategory !== 'consultation') return;
-      setLoadingConsultations(true);
+    if (selectedDocCategory === 'consultation') {
+      fetchPatientConsultations();
+    }
+  }, [patientId, selectedDocCategory]);
+
+  // Fetch ALL patient documents once on page load
+  useEffect(() => {
+    const fetchAllDocuments = async () => {
+      if (!patientId) return;
       try {
-        // Fetch consultations for this patient
+        // Fetch all documents for this patient (not filtered by category)
         const { data, error } = await (supabase as any)
-          .from('consultations')
+          .from('patient_documents')
           .select('*')
           .eq('patient_id', patientId)
-          .order('consultation_date', { ascending: false });
+          .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setPatientConsultations(data || []);
+        setPatientDocuments(data || []);
       } catch (error) {
-        console.error('Error fetching consultations:', error);
-      } finally {
-        setLoadingConsultations(false);
+        console.error('Error fetching all documents:', error);
       }
     };
-    fetchConsultations();
-  }, [patientId, selectedDocCategory]);
-
-  // Fetch patient documents when category changes
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      if (!patientId || !selectedDocCategory) return;
-      try {
-        const docs = await patientDocumentService.getDocumentsByCategory(patientId, selectedDocCategory);
-        setPatientDocuments(docs);
-      } catch (error) {
-        console.error('Error fetching documents:', error);
-      }
-    };
-    fetchDocuments();
-  }, [patientId, selectedDocCategory]);
+    fetchAllDocuments();
+  }, [patientId]);
 
   // Function to crop the image based on the current crop selection
   const getCroppedImg = async (): Promise<string | null> => {
@@ -970,10 +1033,95 @@ export function PatientProfilePage() {
     }
   }, [activeDropdown, ivSedationActiveDropdown]);
 
+  // Get document count for a category (including forms and uploaded documents)
+  // Using useMemo to ensure counts update when data changes
+  const documentCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+
+    // Consultation
+    counts['consultation'] =
+      patientDocuments.filter(doc => doc.category === 'consultation').length +
+      patientConsultations.length;
+
+    // Administrative
+    counts['administrative'] =
+      patientDocuments.filter(doc => doc.category === 'administrative').length +
+      patientPackets.filter(p => p.form_status === 'completed').length +
+      financialAgreements.filter(f => f.status === 'completed').length +
+      consentForms.filter(f => f.status === 'completed').length +
+      partialPaymentAgreementForms.filter(f => f.status !== 'draft' && f.status !== 'void').length +
+      treatmentPlanForms.filter(f => f.form_status === 'completed').length;
+
+    // Data Collection
+    counts['data-collection'] =
+      patientDocuments.filter(doc => doc.category === 'data-collection').length +
+      dataCollectionSheets.length;
+
+    // Surgical
+    counts['surgical'] =
+      patientDocuments.filter(doc => doc.category === 'surgical').length +
+      ivSedationSheets.filter(f => f.status === 'completed').length +
+      surgicalRecallSheets.filter(s => s.status === 'completed').length;
+
+    // Post-Surgery
+    counts['post-surgery'] =
+      patientDocuments.filter(doc => doc.category === 'post-surgery').length;
+
+    // Lab
+    counts['lab'] =
+      patientDocuments.filter(doc => doc.category === 'lab').length +
+      labScripts.filter(s => s.status === 'completed').length;
+
+    // Report Cards
+    const patientReportCardsFiltered = reportCards.filter(card => {
+      return card.lab_script_id && labScripts.some(script => script.id === card.lab_script_id);
+    });
+    counts['report-cards'] =
+      patientDocuments.filter(doc => doc.category === 'report-cards').length +
+      patientReportCardsFiltered.filter(card =>
+        card.lab_report_status === 'completed' || card.clinical_report_status === 'completed'
+      ).length;
+
+    // Miscellaneous
+    counts['miscellaneous'] =
+      patientDocuments.filter(doc => doc.category === 'miscellaneous').length;
+
+    // All - sum of all categories
+    counts['all'] =
+      counts['consultation'] +
+      counts['administrative'] +
+      counts['data-collection'] +
+      counts['surgical'] +
+      counts['post-surgery'] +
+      counts['lab'] +
+      counts['report-cards'] +
+      counts['miscellaneous'];
+
+    return counts;
+  }, [
+    patientDocuments,
+    patientConsultations,
+    patientPackets,
+    financialAgreements,
+    consentForms,
+    partialPaymentAgreementForms,
+    treatmentPlanForms,
+    dataCollectionSheets,
+    ivSedationSheets,
+    surgicalRecallSheets,
+    labScripts,
+    reportCards
+  ]);
+
+  const getDocumentCount = (categoryId: string) => {
+    return documentCounts[categoryId] || 0;
+  };
+
   useEffect(() => {
     if (patientId) {
       fetchPatientData();
       fetchPatientTreatments();
+      fetchPatientConsultations();
       fetchDataCollectionSheets();
       fetchIVSedationSheets();
       fetchPatientPackets();
@@ -5550,6 +5698,7 @@ export function PatientProfilePage() {
                     {/* Categories List */}
                     <div className="flex-1 overflow-y-auto p-2">
                       {[
+                        { id: 'all', name: 'All Documents', icon: FolderOpen },
                         { id: 'consultation', name: 'Consultation', icon: Stethoscope },
                         { id: 'administrative', name: 'Administrative Documents', icon: FileText },
                         { id: 'data-collection', name: 'Data Collection Sheets', icon: ClipboardCheck },
@@ -5558,99 +5707,232 @@ export function PatientProfilePage() {
                         { id: 'lab', name: 'Lab', icon: FlaskConical },
                         { id: 'report-cards', name: 'Report Cards', icon: ClipboardList },
                         { id: 'miscellaneous', name: 'Miscellaneous', icon: FolderOpen },
-                      ].map((category) => (
-                        <div
-                          key={category.id}
-                          onClick={() => setSelectedDocCategory(category.id)}
-                          className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors mb-1 border ${
-                            selectedDocCategory === category.id
-                              ? 'bg-blue-50 border-blue-300'
-                              : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`p-1.5 rounded-lg ${
-                              selectedDocCategory === category.id ? 'bg-blue-100' : 'bg-gray-100'
-                            }`}>
-                              <category.icon className={`h-4 w-4 ${
-                                selectedDocCategory === category.id ? 'text-blue-600' : 'text-gray-600'
+                      ].map((category) => {
+                        const docCount = getDocumentCount(category.id);
+                        return (
+                          <div
+                            key={category.id}
+                            onClick={() => setSelectedDocCategory(category.id)}
+                            onDragOver={(e) => {
+                              if (draggedDocument && draggedDocument.category !== category.id) {
+                                e.preventDefault();
+                                setDragOverCategory(category.id);
+                              }
+                            }}
+                            onDragLeave={() => {
+                              setDragOverCategory(null);
+                            }}
+                            onDrop={async (e) => {
+                              e.preventDefault();
+                              setDragOverCategory(null);
+                              if (draggedDocument && draggedDocument.category !== category.id) {
+                                try {
+                                  await patientDocumentService.updateDocumentCategory(draggedDocument.id, category.id);
+                                  setPatientDocuments(prev =>
+                                    prev.map(d => d.id === draggedDocument.id ? { ...d, category: category.id } : d)
+                                  );
+                                  toast({
+                                    title: "Document moved",
+                                    description: `Moved to ${category.name}`
+                                  });
+                                  setDraggedDocument(null);
+                                } catch (error) {
+                                  console.error('Error moving document:', error);
+                                  toast({ title: "Error moving document", variant: "destructive" });
+                                }
+                              }
+                            }}
+                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors mb-1 border ${
+                              selectedDocCategory === category.id
+                                ? 'bg-blue-50 border-blue-300'
+                                : dragOverCategory === category.id
+                                ? 'bg-green-50 border-green-400 ring-2 ring-green-300'
+                                : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`p-1.5 rounded-lg ${
+                                selectedDocCategory === category.id ? 'bg-blue-100' :
+                                dragOverCategory === category.id ? 'bg-green-100' :
+                                'bg-gray-100'
+                              }`}>
+                                <category.icon className={`h-4 w-4 ${
+                                  selectedDocCategory === category.id ? 'text-blue-600' :
+                                  dragOverCategory === category.id ? 'text-green-600' :
+                                  'text-gray-600'
+                                }`} />
+                              </div>
+                              <span className={`text-sm ${
+                                selectedDocCategory === category.id ? 'text-blue-700 font-medium' : 'text-gray-700'
+                              }`}>{category.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                selectedDocCategory === category.id
+                                  ? 'bg-blue-200 text-blue-700'
+                                  : 'bg-gray-200 text-gray-600'
+                              }`}>
+                                {docCount}
+                              </span>
+                              <ChevronRight className={`h-4 w-4 ${
+                                selectedDocCategory === category.id ? 'text-blue-500' : 'text-gray-400'
                               }`} />
                             </div>
-                            <span className={`text-sm ${
-                              selectedDocCategory === category.id ? 'text-blue-700 font-medium' : 'text-gray-700'
-                            }`}>{category.name}</span>
                           </div>
-                          <ChevronRight className={`h-4 w-4 ${
-                            selectedDocCategory === category.id ? 'text-blue-500' : 'text-gray-400'
-                          }`} />
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                   {/* Right Container - 2/3 width */}
                   <div className="w-2/3 bg-white rounded-2xl shadow-sm border border-blue-200 h-full flex flex-col">
                     {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-2 bg-blue-50 rounded-t-2xl">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-blue-100 rounded-lg">
-                          <FileText className="h-4 w-4 text-blue-600" />
+                    <div className="px-4 py-3 bg-blue-50 rounded-t-2xl">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="p-1.5 bg-blue-100 rounded-lg">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <h3 className="text-sm font-semibold text-blue-700 whitespace-nowrap">
+                            {selectedDocCategory
+                              ? [
+                                  { id: 'all', name: 'All' },
+                                  { id: 'consultation', name: 'Consultation' },
+                                  { id: 'administrative', name: 'Administrative Documents' },
+                                  { id: 'data-collection', name: 'Data Collection Sheets' },
+                                  { id: 'surgical', name: 'Surgical Day Workflow' },
+                                  { id: 'post-surgery', name: 'Post Surgery Workflow' },
+                                  { id: 'lab', name: 'Lab' },
+                                  { id: 'report-cards', name: 'Report Cards' },
+                                  { id: 'miscellaneous', name: 'Miscellaneous' },
+                                ].find(c => c.id === selectedDocCategory)?.name + ' Documents'
+                              : 'Documents'
+                            }
+                          </h3>
                         </div>
-                        <h3 className="text-sm font-semibold text-blue-700">
-                          {selectedDocCategory
-                            ? [
-                                { id: 'consultation', name: 'Consultation' },
-                                { id: 'administrative', name: 'Administrative Documents' },
-                                { id: 'data-collection', name: 'Data Collection Sheets' },
-                                { id: 'surgical', name: 'Surgical Day Workflow' },
-                                { id: 'post-surgery', name: 'Post Surgery Workflow' },
-                                { id: 'lab', name: 'Lab' },
-                                { id: 'report-cards', name: 'Report Cards' },
-                                { id: 'miscellaneous', name: 'Miscellaneous' },
-                              ].find(c => c.id === selectedDocCategory)?.name + ' Documents'
-                            : 'Documents'
-                          }
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {selectedDocCategory !== 'lab' && selectedDocCategory !== 'report-cards' && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-9 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-100 border-blue-300 hover:border-blue-400"
-                              onClick={() => {
-                                if (!selectedDocCategory) {
-                                  toast({ title: "Please select a category first", variant: "destructive" });
-                                  return;
-                                }
-                                setShowUploadDialog(true);
-                              }}
-                            >
-                              <Upload className="h-4 w-4 mr-1" />
-                              Upload
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-9 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-100 border-blue-300 hover:border-blue-400"
-                              onClick={() => {
-                                if (!selectedDocCategory) {
-                                  toast({ title: "Please select a category first", variant: "destructive" });
-                                  return;
-                                }
-                                setShowCaptureDialog(true);
-                              }}
-                            >
-                              <Camera className="h-4 w-4 mr-1" />
-                              Capture
-                            </Button>
-                          </>
+
+                        {/* Search Bar for All Documents - Inline */}
+                        {selectedDocCategory === 'all' ? (
+                          <div className="flex-1 max-w-md">
+                            <div className="relative">
+                              <Input
+                                type="text"
+                                placeholder="Search documents by name, category, or description..."
+                                value={documentSearchTerm}
+                                onChange={(e) => setDocumentSearchTerm(e.target.value)}
+                                className="pl-9 pr-9 h-9 text-sm bg-white border-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                              />
+                              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-blue-400" />
+                              {documentSearchTerm && (
+                                <button
+                                  onClick={() => setDocumentSearchTerm('')}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-600"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {selectedDocCategory !== 'lab' && selectedDocCategory !== 'report-cards' && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-9 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-100 border-blue-300 hover:border-blue-400"
+                                  onClick={() => {
+                                    if (!selectedDocCategory) {
+                                      toast({ title: "Please select a category first", variant: "destructive" });
+                                      return;
+                                    }
+                                    setShowUploadDialog(true);
+                                  }}
+                                >
+                                  <Upload className="h-4 w-4 mr-1" />
+                                  Upload
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-9 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-100 border-blue-300 hover:border-blue-400"
+                                  onClick={() => {
+                                    if (!selectedDocCategory) {
+                                      toast({ title: "Please select a category first", variant: "destructive" });
+                                      return;
+                                    }
+                                    setShowCaptureDialog(true);
+                                  }}
+                                >
+                                  <Camera className="h-4 w-4 mr-1" />
+                                  Capture
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
                     <div className="border-b border-blue-100" />
                     {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-4">
+                    <div
+                      className={`flex-1 overflow-y-auto p-4 relative transition-all duration-200 ${
+                        docAreaDragActive && selectedDocCategory ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''
+                      }`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (selectedDocCategory) {
+                          setDocAreaDragActive(true);
+                        }
+                      }}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (selectedDocCategory) {
+                          setDocAreaDragActive(true);
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Only set to false if we're leaving the content area itself
+                        if (e.currentTarget === e.target) {
+                          setDocAreaDragActive(false);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDocAreaDragActive(false);
+
+                        const files = e.dataTransfer.files;
+                        if (files && files.length > 0) {
+                          handleDocAreaFileDrop(files);
+                        }
+                      }}
+                    >
+                      {/* Drag and Drop Overlay */}
+                      {docAreaDragActive && selectedDocCategory && (
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-blue-500/10 backdrop-blur-sm pointer-events-none">
+                          <div className="bg-white rounded-2xl shadow-2xl p-8 border-2 border-dashed border-blue-500">
+                            <div className="flex flex-col items-center gap-4">
+                              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Upload className="h-8 w-8 text-blue-600" />
+                              </div>
+                              <div className="text-center">
+                                <p className="text-lg font-semibold text-gray-900">Drop files to upload</p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  Upload multiple files at once
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Document type and date will be auto-filled
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {!selectedDocCategory ? (
                         <div className="h-full flex flex-col items-center justify-center">
                           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-4">
@@ -5659,6 +5941,255 @@ export function PatientProfilePage() {
                           <p className="text-base font-medium text-gray-500">Select a category</p>
                           <p className="text-sm text-gray-400 mt-1">Choose a category from the left to view documents</p>
                         </div>
+                      ) : selectedDocCategory === 'all' ? (
+                        // Show all documents with search
+                        (() => {
+                          // Gather all documents from all sources
+                          const allDocs: any[] = [
+                            ...patientDocuments.map(doc => ({
+                              ...doc,
+                              type: 'uploaded',
+                              displayCategory: [
+                                { id: 'consultation', name: 'Consultation' },
+                                { id: 'administrative', name: 'Administrative' },
+                                { id: 'data-collection', name: 'Data Collection' },
+                                { id: 'surgical', name: 'Surgical' },
+                                { id: 'post-surgery', name: 'Post Surgery' },
+                                { id: 'lab', name: 'Lab' },
+                                { id: 'report-cards', name: 'Report Cards' },
+                                { id: 'miscellaneous', name: 'Miscellaneous' },
+                              ].find(c => c.id === doc.category)?.name || doc.category
+                            })),
+                            ...patientConsultations.map(c => ({
+                              id: c.id,
+                              title: `Consultation - ${new Date(c.created_at).toLocaleDateString()}`,
+                              created_at: c.created_at,
+                              type: 'consultation',
+                              displayCategory: 'Consultation',
+                              data: c
+                            })),
+                            ...patientPackets.filter(p => p.form_status !== 'draft').map(p => ({
+                              id: p.id,
+                              title: `New Patient Packet - ${p.patient_name}`,
+                              created_at: p.created_at,
+                              type: 'packet',
+                              displayCategory: 'Administrative',
+                              data: p
+                            })),
+                            ...financialAgreements.filter(f => f.status !== 'draft' && f.status !== 'void').map(f => ({
+                              id: f.id,
+                              title: `Financial Agreement - ${f.patient_name}`,
+                              created_at: f.created_at,
+                              type: 'financial',
+                              displayCategory: 'Administrative',
+                              data: f
+                            })),
+                            ...dataCollectionSheets.map(d => ({
+                              id: d.id,
+                              title: `Data Collection - ${d.reason || 'General'}`,
+                              created_at: d.created_at,
+                              type: 'data-collection',
+                              displayCategory: 'Data Collection',
+                              data: d
+                            })),
+                            ...labScripts.filter(s => s.status === 'completed').map(s => ({
+                              id: s.id,
+                              title: `Lab Script - ${s.patient_name}`,
+                              created_at: s.created_at,
+                              type: 'lab-script',
+                              displayCategory: 'Lab',
+                              data: s
+                            })),
+                            ...patientReportCards.filter(card => card.lab_report_status === 'completed' || card.clinical_report_status === 'completed').map(card => ({
+                              id: card.id,
+                              title: `Report Card - ${card.patient_name}`,
+                              created_at: card.created_at,
+                              type: 'report-card',
+                              displayCategory: 'Report Cards',
+                              data: card
+                            }))
+                          ];
+
+                          // Filter by search term
+                          const filteredDocs = documentSearchTerm
+                            ? allDocs.filter(doc =>
+                                doc.title?.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+                                doc.file_name?.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+                                doc.description?.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+                                doc.displayCategory?.toLowerCase().includes(documentSearchTerm.toLowerCase())
+                              )
+                            : allDocs;
+
+                          // Sort by created_at descending
+                          const sortedDocs = filteredDocs.sort((a, b) =>
+                            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                          );
+
+                          return (
+                            <div>
+                              {/* Documents List */}
+                              {sortedDocs.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center py-12">
+                                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mb-4">
+                                    <FileText className="h-10 w-10 text-gray-300" />
+                                  </div>
+                                  <p className="text-base font-medium text-gray-500">
+                                    {documentSearchTerm ? 'No documents found' : 'No documents yet'}
+                                  </p>
+                                  <p className="text-sm text-gray-400 mt-1">
+                                    {documentSearchTerm ? 'Try a different search term' : 'Documents will appear here as they are added'}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 gap-3">
+                                  {sortedDocs.map((doc) => {
+                                    const isUploaded = doc.type === 'uploaded';
+                                    const isImage = isUploaded && doc.file_type?.startsWith('image/');
+                                    const isPdf = isUploaded && doc.file_type === 'application/pdf';
+
+                                    return (
+                                      <div
+                                        key={`${doc.type}-${doc.id}`}
+                                        className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                      >
+                                        <div className="flex items-start justify-between gap-3">
+                                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            <div className={`p-2.5 rounded-xl flex-shrink-0 ${
+                                              isImage ? 'bg-purple-100' :
+                                              isPdf ? 'bg-red-100' :
+                                              isUploaded ? 'bg-blue-100' :
+                                              'bg-gray-100'
+                                            }`}>
+                                              {isImage ? (
+                                                <FileImage className="h-5 w-5 text-purple-600" />
+                                              ) : isPdf ? (
+                                                <FileText className="h-5 w-5 text-red-600" />
+                                              ) : isUploaded ? (
+                                                <FolderOpen className="h-5 w-5 text-blue-600" />
+                                              ) : (
+                                                <FileText className="h-5 w-5 text-gray-600" />
+                                              )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <h4 className="text-sm font-semibold text-gray-900 truncate">
+                                                {doc.title || doc.file_name || 'Untitled'}
+                                              </h4>
+                                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+                                                  {doc.displayCategory}
+                                                </span>
+                                                {isUploaded && doc.file_type && (
+                                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                                    isImage ? 'bg-purple-100 text-purple-700' :
+                                                    isPdf ? 'bg-red-100 text-red-700' :
+                                                    'bg-gray-100 text-gray-700'
+                                                  }`}>
+                                                    {isImage ? 'Image' : isPdf ? 'PDF' : doc.file_type.split('/')[1]?.toUpperCase() || 'FILE'}
+                                                  </span>
+                                                )}
+                                                <span className="text-xs text-gray-400">
+                                                  {new Date(doc.created_at).toLocaleDateString()}
+                                                </span>
+                                              </div>
+                                              {doc.description && (
+                                                <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                                                  {doc.description}
+                                                </p>
+                                              )}
+                                              {isUploaded && doc.file_size && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                  {patientDocumentService.formatFileSize(doc.file_size)}
+                                                  {doc.uploaded_by && ` • By: ${doc.uploaded_by}`}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2 flex-shrink-0">
+                                            {isUploaded ? (
+                                              <>
+                                                <button
+                                                  onClick={() => {
+                                                    if (isImage || isPdf) {
+                                                      setPreviewFileData(doc);
+                                                      setShowFilePreviewDialog(true);
+                                                    } else {
+                                                      toast({ title: "Preview not available for this file type" });
+                                                    }
+                                                  }}
+                                                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                                  title="Preview"
+                                                >
+                                                  <Eye className="h-4 w-4 text-gray-500 hover:text-blue-600" />
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    const link = document.createElement('a');
+                                                    link.href = doc.file_url;
+                                                    link.download = doc.file_name;
+                                                    link.target = '_blank';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                  }}
+                                                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                                  title="Download"
+                                                >
+                                                  <Download className="h-4 w-4 text-gray-500 hover:text-green-600" />
+                                                </button>
+                                                <DropdownMenu>
+                                                  <DropdownMenuTrigger asChild>
+                                                    <button
+                                                      className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                                                      title="More options"
+                                                    >
+                                                      <MoreVertical className="h-4 w-4 text-gray-500" />
+                                                    </button>
+                                                  </DropdownMenuTrigger>
+                                                  <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                      onClick={() => {
+                                                        setDocumentToMove(doc);
+                                                        setShowMoveDocumentDialog(true);
+                                                      }}
+                                                    >
+                                                      <FileText className="h-4 w-4 mr-2" />
+                                                      Move to Category
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                      onClick={() => {
+                                                        setDocumentToDelete(doc);
+                                                        setShowDeleteConfirmDialog(true);
+                                                      }}
+                                                      className="text-red-600 focus:text-red-600"
+                                                    >
+                                                      <Trash2 className="h-4 w-4 mr-2" />
+                                                      Delete
+                                                    </DropdownMenuItem>
+                                                  </DropdownMenuContent>
+                                                </DropdownMenu>
+                                              </>
+                                            ) : (
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0"
+                                                onClick={() => {
+                                                  toast({ title: "View details coming soon" });
+                                                }}
+                                              >
+                                                <Eye className="h-4 w-4 text-gray-500" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()
                       ) : selectedDocCategory === 'consultation' ? (
                         // Show consultations list and uploaded documents
                         (() => {
@@ -5780,8 +6311,26 @@ export function PatientProfilePage() {
                                 return (
                                   <div
                                     key={doc.id}
-                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                    className="group bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 relative"
                                   >
+                                    {/* Drag Handle - Bottom Left Corner */}
+                                    <div
+                                      draggable
+                                      onDragStart={(e) => {
+                                        setDraggedDocument(doc);
+                                        e.dataTransfer.effectAllowed = 'move';
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedDocument(null);
+                                        setDragOverCategory(null);
+                                      }}
+                                      className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg cursor-move hover:from-blue-600 hover:to-blue-700 hover:shadow-xl hover:scale-105 transition-all duration-200 z-10 opacity-0 group-hover:opacity-100"
+                                      title="Drag to move to another category"
+                                    >
+                                      <GripVertical className="h-3.5 w-3.5 text-white" />
+                                      <span className="text-[10px] font-semibold text-white uppercase tracking-wide">Move</span>
+                                    </div>
+
                                     <div className="flex items-start justify-between">
                                       <div className="flex items-start gap-3">
                                         <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-blue-100'}`}>
@@ -6435,8 +6984,26 @@ export function PatientProfilePage() {
                                 return (
                                   <div
                                     key={doc.id}
-                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                    className="group bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 relative"
                                   >
+                                    {/* Drag Handle - Bottom Left Corner */}
+                                    <div
+                                      draggable
+                                      onDragStart={(e) => {
+                                        setDraggedDocument(doc);
+                                        e.dataTransfer.effectAllowed = 'move';
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedDocument(null);
+                                        setDragOverCategory(null);
+                                      }}
+                                      className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg cursor-move hover:from-blue-600 hover:to-blue-700 hover:shadow-xl hover:scale-105 transition-all duration-200 z-10 opacity-0 group-hover:opacity-100"
+                                      title="Drag to move to another category"
+                                    >
+                                      <GripVertical className="h-3.5 w-3.5 text-white" />
+                                      <span className="text-[10px] font-semibold text-white uppercase tracking-wide">Move</span>
+                                    </div>
+
                                     <div className="flex items-start justify-between">
                                       <div className="flex items-start gap-3">
                                         <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-orange-100'}`}>
@@ -6649,8 +7216,26 @@ export function PatientProfilePage() {
                                 return (
                                   <div
                                     key={doc.id}
-                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                    className="group bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 relative"
                                   >
+                                    {/* Drag Handle - Bottom Left Corner */}
+                                    <div
+                                      draggable
+                                      onDragStart={(e) => {
+                                        setDraggedDocument(doc);
+                                        e.dataTransfer.effectAllowed = 'move';
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedDocument(null);
+                                        setDragOverCategory(null);
+                                      }}
+                                      className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg cursor-move hover:from-blue-600 hover:to-blue-700 hover:shadow-xl hover:scale-105 transition-all duration-200 z-10 opacity-0 group-hover:opacity-100"
+                                      title="Drag to move to another category"
+                                    >
+                                      <GripVertical className="h-3.5 w-3.5 text-white" />
+                                      <span className="text-[10px] font-semibold text-white uppercase tracking-wide">Move</span>
+                                    </div>
+
                                     <div className="flex items-start justify-between">
                                       <div className="flex items-start gap-3">
                                         <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-orange-100'}`}>
@@ -6874,8 +7459,26 @@ export function PatientProfilePage() {
                                 return (
                                   <div
                                     key={doc.id}
-                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                    className="group bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 relative"
                                   >
+                                    {/* Drag Handle - Bottom Left Corner */}
+                                    <div
+                                      draggable
+                                      onDragStart={(e) => {
+                                        setDraggedDocument(doc);
+                                        e.dataTransfer.effectAllowed = 'move';
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedDocument(null);
+                                        setDragOverCategory(null);
+                                      }}
+                                      className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg cursor-move hover:from-blue-600 hover:to-blue-700 hover:shadow-xl hover:scale-105 transition-all duration-200 z-10 opacity-0 group-hover:opacity-100"
+                                      title="Drag to move to another category"
+                                    >
+                                      <GripVertical className="h-3.5 w-3.5 text-white" />
+                                      <span className="text-[10px] font-semibold text-white uppercase tracking-wide">Move</span>
+                                    </div>
+
                                     <div className="flex items-start justify-between">
                                       <div className="flex items-start gap-3">
                                         <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-orange-100'}`}>
@@ -7249,8 +7852,26 @@ export function PatientProfilePage() {
                                 return (
                                   <div
                                     key={doc.id}
-                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                    className="group bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 relative"
                                   >
+                                    {/* Drag Handle - Bottom Left Corner */}
+                                    <div
+                                      draggable
+                                      onDragStart={(e) => {
+                                        setDraggedDocument(doc);
+                                        e.dataTransfer.effectAllowed = 'move';
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedDocument(null);
+                                        setDragOverCategory(null);
+                                      }}
+                                      className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg cursor-move hover:from-blue-600 hover:to-blue-700 hover:shadow-xl hover:scale-105 transition-all duration-200 z-10 opacity-0 group-hover:opacity-100"
+                                      title="Drag to move to another category"
+                                    >
+                                      <GripVertical className="h-3.5 w-3.5 text-white" />
+                                      <span className="text-[10px] font-semibold text-white uppercase tracking-wide">Move</span>
+                                    </div>
+
                                     <div className="flex items-start justify-between">
                                       <div className="flex items-start gap-3">
                                         <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-pink-100'}`}>
@@ -7387,8 +8008,26 @@ export function PatientProfilePage() {
                                 return (
                                   <div
                                     key={doc.id}
-                                    className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                                    className="group bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all duration-200 relative"
                                   >
+                                    {/* Drag Handle - Bottom Left Corner */}
+                                    <div
+                                      draggable
+                                      onDragStart={(e) => {
+                                        setDraggedDocument(doc);
+                                        e.dataTransfer.effectAllowed = 'move';
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggedDocument(null);
+                                        setDragOverCategory(null);
+                                      }}
+                                      className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg cursor-move hover:from-blue-600 hover:to-blue-700 hover:shadow-xl hover:scale-105 transition-all duration-200 z-10 opacity-0 group-hover:opacity-100"
+                                      title="Drag to move to another category"
+                                    >
+                                      <GripVertical className="h-3.5 w-3.5 text-white" />
+                                      <span className="text-[10px] font-semibold text-white uppercase tracking-wide">Move</span>
+                                    </div>
+
                                     <div className="flex items-start justify-between">
                                       <div className="flex items-start gap-3">
                                         <div className={`p-2.5 rounded-xl ${isImage ? 'bg-purple-100' : isPdf ? 'bg-red-100' : 'bg-amber-100'}`}>
@@ -7512,6 +8151,24 @@ export function PatientProfilePage() {
                               >
                                 {/* Thumbnail/Preview */}
                                 <div className="relative h-32 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+                                  {/* Drag Handle - Bottom Left Corner */}
+                                  <div
+                                    draggable
+                                    onDragStart={(e) => {
+                                      setDraggedDocument(doc);
+                                      e.dataTransfer.effectAllowed = 'move';
+                                    }}
+                                    onDragEnd={() => {
+                                      setDraggedDocument(null);
+                                      setDragOverCategory(null);
+                                    }}
+                                    className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-lg cursor-move hover:from-blue-600 hover:to-blue-700 hover:shadow-xl hover:scale-105 transition-all duration-200 z-10 opacity-0 group-hover:opacity-100"
+                                    title="Drag to move to another category"
+                                  >
+                                    <GripVertical className="h-3.5 w-3.5 text-white" />
+                                    <span className="text-[10px] font-semibold text-white uppercase tracking-wide">Move</span>
+                                  </div>
+
                                   {isImage ? (
                                     <img src={doc.file_url} alt={doc.file_name} className="w-full h-full object-cover" />
                                   ) : (
@@ -7971,6 +8628,223 @@ export function PatientProfilePage() {
                         <>
                           <Upload className="h-4 w-4 mr-2" />
                           Upload
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Bulk Upload Dialog */}
+            <Dialog open={showBulkUploadDialog} onOpenChange={(open) => {
+              setShowBulkUploadDialog(open);
+              if (!open) {
+                setSelectedFiles([]);
+                setBulkUploadDescription('');
+              }
+            }}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold text-gray-900">
+                    Bulk Upload Documents
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  {/* File List */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Selected Files ({selectedFiles.length})
+                    </Label>
+                    <div className="max-h-64 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-3 bg-gray-50">
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                              <FileText className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                              <p className="text-xs text-gray-500">{patientDocumentService.formatFileSize(file.size)}</p>
+                            </div>
+                          </div>
+                          <button
+                            className="ml-3 text-red-500 hover:text-red-700 flex-shrink-0"
+                            onClick={() => {
+                              const newFiles = selectedFiles.filter((_, i) => i !== index);
+                              setSelectedFiles(newFiles);
+                              if (newFiles.length === 0) {
+                                setShowBulkUploadDialog(false);
+                              }
+                            }}
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-gray-700">Description (optional)</Label>
+                    <Textarea
+                      value={bulkUploadDescription}
+                      onChange={(e) => setBulkUploadDescription(e.target.value)}
+                      placeholder="Add a description for all files..."
+                      className="resize-none h-20"
+                    />
+                    <p className="text-xs text-gray-500">This description will be applied to all uploaded files</p>
+                  </div>
+
+                  {/* Upload Progress */}
+                  {uploadingDoc && (
+                    <div className="space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                      {/* Multi-file progress */}
+                      <div className="mb-3 pb-3 border-b border-blue-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-blue-700">
+                            Uploading file {multiFileUploadProgress.currentFile} of {multiFileUploadProgress.totalFiles}
+                          </span>
+                          <span className="text-sm font-semibold text-blue-600">
+                            {multiFileUploadProgress.overallProgress}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden mb-2">
+                          <div
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${multiFileUploadProgress.overallProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-blue-600 truncate">
+                          Current: {multiFileUploadProgress.currentFileName}
+                        </p>
+                      </div>
+
+                      {/* Individual file progress */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <span className="font-medium text-blue-700">Uploading file...</span>
+                        </div>
+                        <span className="text-sm font-semibold text-blue-600">{uploadProgress.progress}%</span>
+                      </div>
+                      <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-150 ease-out"
+                          style={{ width: `${uploadProgress.progress}%` }}
+                        />
+                      </div>
+                      {uploadProgress.total > 0 && (
+                        <div className="flex items-center justify-between text-xs text-blue-600">
+                          <span className="truncate max-w-[200px]">
+                            {multiFileUploadProgress.currentFileName}
+                          </span>
+                          <span className="font-medium">
+                            {patientDocumentService.formatFileSize(uploadProgress.loaded)} / {patientDocumentService.formatFileSize(uploadProgress.total)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowBulkUploadDialog(false)}
+                      disabled={uploadingDoc}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      disabled={selectedFiles.length === 0 || uploadingDoc}
+                      onClick={async () => {
+                        if (selectedFiles.length === 0 || !patientId || !selectedDocCategory) return;
+
+                        setUploadingDoc(true);
+                        const totalFiles = selectedFiles.length;
+                        const uploadedDocs: any[] = [];
+                        let successCount = 0;
+                        let errorCount = 0;
+
+                        try {
+                          for (let i = 0; i < selectedFiles.length; i++) {
+                            const file = selectedFiles[i];
+                            const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+
+                            // Update multi-file progress
+                            setMultiFileUploadProgress({
+                              currentFile: i + 1,
+                              totalFiles: totalFiles,
+                              currentFileName: file.name,
+                              overallProgress: Math.round((i / totalFiles) * 100)
+                            });
+
+                            try {
+                              const newDoc = await patientDocumentService.uploadDocument(
+                                patientId,
+                                file,
+                                selectedDocCategory,
+                                fileNameWithoutExt, // Use filename as title
+                                bulkUploadDescription,
+                                new Date().toISOString().split('T')[0], // Current date
+                                userProfile?.full_name || user?.email || 'Unknown',
+                                userProfile?.id || user?.id,
+                                (info) => setUploadProgress(info)
+                              );
+                              uploadedDocs.push(newDoc);
+                              successCount++;
+                            } catch (error) {
+                              console.error(`Error uploading ${file.name}:`, error);
+                              errorCount++;
+                            }
+                          }
+
+                          // Update document list with all uploaded docs
+                          setPatientDocuments(prev => [...uploadedDocs, ...prev]);
+
+                          // Close dialog and reset
+                          setShowBulkUploadDialog(false);
+                          setSelectedFiles([]);
+                          setBulkUploadDescription('');
+                          setUploadProgress({ progress: 0, loaded: 0, total: 0 });
+                          setMultiFileUploadProgress({ currentFile: 0, totalFiles: 0, currentFileName: '', overallProgress: 0 });
+
+                          // Show summary toast
+                          if (errorCount === 0) {
+                            toast({
+                              title: "All documents uploaded successfully",
+                              description: `${successCount} file${successCount > 1 ? 's' : ''} uploaded.`
+                            });
+                          } else {
+                            toast({
+                              title: "Upload completed with errors",
+                              description: `${successCount} succeeded, ${errorCount} failed.`,
+                              variant: errorCount > successCount ? "destructive" : "default"
+                            });
+                          }
+                        } catch (error) {
+                          console.error('Upload error:', error);
+                          toast({ title: "Error uploading documents", variant: "destructive" });
+                        } finally {
+                          setUploadingDoc(false);
+                          setUploadProgress({ progress: 0, loaded: 0, total: 0 });
+                          setMultiFileUploadProgress({ currentFile: 0, totalFiles: 0, currentFileName: '', overallProgress: 0 });
+                        }
+                      }}
+                    >
+                      {uploadingDoc ? (
+                        <>
+                          <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload {selectedFiles.length} File{selectedFiles.length > 1 ? 's' : ''}
                         </>
                       )}
                     </Button>
