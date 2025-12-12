@@ -361,13 +361,14 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
         last_name: lastName,
         date_of_birth: dateOfBirth,
         phone: packetData.phone_cell || packetData.phone_work || null, // Use cell phone first, then work phone
+        email: packetData.email || null,
         gender: gender,
         street: packetData.address_street || null,
         city: packetData.address_city || null,
         state: packetData.address_state || null,
         zip_code: packetData.address_zip || null,
         status: 'ACTIVE', // Always set status to ACTIVE
-        treatment_type: 'Consultation Completed',
+        treatment_status: 'Treatment Not Started', // Set initial treatment status
         patient_source: 'Consult' // Patient created from consultation
         // Note: full_name is a generated column and will be automatically created
         // created_at and updated_at have default values, so we don't need to specify them
@@ -431,8 +432,7 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
       const { error: updateError } = await supabase
         .from('patients')
         .update({
-          status: 'ACTIVE',
-          treatment_type: 'Consultation Completed'
+          status: 'ACTIVE'
         })
         .eq('id', patientId);
 
@@ -577,13 +577,14 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
         last_name: lastName,
         date_of_birth: dateOfBirth,
         phone: null, // consultation_patients table doesn't have phone field
+        email: null,
         gender: gender,
         street: null, // consultation_patients table doesn't have address fields
         city: null,
         state: null,
         zip_code: null,
         status: 'ACTIVE', // Always set status to ACTIVE
-        treatment_type: 'Consultation Completed',
+        treatment_status: 'Treatment Not Started', // Set initial treatment status
         patient_source: 'Consult' // Patient created from consultation
       };
 
@@ -644,8 +645,7 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
       const { error: updateError } = await supabase
         .from('patients')
         .update({
-          status: 'ACTIVE',
-          treatment_type: 'Consultation Completed'
+          status: 'ACTIVE'
         })
         .eq('id', patientId);
 
