@@ -21,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { EditPatientForm } from "@/components/EditPatientForm";
 import { EditEmergencyContactDialog } from "@/components/EditEmergencyContactDialog";
 import { LabScriptDetail } from "@/components/LabScriptDetail";
+import { PatientStatusDialog } from "@/components/patient/PatientStatusDialog";
 import { TreatmentDialog, TreatmentData } from "@/components/TreatmentDialog";
 import { ConsentFullArchDialog } from "@/components/ConsentFullArchDialog";
 import { FinancialAgreementDialog } from "@/components/FinancialAgreementDialog";
@@ -609,6 +610,9 @@ export function PatientProfilePage() {
   // State for Treatment Status Edit Dialog
   const [showTreatmentStatusEditDialog, setShowTreatmentStatusEditDialog] = useState(false);
   const [selectedTreatmentStatus, setSelectedTreatmentStatus] = useState<string>('');
+
+  // State for Patient Status Dialog
+  const [showPatientStatusDialog, setShowPatientStatusDialog] = useState(false);
 
   // State for Patient Packets
   const [patientPackets, setPatientPackets] = useState<any[]>([]);
@@ -5045,6 +5049,15 @@ export function PatientProfilePage() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                    onClick={() => setShowPatientStatusDialog(true)}
+                  >
+                    <Activity className="h-4 w-4 mr-1" />
+                    View Current Status
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -20672,6 +20685,16 @@ export function PatientProfilePage() {
           });
         }}
       />
+
+      {/* Patient Status Dialog */}
+      {patient && (
+        <PatientStatusDialog
+          open={showPatientStatusDialog}
+          onOpenChange={setShowPatientStatusDialog}
+          patientId={patientId || ''}
+          patientName={patient.full_name || `${patient.first_name} ${patient.last_name}`}
+        />
+      )}
     </div>
   );
 }

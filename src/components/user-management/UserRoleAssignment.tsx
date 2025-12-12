@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Shield, Loader2, Save } from 'lucide-react';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -209,8 +210,8 @@ export function UserRoleAssignment({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {asDropdownItem ? (
+      {asDropdownItem ? (
+        <DialogTrigger asChild>
           <DropdownMenuItem
             onSelect={(e) => {
               e.preventDefault();
@@ -220,13 +221,21 @@ export function UserRoleAssignment({
             <Shield className="h-4 w-4 mr-2" />
             Manage Roles
           </DropdownMenuItem>
-        ) : (
-          <Button variant="ghost" size="sm">
-            <Shield className="h-4 w-4 mr-2" />
-            Manage Roles
-          </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Shield className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Manage Roles</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Manage Roles for {userName}</DialogTitle>

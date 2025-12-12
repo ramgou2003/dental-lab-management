@@ -10,25 +10,26 @@ import { CreateUserForm } from '@/components/user-management/CreateUserForm';
 import { EditUserForm } from '@/components/user-management/EditUserForm';
 import { RoleManagement } from '@/components/user-management/RoleManagement';
 import { UserRoleAssignment } from '@/components/user-management/UserRoleAssignment';
+import { ResetPasswordDialog } from '@/components/user-management/ResetPasswordDialog';
 import {
   Users,
   Search,
   Plus,
-  MoreHorizontal,
   Edit,
   Trash2,
   Shield,
   UserCheck,
   UserX,
   UserMinus,
-  AlertTriangle
+  AlertTriangle,
+  KeyRound
 } from 'lucide-react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -382,13 +383,13 @@ export function UserManagementPage() {
               <div className="space-y-4">
                 {filteredUsers.map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-4 flex-1">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-indigo-600 text-white">
                           {getInitials(user.first_name, user.last_name)}
                         </AvatarFallback>
                       </Avatar>
-                      
+
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900">{user.full_name}</h3>
                         <p className="text-sm text-gray-500">{user.email}</p>
@@ -414,73 +415,127 @@ export function UserManagementPage() {
                       </div>
                     </div>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                    {/* Action Buttons */}
+                    <TooltipProvider>
+                      <div className="flex items-center gap-2">
                         {canEditUser(user) ? (
                           <>
+                            {/* Manage Roles */}
                             <PermissionGuard permission="users.manage_roles">
                               <UserRoleAssignment
                                 userId={user.id}
                                 userName={user.full_name}
                                 currentRoles={user.allRoleAssignments || []}
                                 onRolesUpdated={fetchUsers}
-                                asDropdownItem={true}
+                                asDropdownItem={false}
                               />
                             </PermissionGuard>
 
+                            {/* Edit User */}
                             <PermissionGuard permission="users.update">
                               <EditUserForm
                                 user={user}
                                 onUserUpdated={fetchUsers}
-                                asDropdownItem={true}
+                                asDropdownItem={false}
                               />
                             </PermissionGuard>
 
-                            <PermissionGuard permission="users.change_status">
-                              {user.status === 'active' ? (
-                                <DropdownMenuItem onClick={() => handleStatusChange(user.id, 'suspended')}>
-                                  <UserMinus className="h-4 w-4 mr-2" />
-                                  Suspend User
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem onClick={() => handleStatusChange(user.id, 'active')}>
-                                  <UserCheck className="h-4 w-4 mr-2" />
-                                  Activate User
-                                </DropdownMenuItem>
-                              )}
-
-                              <DropdownMenuItem onClick={() => handleStatusChange(user.id, 'disabled')}>
-                                <UserX className="h-4 w-4 mr-2" />
-                                Disable User
-                              </DropdownMenuItem>
+                            {/* Reset Password */}
+                            <PermissionGuard permission="users.update">
+                              <ResetPasswordDialog
+                                userId={user.id}
+                                userName={user.full_name}
+                                userEmail={user.email}
+                                asDropdownItem={false}
+                              />
                             </PermissionGuard>
 
+                            {/* Suspend/Activate User */}
+                            <PermissionGuard permission="users.change_status">
+                              {user.status === 'active' ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleStatusChange(user.id, 'suspended')}
+                                    >
+                                      <UserMinus className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Suspend User</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleStatusChange(user.id, 'active')}
+                                    >
+                                      <UserCheck className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Activate User</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </PermissionGuard>
+
+                            {/* Disable User */}
+                            <PermissionGuard permission="users.change_status">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleStatusChange(user.id, 'disabled')}
+                                  >
+                                    <UserX className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Disable User</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </PermissionGuard>
+
+                            {/* Delete User */}
                             <PermissionGuard permission="users.delete">
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onSelect={(e) => {
-                                  e.preventDefault();
-                                  openDeleteDialog(user);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete User
-                              </DropdownMenuItem>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => openDeleteDialog(user)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Delete User</p>
+                                </TooltipContent>
+                              </Tooltip>
                             </PermissionGuard>
                           </>
                         ) : (
-                          <DropdownMenuItem disabled className="text-gray-400">
-                            <Shield className="h-4 w-4 mr-2" />
-                            Protected Account
-                          </DropdownMenuItem>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" disabled>
+                                <Shield className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Protected Account</p>
+                            </TooltipContent>
+                          </Tooltip>
                         )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      </div>
+                    </TooltipProvider>
                   </div>
                 ))}
               </div>

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Edit, Save, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -141,8 +142,8 @@ export function EditUserForm({ user, onUserUpdated, asDropdownItem = false }: Ed
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {asDropdownItem ? (
+      {asDropdownItem ? (
+        <DialogTrigger asChild>
           <DropdownMenuItem
             onSelect={(e) => {
               e.preventDefault();
@@ -152,13 +153,21 @@ export function EditUserForm({ user, onUserUpdated, asDropdownItem = false }: Ed
             <Edit className="h-4 w-4 mr-2" />
             Edit User
           </DropdownMenuItem>
-        ) : (
-          <Button variant="outline" size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit User
-          </Button>
-        )}
-      </DialogTrigger>
+        </DialogTrigger>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Edit className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Edit User</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
       
       <DialogContent className="max-w-md">
         <DialogHeader>

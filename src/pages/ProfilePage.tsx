@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
 
 interface UserProfileData {
   id: string;
@@ -32,6 +33,7 @@ export function ProfilePage() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
 
   // Check if user has doctor role
   const isDentist = userRoles.some(role => role.name === 'dentist');
@@ -252,7 +254,11 @@ export function ProfilePage() {
                 <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
                   Edit Profile
                 </Button>
-                <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-50">
+                <Button
+                  variant="outline"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  onClick={() => setShowChangePasswordDialog(true)}
+                >
                   Change Password
                 </Button>
               </div>
@@ -260,6 +266,12 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={showChangePasswordDialog}
+        onOpenChange={setShowChangePasswordDialog}
+      />
     </div>
   );
 }

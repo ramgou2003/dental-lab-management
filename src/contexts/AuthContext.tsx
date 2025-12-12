@@ -265,10 +265,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Initialize auth state with cached data for instant loading
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
+    let cachedData: any = null;
 
     // Clear any potentially corrupted cache on startup
     try {
-      const cachedData = authCache.load();
+      cachedData = authCache.load();
       if (cachedData) {
         console.log('Loading cached user data for instant startup:', cachedData);
         setUserProfile(cachedData.userProfile);
