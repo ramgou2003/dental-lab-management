@@ -1028,7 +1028,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           handleAppointmentTouchMove();
                         }}
                       >
-                    <div className="p-1 h-full flex flex-col justify-between">
+                    {/* Vertical status capsule on the left edge */}
+                    <div className={`absolute left-0 top-1 bottom-1 w-1 rounded-full ${getStatusDotColor(appointment.status)}`}></div>
+                    <div className="p-1 pl-2 h-full flex flex-col justify-between">
                       {(() => {
                         // Calculate appointment duration in minutes
                         const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
@@ -1053,7 +1055,6 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                             <div className="flex items-center justify-between h-full w-full overflow-hidden">
                               <div className="flex flex-col gap-0.5 flex-1 min-w-0 pr-1">
                                 <div className="flex items-center gap-1">
-                                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
                                   <h4
                                     className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
                                     onClick={(e) => {
@@ -1066,7 +1067,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                   </h4>
                                 </div>
                                 {appointment.assignedUserName && (
-                                  <div className="text-[9px] text-gray-500 truncate pl-2.5">
+                                  <div className="text-[9px] text-gray-500 truncate">
                                     👤 {appointment.assignedUserName}
                                   </div>
                                 )}
@@ -1093,7 +1094,6 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                               {/* Top section - Name and assigned user */}
                               <div className="flex flex-col gap-0.5">
                                 <div className="flex items-center gap-1.5">
-                                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
                                   <h4
                                     className="font-semibold text-sm text-gray-800 truncate underline cursor-pointer hover:text-blue-600 transition-colors"
                                     onClick={(e) => {
@@ -1106,7 +1106,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                   </h4>
                                 </div>
                                 {appointment.assignedUserName && (
-                                  <div className="text-[10px] text-gray-500 truncate pl-3.5">
+                                  <div className="text-[10px] text-gray-500 truncate">
                                     👤 {appointment.assignedUserName}
                                   </div>
                                 )}
