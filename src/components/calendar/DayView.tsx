@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile } from "lucide-react";
+import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -1130,10 +1130,17 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         </ContextMenuSubContent>
                       </ContextMenuSub>
                       <ContextMenuSeparator />
-                      <ContextMenuItem onClick={() => handleViewPatientProfile(appointment)}>
-                        <UserCircle className="mr-2 h-4 w-4" />
-                        View Patient Profile
-                      </ContextMenuItem>
+                      {appointment.type === 'consultation' ? (
+                        <ContextMenuItem onClick={() => navigate(`/consultation/${appointment.id}`)}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          View Consultation
+                        </ContextMenuItem>
+                      ) : (
+                        <ContextMenuItem onClick={() => handleViewPatientProfile(appointment)}>
+                          <UserCircle className="mr-2 h-4 w-4" />
+                          View Patient Profile
+                        </ContextMenuItem>
+                      )}
                       <ContextMenuItem onClick={() => handleViewHealthHistory(appointment)}>
                         <Heart className="mr-2 h-4 w-4" />
                         View Health History
