@@ -173,6 +173,7 @@ export function AppointmentsPage() {
             isDialogOpen={showAppointmentForm || showAppointmentDetails}
             onClearSelection={handleClearSelection}
             clearSelectionTrigger={clearSelectionTrigger}
+            onStatusChange={handleStatusChange}
           />
         </div>
       </div>

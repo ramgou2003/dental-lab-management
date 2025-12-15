@@ -1,8 +1,18 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Clock, User, MapPin, MoreHorizontal } from "lucide-react";
+import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface Appointment {
   id: string;
@@ -23,9 +33,10 @@ interface DayViewProps {
   isDialogOpen?: boolean;
   onClearSelection?: () => void;
   clearSelectionTrigger?: number;
+  onStatusChange?: (appointmentId: string, newStatus: Appointment['status']) => void;
 }
 
-export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger }: DayViewProps) {
+export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange }: DayViewProps) {
   const navigate = useNavigate();
 
   // Function to get status dot color
@@ -93,6 +104,87 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       alert(`Error: ${error}`);
     }
   };
+
+  // Handler for status change from context menu
+  const handleStatusChangeFromMenu = (appointmentId: string, newStatus: Appointment['status']) => {
+    if (onStatusChange) {
+      onStatusChange(appointmentId, newStatus);
+    }
+  };
+
+  // Handler for viewing patient profile
+  const handleViewPatientProfile = async (appointment: Appointment) => {
+    try {
+      // Search for patient by full name
+      const { data: patients, error } = await supabase
+        .from('patients')
+        .select('id, full_name')
+        .eq('full_name', appointment.patient)
+        .limit(1);
+
+      if (error) {
+        console.error('Error finding patient:', error);
+        return;
+      }
+
+      if (patients && patients.length > 0) {
+        navigate(`/patients/${patients[0].id}`);
+      } else {
+        alert(`Patient "${appointment.patient}" not found in database.`);
+      }
+    } catch (error) {
+      console.error('Error searching for patient:', error);
+    }
+  };
+
+  // Handler for viewing health history
+  const handleViewHealthHistory = async (appointment: Appointment) => {
+    try {
+      const { data: patients, error } = await supabase
+        .from('patients')
+        .select('id, full_name')
+        .eq('full_name', appointment.patient)
+        .limit(1);
+
+      if (error) {
+        console.error('Error finding patient:', error);
+        return;
+      }
+
+      if (patients && patients.length > 0) {
+        navigate(`/patients/${patients[0].id}?tab=health-history`);
+      } else {
+        alert(`Patient "${appointment.patient}" not found in database.`);
+      }
+    } catch (error) {
+      console.error('Error searching for patient:', error);
+    }
+  };
+
+  // Handler for viewing comfort preference
+  const handleViewComfortPreference = async (appointment: Appointment) => {
+    try {
+      const { data: patients, error } = await supabase
+        .from('patients')
+        .select('id, full_name')
+        .eq('full_name', appointment.patient)
+        .limit(1);
+
+      if (error) {
+        console.error('Error finding patient:', error);
+        return;
+      }
+
+      if (patients && patients.length > 0) {
+        navigate(`/patients/${patients[0].id}?tab=comfort-preference`);
+      } else {
+        alert(`Patient "${appointment.patient}" not found in database.`);
+      }
+    } catch (error) {
+      console.error('Error searching for patient:', error);
+    }
+  };
+
   const hours = Array.from({ length: 13 }, (_, i) => i + 7); // 7 AM to 7 PM
 
   const appointmentTypes = [
@@ -816,40 +908,41 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 const leftPosition = `calc(60px + ${typeIndex} * ${columnWidth})`;
 
                 return (
-                  <div
-                    key={appointment.id}
-                    className={`absolute ${typeColors.color} rounded-lg border-2 shadow-sm cursor-pointer hover:shadow-lg transition-all pointer-events-auto z-10`}
-                    style={{
-                      left: `calc(${leftPosition} + 8px)`, // Add left padding
-                      width: `calc(${columnWidth} - 16px)`, // Subtract left and right padding
-                      top: `${topPosition}px`,
-                      height: `${height}px`,
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      onAppointmentClick(appointment);
-                    }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                    onMouseMove={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onMouseUp={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onTouchStart={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                    onTouchEnd={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      onAppointmentClick(appointment);
-                    }}
-                  >
+                  <ContextMenu key={appointment.id}>
+                    <ContextMenuTrigger asChild>
+                      <div
+                        className={`absolute ${typeColors.color} rounded-lg border-2 shadow-sm cursor-pointer hover:shadow-lg transition-all pointer-events-auto z-10`}
+                        style={{
+                          left: `calc(${leftPosition} + 8px)`, // Add left padding
+                          width: `calc(${columnWidth} - 16px)`, // Subtract left and right padding
+                          top: `${topPosition}px`,
+                          height: `${height}px`,
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          onAppointmentClick(appointment);
+                        }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                        onMouseMove={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onMouseUp={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onTouchStart={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                        onTouchEnd={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          onAppointmentClick(appointment);
+                        }}
+                      >
                     <div className="p-1 h-full flex flex-col justify-between">
                       {(() => {
                         // Calculate appointment duration in minutes
@@ -1005,7 +1098,52 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         return null;
                       })()}
                     </div>
-                  </div>
+                      </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-56">
+                      <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Change Status
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'pending')}>
+                            <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
+                            Pending
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'confirmed')}>
+                            <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                            Confirmed
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'not-confirmed')}>
+                            <AlertCircle className="mr-2 h-4 w-4 text-orange-600" />
+                            Not Confirmed
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'completed')}>
+                            <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
+                            Completed
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'cancelled')}>
+                            <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                            Cancelled
+                          </ContextMenuItem>
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => handleViewPatientProfile(appointment)}>
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        View Patient Profile
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => handleViewHealthHistory(appointment)}>
+                        <Heart className="mr-2 h-4 w-4" />
+                        View Health History
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => handleViewComfortPreference(appointment)}>
+                        <Smile className="mr-2 h-4 w-4" />
+                        View Comfort Preference
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
                 );
               });
             })}
