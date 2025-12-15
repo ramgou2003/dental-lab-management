@@ -39,6 +39,10 @@ interface DayViewProps {
 export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange }: DayViewProps) {
   const navigate = useNavigate();
 
+  // State for long-press handling
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isLongPress, setIsLongPress] = useState(false);
+
   // Function to get status dot color
   const getStatusDotColor = (status: string) => {
     switch (status) {
@@ -183,6 +187,50 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     } catch (error) {
       console.error('Error searching for patient:', error);
     }
+  };
+
+  // Long-press handlers for touch devices
+  const handleTouchStart = (e: React.TouchEvent, appointment: Appointment) => {
+    setIsLongPress(false);
+    const timer = setTimeout(() => {
+      setIsLongPress(true);
+      // Trigger context menu programmatically
+      // We'll use a custom event to open the context menu
+      const element = e.currentTarget as HTMLElement;
+      const contextMenuEvent = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        button: 2,
+        clientX: e.touches[0].clientX,
+        clientY: e.touches[0].clientY,
+      });
+      element.dispatchEvent(contextMenuEvent);
+    }, 500); // 500ms long press duration
+    setLongPressTimer(timer);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent, appointment: Appointment) => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+
+    // If it wasn't a long press, treat it as a normal click
+    if (!isLongPress) {
+      e.preventDefault();
+      onAppointmentClick(appointment);
+    }
+    setIsLongPress(false);
+  };
+
+  const handleTouchMove = () => {
+    // Cancel long press if user moves finger
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    setIsLongPress(false);
   };
 
   const hours = Array.from({ length: 13 }, (_, i) => i + 7); // 7 AM to 7 PM
@@ -935,12 +983,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         }}
                         onTouchStart={(e) => {
                           e.stopPropagation();
-                          e.preventDefault();
+                          handleTouchStart(e, appointment);
                         }}
                         onTouchEnd={(e) => {
                           e.stopPropagation();
-                          e.preventDefault();
-                          onAppointmentClick(appointment);
+                          handleTouchEnd(e, appointment);
+                        }}
+                        onTouchMove={(e) => {
+                          e.stopPropagation();
+                          handleTouchMove();
                         }}
                       >
                     <div className="p-1 h-full flex flex-col justify-between">
