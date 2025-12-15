@@ -213,6 +213,9 @@ export function AppointmentForm({
       });
 
       if (editingAppointment) {
+        console.log('🔄 Initializing form with editing appointment:', editingAppointment);
+        console.log('👤 Assigned User ID from appointment:', editingAppointment.assignedUserId);
+
         setSelectedPatient(editingAppointment.patient || '');
         setSelectedPatientId(editingAppointment.patientId || '');
         setSelectedUserId(editingAppointment.assignedUserId || '');
@@ -325,6 +328,8 @@ export function AppointmentForm({
       notes: notes.trim() || undefined
     };
 
+    console.log('📝 Saving appointment with data:', appointmentData);
+    console.log('👤 Selected User ID:', selectedUserId);
     onSave(appointmentData);
     onClose();
   };

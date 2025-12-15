@@ -297,6 +297,8 @@ export function useAppointments() {
 
   const updateAppointment = async (id: string, updates: Partial<Appointment>) => {
     try {
+      console.log('🔄 updateAppointment called with:', { id, updates });
+
       // Prepare the update data for Supabase
       const updateData: any = {};
       if (updates.patient) updateData.patient_name = updates.patient;
@@ -309,6 +311,8 @@ export function useAppointments() {
       if (updates.status) updateData.status = updates.status;
       if (updates.date) updateData.date = updates.date;
       if (updates.notes !== undefined) updateData.notes = updates.notes || null;
+
+      console.log('📤 Sending update to database:', updateData);
 
       const { data, error } = await supabase
         .from('appointments')
