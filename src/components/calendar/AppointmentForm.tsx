@@ -12,6 +12,12 @@ interface Patient {
   last_name: string;
 }
 
+interface User {
+  id: string;
+  full_name: string;
+  email: string;
+}
+
 interface AppointmentFormProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,6 +48,9 @@ export function AppointmentForm({
   const [notes, setNotes] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(''); // Assigned user ID
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   // Helper function to format date for input (YYYY-MM-DD) using EST timezone
   const formatDateForInput = (date: Date) => {
@@ -97,6 +106,31 @@ export function AppointmentForm({
     }
   };
 
+  // Fetch users from Supabase for assignment
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .eq('status', 'active')
+        .order('full_name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching users:', error);
+        return;
+      }
+
+      if (data) {
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   // Appointment types matching calendar columns
   const appointmentTypes = [
     { id: 'consultation', name: 'Consult' },
@@ -124,10 +158,11 @@ export function AppointmentForm({
 
   const timeSlots = generateTimeSlots();
 
-  // Fetch patients when dialog opens
+  // Fetch patients and users when dialog opens
   useEffect(() => {
     if (isOpen) {
       fetchPatients();
+      fetchUsers();
     }
   }, [isOpen]);
 
@@ -145,6 +180,7 @@ export function AppointmentForm({
       if (editingAppointment) {
         setSelectedPatient(editingAppointment.patient || '');
         setSelectedPatientId(editingAppointment.patientId || '');
+        setSelectedUserId(editingAppointment.assignedUserId || '');
 
         // If we don't have a patient ID but have a patient name, try to find the ID
         if (!editingAppointment.patientId && editingAppointment.patient && patients.length > 0) {
@@ -177,6 +213,7 @@ export function AppointmentForm({
         // Reset form for new appointment
         setSelectedPatient('');
         setSelectedPatientId('');
+        setSelectedUserId('');
         setNotes('');
 
         // Only set appointment type if it's valid
@@ -244,6 +281,7 @@ export function AppointmentForm({
       title: selectedAppointmentType, // Use appointment type as title
       patient: selectedPatient, // Patient name for display
       patientId: selectedPatientId, // Patient ID for database
+      assignedUserId: selectedUserId || undefined, // Assigned user ID
       date: formatDateForDatabase(selectedDate),
       startTime: startTime,
       endTime: endTime,
@@ -259,6 +297,7 @@ export function AppointmentForm({
   const handleCancel = () => {
     setSelectedPatient('');
     setSelectedPatientId('');
+    setSelectedUserId('');
     setSelectedAppointmentType('');
     setSelectedDate(new Date());
     setStartTime('09:00');
@@ -307,6 +346,37 @@ export function AppointmentForm({
                 {patients.length === 0 && !loadingPatients && (
                   <SelectItem value="no-patients" disabled>
                     No patients found
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Assigned User Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-blue-700">
+              Assign To
+            </label>
+            <Select
+              value={selectedUserId || "unassigned"}
+              onValueChange={(value) => {
+                setSelectedUserId(value === "unassigned" ? "" : value);
+              }}
+              disabled={loadingUsers}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a user (optional)"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.full_name} ({user.email})
+                  </SelectItem>
+                ))}
+                {users.length === 0 && !loadingUsers && (
+                  <SelectItem value="no-users" disabled>
+                    No users found
                   </SelectItem>
                 )}
               </SelectContent>

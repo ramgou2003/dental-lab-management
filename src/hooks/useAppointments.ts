@@ -7,6 +7,7 @@ export interface Appointment {
   title: string;
   patient: string;
   patientId?: string; // Add patient ID field
+  assignedUserId?: string; // Add assigned user ID field
   startTime: string;
   endTime: string;
   type: string;
@@ -46,6 +47,7 @@ export function useAppointments() {
         title: appointment.title,
         patient: appointment.patient_name,
         patientId: appointment.patient_id || undefined,
+        assignedUserId: appointment.assigned_user_id || undefined,
         startTime: appointment.start_time,
         endTime: appointment.end_time,
         type: appointment.appointment_type,
@@ -102,6 +104,7 @@ export function useAppointments() {
                 title: payload.new.title,
                 patient: payload.new.patient_name,
                 patientId: payload.new.patient_id || undefined,
+                assignedUserId: payload.new.assigned_user_id || undefined,
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
@@ -135,6 +138,7 @@ export function useAppointments() {
                 title: payload.new.title,
                 patient: payload.new.patient_name,
                 patientId: payload.new.patient_id || undefined,
+                assignedUserId: payload.new.assigned_user_id || undefined,
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
@@ -217,6 +221,7 @@ export function useAppointments() {
         .insert([{
           patient_name: appointmentData.patient,
           patient_id: appointmentData.patientId || null,
+          assigned_user_id: appointmentData.assignedUserId || null,
           title: appointmentData.title,
           start_time: appointmentData.startTime,
           end_time: appointmentData.endTime,
@@ -238,6 +243,7 @@ export function useAppointments() {
         title: data.title,
         patient: data.patient_name,
         patientId: data.patient_id || undefined,
+        assignedUserId: data.assigned_user_id || undefined,
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
@@ -287,6 +293,7 @@ export function useAppointments() {
       const updateData: any = {};
       if (updates.patient) updateData.patient_name = updates.patient;
       if (updates.patientId !== undefined) updateData.patient_id = updates.patientId || null;
+      if (updates.assignedUserId !== undefined) updateData.assigned_user_id = updates.assignedUserId || null;
       if (updates.title) updateData.title = updates.title;
       if (updates.startTime) updateData.start_time = updates.startTime;
       if (updates.endTime) updateData.end_time = updates.endTime;
@@ -312,6 +319,7 @@ export function useAppointments() {
         title: data.title,
         patient: data.patient_name,
         patientId: data.patient_id || undefined,
+        assignedUserId: data.assigned_user_id || undefined,
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
