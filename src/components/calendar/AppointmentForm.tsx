@@ -86,18 +86,53 @@ export function AppointmentForm({
   const fetchPatients = async () => {
     setLoadingPatients(true);
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('id, full_name, first_name, last_name')
-        .order('full_name', { ascending: true });
+      // Check if this is a consultation appointment
+      const isConsultation = selectedAppointmentType === 'consultation' ||
+                            editingAppointment?.type === 'consultation';
 
-      if (error) {
-        console.error('Error fetching patients:', error);
-        return;
-      }
+      if (isConsultation) {
+        // Fetch from both patients and consultation_patients tables
+        const [regularPatientsResult, consultationPatientsResult] = await Promise.all([
+          supabase
+            .from('patients')
+            .select('id, full_name, first_name, last_name')
+            .order('full_name', { ascending: true }),
+          supabase
+            .from('consultation_patients')
+            .select('id, first_name, last_name')
+            .order('first_name', { ascending: true })
+        ]);
 
-      if (data) {
-        setPatients(data);
+        const regularPatients = regularPatientsResult.data || [];
+        const consultationPatients = (consultationPatientsResult.data || []).map(cp => ({
+          id: cp.id,
+          first_name: cp.first_name,
+          last_name: cp.last_name,
+          full_name: `${cp.first_name} ${cp.last_name}`.trim()
+        }));
+
+        // Combine both lists, removing duplicates by ID
+        const allPatients = [...regularPatients, ...consultationPatients];
+        const uniquePatients = Array.from(
+          new Map(allPatients.map(p => [p.id, p])).values()
+        );
+
+        setPatients(uniquePatients);
+      } else {
+        // For non-consultation appointments, only fetch from patients table
+        const { data, error } = await supabase
+          .from('patients')
+          .select('id, full_name, first_name, last_name')
+          .order('full_name', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching patients:', error);
+          return;
+        }
+
+        if (data) {
+          setPatients(data);
+        }
       }
     } catch (error) {
       console.error('Error fetching patients:', error);
@@ -158,13 +193,13 @@ export function AppointmentForm({
 
   const timeSlots = generateTimeSlots();
 
-  // Fetch patients and users when dialog opens
+  // Fetch patients and users when dialog opens or appointment type changes
   useEffect(() => {
     if (isOpen) {
       fetchPatients();
       fetchUsers();
     }
-  }, [isOpen]);
+  }, [isOpen, selectedAppointmentType]);
 
   // Initialize form when dialog opens
   useEffect(() => {
