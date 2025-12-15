@@ -189,8 +189,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     }
   };
 
-  // Long-press handlers for touch devices
-  const handleTouchStart = (e: React.TouchEvent, appointment: Appointment) => {
+  // Long-press handlers for appointment cards on touch devices
+  const handleAppointmentTouchStart = (e: React.TouchEvent, appointment: Appointment) => {
     setIsLongPress(false);
     const timer = setTimeout(() => {
       setIsLongPress(true);
@@ -210,7 +210,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     setLongPressTimer(timer);
   };
 
-  const handleTouchEnd = (e: React.TouchEvent, appointment: Appointment) => {
+  const handleAppointmentTouchEnd = (e: React.TouchEvent, appointment: Appointment) => {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
@@ -224,7 +224,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     setIsLongPress(false);
   };
 
-  const handleTouchMove = () => {
+  const handleAppointmentTouchMove = () => {
     // Cancel long press if user moves finger
     if (longPressTimer) {
       clearTimeout(longPressTimer);
@@ -983,15 +983,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         }}
                         onTouchStart={(e) => {
                           e.stopPropagation();
-                          handleTouchStart(e, appointment);
+                          handleAppointmentTouchStart(e, appointment);
                         }}
                         onTouchEnd={(e) => {
                           e.stopPropagation();
-                          handleTouchEnd(e, appointment);
+                          handleAppointmentTouchEnd(e, appointment);
                         }}
                         onTouchMove={(e) => {
                           e.stopPropagation();
-                          handleTouchMove();
+                          handleAppointmentTouchMove();
                         }}
                       >
                     <div className="p-1 h-full flex flex-col justify-between">
