@@ -150,9 +150,9 @@ export function AppointmentsPage() {
   // Data will load in background and update when ready
 
   return (
-    <div className="h-screen bg-gray-50 p-4 overflow-hidden">
+    <div className="h-screen bg-blue-50 p-4 overflow-hidden">
       {/* Calendar Container - Full height with padding */}
-      <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 table-container-rounded flex flex-col overflow-hidden">
+      <div className="h-full bg-white rounded-xl shadow-sm border border-blue-200 table-container-rounded flex flex-col overflow-hidden">
         {/* Calendar Header */}
         <CalendarHeader
           currentDate={currentDate}

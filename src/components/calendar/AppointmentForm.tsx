@@ -271,7 +271,7 @@ export function AppointmentForm({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">
+          <DialogTitle className="text-lg font-semibold text-blue-900">
             New Appointment
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -282,7 +282,7 @@ export function AppointmentForm({
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           {/* Patient Selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-blue-700">
               Patient *
             </label>
             <Select
@@ -315,7 +315,7 @@ export function AppointmentForm({
 
           {/* Appointment Type Selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-blue-700">
               Appointment Type *
             </label>
             <Select value={selectedAppointmentType || undefined} onValueChange={setSelectedAppointmentType}>
@@ -334,21 +334,21 @@ export function AppointmentForm({
 
           {/* Date Selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-blue-700">
               Date *
             </label>
             <input
               type="date"
               value={formatDateForInput(selectedDate)}
               onChange={(e) => setSelectedDate(createDateFromInput(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           {/* Time Selection */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-blue-700">
                 Start Time *
               </label>
               <Select value={startTime || undefined} onValueChange={setStartTime}>
@@ -366,7 +366,7 @@ export function AppointmentForm({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-blue-700">
                 End Time *
               </label>
               <Select value={endTime || undefined} onValueChange={setEndTime}>
@@ -386,14 +386,14 @@ export function AppointmentForm({
 
           {/* Notes */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-blue-700">
               Notes
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any additional notes for this appointment..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+              className="w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
               rows={3}
             />
           </div>
@@ -409,7 +409,7 @@ export function AppointmentForm({
             </Button>
             <Button
               type="submit"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
               disabled={!selectedPatientId || !selectedAppointmentType}
             >
               {editingAppointment ? 'Update Appointment' : 'Create Appointment'}

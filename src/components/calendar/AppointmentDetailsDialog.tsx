@@ -151,7 +151,7 @@ export function AppointmentDetailsDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">
+          <DialogTitle className="text-lg font-semibold text-blue-900">
             Appointment Details
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -166,29 +166,29 @@ export function AppointmentDetailsDialog({
               <User className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Patient</p>
+              <p className="text-sm text-blue-600">Patient</p>
               <p className="font-semibold text-gray-900">{appointment.patient}</p>
             </div>
           </div>
 
           {/* Appointment Type */}
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Calendar className="h-5 w-5 text-purple-600" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Calendar className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Appointment Type</p>
+              <p className="text-sm text-blue-600">Appointment Type</p>
               <p className="font-semibold text-gray-900">{getAppointmentTypeLabel(appointment.type)}</p>
             </div>
           </div>
 
           {/* Date and Time */}
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Clock className="h-5 w-5 text-green-600" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Clock className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Date & Time</p>
+              <p className="text-sm text-blue-600">Date & Time</p>
               <p className="font-semibold text-gray-900">{formatDate(appointment.date)}</p>
               <p className="text-sm text-gray-700">{formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}</p>
             </div>
