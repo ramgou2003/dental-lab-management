@@ -25,6 +25,7 @@ interface NavigationItem {
   featureFlag?: string;
   pageKey?: string;
   adminOnly?: boolean;
+  permission?: string; // Permission required to view this menu item
   submenu?: NavigationItem[];
 }
 
@@ -49,7 +50,8 @@ const navigation: NavigationItem[] = [
     section: "appointments",
     icon: Calendar,
     featureFlag: "appointments",
-    pageKey: "appointments"
+    pageKey: "appointments",
+    permission: "appointments.read"
   }, {
     name: "Consultation",
     href: "/consultation",
@@ -138,7 +140,7 @@ export function Sidebar({
   const [startWidth, setStartWidth] = useState(0);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
-  const { signOut, userProfile, loading, userRoles } = useAuth();
+  const { signOut, userProfile, loading, userRoles, hasPermission } = useAuth();
   const { canAccessUserManagement, isAdminUser } = usePermissions();
 
   const toggleSubmenu = (section: string) => {
@@ -347,6 +349,11 @@ export function Sidebar({
           return null;
         }
 
+        // Hide items based on permissions
+        if (item.permission && !hasPermission(item.permission)) {
+          return null;
+        }
+
         // Hide items based on feature flags
         if (item.featureFlag && !isFeatureEnabled(item.featureFlag as any)) {
           return null;
@@ -364,6 +371,9 @@ export function Sidebar({
 
         // Filter visible submenu items
         const visibleSubmenuItems = hasSubmenu ? item.submenu!.filter(subItem => {
+          if (subItem.permission && !hasPermission(subItem.permission)) {
+            return false;
+          }
           if (subItem.featureFlag && !isFeatureEnabled(subItem.featureFlag as any)) {
             return false;
           }
