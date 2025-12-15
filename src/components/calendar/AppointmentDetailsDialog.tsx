@@ -14,6 +14,7 @@ interface Appointment {
   status: 'pending' | 'confirmed' | 'not-confirmed' | 'completed' | 'cancelled';
   date: string;
   notes?: string;
+  assignedUserName?: string;
 }
 
 interface AppointmentDetailsDialogProps {
@@ -193,6 +194,19 @@ export function AppointmentDetailsDialog({
               <p className="text-sm text-gray-700">{formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}</p>
             </div>
           </div>
+
+          {/* Assigned User */}
+          {appointment.assignedUserName && (
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <UserCheck className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-green-600">Assigned To</p>
+                <p className="font-semibold text-gray-900">{appointment.assignedUserName}</p>
+              </div>
+            </div>
+          )}
 
           {/* Status */}
           <div className="space-y-4">
