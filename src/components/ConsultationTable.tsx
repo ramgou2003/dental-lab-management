@@ -146,7 +146,9 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
           status,
           appointment_type,
           notes,
-          created_at
+          created_at,
+          assigned_user_id,
+          assigned_user:user_profiles!assigned_user_id(full_name)
         `)
         .eq('appointment_type', 'consultation')
         .eq('date', queryDate)
@@ -568,6 +570,11 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                           <div className="text-sm text-gray-500">
                             {appointment.consultation_id ? `Consultation ID: ${appointment.consultation_id.slice(0, 8)}...` : 'No Consultation ID'}
                           </div>
+                          {appointment.assigned_user?.full_name && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              👤 Assigned to: {appointment.assigned_user.full_name}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
