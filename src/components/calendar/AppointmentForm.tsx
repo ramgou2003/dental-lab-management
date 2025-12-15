@@ -400,7 +400,9 @@ export function AppointmentForm({
             <Select
               value={selectedUserId || "unassigned"}
               onValueChange={(value) => {
-                setSelectedUserId(value === "unassigned" ? "" : value);
+                const newUserId = value === "unassigned" ? "" : value;
+                console.log('👤 User selection changed:', { from: selectedUserId, to: newUserId, value });
+                setSelectedUserId(newUserId);
               }}
               disabled={loadingUsers}
             >
