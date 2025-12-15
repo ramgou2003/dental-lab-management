@@ -548,15 +548,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       clearTimeout(timeSlotLongPressTimer);
     }
 
-    // Set a 2-second timer before enabling drag
+    // Set a 1-second timer before enabling drag
     const timer = setTimeout(() => {
-      console.log('2-second hold completed, enabling drag'); // Debug log
+      console.log('1-second hold completed, enabling drag'); // Debug log
       setIsTimeSlotLongPress(true);
       setIsDragging(true);
       setDragStart({ hour, minute, column });
       setDragEnd({ hour, minute, column });
       setDragColumn(column);
-    }, 2000); // 2000ms = 2 seconds
+    }, 1000); // 1000ms = 1 second
 
     setTimeSlotLongPressTimer(timer);
   }, [timeSlotLongPressTimer]);
