@@ -46,18 +46,26 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     }
   };
 
-  // Function to find patient ID by name and navigate to profile
-  const handlePatientNameClick = async (patientName: string) => {
-    console.log('Patient name clicked:', patientName);
+  // Function to find patient ID by name and navigate to profile or consultation page
+  const handlePatientNameClick = async (appointment: Appointment) => {
+    console.log('Patient name clicked:', appointment.patient, 'Type:', appointment.type);
 
     try {
+      // For consultation appointments, navigate to consultation session page
+      if (appointment.type === 'consultation') {
+        console.log('Consultation appointment, navigating to consultation session:', appointment.id);
+        navigate(`/consultations/session/${appointment.id}`);
+        return;
+      }
+
+      // For other appointment types, navigate to patient profile
       console.log('Searching for patient in database...');
 
       // Search for patient by full name
       const { data: patients, error } = await supabase
         .from('patients')
         .select('id, full_name')
-        .eq('full_name', patientName)
+        .eq('full_name', appointment.patient)
         .limit(1);
 
       console.log('Database query result:', { patients, error });
@@ -73,8 +81,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         // Navigate to patient profile
         navigate(`/patients/${patients[0].id}`);
       } else {
-        console.warn('Patient not found:', patientName);
-        alert(`Patient "${patientName}" not found in database. This might be mock data.`);
+        console.warn('Patient not found:', appointment.patient);
+        alert(`Patient "${appointment.patient}" not found in database. This might be mock data.`);
 
         // For development: try to navigate to a mock patient profile
         console.log('Trying to navigate to mock patient profile...');
@@ -873,7 +881,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                     onClick={(e) => {
                                       console.log('15-minute appointment patient name clicked');
                                       e.stopPropagation();
-                                      handlePatientNameClick(appointment.patient);
+                                      handlePatientNameClick(appointment);
                                     }}
                                   >
                                     {appointment.patient}
@@ -913,7 +921,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                     onClick={(e) => {
                                       console.log('30+ minute appointment patient name clicked');
                                       e.stopPropagation();
-                                      handlePatientNameClick(appointment.patient);
+                                      handlePatientNameClick(appointment);
                                     }}
                                   >
                                     {appointment.patient}
