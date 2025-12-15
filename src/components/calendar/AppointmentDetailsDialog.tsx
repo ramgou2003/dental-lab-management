@@ -209,99 +209,16 @@ export function AppointmentDetailsDialog({
           )}
 
           {/* Status */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-lg ${getStatusColor(appointment.status).replace('text-', 'text-').replace('bg-', 'bg-').replace('border-', 'bg-')}`}>
-                {getStatusIcon(appointment.status)}
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Current Status</p>
-                <Badge className={`${getStatusColor(appointment.status)} flex items-center gap-1`}>
-                  {getStatusIcon(appointment.status)}
-                  {getStatusLabel(appointment.status)}
-                </Badge>
-              </div>
+          <div className="flex items-center space-x-3">
+            <div className={`p-2 rounded-lg ${getStatusColor(appointment.status).replace('text-', 'text-').replace('bg-', 'bg-').replace('border-', 'bg-')}`}>
+              {getStatusIcon(appointment.status)}
             </div>
-
-            {/* Status Management Buttons */}
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-gray-700">Update Status:</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusChange('pending')}
-                  disabled={appointment.status === 'pending'}
-                  className={`flex items-center gap-2 text-xs ${
-                    appointment.status === 'pending'
-                      ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
-                      : 'hover:bg-yellow-50 hover:border-yellow-200'
-                  }`}
-                >
-                  <Clock3 className="h-3 w-3" />
-                  Pending
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusChange('confirmed')}
-                  disabled={appointment.status === 'confirmed'}
-                  className={`flex items-center gap-2 text-xs ${
-                    appointment.status === 'confirmed'
-                      ? 'bg-green-50 border-green-200 text-green-700'
-                      : 'hover:bg-green-50 hover:border-green-200'
-                  }`}
-                >
-                  <CheckCircle className="h-3 w-3" />
-                  Confirmed
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusChange('not-confirmed')}
-                  disabled={appointment.status === 'not-confirmed'}
-                  className={`flex items-center gap-2 text-xs ${
-                    appointment.status === 'not-confirmed'
-                      ? 'bg-orange-50 border-orange-200 text-orange-700'
-                      : 'hover:bg-orange-50 hover:border-orange-200'
-                  }`}
-                >
-                  <AlertCircle className="h-3 w-3" />
-                  Not Confirmed
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusChange('completed')}
-                  disabled={appointment.status === 'completed'}
-                  className={`flex items-center gap-2 text-xs ${
-                    appointment.status === 'completed'
-                      ? 'bg-blue-50 border-blue-200 text-blue-700'
-                      : 'hover:bg-blue-50 hover:border-blue-200'
-                  }`}
-                >
-                  <UserCheck className="h-3 w-3" />
-                  Completed
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusChange('cancelled')}
-                  disabled={appointment.status === 'cancelled'}
-                  className={`flex items-center gap-2 text-xs col-span-2 ${
-                    appointment.status === 'cancelled'
-                      ? 'bg-red-50 border-red-200 text-red-700'
-                      : 'hover:bg-red-50 hover:border-red-200'
-                  }`}
-                >
-                  <XCircle className="h-3 w-3" />
-                  Cancelled
-                </Button>
-              </div>
+            <div>
+              <p className="text-sm text-gray-600">Status</p>
+              <Badge className={`${getStatusColor(appointment.status)} flex items-center gap-1`}>
+                {getStatusIcon(appointment.status)}
+                {getStatusLabel(appointment.status)}
+              </Badge>
             </div>
           </div>
 
