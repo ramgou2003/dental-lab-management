@@ -100,7 +100,15 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
         .order('full_name', { ascending: true });
 
       if (error) throw error;
-      if (data) setUsers(data);
+      if (data) {
+        setUsers(data);
+
+        // Set DC as default assigned user for consultation appointments
+        const dcUser = data.find(user => user.full_name.trim().toLowerCase() === 'dc');
+        if (dcUser && !formData.assignedUserId) {
+          setFormData(prev => ({ ...prev, assignedUserId: dcUser.id }));
+        }
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('Failed to load users');

@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, MapPin, Heart, DollarSign, FileText, AlertCircle, CheckCircle, XCircle, Info, BarChart3, Plus, RefreshCw, Mic, FileAudio } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, User, Phone, Mail, MapPin, Heart, DollarSign, FileText, AlertCircle, CheckCircle, XCircle, Info, BarChart3, Plus, RefreshCw, Mic, FileAudio, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import { RecordingConsentDialog } from "@/components/RecordingConsentDialog";
 import { RecordingControlDialog } from "@/components/RecordingControlDialog";
 import { RecordingsList } from "@/components/RecordingsList";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LeadAppointmentScheduler } from "@/components/LeadAppointmentScheduler";
 import { NewPatientFormData } from "@/types/newPatientPacket";
 import { getPatientPacketsByLeadId, getPatientPacketsByPatientId, getPatientPacketsByConsultationPatientId, getPatientPacket, updatePatientPacket } from "@/services/patientPacketService";
 import { uploadAudioRecording, saveRecordingMetadata } from "@/lib/audioRecordingService";
@@ -60,6 +61,7 @@ const ConsultationSessionPage = () => {
   const [showNewPatientPacketDialog, setShowNewPatientPacketDialog] = useState(false);
   const [showConsultationFormDialog, setShowConsultationFormDialog] = useState(false);
   const [showConsultationPreviewDialog, setShowConsultationPreviewDialog] = useState(false);
+  const [showEditAppointmentDialog, setShowEditAppointmentDialog] = useState(false);
   const formRef = useRef<NewPatientPacketFormRef>(null);
 
   const tabs = [
@@ -100,7 +102,10 @@ const ConsultationSessionPage = () => {
         // First try to get from appointments table
         const { data: appointmentData, error: appointmentError } = await supabase
           .from('appointments')
-          .select('*')
+          .select(`
+            *,
+            assigned_user:user_profiles!assigned_user_id(full_name, email)
+          `)
           .eq('id', appointmentId)
           .single();
 
@@ -1124,6 +1129,28 @@ const ConsultationSessionPage = () => {
     }
   };
 
+  const handleAppointmentUpdate = async () => {
+    console.log('✅ Appointment updated successfully');
+    toast.success('Appointment updated successfully!');
+    setShowEditAppointmentDialog(false);
+
+    // Refresh appointment data
+    if (appointmentId) {
+      const { data: updatedAppointment, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          assigned_user:user_profiles!assigned_user_id(full_name, email)
+        `)
+        .eq('id', appointmentId)
+        .single();
+
+      if (!error && updatedAppointment) {
+        setAppointmentData(prev => ({ ...prev, ...updatedAppointment }));
+      }
+    }
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Today';
     const date = new Date(dateString);
@@ -1318,6 +1345,72 @@ const ConsultationSessionPage = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Appointment Details Section */}
+                  {appointmentData && (
+                    <div className="space-y-3 border-t border-gray-200 pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <Calendar className="h-4 w-4 text-indigo-600" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-gray-900">Appointment Details</h4>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowEditAppointmentDialog(true)}
+                          className="h-7 px-2 text-xs"
+                        >
+                          <Edit className="h-3 w-3 mr-1" />
+                          Edit
+                        </Button>
+                      </div>
+
+                      {appointmentData.date && (
+                        <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Calendar className="h-4 w-4 text-indigo-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatDate(appointmentData.date)}
+                            </p>
+                            <p className="text-xs text-gray-500">Appointment Date</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {appointmentData.start_time && (
+                        <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Clock className="h-4 w-4 text-purple-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatTime(appointmentData.start_time)}
+                              {appointmentData.end_time && ` - ${formatTime(appointmentData.end_time)}`}
+                            </p>
+                            <p className="text-xs text-gray-500">Appointment Time</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {appointmentData.assigned_user_id && (
+                        <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">
+                              {appointmentData.assigned_user?.full_name || 'Assigned'}
+                            </p>
+                            <p className="text-xs text-gray-500">Assigned To</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Contact Information */}
                   <div className="space-y-3 border-t border-gray-200 pt-4">
@@ -2248,6 +2341,25 @@ const ConsultationSessionPage = () => {
           setShowConsultationFormDialog(true);
         }}
       />
+
+      {/* Edit Appointment Dialog */}
+      {appointmentData && (
+        <LeadAppointmentScheduler
+          isOpen={showEditAppointmentDialog}
+          onClose={() => setShowEditAppointmentDialog(false)}
+          onSuccess={handleAppointmentUpdate}
+          leadId={appointmentData.lead_id || undefined}
+          leadName={appointmentData.patient_name}
+          existingAppointment={{
+            id: appointmentData.id,
+            date: appointmentData.date,
+            start_time: appointmentData.start_time,
+            end_time: appointmentData.end_time,
+            notes: appointmentData.notes,
+            assigned_user_id: appointmentData.assigned_user_id
+          }}
+        />
+      )}
     </div>
   );
 };

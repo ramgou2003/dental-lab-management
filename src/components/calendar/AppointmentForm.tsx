@@ -158,6 +158,15 @@ export function AppointmentForm({
 
       if (data) {
         setUsers(data);
+
+        // Set DC as default assigned user for new consultation appointments
+        const isConsultation = selectedAppointmentType === 'consultation' || appointmentType === 'consultation';
+        if (isConsultation && !editingAppointment && !selectedUserId) {
+          const dcUser = data.find(user => user.full_name.trim().toLowerCase() === 'dc');
+          if (dcUser) {
+            setSelectedUserId(dcUser.id);
+          }
+        }
       }
     } catch (error) {
       console.error('Error fetching users:', error);
