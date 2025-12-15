@@ -58,7 +58,8 @@ const navigation: NavigationItem[] = [
     section: "consultation",
     icon: Stethoscope,
     featureFlag: "consultation",
-    pageKey: "consultation"
+    pageKey: "consultation",
+    permission: "consultation.read"
   }, {
     name: "Patients",
     href: "/patients",

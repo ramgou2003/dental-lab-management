@@ -161,6 +161,7 @@ export function ManageRolePermissionsDialog({
     dashboard: 'Dashboard',
     patients: 'Patients',
     appointments: 'Appointments',
+    consultation: 'Consultation',
     lab_scripts: 'Lab Scripts',
     cad: 'CAD/CAM',
     reports: 'Reports',

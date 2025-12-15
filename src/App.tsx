@@ -212,7 +212,7 @@ const App = () => {
                     <Route
                       path="consultation"
                       element={
-                        <PermissionGuard permission="appointments.read">
+                        <PermissionGuard permission="consultation.read">
                           <ConsultationPage />
                         </PermissionGuard>
                       }
@@ -220,7 +220,7 @@ const App = () => {
                     <Route
                       path="consultation/:appointmentId"
                       element={
-                        <PermissionGuard permission="appointments.read">
+                        <PermissionGuard permission="consultation.read">
                           <ConsultationSessionPage />
                         </PermissionGuard>
                       }
