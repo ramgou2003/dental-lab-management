@@ -51,7 +51,7 @@ export function CalendarHeader({
   };
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800 px-6 py-4">
+    <div className="bg-blue-50/50 backdrop-blur-sm border-b border-blue-200 px-6 py-4">
       <div className="flex items-center justify-between">
         {/* Left side - Navigation and Title */}
         <div className="flex items-center space-x-4">
@@ -60,7 +60,7 @@ export function CalendarHeader({
               variant="outline"
               size="sm"
               onClick={() => navigateDate('prev')}
-              className="h-8 w-8 p-0 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+              className="h-8 w-8 p-0 bg-blue-100/50 border-blue-300 text-blue-700 hover:bg-blue-200/50 hover:text-blue-800"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -68,7 +68,7 @@ export function CalendarHeader({
               variant="outline"
               size="sm"
               onClick={goToToday}
-              className="px-3 h-8 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+              className="px-3 h-8 bg-blue-100/50 border-blue-300 text-blue-700 hover:bg-blue-200/50 hover:text-blue-800"
             >
               Today
             </Button>
@@ -76,13 +76,13 @@ export function CalendarHeader({
               variant="outline"
               size="sm"
               onClick={() => navigateDate('next')}
-              className="h-8 w-8 p-0 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+              className="h-8 w-8 p-0 bg-blue-100/50 border-blue-300 text-blue-700 hover:bg-blue-200/50 hover:text-blue-800"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          <h1 className="text-xl font-semibold text-white">
+          <h1 className="text-xl font-semibold text-blue-900">
             {formatDateTitle()}
           </h1>
         </div>
@@ -95,7 +95,7 @@ export function CalendarHeader({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 px-3 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+                className="h-9 px-3 bg-blue-100/50 border-blue-300 text-blue-700 hover:bg-blue-200/50 hover:text-blue-800"
               >
                 <Calendar className="h-4 w-4" />
               </Button>
@@ -112,12 +112,12 @@ export function CalendarHeader({
 
           {/* Search Field */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-200" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500" />
             <Input
               placeholder="Search appointments..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 h-9 w-80 bg-white/10 border-white/20 text-white placeholder:text-blue-200"
+              className="pl-10 h-9 w-80 bg-white/70 border-blue-300 text-blue-900 placeholder:text-blue-400"
             />
           </div>
 
@@ -125,7 +125,7 @@ export function CalendarHeader({
           {canCreateAppointments && (
             <Button
               onClick={onNewAppointment}
-              className="bg-white text-blue-600 hover:bg-blue-50 h-9 px-4 font-semibold"
+              className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4 font-semibold"
             >
               <Plus className="h-4 w-4 mr-2" />
               New Appointment
