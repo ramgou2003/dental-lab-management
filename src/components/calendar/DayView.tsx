@@ -54,7 +54,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       // For consultation appointments, navigate to consultation session page
       if (appointment.type === 'consultation') {
         console.log('Consultation appointment, navigating to consultation session:', appointment.id);
-        navigate(`/consultations/session/${appointment.id}`);
+        navigate(`/consultation/${appointment.id}`);
         return;
       }
 
