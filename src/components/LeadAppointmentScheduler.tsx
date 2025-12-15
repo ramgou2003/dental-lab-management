@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CalendarPlus, Clock, User, AlertCircle, CheckCircle, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useAppointments } from "@/hooks/useAppointments";
+import { supabase } from "@/lib/supabase";
 
 interface LeadAppointmentSchedulerProps {
   isOpen: boolean;
@@ -20,6 +21,12 @@ interface LeadAppointmentSchedulerProps {
   leadEmail?: string;
   leadPhone?: string;
   existingAppointment?: any; // For rescheduling
+}
+
+interface UserProfile {
+  id: string;
+  full_name: string;
+  email: string;
 }
 
 export function LeadAppointmentScheduler({
@@ -36,8 +43,50 @@ export function LeadAppointmentScheduler({
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [appointmentNotes, setAppointmentNotes] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   const { appointments, addAppointment, deleteAppointment } = useAppointments();
+
+  // Fetch users for assignment
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .eq('status', 'active')
+        .order('full_name', { ascending: true });
+
+      if (error) throw error;
+      if (data) setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Load users on mount
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  // Initialize form with existing appointment data when rescheduling
+  useEffect(() => {
+    if (existingAppointment && isOpen) {
+      // Set assigned user if exists
+      if (existingAppointment.assigned_user_id) {
+        setSelectedUserId(existingAppointment.assigned_user_id);
+      }
+      // Set notes if exists
+      if (existingAppointment.notes) {
+        setAppointmentNotes(existingAppointment.notes);
+      }
+    }
+  }, [existingAppointment, isOpen]);
 
   // Generate time slots in 15-minute intervals for 30-minute appointments
   const generateTimeSlots = () => {
@@ -149,6 +198,7 @@ export function LeadAppointmentScheduler({
         title: 'Consultation',
         patient: leadName,
         patientId: null, // Set to null since this is a lead, not an existing patient
+        assignedUserId: selectedUserId || undefined,
         date: formatDateForDatabase(selectedDate),
         startTime: selectedTime,
         endTime: endTime,
@@ -167,6 +217,7 @@ export function LeadAppointmentScheduler({
       setSelectedDate(undefined);
       setSelectedTime("");
       setAppointmentNotes("");
+      setSelectedUserId("");
 
       // Call the callback to refresh appointments
       if (onAppointmentScheduled) {
@@ -196,6 +247,7 @@ export function LeadAppointmentScheduler({
       setSelectedDate(undefined);
       setSelectedTime("");
       setAppointmentNotes("");
+      setSelectedUserId("");
     }
   }, [isOpen]);
 
@@ -355,6 +407,36 @@ export function LeadAppointmentScheduler({
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* User Assignment Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Assign To</h3>
+              <span className="text-sm text-gray-500">(Optional)</span>
+            </div>
+            <div className="bg-white border rounded-lg p-4">
+              <Select
+                value={selectedUserId || "unassigned"}
+                onValueChange={(value) => {
+                  setSelectedUserId(value === "unassigned" ? "" : value);
+                }}
+                disabled={loadingUsers}
+              >
+                <SelectTrigger className="border-0 p-0 focus:ring-0 h-auto">
+                  <SelectValue placeholder="Select a user to assign this appointment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.full_name} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

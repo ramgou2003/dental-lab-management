@@ -35,6 +35,13 @@ interface ConsultationFormData {
   gender: 'male' | 'female' | 'prefer-not-to-answer';
   consultationDate: Date;
   consultationTime: string;
+  assignedUserId?: string;
+}
+
+interface UserProfile {
+  id: string;
+  full_name: string;
+  email: string;
 }
 
 interface ConsultationPatient {
@@ -72,12 +79,42 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
     dateOfBirth: '',
     gender: 'prefer-not-to-answer',
     consultationDate: new Date(),
-    consultationTime: '09:00'
+    consultationTime: '09:00',
+    assignedUserId: undefined
   });
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // Fetch users for assignment
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .eq('status', 'active')
+        .order('full_name', { ascending: true });
+
+      if (error) throw error;
+      if (data) setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Load users on mount
+  useEffect(() => {
+    if (isOpen) {
+      fetchUsers();
+    }
+  }, [isOpen]);
 
   // Search for consultation patients
   const searchConsultationPatients = async (query: string) => {
@@ -261,6 +298,7 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
         .insert([{
           patient_name: `${formData.firstName} ${formData.lastName}`,
           patient_id: patientId,
+          assigned_user_id: formData.assignedUserId || null,
           title: `Consultation - ${formData.firstName} ${formData.lastName}`,
           date: consultationDateStr,
           start_time: formData.consultationTime,
@@ -734,6 +772,32 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4" />
                               {slot.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>
+                      Assign To <span className="text-gray-500 text-sm">(Optional)</span>
+                    </Label>
+                    <Select
+                      value={formData.assignedUserId || "unassigned"}
+                      onValueChange={(value) => handleInputChange('assignedUserId', value === "unassigned" ? undefined : value)}
+                      disabled={loadingUsers}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a user to assign" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {users.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            <div className="flex items-center gap-2">
+                              <UserCheck className="h-4 w-4" />
+                              {user.full_name} ({user.email})
                             </div>
                           </SelectItem>
                         ))}
