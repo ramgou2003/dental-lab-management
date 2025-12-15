@@ -842,7 +842,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                       onAppointmentClick(appointment);
                     }}
                   >
-                    <div className="p-2 h-full flex flex-col justify-between">
+                    <div className="p-1 h-full flex flex-col justify-between">
                       {(() => {
                         // Calculate appointment duration in minutes
                         const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
@@ -853,12 +853,22 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         if (durationMinutes === 15) {
                           // Single line layout for 15-minute appointments
                           const firstLetter = typeColors.shortLabel?.charAt(0) || typeColors.label?.charAt(0) || 'A';
+                          const columnWidth = getColumnWidth();
+
+                          // Determine time font size based on column width
+                          let timeFontSize = 'text-xs';
+                          if (columnWidth < 100) {
+                            timeFontSize = 'text-[9px]';
+                          } else if (columnWidth < 120) {
+                            timeFontSize = 'text-[10px]';
+                          }
+
                           return (
-                            <div className="flex items-center justify-between h-full w-full">
-                              <div className="flex items-center gap-1.5 flex-1 min-w-0 pr-2">
-                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
+                            <div className="flex items-center justify-between h-full w-full overflow-hidden">
+                              <div className="flex items-center gap-1 flex-1 min-w-0 pr-1">
+                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
                                 <h4
-                                  className="font-medium text-sm text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
+                                  className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
                                   onClick={(e) => {
                                     console.log('15-minute appointment patient name clicked');
                                     e.stopPropagation();
@@ -868,11 +878,16 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                   {appointment.patient}
                                 </h4>
                               </div>
-                              <div className="flex items-center gap-1.5 flex-shrink-0 ml-auto">
-                                <span className="text-sm text-gray-600 whitespace-nowrap">
-                                  {formatAppointmentTime(appointment.startTime)} - {formatAppointmentTime(appointment.endTime)}
-                                </span>
-                                <span className={`inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white rounded-full uppercase ${typeColors.badgeColor || 'bg-gray-500'}`}>
+                              <div className="flex items-center gap-0.5 flex-shrink-0">
+                                <div className="flex flex-col items-end">
+                                  <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                    {formatAppointmentTime(appointment.startTime)}
+                                  </span>
+                                  <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                    {formatAppointmentTime(appointment.endTime)}
+                                  </span>
+                                </div>
+                                <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full uppercase ${typeColors.badgeColor || 'bg-gray-500'}`}>
                                   {firstLetter}
                                 </span>
                               </div>
@@ -883,10 +898,10 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           return (
                             <div className="flex flex-col h-full justify-between">
                               {/* Top row - Name in top left */}
-                              <div className="flex items-center gap-2">
-                                <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
                                 <h4
-                                  className="font-semibold text-base text-gray-800 truncate underline cursor-pointer hover:text-blue-600 transition-colors"
+                                  className="font-semibold text-sm text-gray-800 truncate underline cursor-pointer hover:text-blue-600 transition-colors"
                                   onClick={(e) => {
                                     console.log('30+ minute appointment patient name clicked');
                                     e.stopPropagation();
@@ -897,39 +912,44 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                 </h4>
                               </div>
                               {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
-                              <div className="flex justify-between items-end gap-2 min-w-0 w-full">
+                              <div className="flex justify-between items-end gap-1 min-w-0 w-full overflow-hidden">
                                 {(() => {
                                   const columnWidth = getColumnWidth();
                                   const label = typeColors.shortLabel || typeColors.label;
 
-                                  // Determine display text and badge size based on column width - increased sizes
-                                  let displayText, badgeSize, badgePadding;
+                                  // Determine display text, badge size, and time size based on column width
+                                  let displayText, badgeSize, badgePadding, timeFontSize;
 
                                   if (columnWidth >= 140) {
                                     // Wide columns - show full text
                                     displayText = label;
-                                    badgeSize = 'text-xs';
-                                    badgePadding = 'px-2 py-1';
+                                    badgeSize = 'text-[11px]';
+                                    badgePadding = 'px-1.5 py-0.5';
+                                    timeFontSize = 'text-xs';
                                   } else if (columnWidth >= 120) {
                                     // Medium columns - show full text but smaller
                                     displayText = label;
-                                    badgeSize = 'text-[11px]';
-                                    badgePadding = 'px-1.5 py-0.5';
+                                    badgeSize = 'text-[10px]';
+                                    badgePadding = 'px-1 py-0.5';
+                                    timeFontSize = 'text-[10px]';
                                   } else if (columnWidth >= 100) {
                                     // Narrow columns - start abbreviating "Data Collection"
                                     displayText = (label === 'Data Collection') ? 'Data' : label;
-                                    badgeSize = 'text-[10px]';
-                                    badgePadding = 'px-1.5 py-0.5';
+                                    badgeSize = 'text-[9px]';
+                                    badgePadding = 'px-1 py-0.5';
+                                    timeFontSize = 'text-[10px]';
                                   } else if (columnWidth >= 80) {
                                     // Very narrow - abbreviate and smaller size
                                     displayText = (label === 'Data Collection') ? 'Data' : label;
-                                    badgeSize = 'text-[9px]';
-                                    badgePadding = 'px-1 py-0.5';
-                                  } else {
-                                    // Ultra narrow - minimal badge
-                                    displayText = (label === 'Data Collection') ? 'Data' : label;
                                     badgeSize = 'text-[8px]';
                                     badgePadding = 'px-0.5 py-0.5';
+                                    timeFontSize = 'text-[9px]';
+                                  } else {
+                                    // Ultra narrow - minimal badge and time
+                                    displayText = (label === 'Data Collection') ? 'Data' : label;
+                                    badgeSize = 'text-[7px]';
+                                    badgePadding = 'px-0.5 py-0';
+                                    timeFontSize = 'text-[8px]';
                                   }
 
                                   return (
@@ -937,8 +957,13 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                       <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase ${typeColors.badgeColor || 'bg-gray-100 text-gray-800'} ${badgeSize} ${badgePadding}`}>
                                         {label === 'Data Collection' ? 'Data' : displayText}
                                       </span>
-                                      <div className="text-sm text-gray-600 text-right whitespace-nowrap flex-shrink-0 ml-auto">
-                                        {formatAppointmentTime(appointment.startTime)} - {formatAppointmentTime(appointment.endTime)}
+                                      <div className="flex flex-col items-end flex-shrink-0">
+                                        <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                          {formatAppointmentTime(appointment.startTime)}
+                                        </span>
+                                        <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                          {formatAppointmentTime(appointment.endTime)}
+                                        </span>
                                       </div>
                                     </>
                                   );
