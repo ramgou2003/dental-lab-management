@@ -36,6 +36,9 @@ export interface ManufacturingItem {
   inspection_completed_at: string | null;
   inspection_completed_by: string | null;
   inspection_completed_by_name: string | null;
+  received_at: string | null;
+  received_by: string | null;
+  received_by_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -221,6 +224,55 @@ export function useManufacturingItems() {
       toast({
         title: "Error",
         description: "Failed to complete printing",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const markAsReceived = async (
+    itemId: string,
+    receivedData: {
+      received_date: string;
+      received_time: string;
+      received_by: string;
+      received_by_name: string;
+    }
+  ) => {
+    try {
+      // Combine received_date and received_time to create timestamp
+      const dateTimeString = `${receivedData.received_date}T${receivedData.received_time}:00`;
+      const [datePart, timePart] = dateTimeString.split('T');
+      const receivedAtTimestamp = `${datePart}T${timePart}-05:00`;
+
+      const { error } = await supabase
+        .from('manufacturing_items')
+        .update({
+          status: 'inspection',
+          received_at: receivedAtTimestamp,
+          received_by: receivedData.received_by,
+          received_by_name: receivedData.received_by_name,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error marking appliance as received:', error);
+        throw error;
+      }
+
+      // Refresh the manufacturing items list
+      await fetchManufacturingItems();
+
+      toast({
+        title: "Success",
+        description: "Appliance marked as received",
+      });
+    } catch (error) {
+      console.error('Error marking appliance as received:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark appliance as received",
         variant: "destructive",
       });
       throw error;
@@ -454,6 +506,7 @@ export function useManufacturingItems() {
     updateManufacturingItemStatus,
     updateManufacturingItemWithMillingDetails,
     completePrinting,
+    markAsReceived,
     completeInspection,
     deleteManufacturingItem,
     getManufacturingItemByLabReportId

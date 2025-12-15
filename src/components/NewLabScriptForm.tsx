@@ -6,10 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { PatientAutocomplete } from "@/components/PatientAutocomplete";
-import { User, FlaskConical, Sparkles, Loader2 } from "lucide-react";
+import { User, FlaskConical, Sparkles, Loader2, Settings } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useLabScriptComments } from "@/hooks/useLabScriptComments";
 import { enhanceLabInstructions } from "@/services/geminiAI";
+import { useLabScriptConfig } from "@/hooks/useLabScriptConfig";
+import { LabScriptConfigDialog } from "@/components/LabScriptConfigDialog";
+import { useFieldVisibilityRules } from "@/hooks/useFieldVisibilityRules";
 
 interface NewLabScriptFormProps {
   open: boolean;
@@ -20,81 +23,32 @@ interface NewLabScriptFormProps {
 export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormProps) {
 
   const { addComment } = useLabScriptComments();
+  const { treatmentTypes, applianceTypes, materials, shades } = useLabScriptConfig();
+  const { shouldShowField } = useFieldVisibilityRules();
+  const [showConfigDialog, setShowConfigDialog] = useState(false);
 
-  // Hardcoded dropdown options
+  // Convert dynamic data to options format
   const options = {
-    treatment_type: [
-      { id: 1, value: 'full-arch-fixed', label: 'Full arch fixed' },
-      { id: 2, value: 'denture', label: 'Denture' },
-      { id: 3, value: 'single-implant', label: 'Single implant' },
-      { id: 4, value: 'multiple-implants', label: 'Multiple implants' },
-      { id: 5, value: 'nightguard', label: 'Nightguard' }
-    ],
-    appliance_type: [
-      { id: 1, value: 'surgical-day-appliance', label: 'Surgical Day Appliance' },
-      { id: 2, value: 'printed-tryin', label: 'Printed Tryin' },
-      { id: 3, value: 'night-guard', label: 'Night Guard' },
-      { id: 4, value: 'direct-load-pmma', label: 'Direct Load PMMA' },
-      { id: 5, value: 'direct-load-zirconia', label: 'Direct Load Zirconia' },
-      { id: 6, value: 'ti-bar-superstructure', label: 'Ti-Bar and Superstructure' },
-      { id: 7, value: 'crown', label: 'Crown' },
-      { id: 8, value: 'bridge', label: 'Bridge' },
-      { id: 9, value: 'custom-abutment-crown', label: 'Custom Abutment & Crown' }
-    ],
+    treatment_type: treatmentTypes.map(t => ({ id: t.id, value: t.value, label: t.name })),
+    appliance_type: applianceTypes.map(a => ({ id: a.id, value: a.value, label: a.name })),
     screw_type: [
-      { id: 19, value: 'dc_screw', label: 'DC Screw' },
-      { id: 20, value: 'rosen', label: 'Rosen' },
-      { id: 21, value: 'rosen_wave_t5', label: 'Rosen Wave T5' },
-      { id: 22, value: 'powerball', label: 'Powerball' },
-      { id: 23, value: 'dess', label: 'Dess' },
-      { id: 24, value: 'sin_prh30', label: 'SIN PRH30' },
-      { id: 25, value: 'neodent', label: 'Neodent' },
-      { id: 26, value: 'other', label: 'Other' }
+      { id: '19', value: 'dc_screw', label: 'DC Screw' },
+      { id: '20', value: 'rosen', label: 'Rosen' },
+      { id: '21', value: 'rosen_wave_t5', label: 'Rosen Wave T5' },
+      { id: '22', value: 'powerball', label: 'Powerball' },
+      { id: '23', value: 'dess', label: 'Dess' },
+      { id: '24', value: 'sin_prh30', label: 'SIN PRH30' },
+      { id: '25', value: 'neodent', label: 'Neodent' },
+      { id: '26', value: 'other', label: 'Other' }
     ],
     vdo_details: [
-      { id: 27, value: 'open_4mm_without', label: 'Open up to 4mm without calling Doctor' },
-      { id: 28, value: 'open_4mm_with', label: 'Open up to 4mm with calling Doctor' },
-      { id: 29, value: 'open_based_requirement', label: 'Open VDO based on requirement' },
-      { id: 30, value: 'no_changes', label: 'No changes required in VDO' }
+      { id: '27', value: 'open_4mm_without', label: 'Open up to 4mm without calling Doctor' },
+      { id: '28', value: 'open_4mm_with', label: 'Open up to 4mm with calling Doctor' },
+      { id: '29', value: 'open_based_requirement', label: 'Open VDO based on requirement' },
+      { id: '30', value: 'no_changes', label: 'No changes required in VDO' }
     ],
-    material: [
-      { id: 31, value: 'flexera-smile-ultra-plus', label: 'Flexera Smile Ultra Plus' },
-      { id: 32, value: 'sprint-ray-onx', label: 'Sprint Ray ONX' },
-      { id: 33, value: 'sprint-ray-nightguard-flex', label: 'Sprint Ray Nightguard Flex' },
-      { id: 34, value: 'flexera-model-x', label: 'Flexera Model X' },
-      { id: 35, value: 'zirconia', label: 'Zirconia' },
-      { id: 36, value: 'pmma', label: 'PMMA' },
-      { id: 37, value: 'onx-tough', label: 'ONX Tough' },
-      { id: 38, value: 'titanium-zirconia', label: 'Titanium & Zirconia' },
-      { id: 39, value: 'titanium', label: 'Titanium' }
-    ],
-    shade: [
-      { id: 39, value: 'na', label: 'N/A' },
-      { id: 40, value: 'a1', label: 'A1' },
-      { id: 41, value: 'a2', label: 'A2' },
-      { id: 42, value: 'a3', label: 'A3' },
-      { id: 43, value: 'a3.5', label: 'A3.5' },
-      { id: 44, value: 'a4', label: 'A4' },
-      { id: 45, value: 'b1', label: 'B1' },
-      { id: 46, value: 'b2', label: 'B2' },
-      { id: 47, value: 'b3', label: 'B3' },
-      { id: 48, value: 'b4', label: 'B4' },
-      { id: 49, value: 'c1', label: 'C1' },
-      { id: 50, value: 'c2', label: 'C2' },
-      { id: 51, value: 'c3', label: 'C3' },
-      { id: 52, value: 'c4', label: 'C4' },
-      { id: 53, value: 'd2', label: 'D2' },
-      { id: 54, value: 'd3', label: 'D3' },
-      { id: 55, value: 'd4', label: 'D4' },
-      { id: 56, value: 'bl1', label: 'BL1' },
-      { id: 57, value: 'bl2', label: 'BL2' },
-      { id: 58, value: 'bl3', label: 'BL3' },
-      { id: 59, value: 'bl4', label: 'BL4' },
-      { id: 60, value: 'bleach', label: 'BLEACH' },
-      { id: 61, value: 'nw', label: 'NW' },
-      { id: 62, value: 'clear', label: 'Clear' },
-      { id: 63, value: 'custom', label: 'Custom' }
-    ]
+    material: materials.map(m => ({ id: m.id, value: m.value, label: m.name })),
+    shade: shades.map(s => ({ id: s.id, value: s.value, label: s.name }))
   };
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [selectedText, setSelectedText] = useState("");
@@ -196,29 +150,16 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       }
     }
 
-    // Screw type validation (when visible)
-    const shouldShowScrewType = () => {
-      if (formData.archType === "upper") {
-        const treatmentExcluded = formData.upperTreatmentType === "denture" || formData.upperTreatmentType === "nightguard";
-        const applianceExcluded = formData.upperApplianceType === "night-guard";
-        return !treatmentExcluded && !applianceExcluded;
-      } else if (formData.archType === "lower") {
-        const treatmentExcluded = formData.lowerTreatmentType === "denture" || formData.lowerTreatmentType === "nightguard";
-        const applianceExcluded = formData.lowerApplianceType === "night-guard";
-        return !treatmentExcluded && !applianceExcluded;
-      } else if (formData.archType === "dual") {
-        const upperTreatmentExcluded = formData.upperTreatmentType === "denture" || formData.upperTreatmentType === "nightguard";
-        const upperApplianceExcluded = formData.upperApplianceType === "night-guard";
-        const lowerTreatmentExcluded = formData.lowerTreatmentType === "denture" || formData.lowerTreatmentType === "nightguard";
-        const lowerApplianceExcluded = formData.lowerApplianceType === "night-guard";
-        const upperExcluded = upperTreatmentExcluded || upperApplianceExcluded;
-        const lowerExcluded = lowerTreatmentExcluded || lowerApplianceExcluded;
-        return !(upperExcluded && lowerExcluded);
-      }
-      return false;
-    };
+    // Screw type validation (when visible) - using dynamic rules
+    const screwTypeVisible = shouldShowField('screw_type', {
+      archType: formData.archType,
+      upperTreatmentType: formData.upperTreatmentType,
+      lowerTreatmentType: formData.lowerTreatmentType,
+      upperApplianceType: formData.upperApplianceType,
+      lowerApplianceType: formData.lowerApplianceType,
+    });
 
-    if (shouldShowScrewType() && !formData.screwType) {
+    if (screwTypeVisible && !formData.screwType) {
       errors.push("Screw type is required");
     }
 
@@ -227,47 +168,29 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       errors.push("Custom screw type specification is required");
     }
 
-    // VDO Details validation (when visible)
-    const shouldShowVDODetails = () => {
-      if (formData.archType === "upper") {
-        const treatmentExcluded = formData.upperTreatmentType === "nightguard";
-        const applianceExcluded = formData.upperApplianceType === "night-guard";
-        return !treatmentExcluded && !applianceExcluded;
-      } else if (formData.archType === "lower") {
-        const treatmentExcluded = formData.lowerTreatmentType === "nightguard";
-        const applianceExcluded = formData.lowerApplianceType === "night-guard";
-        return !treatmentExcluded && !applianceExcluded;
-      } else if (formData.archType === "dual") {
-        const upperTreatmentExcluded = formData.upperTreatmentType === "nightguard";
-        const upperApplianceExcluded = formData.upperApplianceType === "night-guard";
-        const lowerTreatmentExcluded = formData.lowerTreatmentType === "nightguard";
-        const lowerApplianceExcluded = formData.lowerApplianceType === "night-guard";
-        const upperExcluded = upperTreatmentExcluded || upperApplianceExcluded;
-        const lowerExcluded = lowerTreatmentExcluded || lowerApplianceExcluded;
-        return !(upperExcluded && lowerExcluded);
-      }
-      return false;
-    };
+    // VDO Details validation (when visible) - using dynamic rules
+    const vdoDetailsVisible = shouldShowField('vdo_details', {
+      archType: formData.archType,
+      upperTreatmentType: formData.upperTreatmentType,
+      lowerTreatmentType: formData.lowerTreatmentType,
+      upperApplianceType: formData.upperApplianceType,
+      lowerApplianceType: formData.lowerApplianceType,
+    });
 
-    if (shouldShowVDODetails() && !formData.vdoDetails) {
+    if (vdoDetailsVisible && !formData.vdoDetails) {
       errors.push("VDO details selection is required");
     }
 
-    // Nightguard needed validation (when visible)
-    const shouldShowNightguardQuestion = () => {
-      if (formData.archType === "upper") {
-        return formData.upperApplianceType !== "denture" && formData.upperApplianceType !== "night-guard" && formData.upperApplianceType !== "";
-      } else if (formData.archType === "lower") {
-        return formData.lowerApplianceType !== "denture" && formData.lowerApplianceType !== "night-guard" && formData.lowerApplianceType !== "";
-      } else if (formData.archType === "dual") {
-        const upperNeedQuestion = formData.upperApplianceType !== "denture" && formData.upperApplianceType !== "night-guard" && formData.upperApplianceType !== "";
-        const lowerNeedQuestion = formData.lowerApplianceType !== "denture" && formData.lowerApplianceType !== "night-guard" && formData.lowerApplianceType !== "";
-        return upperNeedQuestion || lowerNeedQuestion;
-      }
-      return false;
-    };
+    // Nightguard needed validation (when visible) - using dynamic rules
+    const nightguardQuestionVisible = shouldShowField('nightguard_question', {
+      archType: formData.archType,
+      upperTreatmentType: formData.upperTreatmentType,
+      lowerTreatmentType: formData.lowerTreatmentType,
+      upperApplianceType: formData.upperApplianceType,
+      lowerApplianceType: formData.lowerApplianceType,
+    });
 
-    if (shouldShowNightguardQuestion() && !formData.isNightguardNeeded) {
+    if (nightguardQuestionVisible && !formData.isNightguardNeeded) {
       errors.push("Nightguard needed selection is required");
     }
 
@@ -476,16 +399,17 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
-            <FlaskConical className="h-6 w-6 text-indigo-600" />
-            New Lab Script
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+              <FlaskConical className="h-6 w-6 text-indigo-600" />
+              New Lab Script
+            </DialogTitle>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* Patient Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -723,32 +647,16 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
             {/* Screw Type - Checkbox Buttons - Conditional Display */}
             {(() => {
-              // Logic to determine if screw type should be shown
-              const shouldShowScrewType = () => {
-                if (formData.archType === "upper") {
-                  // For upper arch, hide if treatment type is denture/nightguard or appliance is night-guard
-                  const treatmentExcluded = formData.upperTreatmentType === "denture" || formData.upperTreatmentType === "nightguard";
-                  const applianceExcluded = formData.upperApplianceType === "night-guard";
-                  return !treatmentExcluded && !applianceExcluded;
-                } else if (formData.archType === "lower") {
-                  // For lower arch, hide if treatment type is denture/nightguard or appliance is night-guard
-                  const treatmentExcluded = formData.lowerTreatmentType === "denture" || formData.lowerTreatmentType === "nightguard";
-                  const applianceExcluded = formData.lowerApplianceType === "night-guard";
-                  return !treatmentExcluded && !applianceExcluded;
-                } else if (formData.archType === "dual") {
-                  // For dual arch, show if at least one arch doesn't have excluded treatment/appliance
-                  const upperTreatmentExcluded = formData.upperTreatmentType === "denture" || formData.upperTreatmentType === "nightguard";
-                  const upperApplianceExcluded = formData.upperApplianceType === "night-guard";
-                  const lowerTreatmentExcluded = formData.lowerTreatmentType === "denture" || formData.lowerTreatmentType === "nightguard";
-                  const lowerApplianceExcluded = formData.lowerApplianceType === "night-guard";
-                  const upperExcluded = upperTreatmentExcluded || upperApplianceExcluded;
-                  const lowerExcluded = lowerTreatmentExcluded || lowerApplianceExcluded;
-                  return !(upperExcluded && lowerExcluded);
-                }
-                return false; // Hide if no arch type is selected
-              };
+              // Using dynamic visibility rules
+              const screwTypeVisible = shouldShowField('screw_type', {
+                archType: formData.archType,
+                upperTreatmentType: formData.upperTreatmentType,
+                lowerTreatmentType: formData.lowerTreatmentType,
+                upperApplianceType: formData.upperApplianceType,
+                lowerApplianceType: formData.lowerApplianceType,
+              });
 
-              return shouldShowScrewType() ? (
+              return screwTypeVisible ? (
                 <div>
                   <Label>Screw Type *</Label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
@@ -796,32 +704,16 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
             {/* VDO Details - Checkbox Buttons - Conditional Display */}
             {(() => {
-              // Logic to determine if VDO details should be shown
-              const shouldShowVDODetails = () => {
-                if (formData.archType === "upper") {
-                  // For upper arch, hide if treatment type is nightguard or appliance is night-guard
-                  const treatmentExcluded = formData.upperTreatmentType === "nightguard";
-                  const applianceExcluded = formData.upperApplianceType === "night-guard";
-                  return !treatmentExcluded && !applianceExcluded;
-                } else if (formData.archType === "lower") {
-                  // For lower arch, hide if treatment type is nightguard or appliance is night-guard
-                  const treatmentExcluded = formData.lowerTreatmentType === "nightguard";
-                  const applianceExcluded = formData.lowerApplianceType === "night-guard";
-                  return !treatmentExcluded && !applianceExcluded;
-                } else if (formData.archType === "dual") {
-                  // For dual arch, show if at least one arch doesn't have excluded treatment/appliance
-                  const upperTreatmentExcluded = formData.upperTreatmentType === "nightguard";
-                  const upperApplianceExcluded = formData.upperApplianceType === "night-guard";
-                  const lowerTreatmentExcluded = formData.lowerTreatmentType === "nightguard";
-                  const lowerApplianceExcluded = formData.lowerApplianceType === "night-guard";
-                  const upperExcluded = upperTreatmentExcluded || upperApplianceExcluded;
-                  const lowerExcluded = lowerTreatmentExcluded || lowerApplianceExcluded;
-                  return !(upperExcluded && lowerExcluded);
-                }
-                return false; // Hide if no arch type is selected
-              };
+              // Using dynamic visibility rules
+              const vdoDetailsVisible = shouldShowField('vdo_details', {
+                archType: formData.archType,
+                upperTreatmentType: formData.upperTreatmentType,
+                lowerTreatmentType: formData.lowerTreatmentType,
+                upperApplianceType: formData.upperApplianceType,
+                lowerApplianceType: formData.lowerApplianceType,
+              });
 
-              return shouldShowVDODetails() ? (
+              return vdoDetailsVisible ? (
                 <div>
               <Label>VDO Details *</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
@@ -855,24 +747,16 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
 
             {/* Is Nightguard Needed - Conditional Display */}
             {(() => {
-              // Logic to determine if nightguard question should be shown
-              const shouldShowNightguardQuestion = () => {
-                if (formData.archType === "upper") {
-                  // For upper arch, show if appliance is NOT denture or night-guard
-                  return formData.upperApplianceType !== "denture" && formData.upperApplianceType !== "night-guard" && formData.upperApplianceType !== "";
-                } else if (formData.archType === "lower") {
-                  // For lower arch, show if appliance is NOT denture or night-guard
-                  return formData.lowerApplianceType !== "denture" && formData.lowerApplianceType !== "night-guard" && formData.lowerApplianceType !== "";
-                } else if (formData.archType === "dual") {
-                  // For dual arch, show if at least one appliance is NOT denture or night-guard
-                  const upperNeedQuestion = formData.upperApplianceType !== "denture" && formData.upperApplianceType !== "night-guard" && formData.upperApplianceType !== "";
-                  const lowerNeedQuestion = formData.lowerApplianceType !== "denture" && formData.lowerApplianceType !== "night-guard" && formData.lowerApplianceType !== "";
-                  return upperNeedQuestion || lowerNeedQuestion;
-                }
-                return false; // Hide if no arch type is selected
-              };
+              // Using dynamic visibility rules
+              const nightguardQuestionVisible = shouldShowField('nightguard_question', {
+                archType: formData.archType,
+                upperTreatmentType: formData.upperTreatmentType,
+                lowerTreatmentType: formData.lowerTreatmentType,
+                upperApplianceType: formData.upperApplianceType,
+                lowerApplianceType: formData.lowerApplianceType,
+              });
 
-              return shouldShowNightguardQuestion() ? (
+              return nightguardQuestionVisible ? (
                 <div>
                   <Label>Is Nightguard needed? *</Label>
                   <div className="flex gap-2 mt-2">
@@ -1090,16 +974,34 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <Button type="button" variant="outline" onClick={handleCancel}>
-              Cancel
+          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowConfigDialog(true)}
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Configure
             </Button>
-            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
-              Create Lab Script
-            </Button>
+            <div className="flex space-x-3">
+              <Button type="button" variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+                Create Lab Script
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
     </Dialog>
+
+    <LabScriptConfigDialog
+      open={showConfigDialog}
+      onClose={() => setShowConfigDialog(false)}
+    />
+  </>
   );
 }

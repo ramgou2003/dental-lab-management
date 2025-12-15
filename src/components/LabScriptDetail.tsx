@@ -13,6 +13,7 @@ import { LabScript } from "@/hooks/useLabScripts";
 import { useLabScriptComments } from "@/hooks/useLabScriptComments";
 import { FlaskConical, Edit2, Save, X, MessageSquare, Calendar, User, FileText } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { useLabScriptConfig } from "@/hooks/useLabScriptConfig";
 
 // Helper function to format date and time from database, converting UTC to EST/EDT
 const formatDateTimeFromDB = (dateString: string): { date: string; time: string } => {
@@ -68,83 +69,30 @@ export function LabScriptDetail({ open, onClose, labScript, onUpdate, initialEdi
   const [editData, setEditData] = useState<Partial<LabScript>>({});
   const [newComment, setNewComment] = useState("");
   const { comments, addComment, loading: commentsLoading } = useLabScriptComments(labScript?.id);
+  const { treatmentTypes, applianceTypes, materials, shades } = useLabScriptConfig();
 
-  // Hardcoded dropdown options
+  // Convert dynamic data to options format
   const options = {
-    appliance_type: [
-      { id: 1, value: 'surgical-day-appliance', label: 'Surgical Day Appliance' },
-      { id: 2, value: 'printed-tryin', label: 'Printed Tryin' },
-      { id: 3, value: 'night-guard', label: 'Night Guard' },
-      { id: 4, value: 'direct-load-pmma', label: 'Direct Load PMMA' },
-      { id: 5, value: 'direct-load-zirconia', label: 'Direct Load Zirconia' },
-      { id: 6, value: 'ti-bar-superstructure', label: 'Ti-Bar and Superstructure' },
-      { id: 7, value: 'crown', label: 'Crown' },
-      { id: 8, value: 'bridge', label: 'Bridge' },
-      { id: 9, value: 'denture', label: 'Denture' },
-      { id: 10, value: 'retainer', label: 'Retainer' }
-    ],
-    treatment_type: [
-      { id: 11, value: 'orthodontic', label: 'Orthodontic' },
-      { id: 12, value: 'restorative', label: 'Restorative' },
-      { id: 13, value: 'preventive', label: 'Preventive' },
-      { id: 14, value: 'cosmetic', label: 'Cosmetic' },
-      { id: 15, value: 'surgical', label: 'Surgical' },
-      { id: 16, value: 'prosthetic', label: 'Prosthetic' },
-      { id: 17, value: 'implant_placement', label: 'Implant Placement' },
-      { id: 18, value: 'endodontic', label: 'Endodontic' }
-    ],
+    treatment_type: treatmentTypes.map(t => ({ id: t.id, value: t.value, label: t.name })),
+    appliance_type: applianceTypes.map(a => ({ id: a.id, value: a.value, label: a.name })),
     screw_type: [
-      { id: 19, value: 'dc_screw', label: 'DC Screw' },
-      { id: 20, value: 'rosen', label: 'Rosen' },
-      { id: 21, value: 'rosen_wave_t5', label: 'Rosen Wave T5' },
-      { id: 22, value: 'powerball', label: 'Powerball' },
-      { id: 23, value: 'dess', label: 'Dess' },
-      { id: 24, value: 'sin_prh30', label: 'SIN PRH30' },
-      { id: 25, value: 'neodent', label: 'Neodent' },
-      { id: 26, value: 'other', label: 'Other' }
+      { id: '19', value: 'dc_screw', label: 'DC Screw' },
+      { id: '20', value: 'rosen', label: 'Rosen' },
+      { id: '21', value: 'rosen_wave_t5', label: 'Rosen Wave T5' },
+      { id: '22', value: 'powerball', label: 'Powerball' },
+      { id: '23', value: 'dess', label: 'Dess' },
+      { id: '24', value: 'sin_prh30', label: 'SIN PRH30' },
+      { id: '25', value: 'neodent', label: 'Neodent' },
+      { id: '26', value: 'other', label: 'Other' }
     ],
     vdo_details: [
-      { id: 27, value: 'open_4mm_without', label: 'Open up to 4mm without calling Doctor' },
-      { id: 28, value: 'open_4mm_with', label: 'Open up to 4mm with calling Doctor' },
-      { id: 29, value: 'open_based_requirement', label: 'Open VDO based on requirement' },
-      { id: 30, value: 'no_changes', label: 'No changes required in VDO' }
+      { id: '27', value: 'open_4mm_without', label: 'Open up to 4mm without calling Doctor' },
+      { id: '28', value: 'open_4mm_with', label: 'Open up to 4mm with calling Doctor' },
+      { id: '29', value: 'open_based_requirement', label: 'Open VDO based on requirement' },
+      { id: '30', value: 'no_changes', label: 'No changes required in VDO' }
     ],
-    material: [
-      { id: 31, value: 'flexera-smile-ultra-plus', label: 'Flexera Smile Ultra Plus' },
-      { id: 32, value: 'sprint-ray-onx', label: 'Sprint Ray ONX' },
-      { id: 33, value: 'sprint-ray-nightguard-flex', label: 'Sprint Ray Nightguard Flex' },
-      { id: 34, value: 'flexera-model-x', label: 'Flexera Model X' },
-      { id: 35, value: 'zirconia', label: 'Zirconia' },
-      { id: 36, value: 'pmma', label: 'PMMA' },
-      { id: 37, value: 'onx-tough', label: 'ONX Tough' },
-      { id: 38, value: 'titanium-zirconia', label: 'Titanium & Zirconia' },
-      { id: 39, value: 'titanium', label: 'Titanium' }
-    ],
-    shade: [
-      { id: 40, value: 'na', label: 'N/A' },
-      { id: 41, value: 'a1', label: 'A1' },
-      { id: 42, value: 'a2', label: 'A2' },
-      { id: 43, value: 'a3', label: 'A3' },
-      { id: 44, value: 'a3.5', label: 'A3.5' },
-      { id: 45, value: 'a4', label: 'A4' },
-      { id: 46, value: 'b1', label: 'B1' },
-      { id: 47, value: 'b2', label: 'B2' },
-      { id: 48, value: 'b3', label: 'B3' },
-      { id: 49, value: 'b4', label: 'B4' },
-      { id: 50, value: 'c1', label: 'C1' },
-      { id: 51, value: 'c2', label: 'C2' },
-      { id: 52, value: 'c3', label: 'C3' },
-      { id: 53, value: 'c4', label: 'C4' },
-      { id: 54, value: 'd2', label: 'D2' },
-      { id: 55, value: 'd3', label: 'D3' },
-      { id: 56, value: 'd4', label: 'D4' },
-      { id: 57, value: 'bl1', label: 'BL1' },
-      { id: 58, value: 'bl2', label: 'BL2' },
-      { id: 59, value: 'bl3', label: 'BL3' },
-      { id: 60, value: 'bl4', label: 'BL4' },
-      { id: 61, value: 'bleach', label: 'BLEACH' },
-      { id: 62, value: 'nw', label: 'NW' }
-    ]
+    material: materials.map(m => ({ id: m.id, value: m.value, label: m.name })),
+    shade: shades.map(s => ({ id: s.id, value: s.value, label: s.name }))
   };
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { useMillingLocations } from "@/hooks/useMillingLocations";
 
 export interface ManufacturingFilters {
   status: string[];
@@ -46,6 +47,7 @@ export function ManufacturingFilterDialog({
 }: ManufacturingFilterDialogProps) {
   const [localFilters, setLocalFilters] = useState<ManufacturingFilters>(currentFilters);
   const [manufacturingItems, setManufacturingItems] = useState<ManufacturingItem[]>([]);
+  const { millingLocations } = useMillingLocations();
 
   useEffect(() => {
     setLocalFilters(currentFilters);
@@ -218,19 +220,19 @@ export function ManufacturingFilterDialog({
           <div className="space-y-3">
             <Label className="text-base font-semibold text-gray-900">Milling Location</Label>
             <div className="grid grid-cols-2 gap-2">
-              {['in-house', 'micro-dental-lab', 'evolution-dental-lab', 'haus-milling'].map(location => {
-                const count = filterCounts.millingLocation[location] || 0;
-                const isSelected = localFilters.millingLocation.includes(location);
+              {millingLocations.map(location => {
+                const count = filterCounts.millingLocation[location.name] || 0;
+                const isSelected = localFilters.millingLocation.includes(location.name);
                 return (
                   <Button
-                    key={location}
+                    key={location.id}
                     type="button"
                     variant={isSelected ? "default" : "outline"}
                     size="sm"
                     className={`justify-between ${isSelected ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-gray-50'}`}
-                    onClick={() => handleButtonToggle('millingLocation', location)}
+                    onClick={() => handleButtonToggle('millingLocation', location.name)}
                   >
-                    <span className="truncate">{formatLabel(location)}</span>
+                    <span className="truncate">{location.name}</span>
                     <Badge variant="secondary" className={`ml-2 flex-shrink-0 ${isSelected ? 'bg-blue-500 text-white' : ''}`}>{count}</Badge>
                   </Button>
                 );

@@ -13,14 +13,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical, ClipboardCheck, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical, ClipboardCheck, Filter, ArrowUpDown, ArrowUp, ArrowDown, MapPin, Package } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
 import { useMillingForms } from "@/hooks/useMillingForms";
+import { useMillingLocations } from "@/hooks/useMillingLocations";
 import { generateManufacturingScriptPDF } from "@/utils/pdfGenerator";
 import { PrintingCompletionDialog } from "@/components/PrintingCompletionDialog";
 import { InspectionDialog } from "@/components/InspectionDialog";
+import { ApplianceReceivedDialog } from "@/components/ApplianceReceivedDialog";
 import { ManufacturingFilterDialog, ManufacturingFilters } from "@/components/ManufacturingFilterDialog";
+import { MillingLocationManagement } from "@/components/MillingLocationManagement";
 
 export function ManufacturingPage() {
   const [activeFilter, setActiveFilter] = useState("new-script");
@@ -43,9 +46,12 @@ export function ManufacturingPage() {
   const [selectedPrintingItem, setSelectedPrintingItem] = useState<any>(null);
   const [showInspectionDialog, setShowInspectionDialog] = useState(false);
   const [selectedInspectionItem, setSelectedInspectionItem] = useState<any>(null);
+  const [showReceivedDialog, setShowReceivedDialog] = useState(false);
+  const [selectedReceivedItem, setSelectedReceivedItem] = useState<any>(null);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [selectedReportItem, setSelectedReportItem] = useState<any>(null);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [showMillingLocationManagement, setShowMillingLocationManagement] = useState(false);
   const [sortField, setSortField] = useState<'patient' | 'createdDate' | null>('createdDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filters, setFilters] = useState<ManufacturingFilters>({
@@ -58,8 +64,9 @@ export function ManufacturingPage() {
     millingLocation: [],
     inspectionStatus: [],
   });
-  const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails, completePrinting, completeInspection } = useManufacturingItems();
+  const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails, completePrinting, markAsReceived, completeInspection } = useManufacturingItems();
   const { createMillingForm } = useMillingForms();
+  const { millingLocations, loading: millingLocationsLoading } = useMillingLocations();
 
   const handleNewManufacturing = () => {
     setShowNewManufacturingForm(true);
@@ -187,6 +194,27 @@ export function ManufacturingPage() {
       setSelectedPrintingItem(null);
     } catch (error) {
       toast.error('Failed to complete printing');
+    }
+  };
+
+  const handleApplianceReceived = (item: any) => {
+    setSelectedReceivedItem(item);
+    setShowReceivedDialog(true);
+  };
+
+  const handleReceivedSubmit = async (receivedData: {
+    received_date: string;
+    received_time: string;
+    received_by: string;
+    received_by_name: string;
+  }) => {
+    try {
+      await markAsReceived(selectedReceivedItem.id, receivedData);
+      toast.success('Appliance marked as received successfully');
+      setShowReceivedDialog(false);
+      setSelectedReceivedItem(null);
+    } catch (error) {
+      toast.error('Failed to mark appliance as received');
     }
   };
 
@@ -575,11 +603,11 @@ export function ManufacturingPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleStatusChange(item.id, 'inspection')}
+                                onClick={() => handleApplianceReceived(item)}
                                 className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
                               >
-                                <AlertCircle className="h-4 w-4 mr-2" />
-                                Start Inspection
+                                <Package className="h-4 w-4 mr-2" />
+                                Appliance Received
                               </Button>
                             </div>
                           );
@@ -971,18 +999,37 @@ export function ManufacturingPage() {
 
               {/* Milling Location Selection */}
               <div>
-                <Label htmlFor="milling-location" className="text-sm font-medium text-gray-700">
-                  Milling Location <span className="text-red-500">*</span>
-                </Label>
+                <div className="flex items-center justify-between mb-1">
+                  <Label htmlFor="milling-location" className="text-sm font-medium text-gray-700">
+                    Milling Location <span className="text-red-500">*</span>
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowMillingLocationManagement(true)}
+                    className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  >
+                    <MapPin className="h-3 w-3 mr-1" />
+                    Manage Locations
+                  </Button>
+                </div>
                 <Select value={millingLocation} onValueChange={setMillingLocation}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select milling location" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="in-house">Inhouse</SelectItem>
-                    <SelectItem value="micro-dental-lab">Micro Dental Lab</SelectItem>
-                    <SelectItem value="evolution-dental-lab">Evolution Dental Lab</SelectItem>
-                    <SelectItem value="haus-milling">Haus Milling</SelectItem>
+                    {millingLocationsLoading ? (
+                      <SelectItem value="loading" disabled>Loading...</SelectItem>
+                    ) : millingLocations.length === 0 ? (
+                      <SelectItem value="none" disabled>No locations available</SelectItem>
+                    ) : (
+                      millingLocations.map((location) => (
+                        <SelectItem key={location.id} value={location.name}>
+                          {location.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -1408,6 +1455,17 @@ export function ManufacturingPage() {
         manufacturingItem={selectedPrintingItem}
       />
 
+      {/* Appliance Received Dialog */}
+      <ApplianceReceivedDialog
+        open={showReceivedDialog}
+        onClose={() => {
+          setShowReceivedDialog(false);
+          setSelectedReceivedItem(null);
+        }}
+        onComplete={handleReceivedSubmit}
+        manufacturingItem={selectedReceivedItem}
+      />
+
       {/* Inspection Dialog */}
       <InspectionDialog
         open={showInspectionDialog}
@@ -1692,6 +1750,12 @@ export function ManufacturingPage() {
         currentFilters={filters}
         onApplyFilters={handleApplyFilters}
         onClearFilters={handleClearFilters}
+      />
+
+      {/* Milling Location Management Dialog */}
+      <MillingLocationManagement
+        open={showMillingLocationManagement}
+        onOpenChange={setShowMillingLocationManagement}
       />
     </div>
   );
