@@ -39,9 +39,13 @@ interface DayViewProps {
 export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange }: DayViewProps) {
   const navigate = useNavigate();
 
-  // State for long-press handling
+  // State for long-press handling (appointment cards)
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [isLongPress, setIsLongPress] = useState(false);
+
+  // State for time slot long-press handling
+  const [timeSlotLongPressTimer, setTimeSlotLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isTimeSlotLongPress, setIsTimeSlotLongPress] = useState(false);
 
   // Function to get status dot color
   const getStatusDotColor = (status: string) => {
@@ -539,12 +543,23 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
     console.log('Touch start detected:', { hour, minute, column }); // Debug log
 
-    // Set dragging state - CSS will handle scroll prevention via .dragging class
-    setIsDragging(true);
-    setDragStart({ hour, minute, column });
-    setDragEnd({ hour, minute, column });
-    setDragColumn(column);
-  }, []);
+    // Clear any existing timer
+    if (timeSlotLongPressTimer) {
+      clearTimeout(timeSlotLongPressTimer);
+    }
+
+    // Set a 2-second timer before enabling drag
+    const timer = setTimeout(() => {
+      console.log('2-second hold completed, enabling drag'); // Debug log
+      setIsTimeSlotLongPress(true);
+      setIsDragging(true);
+      setDragStart({ hour, minute, column });
+      setDragEnd({ hour, minute, column });
+      setDragColumn(column);
+    }, 2000); // 2000ms = 2 seconds
+
+    setTimeSlotLongPressTimer(timer);
+  }, [timeSlotLongPressTimer]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isDragging || !dragColumn) return;
@@ -596,11 +611,30 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     e.preventDefault();
     e.stopPropagation();
 
+    // Clear the long-press timer if touch ends before 2 seconds
+    if (timeSlotLongPressTimer) {
+      clearTimeout(timeSlotLongPressTimer);
+      setTimeSlotLongPressTimer(null);
+    }
+
+    // Reset long-press state
+    setIsTimeSlotLongPress(false);
+
     // CSS will handle scroll restoration when .dragging class is removed
     handleMouseUp();
-  }, [handleMouseUp]);
+  }, [handleMouseUp, timeSlotLongPressTimer]);
 
-
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (timeSlotLongPressTimer) {
+        clearTimeout(timeSlotLongPressTimer);
+      }
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+      }
+    };
+  }, [timeSlotLongPressTimer, longPressTimer]);
 
   // Add global touch event prevention during drag and auto-scroll functionality
   useEffect(() => {
