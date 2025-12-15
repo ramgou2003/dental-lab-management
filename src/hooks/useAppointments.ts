@@ -8,6 +8,7 @@ export interface Appointment {
   patient: string;
   patientId?: string; // Add patient ID field
   assignedUserId?: string; // Add assigned user ID field
+  assignedUserName?: string; // Add assigned user name field
   startTime: string;
   endTime: string;
   type: string;
@@ -33,7 +34,10 @@ export function useAppointments() {
 
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
+        .select(`
+          *,
+          assigned_user:user_profiles!assigned_user_id(full_name)
+        `)
         .order('date', { ascending: true })
         .order('start_time', { ascending: true });
 
@@ -48,6 +52,7 @@ export function useAppointments() {
         patient: appointment.patient_name,
         patientId: appointment.patient_id || undefined,
         assignedUserId: appointment.assigned_user_id || undefined,
+        assignedUserName: appointment.assigned_user?.full_name || undefined,
         startTime: appointment.start_time,
         endTime: appointment.end_time,
         type: appointment.appointment_type,
@@ -105,6 +110,7 @@ export function useAppointments() {
                 patient: payload.new.patient_name,
                 patientId: payload.new.patient_id || undefined,
                 assignedUserId: payload.new.assigned_user_id || undefined,
+                assignedUserName: undefined, // Will be fetched on next refresh
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
@@ -139,6 +145,7 @@ export function useAppointments() {
                 patient: payload.new.patient_name,
                 patientId: payload.new.patient_id || undefined,
                 assignedUserId: payload.new.assigned_user_id || undefined,
+                assignedUserName: undefined, // Will be fetched on next refresh
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
@@ -244,6 +251,7 @@ export function useAppointments() {
         patient: data.patient_name,
         patientId: data.patient_id || undefined,
         assignedUserId: data.assigned_user_id || undefined,
+        assignedUserName: undefined, // Will be fetched on next refresh
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
@@ -320,6 +328,7 @@ export function useAppointments() {
         patient: data.patient_name,
         patientId: data.patient_id || undefined,
         assignedUserId: data.assigned_user_id || undefined,
+        assignedUserName: undefined, // Will be fetched on next refresh
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,

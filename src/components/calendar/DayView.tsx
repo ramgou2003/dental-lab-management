@@ -865,18 +865,25 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
                           return (
                             <div className="flex items-center justify-between h-full w-full overflow-hidden">
-                              <div className="flex items-center gap-1 flex-1 min-w-0 pr-1">
-                                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
-                                <h4
-                                  className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
-                                  onClick={(e) => {
-                                    console.log('15-minute appointment patient name clicked');
-                                    e.stopPropagation();
-                                    handlePatientNameClick(appointment.patient);
-                                  }}
-                                >
-                                  {appointment.patient}
-                                </h4>
+                              <div className="flex flex-col gap-0.5 flex-1 min-w-0 pr-1">
+                                <div className="flex items-center gap-1">
+                                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
+                                  <h4
+                                    className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
+                                    onClick={(e) => {
+                                      console.log('15-minute appointment patient name clicked');
+                                      e.stopPropagation();
+                                      handlePatientNameClick(appointment.patient);
+                                    }}
+                                  >
+                                    {appointment.patient}
+                                  </h4>
+                                </div>
+                                {appointment.assignedUserName && (
+                                  <div className="text-[9px] text-gray-500 truncate pl-2.5">
+                                    👤 {appointment.assignedUserName}
+                                  </div>
+                                )}
                               </div>
                               <div className="flex items-center gap-0.5 flex-shrink-0">
                                 <div className="flex flex-col items-end">
@@ -897,19 +904,26 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           // Layout for 30-minute and longer appointments
                           return (
                             <div className="flex flex-col h-full justify-between">
-                              {/* Top row - Name in top left */}
-                              <div className="flex items-center gap-1.5">
-                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
-                                <h4
-                                  className="font-semibold text-sm text-gray-800 truncate underline cursor-pointer hover:text-blue-600 transition-colors"
-                                  onClick={(e) => {
-                                    console.log('30+ minute appointment patient name clicked');
-                                    e.stopPropagation();
-                                    handlePatientNameClick(appointment.patient);
-                                  }}
-                                >
-                                  {appointment.patient}
-                                </h4>
+                              {/* Top section - Name and assigned user */}
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusDotColor(appointment.status)}`}></div>
+                                  <h4
+                                    className="font-semibold text-sm text-gray-800 truncate underline cursor-pointer hover:text-blue-600 transition-colors"
+                                    onClick={(e) => {
+                                      console.log('30+ minute appointment patient name clicked');
+                                      e.stopPropagation();
+                                      handlePatientNameClick(appointment.patient);
+                                    }}
+                                  >
+                                    {appointment.patient}
+                                  </h4>
+                                </div>
+                                {appointment.assignedUserName && (
+                                  <div className="text-[10px] text-gray-500 truncate pl-3.5">
+                                    👤 {appointment.assignedUserName}
+                                  </div>
+                                )}
                               </div>
                               {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
                               <div className="flex justify-between items-end gap-1 min-w-0 w-full overflow-hidden">
