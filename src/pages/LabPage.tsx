@@ -50,7 +50,7 @@ const formatDateFromDB = (dateString: string): string => {
 };
 
 export function LabPage() {
-  const { canCreateLabScripts, canUpdateLabScripts, canDeleteLabScripts } = usePermissions();
+  const { canCreateLabScripts, canUpdateLabScripts, canDeleteLabScripts, canChangeLabScriptStatus } = usePermissions();
   const { userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState("orders");
   const [activeFilter, setActiveFilter] = useState("pending");
@@ -374,6 +374,11 @@ export function LabPage() {
     const currentStatus = originalScript?.status;
     const patientName = originalScript?.patient_name || '';
     const isEditingStatus = editingStatus[orderId] || false;
+
+    // Don't show status change buttons if user doesn't have permission
+    if (!canChangeLabScriptStatus()) {
+      return null;
+    }
 
     // If lab script is completed, show edit button or hold/complete when editing
     if (currentStatus === 'completed' && !isEditingStatus) {
@@ -933,38 +938,40 @@ export function LabPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 flex-shrink-0"
-                                  title="More Actions"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <PermissionGuard permission="lab_scripts.update">
-                                  <DropdownMenuItem
-                                    onClick={() => originalScript && handleEditLabScript(originalScript)}
-                                    className="cursor-pointer"
+                            {(canUpdateLabScripts() || canDeleteLabScripts()) && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 flex-shrink-0"
+                                    title="More Actions"
                                   >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                </PermissionGuard>
-                                <PermissionGuard permission="lab_scripts.delete">
-                                  <DropdownMenuItem
-                                    onClick={() => originalScript && handleDeleteLabScript(originalScript)}
-                                    className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </PermissionGuard>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <PermissionGuard permission="lab_scripts.update">
+                                    <DropdownMenuItem
+                                      onClick={() => originalScript && handleEditLabScript(originalScript)}
+                                      className="cursor-pointer"
+                                    >
+                                      <Edit className="h-4 w-4 mr-2" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                  </PermissionGuard>
+                                  <PermissionGuard permission="lab_scripts.delete">
+                                    <DropdownMenuItem
+                                      onClick={() => originalScript && handleDeleteLabScript(originalScript)}
+                                      className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </PermissionGuard>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </div>
                         </div>
                       </div>
