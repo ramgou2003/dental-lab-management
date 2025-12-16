@@ -43,7 +43,7 @@ export function RoleManagement() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { canCreateRoles, canUpdateRoles, canDeleteRoles } = usePermissions();
+  const { canCreateRoles, canUpdateRoles, canDeleteRoles, isAdminUser } = usePermissions();
 
   // Dialog states
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
@@ -279,7 +279,7 @@ export function RoleManagement() {
                           </DropdownMenuItem>
                         </PermissionGuard>
 
-                        <PermissionGuard permission="roles.delete">
+                        {isAdminUser() && (
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleDeleteRole(role.id, role.display_name)}
@@ -287,7 +287,7 @@ export function RoleManagement() {
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete Role
                           </DropdownMenuItem>
-                        </PermissionGuard>
+                        )}
                       </>
                     )}
                   </DropdownMenuContent>

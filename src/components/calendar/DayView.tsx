@@ -21,7 +21,7 @@ interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
-  status: 'pending' | 'confirmed' | 'not-confirmed' | 'completed' | 'cancelled';
+  status: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk';
   notes?: string;
 }
 
@@ -47,19 +47,29 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [timeSlotLongPressTimer, setTimeSlotLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [isTimeSlotLongPress, setIsTimeSlotLongPress] = useState(false);
 
-  // Function to get status dot color
+  // Function to get status capsule color
   const getStatusDotColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-500';
-      case 'confirmed':
+      case '?????':  // ????? Not Confirmed
+        return 'bg-gray-400';
+      case 'FIRM':  // FIRM Appointment Confirmed
         return 'bg-green-500';
-      case 'not-confirmed':
-        return 'bg-orange-500';
-      case 'completed':
+      case 'EFIRM':  // EFIRM Electronically Confirmed
+        return 'bg-emerald-500';
+      case 'EMER':  // EMER Emergency Patient
+        return 'bg-red-600';
+      case 'HERE':  // HERE Patient has Arrived
         return 'bg-blue-500';
-      case 'cancelled':
-        return 'bg-red-500';
+      case 'READY':  // READY Ready for Operatory
+        return 'bg-purple-500';
+      case 'LM1':  // LM1 Left 1st Message
+        return 'bg-yellow-500';
+      case 'LM2':  // LM2 Left 2nd Message
+        return 'bg-orange-500';
+      case 'MULTI':  // MULTI Multi-Appointment
+        return 'bg-indigo-500';
+      case '2wk':  // 2wk 2 Week Calls
+        return 'bg-pink-500';
       default:
         return 'bg-gray-500';
     }
@@ -1029,8 +1039,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         }}
                       >
                     {/* Vertical status capsule on the left edge */}
-                    <div className={`absolute left-0 top-1 bottom-1 w-1 rounded-full ${getStatusDotColor(appointment.status)}`}></div>
-                    <div className="p-1 pl-2 h-full flex flex-col justify-between">
+                    <div className={`absolute left-1 top-1 bottom-1 right-1 w-1.5 rounded-full ${getStatusDotColor(appointment.status)}`}></div>
+                    <div className="p-1 pl-3 pr-1 h-full flex flex-col justify-between">
                       {(() => {
                         // Calculate appointment duration in minutes
                         const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
@@ -1071,6 +1081,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                     👤 {appointment.assignedUserName}
                                   </div>
                                 )}
+                                <div className="text-[9px] font-semibold text-gray-700">
+                                  {appointment.status}
+                                </div>
                               </div>
                               <div className="flex items-center gap-0.5 flex-shrink-0">
                                 <div className="flex flex-col items-end">
@@ -1091,7 +1104,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           // Layout for 30-minute and longer appointments
                           return (
                             <div className="flex flex-col h-full justify-between">
-                              {/* Top section - Name and assigned user */}
+                              {/* Top section - Name, assigned user, and status */}
                               <div className="flex flex-col gap-0.5">
                                 <div className="flex items-center gap-1.5">
                                   <h4
@@ -1110,6 +1123,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                     👤 {appointment.assignedUserName}
                                   </div>
                                 )}
+                                <div className="text-[10px] font-semibold text-gray-700">
+                                  {appointment.status}
+                                </div>
                               </div>
                               {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
                               <div className="flex justify-between items-end gap-1 min-w-0 w-full overflow-hidden">
@@ -1192,25 +1208,45 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           Change Status
                         </ContextMenuSubTrigger>
                         <ContextMenuSubContent>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'pending')}>
-                            <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
-                            Pending
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, '?????')}>
+                            <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
+                            ????? Not Confirmed
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'confirmed')}>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'FIRM')}>
                             <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                            Confirmed
+                            FIRM Appointment Confirmed
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'not-confirmed')}>
-                            <AlertCircle className="mr-2 h-4 w-4 text-orange-600" />
-                            Not Confirmed
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'EFIRM')}>
+                            <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                            EFIRM Electronically Confirmed
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'completed')}>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'EMER')}>
+                            <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
+                            EMER Emergency Patient
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'HERE')}>
                             <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
-                            Completed
+                            HERE Patient has Arrived
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'cancelled')}>
-                            <XCircle className="mr-2 h-4 w-4 text-red-600" />
-                            Cancelled
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'READY')}>
+                            <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
+                            READY Ready for Operatory
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'LM1')}>
+                            <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
+                            LM1 Left 1st Message
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'LM2')}>
+                            <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
+                            LM2 Left 2nd Message
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'MULTI')}>
+                            <CheckCircle className="mr-2 h-4 w-4 text-indigo-600" />
+                            MULTI Multi-Appointment
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, '2wk')}>
+                            <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
+                            2wk 2 Week Calls
                           </ContextMenuItem>
                         </ContextMenuSubContent>
                       </ContextMenuSub>

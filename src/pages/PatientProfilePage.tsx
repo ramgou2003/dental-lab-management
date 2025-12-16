@@ -472,10 +472,14 @@ export function PatientProfilePage() {
   const { toast } = useToast();
 
   // Permission checks for admin functionality
-  const { isAdminUser } = usePermissions();
+  const { isAdminUser, canDeletePatients } = usePermissions();
 
   // Auth context for user information
   const { user, userProfile } = useAuth();
+
+  // State for delete patient confirmation
+  const [showDeletePatientDialog, setShowDeletePatientDialog] = useState(false);
+  const [deletingPatient, setDeletingPatient] = useState(false);
 
   // Filter report cards for this specific patient
   const patientReportCards = reportCards.filter(card => {
@@ -2061,6 +2065,47 @@ export function PatientProfilePage() {
   const handleEditSubmit = (updatedPatientData: any) => {
     setPatient(updatedPatientData);
     setShowEditForm(false);
+  };
+
+  const handleDeletePatient = async () => {
+    if (!patientId || !patient) return;
+
+    setDeletingPatient(true);
+    try {
+      // Delete the patient from the database
+      const { error } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', patientId);
+
+      if (error) {
+        console.error('Error deleting patient:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete patient. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: `Patient ${patient.full_name} has been deleted successfully.`,
+      });
+
+      // Navigate back to patients list
+      navigate('/patients');
+    } catch (error) {
+      console.error('Error deleting patient:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while deleting the patient.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingPatient(false);
+      setShowDeletePatientDialog(false);
+    }
   };
 
   // Lab Report Card Handlers
@@ -5067,6 +5112,17 @@ export function PatientProfilePage() {
                     <Edit className="h-4 w-4 mr-1" />
                     Edit Profile
                   </Button>
+                  {isAdminUser() && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-600 text-red-600 hover:bg-red-50"
+                      onClick={() => setShowDeletePatientDialog(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete Patient
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -20695,6 +20751,34 @@ export function PatientProfilePage() {
           patientName={patient.full_name || `${patient.first_name} ${patient.last_name}`}
         />
       )}
+
+      {/* Delete Patient Confirmation Dialog */}
+      <AlertDialog open={showDeletePatientDialog} onOpenChange={setShowDeletePatientDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Patient
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{patient?.full_name}</strong>?
+              <br /><br />
+              This action cannot be undone. All patient data, including appointments, lab scripts,
+              documents, and treatment records will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingPatient}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePatient}
+              disabled={deletingPatient}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deletingPatient ? "Deleting..." : "Delete Patient"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

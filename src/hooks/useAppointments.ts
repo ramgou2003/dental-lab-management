@@ -12,7 +12,7 @@ export interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
-  status: 'pending' | 'confirmed' | 'not-confirmed' | 'completed' | 'cancelled';
+  status: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk';
   date: string; // YYYY-MM-DD format
   notes?: string;
   createdAt: string;

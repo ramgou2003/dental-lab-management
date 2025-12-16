@@ -11,7 +11,7 @@ interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
-  status: 'pending' | 'confirmed' | 'not-confirmed' | 'completed' | 'cancelled';
+  status: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk';
   date: string;
   notes?: string;
   assignedUserName?: string;
@@ -61,16 +61,26 @@ export function AppointmentDetailsDialog({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmed':
+      case '?????':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'FIRM':
         return 'bg-green-100 text-green-800 border-green-200';
-      case 'not-confirmed':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'cancelled':
+      case 'EFIRM':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'EMER':
         return 'bg-red-100 text-red-800 border-red-200';
+      case 'HERE':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'READY':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'LM1':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'LM2':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'MULTI':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      case '2wk':
+        return 'bg-pink-100 text-pink-800 border-pink-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -78,16 +88,26 @@ export function AppointmentDetailsDialog({
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending':
-        return <Clock3 className="h-4 w-4" />;
-      case 'confirmed':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'not-confirmed':
+      case '?????':
         return <AlertCircle className="h-4 w-4" />;
-      case 'completed':
+      case 'FIRM':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'EFIRM':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'EMER':
+        return <AlertCircle className="h-4 w-4" />;
+      case 'HERE':
         return <UserCheck className="h-4 w-4" />;
-      case 'cancelled':
-        return <XCircle className="h-4 w-4" />;
+      case 'READY':
+        return <CheckCircle className="h-4 w-4" />;
+      case 'LM1':
+        return <Clock3 className="h-4 w-4" />;
+      case 'LM2':
+        return <Clock3 className="h-4 w-4" />;
+      case 'MULTI':
+        return <CheckCircle className="h-4 w-4" />;
+      case '2wk':
+        return <Clock3 className="h-4 w-4" />;
       default:
         return <Clock3 className="h-4 w-4" />;
     }
@@ -95,16 +115,26 @@ export function AppointmentDetailsDialog({
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'confirmed':
-        return 'Confirmed';
-      case 'not-confirmed':
-        return 'Not Confirmed';
-      case 'completed':
-        return 'Completed';
-      case 'cancelled':
-        return 'Cancelled';
+      case '?????':
+        return '????? Not Confirmed';
+      case 'FIRM':
+        return 'FIRM Appointment Confirmed';
+      case 'EFIRM':
+        return 'EFIRM Electronically Confirmed';
+      case 'EMER':
+        return 'EMER Emergency Patient';
+      case 'HERE':
+        return 'HERE Patient has Arrived';
+      case 'READY':
+        return 'READY Ready for Operatory';
+      case 'LM1':
+        return 'LM1 Left 1st Message';
+      case 'LM2':
+        return 'LM2 Left 2nd Message';
+      case 'MULTI':
+        return 'MULTI Multi-Appointment';
+      case '2wk':
+        return '2wk 2 Week Calls';
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
