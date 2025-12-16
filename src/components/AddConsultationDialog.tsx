@@ -451,6 +451,30 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
         }
       }
 
+      // Create consultation record for ACTIVE patients (link to existing patient in main table)
+      if (patientType === 'active' && patientId) {
+        try {
+          // Create consultation record linking appointment to active patient
+          const { error: consultationError } = await supabase
+            .from('consultations')
+            .insert([{
+              appointment_id: appointmentData.id,
+              patient_id: patientId, // Link directly to existing patient
+              patient_name: `${formData.firstName} ${formData.lastName}`,
+              consultation_date: consultationDateStr,
+              consultation_status: 'draft'
+            }]);
+
+          if (consultationError) {
+            console.warn('Failed to create consultation record for active patient:', consultationError);
+          } else {
+            console.log('Successfully created consultation record for active patient');
+          }
+        } catch (error) {
+          console.warn('Error creating consultation record for active patient:', error);
+        }
+      }
+
       // Show success message based on patient type
       if (patientType === 'new') {
         toast.success(`Consultation appointment created for new patient! Use "Add New Patient Packet" button to create their patient packet.`);

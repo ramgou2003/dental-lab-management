@@ -542,8 +542,36 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
     console.log('📊 Consultation data:', consultation);
 
     // Check if patient already exists in main table
+    // First check consultation.patient_id, then check appointment.patient_id (for active patients)
     let patientId = consultation.patient_id;
     console.log('🔍 Existing patient ID in consultation:', patientId);
+
+    // If no patient_id in consultation, check the appointment
+    if (!patientId) {
+      console.log('🔍 No patient_id in consultation, checking appointment...');
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('patient_id')
+        .eq('id', appointmentId)
+        .single();
+
+      if (!appointmentError && appointment?.patient_id) {
+        patientId = appointment.patient_id;
+        console.log('✅ Found existing patient ID in appointment:', patientId);
+
+        // Update consultation with the patient_id from appointment
+        const { error: consultationUpdateError } = await supabase
+          .from('consultations')
+          .update({ patient_id: patientId })
+          .eq('appointment_id', appointmentId);
+
+        if (consultationUpdateError) {
+          console.error('❌ Error updating consultation with patient ID from appointment:', consultationUpdateError);
+        } else {
+          console.log('✅ Updated consultation with patient ID from appointment');
+        }
+      }
+    }
 
     if (!patientId) {
       console.log('👤 Creating new patient in main table...');
