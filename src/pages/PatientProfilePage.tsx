@@ -2072,34 +2072,172 @@ export function PatientProfilePage() {
 
     setDeletingPatient(true);
     try {
-      // Delete the patient from the database
-      const { error } = await supabase
+      console.log('Starting patient deletion process for:', patientId);
+
+      // Delete all connected data except consultations
+      // 1. Delete appointments (except consultation type)
+      const { error: appointmentsError } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('patient_id', patientId)
+        .neq('type', 'consultation');
+
+      if (appointmentsError) {
+        console.error('Error deleting appointments:', appointmentsError);
+        throw new Error('Failed to delete appointments');
+      }
+
+      // 2. Delete lab scripts
+      const { error: labScriptsError } = await supabase
+        .from('lab_scripts')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (labScriptsError) {
+        console.error('Error deleting lab scripts:', labScriptsError);
+        throw new Error('Failed to delete lab scripts');
+      }
+
+      // 3. Delete report cards (lab and clinical)
+      const { error: labReportCardsError } = await supabase
+        .from('lab_report_cards')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (labReportCardsError) {
+        console.error('Error deleting lab report cards:', labReportCardsError);
+        throw new Error('Failed to delete lab report cards');
+      }
+
+      const { error: clinicalReportCardsError } = await supabase
+        .from('clinical_report_cards')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (clinicalReportCardsError) {
+        console.error('Error deleting clinical report cards:', clinicalReportCardsError);
+        throw new Error('Failed to delete clinical report cards');
+      }
+
+      // 4. Delete manufacturing items
+      const { error: manufacturingError } = await supabase
+        .from('manufacturing_items')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (manufacturingError) {
+        console.error('Error deleting manufacturing items:', manufacturingError);
+        throw new Error('Failed to delete manufacturing items');
+      }
+
+      // 5. Delete appliance delivery items
+      const { error: deliveryError } = await supabase
+        .from('delivery_items')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (deliveryError) {
+        console.error('Error deleting delivery items:', deliveryError);
+        throw new Error('Failed to delete delivery items');
+      }
+
+      // 6. Delete patient forms
+      const { error: patientPacketsError } = await supabase
+        .from('new_patient_packets')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (patientPacketsError) {
+        console.error('Error deleting patient packets:', patientPacketsError);
+        throw new Error('Failed to delete patient packets');
+      }
+
+      const { error: financialAgreementsError } = await supabase
+        .from('financial_agreements')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (financialAgreementsError) {
+        console.error('Error deleting financial agreements:', financialAgreementsError);
+        throw new Error('Failed to delete financial agreements');
+      }
+
+      const { error: consentFormsError } = await supabase
+        .from('consent_full_arch_forms')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (consentFormsError) {
+        console.error('Error deleting consent forms:', consentFormsError);
+        throw new Error('Failed to delete consent forms');
+      }
+
+      const { error: finalDesignError } = await supabase
+        .from('final_design_approval_forms')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (finalDesignError) {
+        console.error('Error deleting final design forms:', finalDesignError);
+        throw new Error('Failed to delete final design forms');
+      }
+
+      const { error: medicalRecordsError } = await supabase
+        .from('medical_records_release_forms')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (medicalRecordsError) {
+        console.error('Error deleting medical records forms:', medicalRecordsError);
+        throw new Error('Failed to delete medical records forms');
+      }
+
+      const { error: medicalHistoryError } = await supabase
+        .from('medical_history')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (medicalHistoryError) {
+        console.error('Error deleting medical history:', medicalHistoryError);
+        throw new Error('Failed to delete medical history');
+      }
+
+      // 7. Delete patient documents
+      const { error: documentsError } = await supabase
+        .from('patient_documents')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (documentsError) {
+        console.error('Error deleting patient documents:', documentsError);
+        throw new Error('Failed to delete patient documents');
+      }
+
+      // 8. Finally, delete the patient record
+      const { error: patientError } = await supabase
         .from('patients')
         .delete()
         .eq('id', patientId);
 
-      if (error) {
-        console.error('Error deleting patient:', error);
-        toast({
-          title: "Error",
-          description: "Failed to delete patient. Please try again.",
-          variant: "destructive",
-        });
-        return;
+      if (patientError) {
+        console.error('Error deleting patient:', patientError);
+        throw new Error('Failed to delete patient record');
       }
+
+      console.log('Patient deletion completed successfully');
 
       toast({
         title: "Success",
-        description: `Patient ${patient.full_name} has been deleted successfully.`,
+        description: `Patient ${patient.full_name} and all related data have been deleted successfully.`,
       });
 
       // Navigate back to patients list
       navigate('/patients');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting patient:', error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred while deleting the patient.",
+        description: error.message || "An unexpected error occurred while deleting the patient.",
         variant: "destructive",
       });
     } finally {
@@ -20754,17 +20892,40 @@ export function PatientProfilePage() {
 
       {/* Delete Patient Confirmation Dialog */}
       <AlertDialog open={showDeletePatientDialog} onOpenChange={setShowDeletePatientDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="h-5 w-5" />
-              Delete Patient
+              Delete Patient - Confirmation Required
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{patient?.full_name}</strong>?
-              <br /><br />
-              This action cannot be undone. All patient data, including appointments, lab scripts,
-              documents, and treatment records will be permanently deleted.
+            <AlertDialogDescription className="space-y-3">
+              <p className="font-semibold text-gray-900">
+                Are you sure you want to delete <strong>{patient?.full_name}</strong>?
+              </p>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="font-semibold text-red-800 mb-2">⚠️ This action cannot be undone!</p>
+                <p className="text-sm text-red-700">
+                  The following data will be permanently deleted:
+                </p>
+                <ul className="list-disc list-inside text-sm text-red-700 mt-2 space-y-1">
+                  <li>Patient profile and personal information</li>
+                  <li>All appointments (except consultation appointments)</li>
+                  <li>Lab scripts and manufacturing orders</li>
+                  <li>Lab and clinical report cards</li>
+                  <li>Manufacturing items and appliance deliveries</li>
+                  <li>Patient forms (packets, financial agreements, consent forms, etc.)</li>
+                  <li>Medical history and documents</li>
+                </ul>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="font-semibold text-blue-800 mb-1">ℹ️ What will NOT be deleted:</p>
+                <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
+                  <li>Consultation records and consultation appointments</li>
+                  <li>Consultation patient data (preserved for records)</li>
+                </ul>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -20774,7 +20935,7 @@ export function PatientProfilePage() {
               disabled={deletingPatient}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {deletingPatient ? "Deleting..." : "Delete Patient"}
+              {deletingPatient ? "Deleting..." : "Yes, Delete Patient"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
