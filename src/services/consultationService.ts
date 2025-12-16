@@ -780,17 +780,35 @@ export async function verifyPatientLinkages(patientPacketId: string): Promise<{
     console.log('🔍 Verifying patient linkages for packet ID:', patientPacketId);
 
     // Get patient packet data
+    // Use maybeSingle() to avoid errors when packet doesn't exist
     const { data: packetData, error: packetError } = await supabase
       .from('new_patient_packets')
       .select('*')
       .eq('id', patientPacketId)
-      .single();
+      .maybeSingle();
 
     if (packetError) {
+      console.warn('⚠️ Error fetching patient packet:', packetError);
       return {
         success: false,
         linkages: { packetToPatient: false, consultationToPatient: false, packetToConsultation: false },
         details: { error: 'Failed to fetch patient packet', packetError }
+      };
+    }
+
+    // If no packet found, this might be an active patient without a packet
+    if (!packetData) {
+      console.log('ℹ️ No patient packet found - might be an active patient without packet');
+      return {
+        success: true, // Consider it successful for active patients
+        linkages: {
+          packetToPatient: false,
+          consultationToPatient: false,
+          packetToConsultation: false
+        },
+        details: {
+          note: 'Active patient - no patient packet created'
+        }
       };
     }
 
