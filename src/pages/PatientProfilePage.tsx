@@ -488,10 +488,10 @@ export function PatientProfilePage() {
     return card.lab_script_id && labScripts.some(script => script.id === card.lab_script_id);
   });
 
-  // Filter delivery items for this specific patient
+  // Filter delivery items for this specific patient using patient_id
   const patientDeliveryItems = deliveryItems.filter(item => {
-    // Check if the delivery item's lab script belongs to this patient
-    return item.lab_script_id && labScripts.some(script => script.id === item.lab_script_id);
+    // Filter by patient_id directly
+    return item.patient_id === patientId;
   });
 
   // State for lab report dialogs

@@ -16,27 +16,11 @@ export function usePatientManufacturingItems(patientId: string | undefined) {
     try {
       setLoading(true);
 
-      // First get the patient name from the patient ID
-      const { data: patientData, error: patientError } = await supabase
-        .from('patients')
-        .select('first_name, last_name')
-        .eq('id', patientId)
-        .single();
-
-      if (patientError) {
-        console.error('Error fetching patient data:', patientError);
-        setManufacturingItems([]);
-        setError(null);
-        setLoading(false);
-        return;
-      }
-
-      const patientFullName = `${patientData.first_name} ${patientData.last_name}`;
-
+      // Fetch manufacturing items by patient_id
       const { data, error } = await supabase
         .from('manufacturing_items')
         .select('*')
-        .eq('patient_name', patientFullName)
+        .eq('patient_id', patientId)
         .order('created_at', { ascending: false });
 
       if (error) {
