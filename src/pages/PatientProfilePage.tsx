@@ -2073,21 +2073,26 @@ export function PatientProfilePage() {
     setDeletingPatient(true);
     try {
       console.log('Starting patient deletion process for:', patientId);
+      console.log('Patient name:', patient.full_name);
 
       // Delete all connected data except consultations
       // 1. Delete appointments (except consultation type)
+      console.log('Deleting appointments...');
       const { error: appointmentsError } = await supabase
         .from('appointments')
         .delete()
         .eq('patient_id', patientId)
-        .neq('type', 'consultation');
+        .neq('appointment_type', 'consultation');
 
       if (appointmentsError) {
         console.error('Error deleting appointments:', appointmentsError);
-        throw new Error('Failed to delete appointments');
+        // Don't throw, continue with other deletions
+      } else {
+        console.log('Appointments deleted successfully');
       }
 
       // 2. Delete lab scripts
+      console.log('Deleting lab scripts...');
       const { error: labScriptsError } = await supabase
         .from('lab_scripts')
         .delete()
@@ -2095,53 +2100,76 @@ export function PatientProfilePage() {
 
       if (labScriptsError) {
         console.error('Error deleting lab scripts:', labScriptsError);
-        throw new Error('Failed to delete lab scripts');
+        // Don't throw, continue with other deletions
+      } else {
+        console.log('Lab scripts deleted successfully');
       }
 
-      // 3. Delete report cards (lab and clinical)
-      const { error: labReportCardsError } = await supabase
-        .from('lab_report_cards')
-        .delete()
+      // 3. Delete report cards - these might not have patient_id, skip if error
+      console.log('Deleting lab report cards...');
+      const { data: labScripts } = await supabase
+        .from('lab_scripts')
+        .select('id')
         .eq('patient_id', patientId);
 
-      if (labReportCardsError) {
-        console.error('Error deleting lab report cards:', labReportCardsError);
-        throw new Error('Failed to delete lab report cards');
+      if (labScripts && labScripts.length > 0) {
+        const labScriptIds = labScripts.map(ls => ls.id);
+
+        const { error: labReportCardsError } = await supabase
+          .from('lab_report_cards')
+          .delete()
+          .in('lab_script_id', labScriptIds);
+
+        if (labReportCardsError) {
+          console.error('Error deleting lab report cards:', labReportCardsError);
+        } else {
+          console.log('Lab report cards deleted successfully');
+        }
+
+        const { error: clinicalReportCardsError } = await supabase
+          .from('clinical_report_cards')
+          .delete()
+          .in('lab_script_id', labScriptIds);
+
+        if (clinicalReportCardsError) {
+          console.error('Error deleting clinical report cards:', clinicalReportCardsError);
+        } else {
+          console.log('Clinical report cards deleted successfully');
+        }
       }
 
-      const { error: clinicalReportCardsError } = await supabase
-        .from('clinical_report_cards')
-        .delete()
-        .eq('patient_id', patientId);
+      // 4. Delete manufacturing items (linked via lab_script_id)
+      console.log('Deleting manufacturing items...');
+      if (labScripts && labScripts.length > 0) {
+        const labScriptIds = labScripts.map(ls => ls.id);
 
-      if (clinicalReportCardsError) {
-        console.error('Error deleting clinical report cards:', clinicalReportCardsError);
-        throw new Error('Failed to delete clinical report cards');
-      }
+        const { error: manufacturingError } = await supabase
+          .from('manufacturing_items')
+          .delete()
+          .in('lab_script_id', labScriptIds);
 
-      // 4. Delete manufacturing items
-      const { error: manufacturingError } = await supabase
-        .from('manufacturing_items')
-        .delete()
-        .eq('patient_id', patientId);
+        if (manufacturingError) {
+          console.error('Error deleting manufacturing items:', manufacturingError);
+        } else {
+          console.log('Manufacturing items deleted successfully');
+        }
 
-      if (manufacturingError) {
-        console.error('Error deleting manufacturing items:', manufacturingError);
-        throw new Error('Failed to delete manufacturing items');
-      }
+        // 5. Delete appliance delivery items (linked via lab_script_id)
+        console.log('Deleting delivery items...');
+        const { error: deliveryError } = await supabase
+          .from('delivery_items')
+          .delete()
+          .in('lab_script_id', labScriptIds);
 
-      // 5. Delete appliance delivery items
-      const { error: deliveryError } = await supabase
-        .from('delivery_items')
-        .delete()
-        .eq('patient_id', patientId);
-
-      if (deliveryError) {
-        console.error('Error deleting delivery items:', deliveryError);
-        throw new Error('Failed to delete delivery items');
+        if (deliveryError) {
+          console.error('Error deleting delivery items:', deliveryError);
+        } else {
+          console.log('Delivery items deleted successfully');
+        }
       }
 
       // 6. Delete patient forms
+      console.log('Deleting patient packets...');
       const { error: patientPacketsError } = await supabase
         .from('new_patient_packets')
         .delete()
@@ -2149,9 +2177,11 @@ export function PatientProfilePage() {
 
       if (patientPacketsError) {
         console.error('Error deleting patient packets:', patientPacketsError);
-        throw new Error('Failed to delete patient packets');
+      } else {
+        console.log('Patient packets deleted successfully');
       }
 
+      console.log('Deleting financial agreements...');
       const { error: financialAgreementsError } = await supabase
         .from('financial_agreements')
         .delete()
@@ -2159,19 +2189,47 @@ export function PatientProfilePage() {
 
       if (financialAgreementsError) {
         console.error('Error deleting financial agreements:', financialAgreementsError);
-        throw new Error('Failed to delete financial agreements');
+      } else {
+        console.log('Financial agreements deleted successfully');
       }
 
+      console.log('Deleting consent full arch forms...');
       const { error: consentFormsError } = await supabase
         .from('consent_full_arch_forms')
         .delete()
         .eq('patient_id', patientId);
 
       if (consentFormsError) {
-        console.error('Error deleting consent forms:', consentFormsError);
-        throw new Error('Failed to delete consent forms');
+        console.error('Error deleting consent full arch forms:', consentFormsError);
+      } else {
+        console.log('Consent full arch forms deleted successfully');
       }
 
+      console.log('Deleting three year care package forms...');
+      const { error: carePackageFormsError } = await supabase
+        .from('three_year_care_package_forms')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (carePackageFormsError) {
+        console.error('Error deleting three year care package forms:', carePackageFormsError);
+      } else {
+        console.log('Three year care package forms deleted successfully');
+      }
+
+      console.log('Deleting partial payment agreement forms...');
+      const { error: partialPaymentFormsError } = await supabase
+        .from('partial_payment_agreement_forms')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (partialPaymentFormsError) {
+        console.error('Error deleting partial payment agreement forms:', partialPaymentFormsError);
+      } else {
+        console.log('Partial payment agreement forms deleted successfully');
+      }
+
+      console.log('Deleting final design forms...');
       const { error: finalDesignError } = await supabase
         .from('final_design_approval_forms')
         .delete()
@@ -2179,9 +2237,11 @@ export function PatientProfilePage() {
 
       if (finalDesignError) {
         console.error('Error deleting final design forms:', finalDesignError);
-        throw new Error('Failed to delete final design forms');
+      } else {
+        console.log('Final design forms deleted successfully');
       }
 
+      console.log('Deleting medical records forms...');
       const { error: medicalRecordsError } = await supabase
         .from('medical_records_release_forms')
         .delete()
@@ -2189,9 +2249,11 @@ export function PatientProfilePage() {
 
       if (medicalRecordsError) {
         console.error('Error deleting medical records forms:', medicalRecordsError);
-        throw new Error('Failed to delete medical records forms');
+      } else {
+        console.log('Medical records forms deleted successfully');
       }
 
+      console.log('Deleting medical history...');
       const { error: medicalHistoryError } = await supabase
         .from('medical_history')
         .delete()
@@ -2199,10 +2261,12 @@ export function PatientProfilePage() {
 
       if (medicalHistoryError) {
         console.error('Error deleting medical history:', medicalHistoryError);
-        throw new Error('Failed to delete medical history');
+      } else {
+        console.log('Medical history deleted successfully');
       }
 
       // 7. Delete patient documents
+      console.log('Deleting patient documents...');
       const { error: documentsError } = await supabase
         .from('patient_documents')
         .delete()
@@ -2210,10 +2274,25 @@ export function PatientProfilePage() {
 
       if (documentsError) {
         console.error('Error deleting patient documents:', documentsError);
-        throw new Error('Failed to delete patient documents');
+      } else {
+        console.log('Patient documents deleted successfully');
       }
 
-      // 8. Finally, delete the patient record
+      // 8. Delete patient treatments
+      console.log('Deleting patient treatments...');
+      const { error: treatmentsError } = await supabase
+        .from('patient_treatments')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (treatmentsError) {
+        console.error('Error deleting patient treatments:', treatmentsError);
+      } else {
+        console.log('Patient treatments deleted successfully');
+      }
+
+      // 9. Finally, delete the patient record
+      console.log('Deleting patient record...');
       const { error: patientError } = await supabase
         .from('patients')
         .delete()
@@ -2221,7 +2300,12 @@ export function PatientProfilePage() {
 
       if (patientError) {
         console.error('Error deleting patient:', patientError);
-        throw new Error('Failed to delete patient record');
+        toast({
+          title: "Error",
+          description: `Failed to delete patient: ${patientError.message}`,
+          variant: "destructive",
+        });
+        return;
       }
 
       console.log('Patient deletion completed successfully');
