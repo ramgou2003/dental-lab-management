@@ -466,7 +466,7 @@ export function PatientProfilePage() {
   // Fetch patient-specific lab scripts and manufacturing items
   const { labScripts, loading: labScriptsLoading, updateLabScript } = usePatientLabScripts(patientId);
   const { manufacturingItems, loading: manufacturingLoading, updateManufacturingItemStatus } = usePatientManufacturingItems(patientId);
-  const { appointments: patientAppointments, loading: appointmentsLoading } = usePatientAppointments(patient?.full_name);
+  const { appointments: patientAppointments, loading: appointmentsLoading } = usePatientAppointments(patientId);
   const { reportCards, loading: reportCardsLoading, updateLabReportStatus, updateClinicalReportStatus } = useReportCards();
   const { deliveryItems, loading: deliveryItemsLoading, updateDeliveryStatus } = useDeliveryItems();
   const { toast } = useToast();
@@ -1335,12 +1335,12 @@ export function PatientProfilePage() {
     }
   }, [patientId]);
 
-  // Fetch consultation forms when patient data is loaded
+  // Fetch consultation forms when patient ID is available
   useEffect(() => {
-    if (patient) {
+    if (patientId) {
       fetchConsultationForms();
     }
-  }, [patient]);
+  }, [patientId]);
 
   const fetchPatientData = async () => {
     try {
@@ -1472,26 +1472,16 @@ export function PatientProfilePage() {
   };
 
   const fetchConsultationForms = async () => {
-    if (!patient) return;
+    if (!patientId) return;
 
     try {
       setLoadingConsultationForms(true);
 
-      // Construct patient name to match consultation records
-      const patientName = patient.first_name && patient.last_name
-        ? `${patient.first_name} ${patient.last_name}`
-        : patient.name || '';
-
-      if (!patientName) {
-        console.log('No patient name available for consultation lookup');
-        return;
-      }
-
-      // Fetch consultation forms for this patient
+      // Fetch consultation forms for this patient using patient_id
       const { data: consultations, error: consultationError } = await supabase
         .from('consultations')
         .select('*')
-        .eq('patient_name', patientName)
+        .eq('patient_id', patientId)
         .order('created_at', { ascending: false });
 
       if (consultationError) {
@@ -1499,7 +1489,7 @@ export function PatientProfilePage() {
         return;
       }
 
-      console.log('Found consultation forms for patient:', patientName, consultations);
+      console.log('Found consultation forms for patient ID:', patientId, consultations);
       setConsultationForms(consultations || []);
     } catch (error) {
       console.error('Unexpected error fetching consultation forms:', error);

@@ -1,21 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useAppointments, type Appointment } from './useAppointments';
 
-export function usePatientAppointments(patientName?: string) {
+export function usePatientAppointments(patientId?: string) {
   const { appointments, loading, addAppointment, updateAppointment, deleteAppointment } = useAppointments();
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
-    if (patientName && appointments.length > 0) {
-      // Filter appointments for this specific patient by exact name match
+    if (patientId && appointments.length > 0) {
+      // Filter appointments for this specific patient by patient_id
       const filtered = appointments.filter(appointment =>
-        appointment.patient && appointment.patient.toLowerCase() === patientName.toLowerCase()
+        appointment.patientId === patientId
       );
       setPatientAppointments(filtered);
     } else {
       setPatientAppointments([]);
     }
-  }, [patientName, appointments]);
+  }, [patientId, appointments]);
 
   return {
     appointments: patientAppointments,
