@@ -427,6 +427,22 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
         console.log('✅ Successfully updated consultation with patient ID:', patientId);
       }
 
+      // Update appointment with patient_id if consultation has an appointment_id
+      if (consultation.appointment_id) {
+        console.log('🔗 Updating appointment with patient ID...');
+        const { error: appointmentUpdateError } = await supabase
+          .from('appointments')
+          .update({ patient_id: patientId })
+          .eq('id', consultation.appointment_id);
+
+        if (appointmentUpdateError) {
+          console.error('❌ Error updating appointment with patient ID:', appointmentUpdateError);
+          // Don't throw error here as patient creation was successful, but log the issue
+        } else {
+          console.log('✅ Successfully updated appointment with patient ID:', patientId);
+        }
+      }
+
     } else {
       // Update existing patient status
       const { error: updateError } = await supabase
@@ -622,6 +638,19 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
         // Don't throw error here as patient creation was successful
       } else {
         console.log('✅ Successfully updated consultation with patient ID:', patientId);
+      }
+
+      // Update appointment with patient_id
+      const { error: appointmentUpdateError } = await supabase
+        .from('appointments')
+        .update({ patient_id: patientId })
+        .eq('id', appointmentId);
+
+      if (appointmentUpdateError) {
+        console.error('❌ Error updating appointment with patient ID:', appointmentUpdateError);
+        // Don't throw error here as patient creation was successful
+      } else {
+        console.log('✅ Successfully updated appointment with patient ID:', patientId);
       }
 
       // If this consultation is linked to a patient packet, link the packet to the new patient as well
