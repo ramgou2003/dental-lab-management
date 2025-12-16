@@ -795,17 +795,40 @@ export async function verifyPatientLinkages(patientPacketId: string): Promise<{
     }
 
     // Get consultation data
+    // Use maybeSingle() to avoid errors when no consultation exists or multiple exist
     const { data: consultationData, error: consultationError } = await supabase
       .from('consultations')
       .select('*')
       .eq('new_patient_packet_id', patientPacketId)
-      .single();
+      .maybeSingle();
 
     if (consultationError) {
+      console.warn('⚠️ Error fetching consultation:', consultationError);
       return {
         success: false,
-        linkages: { packetToPatient: false, consultationToPatient: false, packetToConsultation: true },
+        linkages: { packetToPatient: false, consultationToPatient: false, packetToConsultation: false },
         details: { error: 'Failed to fetch consultation', consultationError, packetData }
+      };
+    }
+
+    // If no consultation found with this packet ID, it might be an active patient consultation
+    // where the consultation was created before the packet was saved
+    if (!consultationData) {
+      console.log('ℹ️ No consultation found with this packet ID - might be an active patient');
+      // For active patients, we still consider it successful if the packet has a patient_id
+      return {
+        success: !!packetData.patient_id,
+        patientId: packetData.patient_id,
+        linkages: {
+          packetToPatient: !!packetData.patient_id,
+          consultationToPatient: false, // No consultation linked to packet
+          packetToConsultation: false
+        },
+        details: {
+          packetData,
+          consultationData: null,
+          note: 'Active patient - consultation created separately from packet'
+        }
       };
     }
 
