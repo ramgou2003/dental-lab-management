@@ -2174,21 +2174,36 @@ const ConsultationSessionPage = () => {
                     if (packetData?.id && appointmentData?.id) {
                       console.log('Attempting to link consultation record...');
                       // First check if consultation already exists for this appointment
-                      const { data: existingConsultation } = await supabase
+                      // Use maybeSingle() instead of single() to avoid errors when no record exists
+                      const { data: existingConsultation, error: fetchError } = await supabase
                         .from('consultations')
-                        .select('id')
+                        .select('id, patient_id')
                         .eq('appointment_id', appointmentData.id)
-                        .single();
+                        .maybeSingle();
+
+                      if (fetchError) {
+                        console.warn('Error fetching existing consultation:', fetchError);
+                      }
 
                       if (existingConsultation) {
                         // Update existing consultation with patient packet ID
+                        // Preserve patient_id if it exists (for active patients)
+                        const updateData: any = {
+                          new_patient_packet_id: packetData.id,
+                          patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
+                          updated_at: new Date().toISOString()
+                        };
+
+                        // Don't overwrite patient_id if it's already set (for active patients)
+                        // Only set it if it's null
+                        if (!existingConsultation.patient_id) {
+                          // For new/consultation patients, patient_id will be set when treatment is accepted
+                          console.log('Existing consultation found without patient_id - will be set when treatment is accepted');
+                        }
+
                         const { error: updateError } = await supabase
                           .from('consultations')
-                          .update({
-                            new_patient_packet_id: packetData.id,
-                            patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
-                            updated_at: new Date().toISOString()
-                          })
+                          .update(updateData)
                           .eq('id', existingConsultation.id);
 
                         if (updateError) {
@@ -2197,7 +2212,9 @@ const ConsultationSessionPage = () => {
                           console.log('Successfully updated consultation with patient packet');
                         }
                       } else {
-                        // Create new consultation record
+                        // Create new consultation record only if one doesn't exist
+                        // This should only happen for new patients without a pre-created consultation
+                        console.log('No existing consultation found, creating new one...');
                         const consultationData = {
                           appointment_id: appointmentData.id,
                           new_patient_packet_id: packetData.id,
