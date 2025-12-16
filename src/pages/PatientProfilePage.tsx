@@ -480,6 +480,7 @@ export function PatientProfilePage() {
   // State for delete patient confirmation
   const [showDeletePatientDialog, setShowDeletePatientDialog] = useState(false);
   const [deletingPatient, setDeletingPatient] = useState(false);
+  const [deletionProgress, setDeletionProgress] = useState<string[]>([]);
 
   // Filter report cards for this specific patient
   const patientReportCards = reportCards.filter(card => {
@@ -2071,13 +2072,21 @@ export function PatientProfilePage() {
     if (!patientId || !patient) return;
 
     setDeletingPatient(true);
+    setDeletionProgress([]);
+
+    const addProgress = (message: string) => {
+      setDeletionProgress(prev => [...prev, message]);
+    };
+
     try {
       console.log('Starting patient deletion process for:', patientId);
       console.log('Patient name:', patient.full_name);
+      addProgress('Starting deletion process...');
 
       // Delete all connected data except consultations
       // 1. Delete appointments (except consultation type)
       console.log('Deleting appointments...');
+      addProgress('Deleting appointments...');
       const { error: appointmentsError } = await supabase
         .from('appointments')
         .delete()
@@ -2086,13 +2095,16 @@ export function PatientProfilePage() {
 
       if (appointmentsError) {
         console.error('Error deleting appointments:', appointmentsError);
+        addProgress('⚠️ Error deleting appointments');
         // Don't throw, continue with other deletions
       } else {
         console.log('Appointments deleted successfully');
+        addProgress('✓ Appointments deleted');
       }
 
       // 2. Delete lab scripts
       console.log('Deleting lab scripts...');
+      addProgress('Deleting lab scripts...');
       const { error: labScriptsError } = await supabase
         .from('lab_scripts')
         .delete()
@@ -2100,13 +2112,16 @@ export function PatientProfilePage() {
 
       if (labScriptsError) {
         console.error('Error deleting lab scripts:', labScriptsError);
+        addProgress('⚠️ Error deleting lab scripts');
         // Don't throw, continue with other deletions
       } else {
         console.log('Lab scripts deleted successfully');
+        addProgress('✓ Lab scripts deleted');
       }
 
       // 3. Delete report cards - these might not have patient_id, skip if error
       console.log('Deleting lab report cards...');
+      addProgress('Deleting report cards...');
       const { data: labScripts } = await supabase
         .from('lab_scripts')
         .select('id')
@@ -2122,8 +2137,10 @@ export function PatientProfilePage() {
 
         if (labReportCardsError) {
           console.error('Error deleting lab report cards:', labReportCardsError);
+          addProgress('⚠️ Error deleting lab report cards');
         } else {
           console.log('Lab report cards deleted successfully');
+          addProgress('✓ Lab report cards deleted');
         }
 
         const { error: clinicalReportCardsError } = await supabase
@@ -2133,43 +2150,48 @@ export function PatientProfilePage() {
 
         if (clinicalReportCardsError) {
           console.error('Error deleting clinical report cards:', clinicalReportCardsError);
+          addProgress('⚠️ Error deleting clinical report cards');
         } else {
           console.log('Clinical report cards deleted successfully');
+          addProgress('✓ Clinical report cards deleted');
         }
       }
 
-      // 4. Delete manufacturing items (linked via lab_script_id)
+      // 4. Delete manufacturing items (linked via patient_id)
       console.log('Deleting manufacturing items...');
-      if (labScripts && labScripts.length > 0) {
-        const labScriptIds = labScripts.map(ls => ls.id);
+      addProgress('Deleting manufacturing items...');
+      const { error: manufacturingError } = await supabase
+        .from('manufacturing_items')
+        .delete()
+        .eq('patient_id', patientId);
 
-        const { error: manufacturingError } = await supabase
-          .from('manufacturing_items')
-          .delete()
-          .in('lab_script_id', labScriptIds);
+      if (manufacturingError) {
+        console.error('Error deleting manufacturing items:', manufacturingError);
+        addProgress('⚠️ Error deleting manufacturing items');
+      } else {
+        console.log('Manufacturing items deleted successfully');
+        addProgress('✓ Manufacturing items deleted');
+      }
 
-        if (manufacturingError) {
-          console.error('Error deleting manufacturing items:', manufacturingError);
-        } else {
-          console.log('Manufacturing items deleted successfully');
-        }
+      // 5. Delete appliance delivery items (linked via patient_id)
+      console.log('Deleting delivery items...');
+      addProgress('Deleting delivery items...');
+      const { error: deliveryError } = await supabase
+        .from('delivery_items')
+        .delete()
+        .eq('patient_id', patientId);
 
-        // 5. Delete appliance delivery items (linked via lab_script_id)
-        console.log('Deleting delivery items...');
-        const { error: deliveryError } = await supabase
-          .from('delivery_items')
-          .delete()
-          .in('lab_script_id', labScriptIds);
-
-        if (deliveryError) {
-          console.error('Error deleting delivery items:', deliveryError);
-        } else {
-          console.log('Delivery items deleted successfully');
-        }
+      if (deliveryError) {
+        console.error('Error deleting delivery items:', deliveryError);
+        addProgress('⚠️ Error deleting delivery items');
+      } else {
+        console.log('Delivery items deleted successfully');
+        addProgress('✓ Delivery items deleted');
       }
 
       // 6. Delete patient forms
       console.log('Deleting patient packets...');
+      addProgress('Deleting patient forms...');
       const { error: patientPacketsError } = await supabase
         .from('new_patient_packets')
         .delete()
@@ -2177,8 +2199,10 @@ export function PatientProfilePage() {
 
       if (patientPacketsError) {
         console.error('Error deleting patient packets:', patientPacketsError);
+        addProgress('⚠️ Error deleting patient packets');
       } else {
         console.log('Patient packets deleted successfully');
+        addProgress('✓ Patient packets deleted');
       }
 
       console.log('Deleting financial agreements...');
@@ -2254,6 +2278,7 @@ export function PatientProfilePage() {
       }
 
       console.log('Deleting medical history...');
+      addProgress('Deleting medical history...');
       const { error: medicalHistoryError } = await supabase
         .from('medical_history')
         .delete()
@@ -2261,12 +2286,15 @@ export function PatientProfilePage() {
 
       if (medicalHistoryError) {
         console.error('Error deleting medical history:', medicalHistoryError);
+        addProgress('⚠️ Error deleting medical history');
       } else {
         console.log('Medical history deleted successfully');
+        addProgress('✓ Medical history deleted');
       }
 
       // 7. Delete patient documents
       console.log('Deleting patient documents...');
+      addProgress('Deleting patient documents...');
       const { error: documentsError } = await supabase
         .from('patient_documents')
         .delete()
@@ -2274,12 +2302,15 @@ export function PatientProfilePage() {
 
       if (documentsError) {
         console.error('Error deleting patient documents:', documentsError);
+        addProgress('⚠️ Error deleting patient documents');
       } else {
         console.log('Patient documents deleted successfully');
+        addProgress('✓ Patient documents deleted');
       }
 
       // 8. Delete patient treatments
       console.log('Deleting patient treatments...');
+      addProgress('Deleting patient treatments...');
       const { error: treatmentsError } = await supabase
         .from('patient_treatments')
         .delete()
@@ -2287,12 +2318,47 @@ export function PatientProfilePage() {
 
       if (treatmentsError) {
         console.error('Error deleting patient treatments:', treatmentsError);
+        addProgress('⚠️ Error deleting patient treatments');
       } else {
         console.log('Patient treatments deleted successfully');
+        addProgress('✓ Patient treatments deleted');
       }
 
-      // 9. Finally, delete the patient record
+      // 9. Delete data collection sheets
+      console.log('Deleting data collection sheets...');
+      addProgress('Deleting data collection sheets...');
+      const { error: dataCollectionError } = await supabase
+        .from('data_collection_sheets')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (dataCollectionError) {
+        console.error('Error deleting data collection sheets:', dataCollectionError);
+        addProgress('⚠️ Error deleting data collection sheets');
+      } else {
+        console.log('Data collection sheets deleted successfully');
+        addProgress('✓ Data collection sheets deleted');
+      }
+
+      // 10. Delete IV sedation forms
+      console.log('Deleting IV sedation forms...');
+      addProgress('Deleting IV sedation forms...');
+      const { error: ivSedationError } = await supabase
+        .from('iv_sedation_forms')
+        .delete()
+        .eq('patient_id', patientId);
+
+      if (ivSedationError) {
+        console.error('Error deleting IV sedation forms:', ivSedationError);
+        addProgress('⚠️ Error deleting IV sedation forms');
+      } else {
+        console.log('IV sedation forms deleted successfully');
+        addProgress('✓ IV sedation forms deleted');
+      }
+
+      // 11. Finally, delete the patient record
       console.log('Deleting patient record...');
+      addProgress('Deleting patient record...');
       const { error: patientError } = await supabase
         .from('patients')
         .delete()
@@ -2300,6 +2366,7 @@ export function PatientProfilePage() {
 
       if (patientError) {
         console.error('Error deleting patient:', patientError);
+        addProgress('❌ Error deleting patient record');
         toast({
           title: "Error",
           description: `Failed to delete patient: ${patientError.message}`,
@@ -2309,16 +2376,21 @@ export function PatientProfilePage() {
       }
 
       console.log('Patient deletion completed successfully');
+      addProgress('✅ Patient deleted successfully!');
 
       toast({
         title: "Success",
         description: `Patient ${patient.full_name} and all related data have been deleted successfully.`,
       });
 
+      // Wait a moment to show the final success message
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       // Navigate back to patients list
       navigate('/patients');
     } catch (error: any) {
       console.error('Error deleting patient:', error);
+      addProgress('❌ Deletion failed');
       toast({
         title: "Error",
         description: error.message || "An unexpected error occurred while deleting the patient.",
@@ -5337,12 +5409,12 @@ export function PatientProfilePage() {
                   {isAdminUser() && (
                     <Button
                       variant="outline"
-                      size="sm"
-                      className="border-red-600 text-red-600 hover:bg-red-50"
+                      size="icon"
+                      className="border-red-600 text-red-600 hover:bg-red-50 h-9 w-9"
                       onClick={() => setShowDeletePatientDialog(true)}
+                      title="Delete Patient"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete Patient
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
@@ -21000,6 +21072,7 @@ export function PatientProfilePage() {
                   <li>Manufacturing items and appliance deliveries</li>
                   <li>Patient forms (packets, financial agreements, consent forms, etc.)</li>
                   <li>Medical history and documents</li>
+                  <li>Data collection sheets and IV sedation forms</li>
                 </ul>
               </div>
 
@@ -21024,6 +21097,38 @@ export function PatientProfilePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Deletion Progress Dialog */}
+      <Dialog open={deletingPatient} onOpenChange={() => {}}>
+        <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-red-600"></div>
+              Deleting Patient...
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {deletionProgress.map((message, index) => (
+              <div
+                key={index}
+                className={`text-sm p-2 rounded ${
+                  message.startsWith('✓')
+                    ? 'bg-green-50 text-green-700'
+                    : message.startsWith('⚠️')
+                    ? 'bg-yellow-50 text-yellow-700'
+                    : message.startsWith('❌')
+                    ? 'bg-red-50 text-red-700'
+                    : message.startsWith('✅')
+                    ? 'bg-green-100 text-green-800 font-semibold'
+                    : 'bg-gray-50 text-gray-700'
+                }`}
+              >
+                {message}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

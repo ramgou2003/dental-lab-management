@@ -6,6 +6,7 @@ export interface ManufacturingItem {
   id: string;
   lab_report_card_id: string;
   lab_script_id: string;
+  patient_id: string | null;
   patient_name: string;
   upper_appliance_type: string | null;
   lower_appliance_type: string | null;
