@@ -11,6 +11,9 @@ export interface ManufacturingScriptData {
   lower_appliance_type?: string;
   upper_appliance_number?: string;
   lower_appliance_number?: string;
+  upper_nightguard_number?: string;
+  lower_nightguard_number?: string;
+  is_nightguard_needed?: string;
   milling_location?: string;
   gingiva_color?: string;
   stained_and_glazed?: string;
@@ -112,6 +115,45 @@ export const generateManufacturingScriptPDF = async (data: ManufacturingScriptDa
     }
 
     yPosition += Math.ceil(caseInfo.length / 2) * 8 + 15;
+
+    // Nightguard Information Section
+    if (data.is_nightguard_needed === 'yes') {
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Nightguard Information', 15, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+
+      const nightguardInfo = [
+        ['Nightguard Needed:', 'Yes']
+      ];
+
+      if (data.upper_nightguard_number) {
+        nightguardInfo.push(['Upper Nightguard #:', data.upper_nightguard_number]);
+      }
+
+      if (data.lower_nightguard_number) {
+        nightguardInfo.push(['Lower Nightguard #:', data.lower_nightguard_number]);
+      }
+
+      // Draw nightguard information in two columns
+      for (let i = 0; i < nightguardInfo.length; i++) {
+        const [label, value] = nightguardInfo[i];
+        const column = i % 2;
+        const row = Math.floor(i / 2);
+        const xPos = column === 0 ? 15 : pageWidth / 2 + 5;
+        const yPos = yPosition + (row * 8);
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(label, xPos, yPos);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(value, xPos + 45, yPos);
+      }
+
+      yPosition += Math.ceil(nightguardInfo.length / 2) * 8 + 15;
+    }
 
     // Milling Instructions Section
     if (data.milling_location || data.gingiva_color || data.stained_and_glazed) {

@@ -117,6 +117,9 @@ export function ManufacturingPage() {
         lower_appliance_type: item.lower_appliance_type,
         upper_appliance_number: item.upper_appliance_number,
         lower_appliance_number: item.lower_appliance_number,
+        upper_nightguard_number: item.upper_nightguard_number,
+        lower_nightguard_number: item.lower_nightguard_number,
+        is_nightguard_needed: item.is_nightguard_needed,
         milling_location: item.milling_location,
         gingiva_color: item.gingiva_color,
         stained_and_glazed: item.stained_and_glazed,
@@ -993,6 +996,33 @@ export function ManufacturingPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Nightguard Information */}
+                    {selectedMillingItem.is_nightguard_needed === 'yes' && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-green-700">🦷 Nightguard</span>
+                        </div>
+                        <div className="pl-6 space-y-2 text-sm">
+                          <div>
+                            <span className="text-gray-600">Needed:</span>
+                            <span className="ml-2 font-semibold text-green-700">Yes</span>
+                          </div>
+                          {selectedMillingItem.upper_nightguard_number && (
+                            <div>
+                              <span className="text-gray-600">Upper NG #:</span>
+                              <span className="ml-2 font-mono font-medium text-green-700">{selectedMillingItem.upper_nightguard_number}</span>
+                            </div>
+                          )}
+                          {selectedMillingItem.lower_nightguard_number && (
+                            <div>
+                              <span className="text-gray-600">Lower NG #:</span>
+                              <span className="ml-2 font-mono font-medium text-green-700">{selectedMillingItem.lower_nightguard_number}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1294,6 +1324,31 @@ export function ManufacturingPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Nightguard Details */}
+                {selectedViewItem.is_nightguard_needed === 'yes' && (
+                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <h4 className="font-medium text-green-900 mb-3">Nightguard Information</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-green-700">Nightguard Needed:</span>
+                        <span className="ml-2 font-semibold text-green-900">Yes</span>
+                      </div>
+                      {selectedViewItem.upper_nightguard_number && (
+                        <div>
+                          <span className="text-green-700">Upper Nightguard #:</span>
+                          <span className="ml-2 font-mono font-medium text-green-900">{selectedViewItem.upper_nightguard_number}</span>
+                        </div>
+                      )}
+                      {selectedViewItem.lower_nightguard_number && (
+                        <div>
+                          <span className="text-green-700">Lower Nightguard #:</span>
+                          <span className="ml-2 font-mono font-medium text-green-900">{selectedViewItem.lower_nightguard_number}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Milling Details */}
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
