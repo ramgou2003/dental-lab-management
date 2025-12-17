@@ -15,6 +15,8 @@ export interface DeliveryItem {
   arch_type: string;
   upper_appliance_number: string | null;
   lower_appliance_number: string | null;
+  upper_nightguard_number: string | null;
+  lower_nightguard_number: string | null;
   delivery_status: 'ready-to-insert' | 'ready-for-delivery' | 'patient-scheduled' | 'inserted' | 'returned';
   delivery_address: string | null;
   delivery_notes: string | null;
