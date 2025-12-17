@@ -11,6 +11,9 @@ interface PartialPaymentAgreementDialogProps {
   newPatientPacketId?: string;
   patientName: string;
   patientDateOfBirth?: string;
+  patientAddress?: string;
+  patientEmail?: string;
+  patientPhone?: string;
   initialData?: any;
   isEditing?: boolean;
   isViewing?: boolean;
@@ -25,6 +28,9 @@ export function PartialPaymentAgreementDialog({
   newPatientPacketId,
   patientName,
   patientDateOfBirth,
+  patientAddress,
+  patientEmail,
+  patientPhone,
   initialData,
   isEditing = false,
   isViewing = false,
@@ -202,6 +208,9 @@ export function PartialPaymentAgreementDialog({
           onCancel={handleCancel}
           patientName={patientName}
           patientDateOfBirth={patientDateOfBirth}
+          patientAddress={patientAddress}
+          patientEmail={patientEmail}
+          patientPhone={patientPhone}
           initialData={initialData}
           isEditing={isEditing}
           readOnly={isViewing}

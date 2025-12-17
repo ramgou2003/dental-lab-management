@@ -16,6 +16,9 @@ interface PartialPaymentAgreementFormProps {
   onCancel: () => void;
   patientName?: string;
   patientDateOfBirth?: string;
+  patientAddress?: string;
+  patientEmail?: string;
+  patientPhone?: string;
   initialData?: any;
   isEditing?: boolean;
   readOnly?: boolean;
@@ -33,6 +36,9 @@ export function PartialPaymentAgreementForm({
   onCancel,
   patientName = "",
   patientDateOfBirth = "",
+  patientAddress = "",
+  patientEmail = "",
+  patientPhone = "",
   initialData = null,
   isEditing = false,
   readOnly = false,
@@ -58,9 +64,9 @@ export function PartialPaymentAgreementForm({
       // Patient Information
       firstName: initialData?.firstName || patientName.split(' ')[0] || "",
       lastName: initialData?.lastName || patientName.split(' ').slice(1).join(' ') || "",
-      address: initialData?.address || "",
-      email: initialData?.email || "",
-      phone: initialData?.phone || "",
+      address: initialData?.address || patientAddress || "",
+      email: initialData?.email || patientEmail || "",
+      phone: initialData?.phone || patientPhone || "",
 
       // Payment Details
       paymentAmount: initialData?.paymentAmount || "",
@@ -124,9 +130,9 @@ export function PartialPaymentAgreementForm({
         // Patient Information
         firstName: initialData.firstName || patientName.split(' ')[0] || "",
         lastName: initialData.lastName || patientName.split(' ').slice(1).join(' ') || "",
-        address: initialData.address || "",
-        email: initialData.email || "",
-        phone: initialData.phone || "",
+        address: initialData.address || patientAddress || "",
+        email: initialData.email || patientEmail || "",
+        phone: initialData.phone || patientPhone || "",
 
         // Payment Details
         paymentAmount: initialData.paymentAmount || "",

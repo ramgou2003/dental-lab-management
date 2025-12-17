@@ -20308,6 +20308,9 @@ export function PatientProfilePage() {
           patientId={patient.id}
           patientName={patient.full_name}
           patientDateOfBirth={patient.date_of_birth}
+          patientAddress={`${patient.street || ''}${patient.street && (patient.city || patient.state || patient.zip_code) ? ', ' : ''}${patient.city || ''}${patient.city && (patient.state || patient.zip_code) ? ', ' : ''}${patient.state || ''}${patient.state && patient.zip_code ? ' ' : ''}${patient.zip_code || ''}`.trim()}
+          patientEmail={patient.email}
+          patientPhone={patient.phone}
           initialData={selectedPartialPaymentAgreementForm}
           isEditing={isEditingPartialPaymentAgreementForm}
           isViewing={isViewingPartialPaymentAgreementForm}
