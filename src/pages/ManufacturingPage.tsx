@@ -737,8 +737,18 @@ export function ManufacturingPage() {
                           </div>
 
                           {/* Right side - Action Buttons */}
-                          <div className="ml-4">
+                          <div className="ml-4 flex flex-col gap-2">
                             {renderActionButtons()}
+                            {/* View Details Button - Always visible */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewManufacturingScript(item)}
+                              className="border-2 border-gray-400 text-gray-700 hover:border-gray-600 hover:text-gray-900 hover:bg-gray-50 px-4 py-2 text-sm font-semibold"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </Button>
                           </div>
                         </div>
 
