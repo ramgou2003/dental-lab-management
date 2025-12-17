@@ -472,6 +472,25 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
       console.log('✅ Updated lead status to converted');
     }
 
+    // Sync medical history from patient packet
+    if (patientId && patientPacketId && packetData) {
+      console.log('🏥 Syncing medical history from patient packet...');
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        const { syncMedicalHistoryFromPacket } = await import('./medicalHistoryService');
+        await syncMedicalHistoryFromPacket(
+          patientId,
+          patientPacketId,
+          packetData,
+          user?.user?.id
+        );
+        console.log('✅ Medical history synced successfully');
+      } catch (syncError) {
+        console.error('❌ Error syncing medical history (non-critical):', syncError);
+        // Don't fail the whole operation if sync fails
+      }
+    }
+
     // Create treatment plan from consultation treatment plan
     if (consultation.treatment_plan && consultation.treatment_plan.treatments && consultation.treatment_plan.treatments.length > 0) {
       console.log('📋 Creating treatment plan for accepted patient...');
@@ -710,6 +729,33 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
         console.error('❌ Error updating existing patient status:', updateError);
       } else {
         console.log('✅ Updated existing patient status:', patientId);
+      }
+    }
+
+    // Sync medical history from patient packet if available
+    if (patientId && consultation.new_patient_packet_id) {
+      console.log('🏥 Syncing medical history from patient packet...');
+      try {
+        const { data: packetData, error: packetError } = await supabase
+          .from('new_patient_packets')
+          .select('*')
+          .eq('id', consultation.new_patient_packet_id)
+          .single();
+
+        if (!packetError && packetData) {
+          const { data: user } = await supabase.auth.getUser();
+          const { syncMedicalHistoryFromPacket } = await import('./medicalHistoryService');
+          await syncMedicalHistoryFromPacket(
+            patientId,
+            consultation.new_patient_packet_id,
+            packetData,
+            user?.user?.id
+          );
+          console.log('✅ Medical history synced successfully');
+        }
+      } catch (syncError) {
+        console.error('❌ Error syncing medical history (non-critical):', syncError);
+        // Don't fail the whole operation if sync fails
       }
     }
 
