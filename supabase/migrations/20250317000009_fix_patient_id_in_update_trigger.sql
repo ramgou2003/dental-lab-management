@@ -113,3 +113,14 @@ WHERE mi.lab_script_id = ls.id
 AND ls.is_nightguard_needed IS NOT NULL
 AND (mi.is_nightguard_needed IS NULL OR mi.is_nightguard_needed != ls.is_nightguard_needed);
 
+-- Update existing manufacturing items with NULL nightguard numbers from lab report cards
+UPDATE manufacturing_items mi
+SET
+  upper_nightguard_number = lrc.upper_nightguard_number,
+  lower_nightguard_number = lrc.lower_nightguard_number
+FROM lab_report_cards lrc
+WHERE mi.lab_report_card_id = lrc.id
+AND (
+  (mi.upper_nightguard_number IS NULL AND lrc.upper_nightguard_number IS NOT NULL) OR
+  (mi.lower_nightguard_number IS NULL AND lrc.lower_nightguard_number IS NOT NULL)
+);
