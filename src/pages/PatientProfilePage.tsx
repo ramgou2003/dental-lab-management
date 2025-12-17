@@ -7173,12 +7173,14 @@ export function PatientProfilePage() {
                                       <div className={`p-2.5 rounded-xl ${
                                         consultation.consultation_status === 'completed' ? 'bg-green-100' :
                                         consultation.consultation_status === 'in_progress' ? 'bg-blue-100' :
-                                        'bg-gray-100'
+                                        consultation.consultation_status === 'scheduled' ? 'bg-purple-100' :
+                                        'bg-yellow-100'
                                       }`}>
                                         <Stethoscope className={`h-5 w-5 ${
                                           consultation.consultation_status === 'completed' ? 'text-green-600' :
                                           consultation.consultation_status === 'in_progress' ? 'text-blue-600' :
-                                          'text-gray-600'
+                                          consultation.consultation_status === 'scheduled' ? 'text-purple-600' :
+                                          'text-yellow-600'
                                         }`} />
                                       </div>
                                       <div>
@@ -7194,12 +7196,13 @@ export function PatientProfilePage() {
                                             consultation.consultation_status === 'completed' ? 'bg-green-100 text-green-700' :
                                             consultation.consultation_status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
                                             consultation.consultation_status === 'scheduled' ? 'bg-purple-100 text-purple-700' :
-                                            'bg-gray-100 text-gray-700'
+                                            'bg-yellow-100 text-yellow-700'
                                           }`}>
                                             {consultation.consultation_status === 'completed' ? 'Completed' :
                                              consultation.consultation_status === 'in_progress' ? 'In Progress' :
                                              consultation.consultation_status === 'scheduled' ? 'Scheduled' :
-                                             consultation.consultation_status?.charAt(0).toUpperCase() + consultation.consultation_status?.slice(1) || 'Draft'}
+                                             consultation.consultation_status === 'draft' ? 'Pending' :
+                                             consultation.consultation_status?.charAt(0).toUpperCase() + consultation.consultation_status?.slice(1) || 'Pending'}
                                           </span>
                                           {consultation.treatment_decision && (
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -12169,10 +12172,14 @@ export function PatientProfilePage() {
                                       ? 'bg-green-100 text-green-800 border-green-200'
                                       : consultation.consultation_status === 'in-progress'
                                       ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                      : 'bg-gray-100 text-gray-800 border-gray-200'
+                                      : consultation.consultation_status === 'scheduled'
+                                      ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                      : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                                   }`}>
                                     {consultation.consultation_status === 'completed' ? 'Completed' :
                                      consultation.consultation_status === 'in-progress' ? 'In Progress' :
+                                     consultation.consultation_status === 'scheduled' ? 'Scheduled' :
+                                     consultation.consultation_status === 'draft' ? 'Pending' :
                                      consultation.consultation_status || 'Pending'}
                                   </span>
 
