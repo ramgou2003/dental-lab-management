@@ -1360,56 +1360,58 @@ export function ManufacturingPage() {
                   </div>
                 )}
 
-                {/* Milling Details */}
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <h4 className="font-medium text-blue-900 mb-3">Milling Instructions</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-blue-700">Milling Location:</span>
-                      <span className="ml-2 font-medium text-blue-900">
-                        {selectedViewItem.milling_location ?
-                          selectedViewItem.milling_location.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) :
-                          'Not specified'
-                        }
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-blue-700">Gingiva Color:</span>
-                      <span className="ml-2 font-medium text-blue-900">
-                        {selectedViewItem.gingiva_color ?
-                          selectedViewItem.gingiva_color.replace(/\b\w/g, (l: string) => l.toUpperCase()) :
-                          'Not specified'
-                        }
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-blue-700">Stained and Glazed:</span>
-                      <span className="ml-2 font-medium text-blue-900">
-                        {selectedViewItem.stained_and_glazed ?
-                          selectedViewItem.stained_and_glazed.replace(/\b\w/g, (l: string) => l.toUpperCase()) :
-                          'Not specified'
-                        }
-                      </span>
-                    </div>
-                    {selectedViewItem.cementation && (
+                {/* Milling Details - Only show for milling manufacturing method */}
+                {selectedViewItem.manufacturing_method === 'milling' && (
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <h4 className="font-medium text-blue-900 mb-3">Milling Instructions</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-blue-700">Cementation:</span>
+                        <span className="text-blue-700">Milling Location:</span>
                         <span className="ml-2 font-medium text-blue-900">
-                          {selectedViewItem.cementation.replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          {selectedViewItem.milling_location ?
+                            selectedViewItem.milling_location.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) :
+                            'Not specified'
+                          }
                         </span>
+                      </div>
+                      <div>
+                        <span className="text-blue-700">Gingiva Color:</span>
+                        <span className="ml-2 font-medium text-blue-900">
+                          {selectedViewItem.gingiva_color ?
+                            selectedViewItem.gingiva_color.replace(/\b\w/g, (l: string) => l.toUpperCase()) :
+                            'Not specified'
+                          }
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-blue-700">Stained and Glazed:</span>
+                        <span className="ml-2 font-medium text-blue-900">
+                          {selectedViewItem.stained_and_glazed ?
+                            selectedViewItem.stained_and_glazed.replace(/\b\w/g, (l: string) => l.toUpperCase()) :
+                            'Not specified'
+                          }
+                        </span>
+                      </div>
+                      {selectedViewItem.cementation && (
+                        <div>
+                          <span className="text-blue-700">Cementation:</span>
+                          <span className="ml-2 font-medium text-blue-900">
+                            {selectedViewItem.cementation.replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedViewItem.additional_notes && (
+                      <div className="mt-4">
+                        <span className="text-blue-700 text-sm">Additional Notes:</span>
+                        <div className="mt-1 p-3 bg-white rounded border border-blue-200">
+                          <p className="text-blue-900 text-sm">{selectedViewItem.additional_notes}</p>
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  {selectedViewItem.additional_notes && (
-                    <div className="mt-4">
-                      <span className="text-blue-700 text-sm">Additional Notes:</span>
-                      <div className="mt-1 p-3 bg-white rounded border border-blue-200">
-                        <p className="text-blue-900 text-sm">{selectedViewItem.additional_notes}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
 
                 {/* Status Information */}
                 <div className="bg-green-50 rounded-lg p-4 border border-green-200">
