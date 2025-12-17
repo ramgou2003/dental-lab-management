@@ -115,7 +115,8 @@ export function ConsultationFormDialog({
       }
 
       // Update consultation status to completed in the database
-      if (patientPacketId) {
+      // Use appointment_id as the primary identifier (works for all patient types)
+      if (appointmentId) {
         console.log('💾 Updating consultation status to completed...');
         const { error: statusError } = await supabase
           .from('consultations')
@@ -123,13 +124,15 @@ export function ConsultationFormDialog({
             consultation_status: 'completed',
             updated_at: new Date().toISOString()
           })
-          .eq('new_patient_packet_id', patientPacketId);
+          .eq('appointment_id', appointmentId);
 
         if (statusError) {
           console.error('❌ Error updating consultation status:', statusError);
           throw statusError;
         }
         console.log('✅ Consultation status updated to completed');
+      } else {
+        console.warn('⚠️ No appointment ID available to update consultation status');
       }
 
       console.log('✅ Consultation completed successfully');
