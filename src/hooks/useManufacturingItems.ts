@@ -321,6 +321,7 @@ export function useManufacturingItems() {
           .insert({
             lab_report_card_id: currentItem.lab_report_card_id,
             lab_script_id: currentItem.lab_script_id,
+            patient_id: currentItem.patient_id,
             patient_name: currentItem.patient_name,
             upper_appliance_type: currentItem.upper_appliance_type,
             lower_appliance_type: currentItem.lower_appliance_type,
