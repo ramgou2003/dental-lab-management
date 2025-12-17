@@ -392,6 +392,71 @@ export function useManufacturingItems() {
     }
   };
 
+  const reprintManufacturingItem = async (itemId: string) => {
+    try {
+      // Fetch the current item from database to get all details
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('manufacturing_items')
+        .select('*')
+        .eq('id', itemId)
+        .single();
+
+      if (fetchError || !currentItem) {
+        console.error('Error fetching manufacturing item:', fetchError);
+        throw new Error('Manufacturing item not found');
+      }
+
+      // Create new manufacturing item with same details for reprinting
+      const { error: createError } = await supabase
+        .from('manufacturing_items')
+        .insert({
+          lab_report_card_id: currentItem.lab_report_card_id,
+          lab_script_id: currentItem.lab_script_id,
+          patient_id: currentItem.patient_id,
+          patient_name: currentItem.patient_name,
+          upper_appliance_type: currentItem.upper_appliance_type,
+          lower_appliance_type: currentItem.lower_appliance_type,
+          shade: currentItem.shade,
+          screw: currentItem.screw,
+          material: currentItem.material,
+          arch_type: currentItem.arch_type,
+          upper_appliance_number: currentItem.upper_appliance_number,
+          lower_appliance_number: currentItem.lower_appliance_number,
+          upper_nightguard_number: currentItem.upper_nightguard_number,
+          lower_nightguard_number: currentItem.lower_nightguard_number,
+          is_nightguard_needed: currentItem.is_nightguard_needed,
+          manufacturing_method: currentItem.manufacturing_method,
+          milling_location: currentItem.milling_location,
+          gingiva_color: currentItem.gingiva_color,
+          stained_and_glazed: currentItem.stained_and_glazed,
+          cementation: currentItem.cementation,
+          additional_notes: currentItem.additional_notes,
+          status: currentItem.manufacturing_method === 'printing' ? 'pending-printing' : 'pending-milling'
+        });
+
+      if (createError) {
+        console.error('Error creating new manufacturing item:', createError);
+        throw createError;
+      }
+
+      // Refresh the manufacturing items list
+      await fetchManufacturingItems();
+
+      toast({
+        title: "Success",
+        description: "New manufacturing item created for reprinting",
+      });
+    } catch (error) {
+      console.error('Error reprinting manufacturing item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create reprint",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   const deleteManufacturingItem = async (itemId: string) => {
     try {
       const { error } = await supabase
@@ -512,6 +577,7 @@ export function useManufacturingItems() {
     completePrinting,
     markAsReceived,
     completeInspection,
+    reprintManufacturingItem,
     deleteManufacturingItem,
     getManufacturingItemByLabReportId
   };

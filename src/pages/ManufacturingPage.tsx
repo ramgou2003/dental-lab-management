@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical, ClipboardCheck, Filter, ArrowUpDown, ArrowUp, ArrowDown, MapPin, Package } from "lucide-react";
+import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical, ClipboardCheck, Filter, ArrowUpDown, ArrowUp, ArrowDown, MapPin, Package, Printer } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
 import { useMillingForms } from "@/hooks/useMillingForms";
@@ -64,7 +64,7 @@ export function ManufacturingPage() {
     millingLocation: [],
     inspectionStatus: [],
   });
-  const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails, completePrinting, markAsReceived, completeInspection } = useManufacturingItems();
+  const { manufacturingItems, loading, updateManufacturingItemStatus, updateManufacturingItemWithMillingDetails, completePrinting, markAsReceived, completeInspection, reprintManufacturingItem } = useManufacturingItems();
   const { createMillingForm } = useMillingForms();
   const { millingLocations, loading: millingLocationsLoading } = useMillingLocations();
 
@@ -248,6 +248,14 @@ export function ManufacturingPage() {
       setSelectedInspectionItem(null);
     } catch (error) {
       toast.error('Failed to complete inspection');
+    }
+  };
+
+  const handleReprint = async (item: any) => {
+    try {
+      await reprintManufacturingItem(item.id);
+    } catch (error) {
+      toast.error('Failed to create reprint');
     }
   };
 
@@ -630,19 +638,39 @@ export function ManufacturingPage() {
                           );
                         case 'completed':
                           return (
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewReport(item)}
+                                className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 text-sm font-semibold"
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                View Report
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReprint(item)}
+                                className="border-2 border-orange-600 text-orange-600 hover:border-orange-700 hover:text-orange-700 hover:bg-orange-50 px-4 py-2 text-sm font-semibold"
+                              >
+                                <Printer className="h-4 w-4 mr-2" />
+                                Reprint
+                              </Button>
+                            </div>
+                          );
+                        case 'rejected':
+                          return (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleViewReport(item)}
-                              className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 text-sm font-semibold"
+                              onClick={() => handleReprint(item)}
+                              className="border-2 border-orange-600 text-orange-600 hover:border-orange-700 hover:text-orange-700 hover:bg-orange-50 px-4 py-2 text-sm font-semibold"
                             >
-                              <FileText className="h-4 w-4 mr-2" />
-                              View Report
+                              <Printer className="h-4 w-4 mr-2" />
+                              Reprint
                             </Button>
                           );
-                        case 'rejected':
-                          // Rejected items don't have action buttons - a new item was created for reprinting
-                          return null;
                         default:
                           return null;
                       }
