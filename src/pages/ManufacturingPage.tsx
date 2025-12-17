@@ -316,7 +316,7 @@ export function ManufacturingPage() {
       ).length;
     }
     if (status === "completed") {
-      return manufacturingItems.filter(item => item.status === 'completed').length;
+      return manufacturingItems.filter(item => item.status === 'completed' || item.status === 'rejected').length;
     }
     return manufacturingItems.length;
   };
@@ -407,7 +407,7 @@ export function ManufacturingPage() {
                    item.status === 'in-transit' ||
                    item.status === 'inspection';
     } else if (activeFilter === "completed") {
-      statusMatch = item.status === 'completed';
+      statusMatch = item.status === 'completed' || item.status === 'rejected';
     }
     // "all-cam-scripts" shows everything
 
@@ -640,6 +640,9 @@ export function ManufacturingPage() {
                               View Report
                             </Button>
                           );
+                        case 'rejected':
+                          // Rejected items don't have action buttons - a new item was created for reprinting
+                          return null;
                         default:
                           return null;
                       }
@@ -717,10 +720,12 @@ export function ManufacturingPage() {
                               <div className="mt-2">
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                                   item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                  item.status === 'rejected' ? 'bg-red-100 text-red-700' :
                                   item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
                                   item.status === 'milling' ? 'bg-cyan-100 text-cyan-700' :
                                   item.status === 'in-transit' ? 'bg-yellow-100 text-yellow-700' :
                                   item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
+                                  item.status === 'inspection' ? 'bg-purple-100 text-purple-700' :
                                   'bg-amber-100 text-amber-700'
                                 }`}>
                                   {item.status === 'pending-printing' ? 'New Script' :
@@ -729,7 +734,9 @@ export function ManufacturingPage() {
                                    item.status === 'milling' ? 'Milling' :
                                    item.status === 'in-transit' ? 'In Transit' :
                                    item.status === 'quality-check' ? 'Inspection' :
+                                   item.status === 'inspection' ? 'Inspection' :
                                    item.status === 'completed' ? 'Completed' :
+                                   item.status === 'rejected' ? 'Rejected' :
                                    item.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                 </span>
                               </div>
@@ -1423,7 +1430,9 @@ export function ManufacturingPage() {
                         {selectedViewItem.status === 'milling' ? 'In Milling' :
                          selectedViewItem.status === 'in-transit' ? 'In Transit' :
                          selectedViewItem.status === 'quality-check' ? 'Quality Check' :
+                         selectedViewItem.status === 'inspection' ? 'Inspection' :
                          selectedViewItem.status === 'completed' ? 'Completed' :
+                         selectedViewItem.status === 'rejected' ? 'Rejected' :
                          selectedViewItem.status.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                       </span>
                     </div>

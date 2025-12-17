@@ -25,7 +25,7 @@ export interface ManufacturingItem {
   stained_and_glazed: string | null;
   cementation: string | null;
   additional_notes: string | null;
-  status: 'pending-printing' | 'pending-milling' | 'in-production' | 'milling' | 'in-transit' | 'quality-check' | 'inspection' | 'completed';
+  status: 'pending-printing' | 'pending-milling' | 'in-production' | 'milling' | 'in-transit' | 'quality-check' | 'inspection' | 'completed' | 'rejected';
   printing_completed_at: string | null;
   printing_completed_by: string | null;
   printing_completed_by_name: string | null;
@@ -345,7 +345,9 @@ export function useManufacturingItems() {
       }
 
       // Update the current item with inspection data
-      const newStatus = inspectionData.inspection_status === 'approved' ? 'completed' : 'completed';
+      // If approved, mark as completed (triggers delivery item creation)
+      // If rejected, mark as rejected (does NOT trigger delivery item creation)
+      const newStatus = inspectionData.inspection_status === 'approved' ? 'completed' : 'rejected';
 
       const { error: updateError } = await supabase
         .from('manufacturing_items')
