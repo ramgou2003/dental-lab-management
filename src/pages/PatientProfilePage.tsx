@@ -1489,15 +1489,6 @@ export function PatientProfilePage() {
         return;
       }
 
-      console.log('📋 Found consultation forms for patient ID:', patientId);
-      console.log('📋 Number of consultations:', consultations?.length || 0);
-      if (consultations && consultations.length > 0) {
-        console.log('📋 First consultation data:', consultations[0]);
-        console.log('📋 Fields in first consultation:', Object.keys(consultations[0]));
-        console.log('📋 Clinical assessment:', consultations[0].clinical_assessment);
-        console.log('📋 Treatment cost:', consultations[0].treatment_cost);
-        console.log('📋 Treatment decision:', consultations[0].treatment_decision);
-      }
       setConsultationForms(consultations || []);
     } catch (error) {
       console.error('Unexpected error fetching consultation forms:', error);
@@ -1507,11 +1498,6 @@ export function PatientProfilePage() {
   };
 
   const handleViewConsultation = (consultation: any) => {
-    console.log('👁️ Opening consultation viewer with data:', consultation);
-    console.log('👁️ Consultation fields:', Object.keys(consultation));
-    console.log('👁️ Clinical assessment:', consultation.clinical_assessment);
-    console.log('👁️ Treatment cost:', consultation.treatment_cost);
-    console.log('👁️ Treatment decision:', consultation.treatment_decision);
     setSelectedConsultation(consultation);
     setShowConsultationViewer(true);
   };
