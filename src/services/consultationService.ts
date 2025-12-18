@@ -309,8 +309,18 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
     }
 
     // Check if patient already exists in main table
-    let patientId = consultation?.patient_id || null;
-    console.log('🔍 Existing patient ID in consultation:', patientId);
+    // Check both consultation.patient_id and packetData.patient_id (for active patients)
+    let patientId = consultation?.patient_id || packetData.patient_id || null;
+    console.log('🔍 Existing patient ID in consultation:', consultation?.patient_id);
+    console.log('🔍 Existing patient ID in packet:', packetData.patient_id);
+    console.log('🔍 Final patient ID:', patientId);
+
+    // If patient already exists, just return the patient ID - don't create a new one!
+    if (patientId) {
+      console.log('✅ Patient already exists in main table:', patientId);
+      console.log('✅ Skipping patient creation - returning existing patient ID');
+      return patientId;
+    }
 
     if (!patientId) {
       console.log('👤 Creating new patient in main table...');
@@ -586,6 +596,13 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
           console.log('✅ Updated consultation with patient ID from appointment');
         }
       }
+    }
+
+    // If patient already exists, just return the patient ID - don't create a new one!
+    if (patientId) {
+      console.log('✅ Patient already exists in main table:', patientId);
+      console.log('✅ Skipping patient creation - returning existing patient ID');
+      return patientId;
     }
 
     if (!patientId) {
