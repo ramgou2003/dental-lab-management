@@ -286,15 +286,11 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
     console.log('📊 Consultation data:', consultation);
 
     if (!consultation) {
-      console.log('⚠️ No consultation found, creating one from patient packet...');
-      consultation = await createConsultationFromPacket(patientPacketId);
-
-      if (!consultation) {
-        console.error('❌ Failed to create consultation for packet ID:', patientPacketId);
-        throw new Error('Failed to create consultation');
-      }
-
-      console.log('✅ Created consultation:', consultation);
+      console.warn('⚠️ No consultation found for patient packet:', patientPacketId);
+      console.warn('⚠️ Skipping consultation creation to prevent orphaned consultations without appointment_id');
+      console.warn('⚠️ This is expected if the patient was created directly without a consultation appointment');
+      // Don't create consultation without appointment_id - this prevents orphaned consultations
+      // The patient can still be moved to main table without a consultation record
     }
 
     // Get patient packet data for additional details
@@ -313,7 +309,7 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
     }
 
     // Check if patient already exists in main table
-    let patientId = consultation.patient_id;
+    let patientId = consultation?.patient_id || null;
     console.log('🔍 Existing patient ID in consultation:', patientId);
 
     if (!patientId) {
@@ -321,7 +317,7 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
 
       // Get patient data from packet (primary source) or consultation patient
       let consultationPatientData = null;
-      if (consultation.consultation_patient_id) {
+      if (consultation?.consultation_patient_id) {
         const { data: cpData } = await supabase
           .from('consultation_patients')
           .select('*')
@@ -492,7 +488,7 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
     }
 
     // Create treatment plan from consultation treatment plan
-    if (consultation.treatment_plan && consultation.treatment_plan.treatments && consultation.treatment_plan.treatments.length > 0) {
+    if (consultation?.treatment_plan && consultation.treatment_plan.treatments && consultation.treatment_plan.treatments.length > 0) {
       console.log('📋 Creating treatment plan for accepted patient...');
 
       const treatmentPlanData = {

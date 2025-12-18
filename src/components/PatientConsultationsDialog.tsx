@@ -145,6 +145,9 @@ export function PatientConsultationsDialog({
 
             if (consultationFormData) {
               consultationDetails = consultationFormData;
+              console.log('📋 Consultation form data for appointment', appointment.id, ':', consultationFormData);
+            } else {
+              console.log('⚠️ No consultation form data found for appointment', appointment.id);
             }
 
             // Transform appointment data to consultation format
@@ -198,6 +201,9 @@ export function PatientConsultationsDialog({
 
               if (consultationFormData) {
                 consultationDetails = consultationFormData;
+                console.log('📋 Consultation form data for active patient appointment', appointment.id, ':', consultationFormData);
+              } else {
+                console.log('⚠️ No consultation form data found for active patient appointment', appointment.id);
               }
 
               return {
@@ -426,6 +432,30 @@ export function PatientConsultationsDialog({
                               </div>
                             )}
 
+                            {/* Clinical Assessment */}
+                            {consultation.clinical_assessment && (
+                              <div className="text-sm">
+                                <span className="font-medium text-gray-700">Clinical Assessment: </span>
+                                <span className="text-gray-600">{consultation.clinical_assessment}</span>
+                              </div>
+                            )}
+
+                            {/* Treatment Cost */}
+                            {consultation.treatment_cost && (
+                              <div className="text-sm">
+                                <span className="font-medium text-gray-700">Treatment Cost: </span>
+                                <span className="text-gray-600">${parseFloat(consultation.treatment_cost).toLocaleString()}</span>
+                              </div>
+                            )}
+
+                            {/* Consultation Status */}
+                            {consultation.consultation_status && (
+                              <div className="flex items-center gap-2">
+                                <Badge className={getStatusColor(consultation.consultation_status)}>
+                                  {consultation.consultation_status}
+                                </Badge>
+                              </div>
+                            )}
 
                           </div>
 
