@@ -987,11 +987,26 @@ const ConsultationSessionPage = () => {
       }
 
       // Get existing consultation data if it exists
-      const { data: existingConsultation } = await supabase
-        .from('consultations')
-        .select('*')
-        .eq('new_patient_packet_id', packetId)
-        .single();
+      // Try to find by appointment_id first (most reliable), then by packet_id
+      let existingConsultation = null;
+      if (appointmentData?.id) {
+        const { data } = await supabase
+          .from('consultations')
+          .select('*')
+          .eq('appointment_id', appointmentData.id)
+          .maybeSingle();
+        existingConsultation = data;
+      }
+
+      // If not found by appointment_id, try by packet_id
+      if (!existingConsultation && packetId) {
+        const { data } = await supabase
+          .from('consultations')
+          .select('*')
+          .eq('new_patient_packet_id', packetId)
+          .maybeSingle();
+        existingConsultation = data;
+      }
 
       // Prepare comprehensive consultation data with ALL available information
       const consultationData = {
@@ -1102,11 +1117,31 @@ const ConsultationSessionPage = () => {
       });
 
       // Insert or update consultation record
-      const { error: upsertError } = await supabase
-        .from('consultations')
-        .upsert(consultationData, {
-          onConflict: 'new_patient_packet_id'
-        });
+      // If we found an existing consultation, update it by ID to avoid duplicates
+      // Otherwise, insert a new one
+      let upsertError = null;
+
+      if (existingConsultation?.id) {
+        console.log('📝 Updating existing consultation:', existingConsultation.id);
+        const { error } = await supabase
+          .from('consultations')
+          .update({
+            ...consultationData,
+            appointment_id: appointmentData.id, // Ensure appointment_id is set
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingConsultation.id);
+        upsertError = error;
+      } else {
+        console.log('📝 Creating new consultation');
+        const { error } = await supabase
+          .from('consultations')
+          .insert({
+            ...consultationData,
+            appointment_id: appointmentData.id // Ensure appointment_id is included
+          });
+        upsertError = error;
+      }
 
       if (upsertError) {
         throw upsertError;

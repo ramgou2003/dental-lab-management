@@ -139,9 +139,9 @@ export function PatientConsultationsDialog({
             // Get consultation form details using appointment_id
             const { data: consultationFormData } = await supabase
               .from('consultations')
-              .select('consultation_status, clinical_assessment, treatment_cost, consultation_notes, treatment_decision')
+              .select('*')
               .eq('appointment_id', appointment.id)
-              .single();
+              .maybeSingle();
 
             if (consultationFormData) {
               consultationDetails = consultationFormData;
@@ -192,9 +192,9 @@ export function PatientConsultationsDialog({
               // Get consultation form details using appointment_id
               const { data: consultationFormData } = await supabase
                 .from('consultations')
-                .select('consultation_status, clinical_assessment, treatment_cost, consultation_notes, treatment_decision')
+                .select('*')
                 .eq('appointment_id', appointment.id)
-                .single();
+                .maybeSingle();
 
               if (consultationFormData) {
                 consultationDetails = consultationFormData;
