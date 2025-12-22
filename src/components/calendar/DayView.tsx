@@ -13,6 +13,16 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { HealthHistoryDialog } from "@/components/HealthHistoryDialog";
 import { ComfortPreferenceDialog } from "@/components/ComfortPreferenceDialog";
 
@@ -49,6 +59,13 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // State for controlling context menu open/close
   const [openContextMenuId, setOpenContextMenuId] = useState<string | null>(null);
+
+  // State for status change confirmation
+  const [statusChangeConfirmation, setStatusChangeConfirmation] = useState<{
+    appointmentId: string;
+    newStatus: Appointment['status'];
+    appointmentDetails: string;
+  } | null>(null);
 
   // State for time slot long-press handling
   const [timeSlotLongPressTimer, setTimeSlotLongPressTimer] = useState<NodeJS.Timeout | null>(null);
@@ -138,10 +155,44 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Handler for status change from context menu
   const handleStatusChangeFromMenu = (appointmentId: string, newStatus: Appointment['status']) => {
-    // Perform the status change
-    if (onStatusChange) {
-      onStatusChange(appointmentId, newStatus);
+    // Find the appointment details
+    const appointment = appointments.find(apt => apt.id === appointmentId);
+    if (!appointment) return;
+
+    // Show confirmation dialog
+    setStatusChangeConfirmation({
+      appointmentId,
+      newStatus,
+      appointmentDetails: `${appointment.patient} - ${appointment.type} at ${appointment.startTime}`
+    });
+  };
+
+  const confirmStatusChange = () => {
+    if (statusChangeConfirmation && onStatusChange) {
+      onStatusChange(statusChangeConfirmation.appointmentId, statusChangeConfirmation.newStatus);
     }
+    setStatusChangeConfirmation(null);
+  };
+
+  const cancelStatusChange = () => {
+    setStatusChangeConfirmation(null);
+  };
+
+  // Helper function to get status name from status code
+  const getStatusNameFromCode = (statusCode: string): string => {
+    const statusMap: Record<string, string> = {
+      '?????': 'Not Confirmed',
+      'FIRM': 'Appointment Confirmed',
+      'EFIRM': 'Electronically Confirmed',
+      'EMER': 'Emergency Patient',
+      'HERE': 'Patient has Arrived',
+      'READY': 'Ready for Operatory',
+      'LM1': 'Left 1st Message',
+      'LM2': 'Left 2nd Message',
+      'MULTI': 'Multi-Appointment',
+      '2wk': '2 Week Calls'
+    };
+    return statusMap[statusCode] || statusCode;
   };
 
   // Handler for viewing patient profile
@@ -1576,6 +1627,26 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         patientId={selectedPatientId}
         patientName={selectedPatientName}
       />
+
+      {/* Status Change Confirmation Dialog */}
+      <AlertDialog open={!!statusChangeConfirmation} onOpenChange={(open) => !open && cancelStatusChange()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to change the status to <strong>{statusChangeConfirmation ? getStatusNameFromCode(statusChangeConfirmation.newStatus) : ''}</strong>?
+              <br /><br />
+              <span className="text-sm text-gray-600">
+                Appointment: {statusChangeConfirmation?.appointmentDetails}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelStatusChange}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmStatusChange}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
