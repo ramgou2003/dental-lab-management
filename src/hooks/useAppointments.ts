@@ -12,14 +12,41 @@ export interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
-  status: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk';
+  status: string; // Full status name (e.g., "Ready for Operatory")
+  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk'; // Status code
   date: string; // YYYY-MM-DD format
   notes?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-
+// Helper function to map status code to full status name
+export function getStatusNameFromCode(statusCode: Appointment['statusCode']): string {
+  switch (statusCode) {
+    case '?????':
+      return 'Not Confirmed';
+    case 'FIRM':
+      return 'Appointment Confirmed';
+    case 'EFIRM':
+      return 'Electronically Confirmed';
+    case 'EMER':
+      return 'Emergency Patient';
+    case 'HERE':
+      return 'Patient has Arrived';
+    case 'READY':
+      return 'Ready for Operatory';
+    case 'LM1':
+      return 'Left 1st Message';
+    case 'LM2':
+      return 'Left 2nd Message';
+    case 'MULTI':
+      return 'Multi-Appointment';
+    case '2wk':
+      return '2 Week Calls';
+    default:
+      return 'Not Confirmed';
+  }
+}
 
 export function useAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -56,7 +83,8 @@ export function useAppointments() {
         startTime: appointment.start_time,
         endTime: appointment.end_time,
         type: appointment.appointment_type,
-        status: appointment.status as Appointment['status'],
+        status: appointment.status || 'Not Confirmed',
+        statusCode: appointment.status_code as Appointment['statusCode'],
         date: appointment.date,
         notes: appointment.notes || undefined,
         createdAt: appointment.created_at,
@@ -129,7 +157,8 @@ export function useAppointments() {
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
-                status: payload.new.status as Appointment['status'],
+                status: payload.new.status || 'Not Confirmed',
+                statusCode: payload.new.status_code as Appointment['statusCode'],
                 date: payload.new.date,
                 notes: payload.new.notes || undefined,
                 createdAt: payload.new.created_at,
@@ -179,7 +208,8 @@ export function useAppointments() {
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
-                status: payload.new.status as Appointment['status'],
+                status: payload.new.status || 'Not Confirmed',
+                statusCode: payload.new.status_code as Appointment['statusCode'],
                 date: payload.new.date,
                 notes: payload.new.notes || undefined,
                 createdAt: payload.new.created_at,
@@ -231,10 +261,13 @@ export function useAppointments() {
       title: appointmentData.title,
       patient: appointmentData.patient,
       patientId: appointmentData.patientId,
+      assignedUserId: appointmentData.assignedUserId,
+      assignedUserName: appointmentData.assignedUserName,
       startTime: appointmentData.startTime,
       endTime: appointmentData.endTime,
       type: appointmentData.type,
       status: appointmentData.status,
+      statusCode: appointmentData.statusCode,
       date: appointmentData.date,
       notes: appointmentData.notes || undefined,
       createdAt: now,
@@ -264,6 +297,7 @@ export function useAppointments() {
           end_time: appointmentData.endTime,
           appointment_type: appointmentData.type,
           status: appointmentData.status,
+          status_code: appointmentData.statusCode,
           date: appointmentData.date,
           notes: appointmentData.notes || null
         }])
@@ -300,7 +334,8 @@ export function useAppointments() {
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
-        status: data.status as Appointment['status'],
+        status: data.status || 'Not Confirmed',
+        statusCode: data.status_code as Appointment['statusCode'],
         date: data.date,
         notes: data.notes || undefined,
         createdAt: data.created_at,
@@ -354,6 +389,10 @@ export function useAppointments() {
       if (updates.endTime) updateData.end_time = updates.endTime;
       if (updates.type) updateData.appointment_type = updates.type;
       if (updates.status) updateData.status = updates.status;
+      if (updates.statusCode) {
+        updateData.status_code = updates.statusCode;
+        updateData.status = getStatusNameFromCode(updates.statusCode);
+      }
       if (updates.date) updateData.date = updates.date;
       if (updates.notes !== undefined) updateData.notes = updates.notes || null;
 
@@ -396,7 +435,8 @@ export function useAppointments() {
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
-        status: data.status as Appointment['status'],
+        status: data.status || 'Not Confirmed',
+        statusCode: data.status_code as Appointment['statusCode'],
         date: data.date,
         notes: data.notes || undefined,
         createdAt: data.created_at,

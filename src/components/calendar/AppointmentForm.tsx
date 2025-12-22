@@ -333,7 +333,8 @@ export function AppointmentForm({
       startTime: startTime,
       endTime: endTime,
       type: selectedAppointmentType,
-      status: '?????', // Default status: Not Confirmed
+      status: 'Not Confirmed', // Default status name
+      statusCode: '?????' as const, // Default status code
       notes: notes.trim() || undefined
     };
 

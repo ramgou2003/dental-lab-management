@@ -23,7 +23,8 @@ interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
-  status: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk';
+  status: string; // Full status name
+  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk'; // Status code
   notes?: string;
 }
 
@@ -35,7 +36,7 @@ interface DayViewProps {
   isDialogOpen?: boolean;
   onClearSelection?: () => void;
   clearSelectionTrigger?: number;
-  onStatusChange?: (appointmentId: string, newStatus: Appointment['status']) => void;
+  onStatusChange?: (appointmentId: string, newStatusCode: Appointment['statusCode']) => void;
 }
 
 export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange }: DayViewProps) {
@@ -1051,7 +1052,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         }}
                       >
                     {/* Vertical status capsule on the left edge */}
-                    <div className={`absolute left-1 top-1 bottom-1 right-1 w-3 rounded-full ${getStatusDotColor(appointment.status)}`}></div>
+                    <div className={`absolute left-1 top-1 bottom-1 right-1 w-3 rounded-full ${getStatusDotColor(appointment.statusCode)}`}></div>
                     <div className="p-1 pl-5 pr-1 h-full flex flex-col justify-between">
                       {(() => {
                         // Calculate appointment duration in minutes

@@ -116,9 +116,9 @@ export function AppointmentsPage() {
     }
   };
 
-  const handleStatusChange = async (appointmentId: string, newStatus: Appointment['status']) => {
+  const handleStatusChange = async (appointmentId: string, newStatusCode: Appointment['statusCode']) => {
     try {
-      await updateAppointment(appointmentId, { status: newStatus });
+      await updateAppointment(appointmentId, { statusCode: newStatusCode });
     } catch (error) {
       // Error handling is done in the hook with toast notifications
       console.error('Failed to update appointment status:', error);
