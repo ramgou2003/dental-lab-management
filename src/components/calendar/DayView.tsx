@@ -204,15 +204,20 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Handler for delete appointment from context menu
   const handleDeleteFromMenu = (appointmentId: string) => {
+    // Close menu immediately
+    setOpenContextMenuId(null);
+
     // Find the appointment details
     const appointment = appointments.find(apt => apt.id === appointmentId);
     if (!appointment) return;
 
-    // Show confirmation dialog
-    setDeleteConfirmation({
-      appointmentId,
-      appointmentDetails: `${appointment.patient} - ${appointment.type} at ${appointment.startTime}`
-    });
+    // Show confirmation dialog with a small delay to ensure menu is closed first
+    setTimeout(() => {
+      setDeleteConfirmation({
+        appointmentId,
+        appointmentDetails: `${appointment.patient} - ${appointment.type} at ${appointment.startTime}`
+      });
+    }, 100);
   };
 
   const confirmDelete = () => {
@@ -1665,8 +1670,12 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       />
 
       {/* Status Change Confirmation Dialog */}
-      <AlertDialog open={!!statusChangeConfirmation} onOpenChange={(open) => !open && cancelStatusChange()}>
-        <AlertDialogContent>
+      <AlertDialog open={!!statusChangeConfirmation} onOpenChange={(open) => {
+        if (!open) {
+          cancelStatusChange();
+        }
+      }}>
+        <AlertDialogContent className="touch-manipulation">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1678,15 +1687,19 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelStatusChange}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmStatusChange}>Confirm</AlertDialogAction>
+            <AlertDialogCancel onClick={cancelStatusChange} className="touch-manipulation">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmStatusChange} className="touch-manipulation">Confirm</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteConfirmation} onOpenChange={(open) => !open && cancelDelete()}>
-        <AlertDialogContent>
+      <AlertDialog open={!!deleteConfirmation} onOpenChange={(open) => {
+        if (!open) {
+          cancelDelete();
+        }
+      }}>
+        <AlertDialogContent className="touch-manipulation">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Appointment</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1698,8 +1711,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+            <AlertDialogCancel onClick={cancelDelete} className="touch-manipulation">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 touch-manipulation">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
