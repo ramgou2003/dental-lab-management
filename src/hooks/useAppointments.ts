@@ -98,11 +98,26 @@ export function useAppointments() {
             schema: 'public',
             table: 'appointments'
           },
-          (payload) => {
+          async (payload) => {
             console.log('🔄 Real-time appointment change received:', payload.eventType, payload);
 
             // Handle different types of changes efficiently
             if (payload.eventType === 'INSERT' && payload.new) {
+              // Fetch assigned user name if assigned_user_id exists
+              let assignedUserName: string | undefined = undefined;
+              if (payload.new.assigned_user_id) {
+                try {
+                  const { data: userData } = await supabase
+                    .from('user_profiles')
+                    .select('full_name')
+                    .eq('id', payload.new.assigned_user_id)
+                    .single();
+                  assignedUserName = userData?.full_name || undefined;
+                } catch (err) {
+                  console.error('Error fetching user name:', err);
+                }
+              }
+
               // Transform new appointment data to match our interface
               const newAppointment: Appointment = {
                 id: payload.new.id,
@@ -110,7 +125,7 @@ export function useAppointments() {
                 patient: payload.new.patient_name,
                 patientId: payload.new.patient_id || undefined,
                 assignedUserId: payload.new.assigned_user_id || undefined,
-                assignedUserName: undefined, // Will be fetched on next refresh
+                assignedUserName: assignedUserName,
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
@@ -138,6 +153,21 @@ export function useAppointments() {
               });
 
             } else if (payload.eventType === 'UPDATE' && payload.new) {
+              // Fetch assigned user name if assigned_user_id exists
+              let assignedUserName: string | undefined = undefined;
+              if (payload.new.assigned_user_id) {
+                try {
+                  const { data: userData } = await supabase
+                    .from('user_profiles')
+                    .select('full_name')
+                    .eq('id', payload.new.assigned_user_id)
+                    .single();
+                  assignedUserName = userData?.full_name || undefined;
+                } catch (err) {
+                  console.error('Error fetching user name:', err);
+                }
+              }
+
               // Transform updated appointment data
               const updatedAppointment: Appointment = {
                 id: payload.new.id,
@@ -145,7 +175,7 @@ export function useAppointments() {
                 patient: payload.new.patient_name,
                 patientId: payload.new.patient_id || undefined,
                 assignedUserId: payload.new.assigned_user_id || undefined,
-                assignedUserName: undefined, // Will be fetched on next refresh
+                assignedUserName: assignedUserName,
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
@@ -244,6 +274,21 @@ export function useAppointments() {
         throw error;
       }
 
+      // Fetch assigned user name if assigned_user_id exists
+      let assignedUserName: string | undefined = undefined;
+      if (data.assigned_user_id) {
+        try {
+          const { data: userData } = await supabase
+            .from('user_profiles')
+            .select('full_name')
+            .eq('id', data.assigned_user_id)
+            .single();
+          assignedUserName = userData?.full_name || undefined;
+        } catch (err) {
+          console.error('Error fetching user name:', err);
+        }
+      }
+
       // Transform the returned data to match our interface
       const newAppointment: Appointment = {
         id: data.id,
@@ -251,7 +296,7 @@ export function useAppointments() {
         patient: data.patient_name,
         patientId: data.patient_id || undefined,
         assignedUserId: data.assigned_user_id || undefined,
-        assignedUserName: undefined, // Will be fetched on next refresh
+        assignedUserName: assignedUserName,
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
@@ -325,6 +370,21 @@ export function useAppointments() {
         throw error;
       }
 
+      // Fetch assigned user name if assigned_user_id exists
+      let assignedUserName: string | undefined = undefined;
+      if (data.assigned_user_id) {
+        try {
+          const { data: userData } = await supabase
+            .from('user_profiles')
+            .select('full_name')
+            .eq('id', data.assigned_user_id)
+            .single();
+          assignedUserName = userData?.full_name || undefined;
+        } catch (err) {
+          console.error('Error fetching user name:', err);
+        }
+      }
+
       // Transform the returned data to match our interface
       const updatedAppointment: Appointment = {
         id: data.id,
@@ -332,7 +392,7 @@ export function useAppointments() {
         patient: data.patient_name,
         patientId: data.patient_id || undefined,
         assignedUserId: data.assigned_user_id || undefined,
-        assignedUserName: undefined, // Will be fetched on next refresh
+        assignedUserName: assignedUserName,
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
