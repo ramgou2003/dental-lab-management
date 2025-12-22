@@ -401,39 +401,6 @@ export function AppointmentForm({
             </Select>
           </div>
 
-          {/* Assigned User Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-blue-700">
-              Assign To
-            </label>
-            <Select
-              value={selectedUserId || "unassigned"}
-              onValueChange={(value) => {
-                const newUserId = value === "unassigned" ? "" : value;
-                console.log('👤 User selection changed:', { from: selectedUserId, to: newUserId, value });
-                setSelectedUserId(newUserId);
-              }}
-              disabled={loadingUsers}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a user (optional)"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.full_name} ({user.email})
-                  </SelectItem>
-                ))}
-                {users.length === 0 && !loadingUsers && (
-                  <SelectItem value="no-users" disabled>
-                    No users found
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Appointment Type Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-blue-700">
@@ -502,6 +469,61 @@ export function AppointmentForm({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Assigned User Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-blue-700">
+              Assign To
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {/* Unassigned button */}
+              <Button
+                type="button"
+                variant={selectedUserId === "" ? "default" : "outline"}
+                className={`${
+                  selectedUserId === ""
+                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                }`}
+                onClick={() => {
+                  console.log('👤 User selection changed:', { from: selectedUserId, to: "" });
+                  setSelectedUserId("");
+                }}
+                disabled={loadingUsers}
+              >
+                Unassigned
+              </Button>
+
+              {/* User buttons */}
+              {users.map((user) => (
+                <Button
+                  key={user.id}
+                  type="button"
+                  variant={selectedUserId === user.id ? "default" : "outline"}
+                  className={`${
+                    selectedUserId === user.id
+                      ? "bg-blue-600 hover:bg-blue-700 text-white"
+                      : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                  }`}
+                  onClick={() => {
+                    console.log('👤 User selection changed:', { from: selectedUserId, to: user.id });
+                    setSelectedUserId(user.id);
+                  }}
+                  disabled={loadingUsers}
+                >
+                  {user.full_name}
+                </Button>
+              ))}
+
+              {users.length === 0 && !loadingUsers && (
+                <p className="text-sm text-gray-500">No users found</p>
+              )}
+
+              {loadingUsers && (
+                <p className="text-sm text-gray-500">Loading users...</p>
+              )}
             </div>
           </div>
 
