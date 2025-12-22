@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText } from "lucide-react";
+import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -37,9 +37,10 @@ interface DayViewProps {
   onClearSelection?: () => void;
   clearSelectionTrigger?: number;
   onStatusChange?: (appointmentId: string, newStatusCode: Appointment['statusCode']) => void;
+  onEdit?: (appointment: Appointment) => void;
 }
 
-export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange }: DayViewProps) {
+export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange, onEdit }: DayViewProps) {
   const navigate = useNavigate();
 
   // State for long-press handling (appointment cards)
@@ -1263,6 +1264,11 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           </ContextMenuItem>
                         </ContextMenuSubContent>
                       </ContextMenuSub>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => onEdit?.(appointment)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Appointment
+                      </ContextMenuItem>
                       <ContextMenuSeparator />
                       {appointment.type === 'consultation' ? (
                         <ContextMenuItem onClick={() => navigate(`/consultation/${appointment.id}`)}>

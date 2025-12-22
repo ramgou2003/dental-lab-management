@@ -174,6 +174,7 @@ export function AppointmentsPage() {
             onClearSelection={handleClearSelection}
             clearSelectionTrigger={clearSelectionTrigger}
             onStatusChange={handleStatusChange}
+            onEdit={handleEditAppointment}
           />
         </div>
       </div>
