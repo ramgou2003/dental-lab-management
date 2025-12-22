@@ -264,51 +264,51 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       key: 'printed-try-in',
       label: 'Printed Try In',
       shortLabel: 'Try In',
-      color: 'bg-green-100 border-green-300 text-green-800',
-      hoverColor: 'hover:bg-green-25',
-      selectedColor: 'bg-green-100 border-green-400',
-      dragColor: 'bg-green-200 border-green-500',
-      badgeColor: 'bg-green-500 text-white'
+      color: 'bg-blue-100 border-blue-300 text-blue-800',
+      hoverColor: 'hover:bg-blue-25',
+      selectedColor: 'bg-blue-100 border-blue-400',
+      dragColor: 'bg-blue-200 border-blue-500',
+      badgeColor: 'bg-blue-500 text-white'
     },
     {
       key: 'follow-up',
       label: 'Follow Up',
       shortLabel: 'Follow Up',
-      color: 'bg-orange-100 border-orange-300 text-orange-800',
-      hoverColor: 'hover:bg-orange-25',
-      selectedColor: 'bg-orange-100 border-orange-400',
-      dragColor: 'bg-orange-200 border-orange-500',
-      badgeColor: 'bg-orange-500 text-white'
+      color: 'bg-blue-100 border-blue-300 text-blue-800',
+      hoverColor: 'hover:bg-blue-25',
+      selectedColor: 'bg-blue-100 border-blue-400',
+      dragColor: 'bg-blue-200 border-blue-500',
+      badgeColor: 'bg-blue-500 text-white'
     },
     {
       key: 'data-collection',
       label: 'Data Collection',
       shortLabel: 'Data Collection',
-      color: 'bg-yellow-100 border-yellow-300 text-yellow-800',
-      hoverColor: 'hover:bg-yellow-25',
-      selectedColor: 'bg-yellow-100 border-yellow-400',
-      dragColor: 'bg-yellow-200 border-yellow-500',
-      badgeColor: 'bg-yellow-500 text-white'
+      color: 'bg-blue-100 border-blue-300 text-blue-800',
+      hoverColor: 'hover:bg-blue-25',
+      selectedColor: 'bg-blue-100 border-blue-400',
+      dragColor: 'bg-blue-200 border-blue-500',
+      badgeColor: 'bg-blue-500 text-white'
     },
     {
       key: 'surgery',
       label: 'Surgery',
       shortLabel: 'Surgery',
-      color: 'bg-purple-100 border-purple-300 text-purple-800',
-      hoverColor: 'hover:bg-purple-25',
-      selectedColor: 'bg-purple-100 border-purple-400',
-      dragColor: 'bg-purple-200 border-purple-500',
-      badgeColor: 'bg-purple-500 text-white'
+      color: 'bg-blue-100 border-blue-300 text-blue-800',
+      hoverColor: 'hover:bg-blue-25',
+      selectedColor: 'bg-blue-100 border-blue-400',
+      dragColor: 'bg-blue-200 border-blue-500',
+      badgeColor: 'bg-blue-500 text-white'
     },
     {
       key: 'emergency',
       label: 'Emergency',
       shortLabel: 'Emergency',
-      color: 'bg-red-100 border-red-300 text-red-800',
-      hoverColor: 'hover:bg-red-25',
-      selectedColor: 'bg-red-100 border-red-400',
-      dragColor: 'bg-red-200 border-red-500',
-      badgeColor: 'bg-red-500 text-white'
+      color: 'bg-blue-100 border-blue-300 text-blue-800',
+      hoverColor: 'hover:bg-blue-25',
+      selectedColor: 'bg-blue-100 border-blue-400',
+      dragColor: 'bg-blue-200 border-blue-500',
+      badgeColor: 'bg-blue-500 text-white'
     }
   ];
 
@@ -1039,8 +1039,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         }}
                       >
                     {/* Vertical status capsule on the left edge */}
-                    <div className={`absolute left-1 top-1 bottom-1 right-1 w-1.5 rounded-full ${getStatusDotColor(appointment.status)}`}></div>
-                    <div className="p-1 pl-3 pr-1 h-full flex flex-col justify-between">
+                    <div className={`absolute left-1 top-1 bottom-1 right-1 w-3 rounded-full ${getStatusDotColor(appointment.status)}`}></div>
+                    <div className="p-1 pl-5 pr-1 h-full flex flex-col justify-between">
                       {(() => {
                         // Calculate appointment duration in minutes
                         const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
