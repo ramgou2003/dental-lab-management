@@ -47,6 +47,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [isLongPress, setIsLongPress] = useState(false);
 
+  // State for controlling context menu open/close
+  const [openContextMenuId, setOpenContextMenuId] = useState<string | null>(null);
+
   // State for time slot long-press handling
   const [timeSlotLongPressTimer, setTimeSlotLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [isTimeSlotLongPress, setIsTimeSlotLongPress] = useState(false);
@@ -135,6 +138,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Handler for status change from context menu
   const handleStatusChangeFromMenu = (appointmentId: string, newStatus: Appointment['status']) => {
+    // Perform the status change
     if (onStatusChange) {
       onStatusChange(appointmentId, newStatus);
     }
@@ -142,6 +146,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Handler for viewing patient profile
   const handleViewPatientProfile = async (appointment: Appointment) => {
+    // Close menu immediately
+    setOpenContextMenuId(null);
+
     try {
       // Search for patient by full name
       const { data: patients, error } = await supabase
@@ -167,6 +174,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Handler for viewing health history
   const handleViewHealthHistory = async (appointment: Appointment) => {
+    // Close menu immediately
+    setOpenContextMenuId(null);
+
     try {
       const { data: patients, error } = await supabase
         .from('patients')
@@ -193,6 +203,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Handler for viewing comfort preference
   const handleViewComfortPreference = async (appointment: Appointment) => {
+    // Close menu immediately
+    setOpenContextMenuId(null);
+
     try {
       const { data: patients, error } = await supabase
         .from('patients')
@@ -220,11 +233,29 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   // Long-press handlers for appointment cards on touch devices
   const handleAppointmentTouchStart = (e: React.TouchEvent, appointment: Appointment) => {
     setIsLongPress(false);
+    const element = e.currentTarget as HTMLElement;
+
+    // Prevent default touch behavior to avoid white strip/overscroll
+    e.preventDefault();
+
+    // Add visual feedback for long press
+    element.style.transform = 'scale(0.98)';
+    element.style.opacity = '0.9';
+
     const timer = setTimeout(() => {
       setIsLongPress(true);
+
+      // Add haptic feedback if available
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+
+      // Prevent body scroll during context menu
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+
       // Trigger context menu programmatically
-      // We'll use a custom event to open the context menu
-      const element = e.currentTarget as HTMLElement;
       const contextMenuEvent = new MouseEvent('contextmenu', {
         bubbles: true,
         cancelable: true,
@@ -234,11 +265,33 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         clientY: e.touches[0].clientY,
       });
       element.dispatchEvent(contextMenuEvent);
+
+      // Reset visual feedback
+      element.style.transform = '';
+      element.style.opacity = '';
+
+      // Restore body scroll after a short delay
+      setTimeout(() => {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+      }, 100);
     }, 500); // 500ms long press duration
     setLongPressTimer(timer);
   };
 
   const handleAppointmentTouchEnd = (e: React.TouchEvent, appointment: Appointment) => {
+    const element = e.currentTarget as HTMLElement;
+
+    // Reset visual feedback
+    element.style.transform = '';
+    element.style.opacity = '';
+
+    // Restore body scroll in case it was locked
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
@@ -252,13 +305,71 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     setIsLongPress(false);
   };
 
-  const handleAppointmentTouchMove = () => {
+  const handleAppointmentTouchMove = (e: React.TouchEvent) => {
     // Cancel long press if user moves finger
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
+
+      // Reset visual feedback
+      const element = e.currentTarget as HTMLElement;
+      element.style.transform = '';
+      element.style.opacity = '';
     }
     setIsLongPress(false);
+  };
+
+  // Helper function to handle both click and touch events for menu items
+  const handleMenuItemAction = (action: () => void) => {
+    return {
+      onSelect: () => {
+        // Don't prevent default - let the menu close naturally
+        action();
+      },
+      onClick: () => {
+        action();
+      },
+      onTouchEnd: (e: React.TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Execute the action
+        action();
+
+        // Force close menu on touch devices
+        setTimeout(() => {
+          setOpenContextMenuId(null);
+        }, 50);
+      }
+    };
+  };
+
+  // Helper function for submenu triggers (needs different handling)
+  const handleSubMenuTrigger = () => {
+    return {
+      onTouchStart: (e: React.TouchEvent) => {
+        e.stopPropagation();
+      },
+      onTouchEnd: (e: React.TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Trigger click to open submenu
+        const target = e.currentTarget as HTMLElement;
+        target.click();
+      }
+    };
+  };
+
+  // Wrapper for edit appointment
+  const handleEditAppointment = (appointment: Appointment) => {
+    setOpenContextMenuId(null);
+    onEdit?.(appointment);
+  };
+
+  // Wrapper for navigate to consultation
+  const handleNavigateToConsultation = (appointmentId: string) => {
+    setOpenContextMenuId(null);
+    navigate(`/consultation/${appointmentId}`);
   };
 
   const hours = Array.from({ length: 13 }, (_, i) => i + 7); // 7 AM to 7 PM
@@ -1014,15 +1125,25 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                 const leftPosition = `calc(60px + ${typeIndex} * ${columnWidth})`;
 
                 return (
-                  <ContextMenu key={appointment.id}>
+                  <ContextMenu
+                    key={appointment.id}
+                    open={openContextMenuId === appointment.id}
+                    onOpenChange={(open) => {
+                      setOpenContextMenuId(open ? appointment.id : null);
+                    }}
+                    modal={true}
+                  >
                     <ContextMenuTrigger asChild>
                       <div
-                        className={`absolute ${typeColors.color} rounded-lg border-2 shadow-sm cursor-pointer hover:shadow-lg transition-all pointer-events-auto z-10`}
+                        className={`absolute ${typeColors.color} rounded-lg border-2 shadow-sm cursor-pointer hover:shadow-lg transition-all pointer-events-auto z-10 select-none`}
                         style={{
                           left: `calc(${leftPosition} + 8px)`, // Add left padding
                           width: `calc(${columnWidth} - 16px)`, // Subtract left and right padding
                           top: `${topPosition}px`,
                           height: `${height}px`,
+                          touchAction: 'none',
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none',
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1049,7 +1170,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         }}
                         onTouchMove={(e) => {
                           e.stopPropagation();
-                          handleAppointmentTouchMove();
+                          handleAppointmentTouchMove(e);
                         }}
                       >
                     {/* Vertical status capsule on the left edge */}
@@ -1215,77 +1336,77 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                     </div>
                       </div>
                     </ContextMenuTrigger>
-                    <ContextMenuContent className="w-56">
+                    <ContextMenuContent className="w-56 touch-manipulation select-none">
                       <ContextMenuSub>
-                        <ContextMenuSubTrigger>
+                        <ContextMenuSubTrigger className="touch-manipulation select-none" {...handleSubMenuTrigger()}>
                           <CheckCircle className="mr-2 h-4 w-4" />
                           Change Status
                         </ContextMenuSubTrigger>
-                        <ContextMenuSubContent>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, '?????')}>
+                        <ContextMenuSubContent className="touch-manipulation select-none">
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
                             <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
                             Not Confirmed
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'FIRM')}>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
                             <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
                             Appointment Confirmed
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'EFIRM')}>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
                             <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
                             Electronically Confirmed
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'EMER')}>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
                             <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
                             Emergency Patient
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'HERE')}>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
                             <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
                             Patient has Arrived
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'READY')}>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
                             <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
                             Ready for Operatory
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'LM1')}>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
                             <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
                             Left 1st Message
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'LM2')}>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
                             <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
                             Left 2nd Message
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'MULTI')}>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
                             <CheckCircle className="mr-2 h-4 w-4 text-indigo-600" />
                             Multi-Appointment
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, '2wk')}>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
                             <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
                             2 Week Calls
                           </ContextMenuItem>
                         </ContextMenuSubContent>
                       </ContextMenuSub>
                       <ContextMenuSeparator />
-                      <ContextMenuItem onClick={() => onEdit?.(appointment)}>
+                      <ContextMenuItem {...handleMenuItemAction(() => handleEditAppointment(appointment))}>
                         <Edit className="mr-2 h-4 w-4" />
                         Edit Appointment
                       </ContextMenuItem>
                       <ContextMenuSeparator />
                       {appointment.type === 'consultation' ? (
-                        <ContextMenuItem onClick={() => navigate(`/consultation/${appointment.id}`)}>
+                        <ContextMenuItem {...handleMenuItemAction(() => handleNavigateToConsultation(appointment.id))}>
                           <FileText className="mr-2 h-4 w-4" />
                           View Consultation
                         </ContextMenuItem>
                       ) : (
-                        <ContextMenuItem onClick={() => handleViewPatientProfile(appointment)}>
+                        <ContextMenuItem {...handleMenuItemAction(() => handleViewPatientProfile(appointment))}>
                           <UserCircle className="mr-2 h-4 w-4" />
                           View Patient Profile
                         </ContextMenuItem>
                       )}
-                      <ContextMenuItem onClick={() => handleViewHealthHistory(appointment)}>
+                      <ContextMenuItem {...handleMenuItemAction(() => handleViewHealthHistory(appointment))}>
                         <Heart className="mr-2 h-4 w-4" />
                         View Health History
                       </ContextMenuItem>
-                      <ContextMenuItem onClick={() => handleViewComfortPreference(appointment)}>
+                      <ContextMenuItem {...handleMenuItemAction(() => handleViewComfortPreference(appointment))}>
                         <Smile className="mr-2 h-4 w-4" />
                         View Comfort Preference
                       </ContextMenuItem>
