@@ -326,20 +326,41 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         // Don't prevent default - let the menu close naturally
         action();
       },
-      onClick: () => {
+      onClick: (e: React.MouseEvent) => {
         action();
+      },
+      onTouchStart: (e: React.TouchEvent) => {
+        // Mark that we're handling a touch event
+        const target = e.currentTarget as HTMLElement;
+        target.setAttribute('data-touch-active', 'true');
       },
       onTouchEnd: (e: React.TouchEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
+        const target = e.currentTarget as HTMLElement;
+
         // Execute the action
         action();
 
-        // Force close menu on touch devices
+        // Force close menu on touch devices by simulating escape key
         setTimeout(() => {
+          // Dispatch escape key event to close menu
+          const escapeEvent = new KeyboardEvent('keydown', {
+            key: 'Escape',
+            code: 'Escape',
+            keyCode: 27,
+            bubbles: true,
+            cancelable: true
+          });
+          document.dispatchEvent(escapeEvent);
+
+          // Also set state to null as backup
           setOpenContextMenuId(null);
-        }, 50);
+
+          // Clean up
+          target.removeAttribute('data-touch-active');
+        }, 100);
       }
     };
   };
