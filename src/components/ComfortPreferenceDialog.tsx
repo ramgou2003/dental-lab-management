@@ -76,85 +76,94 @@ export function ComfortPreferenceDialog({ open, onOpenChange, patientId, patient
           </div>
         ) : (
           <div className="space-y-4 mt-4">
-            {/* Anxiety Control */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Heart className="h-5 w-5 text-pink-600" />
-                  Anxiety Control Preferences
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderPreferenceList(comfortData.anxiety_control)}
-              </CardContent>
-            </Card>
+            {/* Row 1: Anxiety Control and Sensory Sensitivities */}
+            <div className="grid grid-cols-2 gap-4 items-start">
+              {/* Anxiety Control */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Heart className="h-5 w-5 text-pink-600" />
+                    Anxiety Control Preferences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPreferenceList(comfortData.anxiety_control)}
+                </CardContent>
+              </Card>
 
-            {/* Pain and Injection Preferences */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Star className="h-5 w-5 text-orange-600" />
-                  Pain Management & Injection Preferences
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderPreferenceList(comfortData.pain_injection)}
-              </CardContent>
-            </Card>
+              {/* Sensory Sensitivities */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Eye className="h-5 w-5 text-purple-600" />
+                    Sensory Sensitivities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPreferenceList(comfortData.sensory_sensitivities)}
+                </CardContent>
+              </Card>
+            </div>
 
-            {/* Communication Preferences */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <MessageCircle className="h-5 w-5 text-blue-600" />
-                  Communication Preferences
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderPreferenceList(comfortData.communication)}
-              </CardContent>
-            </Card>
+            {/* Row 2: Pain Management and Physical Comfort */}
+            <div className="grid grid-cols-2 gap-4 items-start">
+              {/* Pain and Injection Preferences */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Star className="h-5 w-5 text-orange-600" />
+                    Pain Management & Injection Preferences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPreferenceList(comfortData.pain_injection)}
+                </CardContent>
+              </Card>
 
-            {/* Sensory Sensitivities */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Eye className="h-5 w-5 text-purple-600" />
-                  Sensory Sensitivities
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderPreferenceList(comfortData.sensory_sensitivities)}
-              </CardContent>
-            </Card>
+              {/* Physical Comfort */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <User className="h-5 w-5 text-green-600" />
+                    Physical Comfort Needs
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPreferenceList(comfortData.physical_comfort)}
+                </CardContent>
+              </Card>
+            </div>
 
-            {/* Physical Comfort */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <User className="h-5 w-5 text-green-600" />
-                  Physical Comfort Needs
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderPreferenceList(comfortData.physical_comfort)}
-              </CardContent>
-            </Card>
+            {/* Row 3: Communication and Service Preferences */}
+            <div className="grid grid-cols-2 gap-4 items-start">
+              {/* Communication Preferences */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <MessageCircle className="h-5 w-5 text-blue-600" />
+                    Communication Preferences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPreferenceList(comfortData.communication)}
+                </CardContent>
+              </Card>
 
-            {/* Service Preferences */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Smile className="h-5 w-5 text-indigo-600" />
-                  Service Preferences
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderPreferenceList(comfortData.service_preferences)}
-              </CardContent>
-            </Card>
+              {/* Service Preferences */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Smile className="h-5 w-5 text-indigo-600" />
+                    Service Preferences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPreferenceList(comfortData.service_preferences)}
+                </CardContent>
+              </Card>
+            </div>
 
-            {/* Other Concerns */}
+            {/* Other Concerns - Full Width */}
             {comfortData.other_concerns && (
               <Card>
                 <CardHeader>

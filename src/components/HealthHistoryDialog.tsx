@@ -164,49 +164,106 @@ export function HealthHistoryDialog({ open, onOpenChange, patientId, patientName
           </div>
         ) : (
           <div className="space-y-4 mt-4">
-            {/* Critical Conditions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <AlertCircle className="h-5 w-5 text-red-600" />
-                  Critical Conditions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderCriticalConditions()}
-              </CardContent>
-            </Card>
-
-            {/* System-Specific Conditions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Heart className="h-5 w-5 text-blue-600" />
-                  System-Specific Conditions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderSystemSpecific()}
-              </CardContent>
-            </Card>
-
-            {/* Additional Conditions */}
-            {healthData.additional_conditions && healthData.additional_conditions.length > 0 && (
-              <Card>
+            {/* Row 1: Critical Conditions and Allergies */}
+            <div className="grid grid-cols-2 gap-4 items-start">
+              {/* Critical Conditions */}
+              <Card className="h-full">
                 <CardHeader>
-                  <CardTitle className="text-lg">Additional Conditions</CardTitle>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                    Critical Conditions
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {healthData.additional_conditions.map((condition: string, index: number) => (
-                      <Badge key={index} variant="secondary">{condition}</Badge>
-                    ))}
-                  </div>
+                  {renderCriticalConditions()}
                 </CardContent>
               </Card>
+
+              {/* Allergies */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <AlertCircle className="h-5 w-5 text-orange-600" />
+                    Allergies
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderAllergies()}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Row 2: System-Specific Conditions and Current Medications */}
+            <div className="grid grid-cols-2 gap-4 items-start">
+              {/* System-Specific Conditions */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Heart className="h-5 w-5 text-blue-600" />
+                    System-Specific Conditions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderSystemSpecific()}
+                </CardContent>
+              </Card>
+
+              {/* Current Medications */}
+              <Card className="h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Pill className="h-5 w-5 text-green-600" />
+                    Current Medications
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderMedications()}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Row 3: Additional Conditions and Pharmacy (if they exist) */}
+            {((healthData.additional_conditions && healthData.additional_conditions.length > 0) ||
+              (healthData.current_pharmacy_name || healthData.current_pharmacy_city)) && (
+              <div className="grid grid-cols-2 gap-4 items-start">
+                {/* Additional Conditions */}
+                {healthData.additional_conditions && healthData.additional_conditions.length > 0 ? (
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Additional Conditions</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {healthData.additional_conditions.map((condition: string, index: number) => (
+                          <Badge key={index} variant="secondary">{condition}</Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div></div>
+                )}
+
+                {/* Pharmacy Information */}
+                {(healthData.current_pharmacy_name || healthData.current_pharmacy_city) ? (
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Current Pharmacy</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-700">
+                        {healthData.current_pharmacy_name}
+                        {healthData.current_pharmacy_city && `, ${healthData.current_pharmacy_city}`}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div></div>
+                )}
+              </div>
             )}
 
-            {/* Recent Health Changes */}
+            {/* Recent Health Changes - Full Width */}
             {healthData.recent_health_changes?.hasChanges && (
               <Card>
                 <CardHeader>
@@ -214,47 +271,6 @@ export function HealthHistoryDialog({ open, onOpenChange, patientId, patientName
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-gray-700">{healthData.recent_health_changes.description}</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Allergies */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <AlertCircle className="h-5 w-5 text-orange-600" />
-                  Allergies
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderAllergies()}
-              </CardContent>
-            </Card>
-
-            {/* Current Medications */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Pill className="h-5 w-5 text-green-600" />
-                  Current Medications
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderMedications()}
-              </CardContent>
-            </Card>
-
-            {/* Pharmacy Information */}
-            {(healthData.current_pharmacy_name || healthData.current_pharmacy_city) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Current Pharmacy</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-700">
-                    {healthData.current_pharmacy_name}
-                    {healthData.current_pharmacy_city && `, ${healthData.current_pharmacy_city}`}
-                  </p>
                 </CardContent>
               </Card>
             )}
