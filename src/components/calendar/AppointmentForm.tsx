@@ -357,7 +357,7 @@ export function AppointmentForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-blue-900">
             New Appointment
@@ -368,73 +368,77 @@ export function AppointmentForm({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Patient Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-blue-700">
-              Patient *
-            </label>
-            <Select
-              value={selectedPatientId || undefined}
-              onValueChange={(patientId) => {
-                setSelectedPatientId(patientId);
-                // Find the patient name for display
-                const patient = patients.find(p => p.id === patientId);
-                setSelectedPatient(patient?.full_name || '');
-              }}
-              disabled={loadingPatients}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={loadingPatients ? "Loading patients..." : "Select a patient"} />
-              </SelectTrigger>
-              <SelectContent>
-                {patients.map((patient) => (
-                  <SelectItem key={patient.id} value={patient.id}>
-                    {patient.full_name}
-                  </SelectItem>
-                ))}
-                {patients.length === 0 && !loadingPatients && (
-                  <SelectItem value="no-patients" disabled>
-                    No patients found
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Appointment Type Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-blue-700">
-              Appointment Type *
-            </label>
-            <Select value={selectedAppointmentType || undefined} onValueChange={setSelectedAppointmentType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select appointment type" />
-              </SelectTrigger>
-              <SelectContent>
-                {appointmentTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Date Selection */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-blue-700">
-              Date *
-            </label>
-            <input
-              type="date"
-              value={formatDateForInput(selectedDate)}
-              onChange={(e) => setSelectedDate(createDateFromInput(e.target.value))}
-              className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Time Selection */}
+          {/* Row 1: Patient and Appointment Type */}
           <div className="grid grid-cols-2 gap-4">
+            {/* Patient Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-blue-700">
+                Patient *
+              </label>
+              <Select
+                value={selectedPatientId || undefined}
+                onValueChange={(patientId) => {
+                  setSelectedPatientId(patientId);
+                  // Find the patient name for display
+                  const patient = patients.find(p => p.id === patientId);
+                  setSelectedPatient(patient?.full_name || '');
+                }}
+                disabled={loadingPatients}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingPatients ? "Loading patients..." : "Select a patient"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {patients.map((patient) => (
+                    <SelectItem key={patient.id} value={patient.id}>
+                      {patient.full_name}
+                    </SelectItem>
+                  ))}
+                  {patients.length === 0 && !loadingPatients && (
+                    <SelectItem value="no-patients" disabled>
+                      No patients found
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Appointment Type Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-blue-700">
+                Appointment Type *
+              </label>
+              <Select value={selectedAppointmentType || undefined} onValueChange={setSelectedAppointmentType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select appointment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {appointmentTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 2: Date and Time */}
+          <div className="grid grid-cols-3 gap-4">
+            {/* Date Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-blue-700">
+                Date *
+              </label>
+              <input
+                type="date"
+                value={formatDateForInput(selectedDate)}
+                onChange={(e) => setSelectedDate(createDateFromInput(e.target.value))}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Start Time */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-blue-700">
                 Start Time *
@@ -453,6 +457,7 @@ export function AppointmentForm({
               </Select>
             </div>
 
+            {/* End Time */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-blue-700">
                 End Time *
@@ -477,7 +482,7 @@ export function AppointmentForm({
             <label className="text-sm font-medium text-blue-700">
               Assign To
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {/* Unassigned button */}
               <Button
                 type="button"
@@ -518,11 +523,11 @@ export function AppointmentForm({
               ))}
 
               {users.length === 0 && !loadingUsers && (
-                <p className="text-sm text-gray-500">No users found</p>
+                <p className="text-sm text-gray-500 col-span-4">No users found</p>
               )}
 
               {loadingUsers && (
-                <p className="text-sm text-gray-500">Loading users...</p>
+                <p className="text-sm text-gray-500 col-span-4">Loading users...</p>
               )}
             </div>
           </div>

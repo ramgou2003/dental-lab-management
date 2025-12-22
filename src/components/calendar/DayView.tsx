@@ -13,6 +13,8 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { HealthHistoryDialog } from "@/components/HealthHistoryDialog";
+import { ComfortPreferenceDialog } from "@/components/ComfortPreferenceDialog";
 
 interface Appointment {
   id: string;
@@ -46,6 +48,12 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   // State for time slot long-press handling
   const [timeSlotLongPressTimer, setTimeSlotLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [isTimeSlotLongPress, setIsTimeSlotLongPress] = useState(false);
+
+  // State for health history and comfort preference dialogs
+  const [healthHistoryDialogOpen, setHealthHistoryDialogOpen] = useState(false);
+  const [comfortPreferenceDialogOpen, setComfortPreferenceDialogOpen] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
+  const [selectedPatientName, setSelectedPatientName] = useState<string>("");
 
   // Function to get status capsule color
   const getStatusDotColor = (status: string) => {
@@ -170,7 +178,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       }
 
       if (patients && patients.length > 0) {
-        navigate(`/patients/${patients[0].id}?tab=health-history`);
+        setSelectedPatientId(patients[0].id);
+        setSelectedPatientName(patients[0].full_name);
+        setHealthHistoryDialogOpen(true);
       } else {
         alert(`Patient "${appointment.patient}" not found in database.`);
       }
@@ -194,7 +204,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       }
 
       if (patients && patients.length > 0) {
-        navigate(`/patients/${patients[0].id}?tab=comfort-preference`);
+        setSelectedPatientId(patients[0].id);
+        setSelectedPatientName(patients[0].full_name);
+        setComfortPreferenceDialogOpen(true);
       } else {
         alert(`Patient "${appointment.patient}" not found in database.`);
       }
@@ -1399,6 +1411,22 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
           </div>
         </div>
       </div>
+
+      {/* Health History Dialog */}
+      <HealthHistoryDialog
+        open={healthHistoryDialogOpen}
+        onOpenChange={setHealthHistoryDialogOpen}
+        patientId={selectedPatientId}
+        patientName={selectedPatientName}
+      />
+
+      {/* Comfort Preference Dialog */}
+      <ComfortPreferenceDialog
+        open={comfortPreferenceDialogOpen}
+        onOpenChange={setComfortPreferenceDialogOpen}
+        patientId={selectedPatientId}
+        patientName={selectedPatientName}
+      />
     </div>
   );
 }
