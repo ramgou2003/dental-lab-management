@@ -1095,7 +1095,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                   </div>
                                 )}
                                 <div className="text-[9px] font-semibold text-gray-700">
-                                  {appointment.status}
+                                  {appointment.statusCode}
                                 </div>
                               </div>
                               <div className="flex items-center gap-0.5 flex-shrink-0">
@@ -1137,7 +1137,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                   </div>
                                 )}
                                 <div className="text-[10px] font-semibold text-gray-700">
-                                  {appointment.status}
+                                  {appointment.statusCode}
                                 </div>
                               </div>
                               {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
@@ -1223,43 +1223,43 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         <ContextMenuSubContent>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, '?????')}>
                             <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
-                            ????? Not Confirmed
+                            Not Confirmed
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'FIRM')}>
                             <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                            FIRM Appointment Confirmed
+                            Appointment Confirmed
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'EFIRM')}>
                             <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                            EFIRM Electronically Confirmed
+                            Electronically Confirmed
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'EMER')}>
                             <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
-                            EMER Emergency Patient
+                            Emergency Patient
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'HERE')}>
                             <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
-                            HERE Patient has Arrived
+                            Patient has Arrived
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'READY')}>
                             <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
-                            READY Ready for Operatory
+                            Ready for Operatory
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'LM1')}>
                             <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
-                            LM1 Left 1st Message
+                            Left 1st Message
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'LM2')}>
                             <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
-                            LM2 Left 2nd Message
+                            Left 2nd Message
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, 'MULTI')}>
                             <CheckCircle className="mr-2 h-4 w-4 text-indigo-600" />
-                            MULTI Multi-Appointment
+                            Multi-Appointment
                           </ContextMenuItem>
                           <ContextMenuItem onClick={() => handleStatusChangeFromMenu(appointment.id, '2wk')}>
                             <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
-                            2wk 2 Week Calls
+                            2 Week Calls
                           </ContextMenuItem>
                         </ContextMenuSubContent>
                       </ContextMenuSub>
