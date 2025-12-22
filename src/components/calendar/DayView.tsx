@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit } from "lucide-react";
+import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -48,9 +48,10 @@ interface DayViewProps {
   clearSelectionTrigger?: number;
   onStatusChange?: (appointmentId: string, newStatusCode: Appointment['statusCode']) => void;
   onEdit?: (appointment: Appointment) => void;
+  onDelete?: (appointmentId: string) => void;
 }
 
-export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange, onEdit }: DayViewProps) {
+export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange, onEdit, onDelete }: DayViewProps) {
   const navigate = useNavigate();
 
   // State for long-press handling (appointment cards)
@@ -64,6 +65,12 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [statusChangeConfirmation, setStatusChangeConfirmation] = useState<{
     appointmentId: string;
     newStatus: Appointment['status'];
+    appointmentDetails: string;
+  } | null>(null);
+
+  // State for delete confirmation
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    appointmentId: string;
     appointmentDetails: string;
   } | null>(null);
 
@@ -193,6 +200,30 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       '2wk': '2 Week Calls'
     };
     return statusMap[statusCode] || statusCode;
+  };
+
+  // Handler for delete appointment from context menu
+  const handleDeleteFromMenu = (appointmentId: string) => {
+    // Find the appointment details
+    const appointment = appointments.find(apt => apt.id === appointmentId);
+    if (!appointment) return;
+
+    // Show confirmation dialog
+    setDeleteConfirmation({
+      appointmentId,
+      appointmentDetails: `${appointment.patient} - ${appointment.type} at ${appointment.startTime}`
+    });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmation && onDelete) {
+      onDelete(deleteConfirmation.appointmentId);
+    }
+    setDeleteConfirmation(null);
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmation(null);
   };
 
   // Handler for viewing patient profile
@@ -1482,6 +1513,11 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         <Smile className="mr-2 h-4 w-4" />
                         View Comfort Preference
                       </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem {...handleMenuItemAction(() => handleDeleteFromMenu(appointment.id))} className="text-red-600 focus:text-red-600">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Appointment
+                      </ContextMenuItem>
                     </ContextMenuContent>
                   </ContextMenu>
                 );
@@ -1644,6 +1680,26 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
           <AlertDialogFooter>
             <AlertDialogCancel onClick={cancelStatusChange}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmStatusChange}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmation} onOpenChange={(open) => !open && cancelDelete()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Appointment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this appointment? This action cannot be undone.
+              <br /><br />
+              <span className="text-sm text-gray-600">
+                Appointment: {deleteConfirmation?.appointmentDetails}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
