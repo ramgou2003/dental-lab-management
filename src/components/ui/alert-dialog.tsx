@@ -99,29 +99,71 @@ AlertDialogDescription.displayName =
 const AlertDialogAction = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Action>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Action
-    ref={ref}
-    className={cn(buttonVariants(), className)}
-    {...props}
-  />
-))
+>(({ className, onClick, ...props }, ref) => {
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (buttonRef.current) {
+      buttonRef.current.click();
+    }
+  };
+
+  return (
+    <AlertDialogPrimitive.Action
+      ref={(node) => {
+        buttonRef.current = node;
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+      }}
+      className={cn(buttonVariants(), "touch-manipulation", className)}
+      onClick={onClick}
+      onTouchEnd={handleTouchEnd}
+      {...props}
+    />
+  );
+})
 AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
 
 const AlertDialogCancel = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel>
->(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Cancel
-    ref={ref}
-    className={cn(
-      buttonVariants({ variant: "outline" }),
-      "mt-2 sm:mt-0",
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, onClick, ...props }, ref) => {
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (buttonRef.current) {
+      buttonRef.current.click();
+    }
+  };
+
+  return (
+    <AlertDialogPrimitive.Cancel
+      ref={(node) => {
+        buttonRef.current = node;
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+      }}
+      className={cn(
+        buttonVariants({ variant: "outline" }),
+        "mt-2 sm:mt-0 touch-manipulation",
+        className
+      )}
+      onClick={onClick}
+      onTouchEnd={handleTouchEnd}
+      {...props}
+    />
+  );
+})
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
 
 export {

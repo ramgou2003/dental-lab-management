@@ -470,8 +470,13 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // Wrapper for edit appointment
   const handleEditAppointment = (appointment: Appointment) => {
+    // Close menu immediately
     setOpenContextMenuId(null);
-    onEdit?.(appointment);
+
+    // Open edit form with a small delay to ensure menu is closed first
+    setTimeout(() => {
+      onEdit?.(appointment);
+    }, 100);
   };
 
   // Wrapper for navigate to consultation
