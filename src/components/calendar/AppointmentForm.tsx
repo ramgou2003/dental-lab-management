@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { X, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Patient {
@@ -42,15 +43,35 @@ export function AppointmentForm({
   const [selectedPatient, setSelectedPatient] = useState(''); // Patient name for display
   const [selectedPatientId, setSelectedPatientId] = useState(''); // Patient ID for database
   const [selectedAppointmentType, setSelectedAppointmentType] = useState('');
+  const [selectedSubtype, setSelectedSubtype] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('09:30');
   const [notes, setNotes] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
+  const [patientSearchQuery, setPatientSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState(''); // Assigned user ID
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // Subtype options based on appointment type
+  const subtypeOptions: Record<string, { value: string; label: string }[]> = {
+    'follow-up': [
+      { value: '7-day-followup', label: '7 Day Follow-up' },
+      { value: '30-day-followup', label: '30 Days Follow-up' },
+      { value: 'observation-followup', label: 'Follow-up for Observation' }
+    ],
+    'printed-try-in': [
+      { value: 'printed-try-in-delivery', label: 'Printed Try-in Delivery' },
+      { value: '82-day-appliance-delivery', label: '82 Days PTI Delivery' },
+      { value: '120-day-final-delivery', label: '120 Days Final Delivery' }
+    ],
+    'data-collection': [
+      { value: '75-day-data-collection', label: '75 Days Data Collection for PTI' },
+      { value: 'final-data-collection', label: 'Final Data Collection' }
+    ]
+  };
 
   // Helper function to format date for input (YYYY-MM-DD) using EST timezone
   const formatDateForInput = (date: Date) => {
@@ -178,10 +199,11 @@ export function AppointmentForm({
   // Appointment types matching calendar columns
   const appointmentTypes = [
     { id: 'consultation', name: 'Consult' },
-    { id: 'printed-try-in', name: 'Printed Try In' },
     { id: 'follow-up', name: 'Follow Up' },
     { id: 'data-collection', name: 'Data Collection' },
+    { id: 'printed-try-in', name: 'Appliance Delivery' },
     { id: 'surgery', name: 'Surgery' },
+    { id: 'surgical-revision', name: 'Surgical Revision' },
     { id: 'emergency', name: 'Emergency' }
   ];
 
@@ -202,15 +224,43 @@ export function AppointmentForm({
 
   const timeSlots = generateTimeSlots();
 
-  // Fetch patients and users when dialog opens or appointment type changes
+  // Fetch patients and users when dialog opens
   useEffect(() => {
     if (isOpen) {
       fetchPatients();
       fetchUsers();
     }
-  }, [isOpen, selectedAppointmentType]);
+  }, [isOpen]);
 
-  // Initialize form when dialog opens
+  // Refetch patients when appointment type changes (without resetting form)
+  useEffect(() => {
+    if (isOpen && selectedAppointmentType) {
+      fetchPatients();
+    }
+  }, [selectedAppointmentType]);
+
+  // Reset subtype when appointment type changes
+  useEffect(() => {
+    if (isOpen && selectedAppointmentType) {
+      // Check if the new appointment type has subtypes
+      const hasSubtypes = subtypeOptions[selectedAppointmentType];
+
+      // If the new type doesn't have subtypes, clear the subtype
+      if (!hasSubtypes && selectedSubtype) {
+        setSelectedSubtype('');
+      }
+
+      // If the new type has subtypes, check if the current subtype is valid for this type
+      if (hasSubtypes && selectedSubtype) {
+        const validSubtypes = subtypeOptions[selectedAppointmentType].map(s => s.value);
+        if (!validSubtypes.includes(selectedSubtype)) {
+          setSelectedSubtype('');
+        }
+      }
+    }
+  }, [selectedAppointmentType, isOpen]);
+
+  // Initialize form when dialog opens (only run once when dialog opens)
   useEffect(() => {
     if (isOpen) {
       console.log('Form initializing with:', {
@@ -238,6 +288,7 @@ export function AppointmentForm({
         }
 
         setSelectedAppointmentType(editingAppointment.type || '');
+        setSelectedSubtype(editingAppointment.subtype || '');
 
         // Handle date properly in EST timezone
         if (editingAppointment.date) {
@@ -257,11 +308,12 @@ export function AppointmentForm({
         setEndTime(formatTimeForSelect(editingAppointment.endTime) || '09:30');
         setNotes(editingAppointment.notes || '');
       } else {
-        // Reset form for new appointment
+        // Reset form for new appointment (only when dialog first opens)
         setSelectedPatient('');
         setSelectedPatientId('');
         setSelectedUserId('');
         setNotes('');
+        setSelectedSubtype('');
 
         // Only set appointment type if it's valid
         if (appointmentType && appointmentType.trim() !== '') {
@@ -291,16 +343,36 @@ export function AppointmentForm({
         }
       }
     }
-  }, [isOpen, patients]);
+  }, [isOpen]);
 
-  // Watch for prop changes and update form accordingly
+  // Update patient ID when patients list is loaded (for edit mode)
+  useEffect(() => {
+    if (editingAppointment && !selectedPatientId && editingAppointment.patient && patients.length > 0) {
+      const patient = patients.find(p => p.full_name === editingAppointment.patient);
+      if (patient) {
+        setSelectedPatientId(patient.id);
+      }
+    }
+  }, [patients, editingAppointment, selectedPatientId]);
+
+  // Clear patient search when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setPatientSearchQuery('');
+    }
+  }, [isOpen]);
+
+  // Clear subtype when appointment type changes (unless editing)
+  useEffect(() => {
+    if (!editingAppointment) {
+      setSelectedSubtype('');
+    }
+  }, [selectedAppointmentType, editingAppointment]);
+
+  // Watch for prop changes and update form accordingly (but not appointment type - that's set on open)
   useEffect(() => {
     if (isOpen && !editingAppointment) {
-      console.log('Props changed, updating form:', { appointmentType, initialTime, initialEndTime });
-
-      if (appointmentType && appointmentType.trim() !== '' && appointmentType !== selectedAppointmentType) {
-        setSelectedAppointmentType(appointmentType);
-      }
+      console.log('Props changed, updating form:', { initialTime, initialEndTime });
 
       if (initialTime && initialTime.trim() !== '' && initialTime !== startTime) {
         setStartTime(initialTime);
@@ -314,12 +386,22 @@ export function AppointmentForm({
         setSelectedDate(initialDate);
       }
     }
-  }, [appointmentType, initialTime, initialEndTime, initialDate, isOpen, editingAppointment, selectedAppointmentType, startTime, endTime, selectedDate]);
+  }, [initialTime, initialEndTime, initialDate, isOpen, editingAppointment, startTime, endTime, selectedDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedPatientId || !selectedAppointmentType) {
+      return;
+    }
+
+    // Validate subtype is required for appointment types that have subtypes
+    if (selectedAppointmentType && subtypeOptions[selectedAppointmentType] && !selectedSubtype) {
+      toast({
+        title: "Validation Error",
+        description: "Please select an appointment subtype",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -333,6 +415,7 @@ export function AppointmentForm({
       startTime: startTime,
       endTime: endTime,
       type: selectedAppointmentType,
+      subtype: selectedSubtype || undefined, // Appointment subtype
       status: editingAppointment?.status || 'Not Confirmed', // Preserve existing status or use default
       statusCode: editingAppointment?.statusCode || '?????' as const, // Preserve existing status code or use default
       notes: notes.trim() || undefined
@@ -349,6 +432,7 @@ export function AppointmentForm({
     setSelectedPatientId('');
     setSelectedUserId('');
     setSelectedAppointmentType('');
+    setSelectedSubtype('');
     setSelectedDate(new Date());
     setStartTime('09:00');
     setEndTime('09:30');
@@ -390,16 +474,53 @@ export function AppointmentForm({
                   <SelectValue placeholder={loadingPatients ? "Loading patients..." : "Select a patient"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {patients.map((patient) => (
-                    <SelectItem key={patient.id} value={patient.id}>
-                      {patient.full_name}
-                    </SelectItem>
-                  ))}
-                  {patients.length === 0 && !loadingPatients && (
-                    <SelectItem value="no-patients" disabled>
-                      No patients found
-                    </SelectItem>
-                  )}
+                  {/* Search Bar */}
+                  <div className="sticky top-0 bg-white z-10 p-2 border-b">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        type="text"
+                        placeholder="Search patients..."
+                        value={patientSearchQuery}
+                        onChange={(e) => setPatientSearchQuery(e.target.value)}
+                        className="pl-8 h-8 text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Patient List */}
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {patients
+                      .filter(patient => {
+                        if (!patientSearchQuery.trim()) return true;
+                        const query = patientSearchQuery.toLowerCase();
+                        return (
+                          patient.full_name.toLowerCase().includes(query) ||
+                          patient.first_name.toLowerCase().includes(query) ||
+                          patient.last_name.toLowerCase().includes(query)
+                        );
+                      })
+                      .map((patient) => (
+                        <SelectItem key={patient.id} value={patient.id}>
+                          {patient.full_name}
+                        </SelectItem>
+                      ))}
+                    {patients.filter(patient => {
+                      if (!patientSearchQuery.trim()) return true;
+                      const query = patientSearchQuery.toLowerCase();
+                      return (
+                        patient.full_name.toLowerCase().includes(query) ||
+                        patient.first_name.toLowerCase().includes(query) ||
+                        patient.last_name.toLowerCase().includes(query)
+                      );
+                    }).length === 0 && (
+                      <div className="py-6 text-center text-sm text-gray-500">
+                        No patients found
+                      </div>
+                    )}
+                  </div>
                 </SelectContent>
               </Select>
             </div>
@@ -422,6 +543,27 @@ export function AppointmentForm({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Appointment Subtype Selection - Conditional */}
+            {selectedAppointmentType && subtypeOptions[selectedAppointmentType] && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-blue-700">
+                  Appointment Subtype *
+                </label>
+                <Select value={selectedSubtype || undefined} onValueChange={setSelectedSubtype}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select subtype" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subtypeOptions[selectedAppointmentType].map((subtype) => (
+                      <SelectItem key={subtype.value} value={subtype.value}>
+                        {subtype.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Row 2: Date and Time */}

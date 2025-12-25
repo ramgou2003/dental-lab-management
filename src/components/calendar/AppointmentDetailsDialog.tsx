@@ -11,7 +11,8 @@ interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
-  status: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk';
+  subtype?: string;
+  status: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk' | 'NSHOW' | 'RESCH' | 'CANCL';
   date: string;
   notes?: string;
   assignedUserName?: string;
@@ -81,6 +82,12 @@ export function AppointmentDetailsDialog({
         return 'bg-indigo-100 text-indigo-800 border-indigo-200';
       case '2wk':
         return 'bg-pink-100 text-pink-800 border-pink-200';
+      case 'NSHOW':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'RESCH':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'CANCL':
+        return 'bg-slate-100 text-slate-800 border-slate-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -108,6 +115,12 @@ export function AppointmentDetailsDialog({
         return <CheckCircle className="h-4 w-4" />;
       case '2wk':
         return <Clock3 className="h-4 w-4" />;
+      case 'NSHOW':
+        return <XCircle className="h-4 w-4" />;
+      case 'RESCH':
+        return <Calendar className="h-4 w-4" />;
+      case 'CANCL':
+        return <XCircle className="h-4 w-4" />;
       default:
         return <Clock3 className="h-4 w-4" />;
     }
@@ -135,6 +148,12 @@ export function AppointmentDetailsDialog({
         return 'MULTI Multi-Appointment';
       case '2wk':
         return '2wk 2 Week Calls';
+      case 'NSHOW':
+        return 'NSHOW No Show';
+      case 'RESCH':
+        return 'RESCH Appointment Rescheduled';
+      case 'CANCL':
+        return 'CANCL Appointment Cancelled';
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
@@ -145,18 +164,37 @@ export function AppointmentDetailsDialog({
       case 'consultation':
         return 'Consult';
       case 'printed-try-in':
-        return 'Printed Try In';
+        return 'Appliance Delivery';
       case 'follow-up':
         return 'Follow Up';
       case 'data-collection':
         return 'Data Collection';
       case 'surgery':
         return 'Surgery';
+      case 'surgical-revision':
+        return 'Surgical Revision';
       case 'emergency':
         return 'Emergency';
       default:
         return type;
     }
+  };
+
+  const getSubtypeLabel = (subtype: string | undefined): string | null => {
+    if (!subtype) return null;
+
+    const subtypeLabels: Record<string, string> = {
+      '7-day-followup': '7 Day Follow-up',
+      '30-day-followup': '30 Days Follow-up',
+      'observation-followup': 'Follow-up for Observation',
+      'printed-try-in-delivery': 'Printed Try-in Delivery',
+      '82-day-appliance-delivery': '82 Days PTI Delivery',
+      '120-day-final-delivery': '120 Days Final Delivery',
+      '75-day-data-collection': '75 Days Data Collection for PTI',
+      'final-data-collection': 'Final Data Collection'
+    };
+
+    return subtypeLabels[subtype] || null;
   };
 
   const formatDate = (dateString: string) => {
@@ -210,6 +248,9 @@ export function AppointmentDetailsDialog({
             <div>
               <p className="text-sm text-blue-600">Appointment Type</p>
               <p className="font-semibold text-gray-900">{getAppointmentTypeLabel(appointment.type)}</p>
+              {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
+                <p className="text-sm text-blue-600 mt-1">📋 {getSubtypeLabel(appointment.subtype)}</p>
+              )}
             </div>
           </div>
 

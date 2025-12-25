@@ -18,9 +18,10 @@ interface NewLabScriptFormProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: any) => Promise<any>;
+  initialPatientName?: string;
 }
 
-export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormProps) {
+export function NewLabScriptForm({ open, onClose, onSubmit, initialPatientName }: NewLabScriptFormProps) {
 
   const { addComment } = useLabScriptComments();
   const { treatmentTypes, applianceTypes, materials, shades } = useLabScriptConfig();
@@ -67,6 +68,17 @@ export function NewLabScriptForm({ open, onClose, onSubmit }: NewLabScriptFormPr
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [showSelectionShortcut]);
+
+  // Set initial patient name when dialog opens
+  useEffect(() => {
+    if (open && initialPatientName) {
+      setFormData(prev => ({
+        ...prev,
+        patientName: initialPatientName
+      }));
+    }
+  }, [open, initialPatientName]);
+
   const [formData, setFormData] = useState({
     patientId: "",
     patientName: "",

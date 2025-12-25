@@ -241,7 +241,7 @@ export function DashboardPage() {
     { name: 'Surgery', value: appointments.filter(a => a.type === 'surgery').length, color: '#EF4444' },
     { name: 'Follow-up', value: appointments.filter(a => a.type === 'follow-up').length, color: '#10B981' },
     { name: 'Data Collection', value: appointments.filter(a => a.type === 'data-collection').length, color: '#F59E0B' },
-    { name: 'Try-in', value: appointments.filter(a => a.type === 'printed-try-in').length, color: '#06B6D4' }
+    { name: 'Appliance Delivery', value: appointments.filter(a => a.type === 'printed-try-in').length, color: '#06B6D4' }
   ];
 
   // Key metrics cards data

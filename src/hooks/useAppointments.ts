@@ -12,8 +12,9 @@ export interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
+  subtype?: string; // Appointment subtype (e.g., '7-day-followup', '82-day-appliance-delivery')
   status: string; // Full status name (e.g., "Ready for Operatory")
-  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk'; // Status code
+  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk' | 'NSHOW' | 'RESCH' | 'CANCL'; // Status code
   date: string; // YYYY-MM-DD format
   notes?: string;
   createdAt: string;
@@ -43,6 +44,12 @@ export function getStatusNameFromCode(statusCode: Appointment['statusCode']): st
       return 'Multi-Appointment';
     case '2wk':
       return '2 Week Calls';
+    case 'NSHOW':
+      return 'No Show';
+    case 'RESCH':
+      return 'Appointment Rescheduled';
+    case 'CANCL':
+      return 'Appointment Cancelled';
     default:
       return 'Not Confirmed';
   }
@@ -83,6 +90,7 @@ export function useAppointments() {
         startTime: appointment.start_time,
         endTime: appointment.end_time,
         type: appointment.appointment_type,
+        subtype: appointment.subtype || undefined,
         status: appointment.status || 'Not Confirmed',
         statusCode: appointment.status_code as Appointment['statusCode'],
         date: appointment.date,
@@ -157,6 +165,7 @@ export function useAppointments() {
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
+                subtype: payload.new.subtype || undefined,
                 status: payload.new.status || 'Not Confirmed',
                 statusCode: payload.new.status_code as Appointment['statusCode'],
                 date: payload.new.date,
@@ -166,13 +175,16 @@ export function useAppointments() {
               };
 
               // Add new appointment to existing list
+              console.log('🔔 Real-time INSERT - New appointment:', newAppointment);
               setAppointments(prev => {
                 // Check if appointment already exists to avoid duplicates
                 if (prev.some(apt => apt.id === newAppointment.id)) {
+                  console.log('⚠️ Appointment already exists, skipping duplicate');
                   return prev;
                 }
                 // Insert in correct position based on date and time
                 const newList = [...prev, newAppointment];
+                console.log('📋 Appointments after real-time INSERT:', newList.length, 'appointments');
                 return newList.sort((a, b) => {
                   if (a.date === b.date) {
                     return a.startTime.localeCompare(b.startTime);
@@ -208,6 +220,7 @@ export function useAppointments() {
                 startTime: payload.new.start_time,
                 endTime: payload.new.end_time,
                 type: payload.new.appointment_type,
+                subtype: payload.new.subtype || undefined,
                 status: payload.new.status || 'Not Confirmed',
                 statusCode: payload.new.status_code as Appointment['statusCode'],
                 date: payload.new.date,
@@ -266,6 +279,7 @@ export function useAppointments() {
       startTime: appointmentData.startTime,
       endTime: appointmentData.endTime,
       type: appointmentData.type,
+      subtype: appointmentData.subtype,
       status: appointmentData.status,
       statusCode: appointmentData.statusCode,
       date: appointmentData.date,
@@ -274,9 +288,12 @@ export function useAppointments() {
       updatedAt: now
     };
 
+    console.log('🚀 Creating optimistic appointment:', optimisticAppointment);
+
     // Immediately add to local state for instant UI update
     setAppointments(prev => {
       const newList = [...prev, optimisticAppointment];
+      console.log('📋 Appointments after optimistic add:', newList.length, 'appointments');
       return newList.sort((a, b) => {
         if (a.date === b.date) {
           return a.startTime.localeCompare(b.startTime);
@@ -296,6 +313,7 @@ export function useAppointments() {
           start_time: appointmentData.startTime,
           end_time: appointmentData.endTime,
           appointment_type: appointmentData.type,
+          subtype: appointmentData.subtype || null,
           status: appointmentData.status,
           status_code: appointmentData.statusCode,
           date: appointmentData.date,
@@ -334,6 +352,7 @@ export function useAppointments() {
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
+        subtype: data.subtype || undefined,
         status: data.status || 'Not Confirmed',
         statusCode: data.status_code as Appointment['statusCode'],
         date: data.date,
@@ -343,8 +362,9 @@ export function useAppointments() {
       };
 
       // Replace the optimistic appointment with the real one
+      console.log('✅ Replacing optimistic appointment', tempId, 'with real appointment', newAppointment.id);
       setAppointments(prev => {
-        return prev.map(apt =>
+        const updated = prev.map(apt =>
           apt.id === tempId ? newAppointment : apt
         ).sort((a, b) => {
           if (a.date === b.date) {
@@ -352,6 +372,9 @@ export function useAppointments() {
           }
           return a.date.localeCompare(b.date);
         });
+        console.log('📋 Appointments after replacement:', updated.length, 'appointments');
+        console.log('📋 Appointment types:', updated.map(a => `${a.type} (${a.id})`));
+        return updated;
       });
 
       toast({
@@ -388,6 +411,7 @@ export function useAppointments() {
       if (updates.startTime) updateData.start_time = updates.startTime;
       if (updates.endTime) updateData.end_time = updates.endTime;
       if (updates.type) updateData.appointment_type = updates.type;
+      if (updates.subtype !== undefined) updateData.subtype = updates.subtype || null;
       if (updates.status) updateData.status = updates.status;
       if (updates.statusCode) {
         updateData.status_code = updates.statusCode;
@@ -435,6 +459,7 @@ export function useAppointments() {
         startTime: data.start_time,
         endTime: data.end_time,
         type: data.appointment_type,
+        subtype: data.subtype || undefined,
         status: data.status || 'Not Confirmed',
         statusCode: data.status_code as Appointment['statusCode'],
         date: data.date,

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit, Trash2 } from "lucide-react";
+import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit, Trash2, ClipboardList, Calendar, FileEdit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -25,6 +25,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { HealthHistoryDialog } from "@/components/HealthHistoryDialog";
 import { ComfortPreferenceDialog } from "@/components/ComfortPreferenceDialog";
+import { EncounterFormDialog } from "@/components/calendar/EncounterFormDialog";
+import { NewLabScriptForm } from "@/components/NewLabScriptForm";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/sonner";
 
 interface Appointment {
   id: string;
@@ -33,8 +37,9 @@ interface Appointment {
   startTime: string;
   endTime: string;
   type: string;
+  subtype?: string; // Appointment subtype
   status: string; // Full status name
-  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk'; // Status code
+  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk' | 'NSHOW' | 'RESCH' | 'CANCL'; // Status code
   notes?: string;
 }
 
@@ -84,6 +89,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [selectedPatientId, setSelectedPatientId] = useState<string>("");
   const [selectedPatientName, setSelectedPatientName] = useState<string>("");
 
+  // State for encounter form dialog
+  const [encounterFormDialogOpen, setEncounterFormDialogOpen] = useState(false);
+  const [encounterAppointmentId, setEncounterAppointmentId] = useState<string>("");
+  const [encounterPatientName, setEncounterPatientName] = useState<string>("");
+
+  // State for lab script form dialog
+  const [labScriptFormOpen, setLabScriptFormOpen] = useState(false);
+  const [labScriptPatientName, setLabScriptPatientName] = useState<string>("");
+
   // Function to get status capsule color
   const getStatusDotColor = (status: string) => {
     switch (status) {
@@ -107,9 +121,33 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         return 'bg-indigo-500';
       case '2wk':  // 2wk 2 Week Calls
         return 'bg-pink-500';
+      case 'NSHOW':  // No Show
+        return 'bg-red-700';
+      case 'RESCH':  // Appointment Rescheduled
+        return 'bg-amber-500';
+      case 'CANCL':  // Appointment Cancelled
+        return 'bg-slate-600';
       default:
         return 'bg-gray-500';
     }
+  };
+
+  // Function to get subtype label from subtype value
+  const getSubtypeLabel = (subtype: string | undefined): string | null => {
+    if (!subtype) return null;
+
+    const subtypeLabels: Record<string, string> = {
+      '7-day-followup': '7 Day',
+      '30-day-followup': '30 Day',
+      'observation-followup': 'Observation',
+      'printed-try-in-delivery': 'PTI',
+      '82-day-appliance-delivery': '82 Day PTI',
+      '120-day-final-delivery': '120 Day Final',
+      '75-day-data-collection': '75 Day PTI',
+      'final-data-collection': 'Final'
+    };
+
+    return subtypeLabels[subtype] || null;
   };
 
   // Function to find patient ID by name and navigate to profile or consultation page
@@ -197,7 +235,10 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       'LM1': 'Left 1st Message',
       'LM2': 'Left 2nd Message',
       'MULTI': 'Multi-Appointment',
-      '2wk': '2 Week Calls'
+      '2wk': '2 Week Calls',
+      'NSHOW': 'No Show',
+      'RESCH': 'Appointment Rescheduled',
+      'CANCL': 'Appointment Cancelled'
     };
     return statusMap[statusCode] || statusCode;
   };
@@ -479,10 +520,85 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     }, 100);
   };
 
+  // Handler for encounter form
+  const handleEncounterForm = (appointment: Appointment) => {
+    // Close menu immediately
+    setOpenContextMenuId(null);
+
+    // Open encounter form with a small delay to ensure menu is closed first
+    setTimeout(() => {
+      setEncounterAppointmentId(appointment.id);
+      setEncounterPatientName(appointment.patient);
+      setEncounterFormDialogOpen(true);
+    }, 100);
+  };
+
   // Wrapper for navigate to consultation
   const handleNavigateToConsultation = (appointmentId: string) => {
     setOpenContextMenuId(null);
     navigate(`/consultation/${appointmentId}`);
+  };
+
+  // Handler for creating a new lab script
+  const handleAddNewLabScript = (appointment: Appointment) => {
+    // Close menu immediately
+    setOpenContextMenuId(null);
+
+    // Open lab script form with patient name
+    setTimeout(() => {
+      setLabScriptPatientName(appointment.patient);
+      setLabScriptFormOpen(true);
+    }, 100);
+  };
+
+  // Handler for lab script form submission
+  const handleLabScriptSubmit = async (formData: any) => {
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+
+      const { data: userProfile } = await supabaseClient
+        .from('user_profiles')
+        .select('id, full_name')
+        .eq('user_id', user?.id)
+        .single();
+
+      const { data: newLabScript, error } = await supabaseClient
+        .from('lab_scripts')
+        .insert({
+          patient_id: formData.patientId,
+          patient_name: formData.patientName,
+          arch_type: formData.archType,
+          upper_treatment_type: formData.upperTreatmentType || null,
+          lower_treatment_type: formData.lowerTreatmentType || null,
+          upper_appliance_type: formData.upperApplianceType || null,
+          lower_appliance_type: formData.lowerApplianceType || null,
+          screw_type: formData.screwType || null,
+          custom_screw_type: formData.customScrewType || null,
+          material: formData.material || null,
+          shade: formData.shade || null,
+          vdo_details: formData.vdoDetails || null,
+          is_nightguard_needed: formData.isNightguardNeeded || null,
+          requested_date: formData.requestedDate,
+          due_date: formData.dueDate || null,
+          instructions: formData.instructions,
+          notes: formData.notes || null,
+          status: 'pending',
+          created_by: userProfile?.id || null,
+          created_by_name: userProfile?.full_name || null
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success("Lab script created successfully!");
+      setLabScriptFormOpen(false);
+      return newLabScript;
+    } catch (error) {
+      console.error("Error creating lab script:", error);
+      toast.error("Failed to create lab script. Please try again.");
+      throw error;
+    }
   };
 
   const hours = Array.from({ length: 13 }, (_, i) => i + 7); // 7 AM to 7 PM
@@ -492,16 +608,6 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       key: 'consultation',
       label: 'Consult',
       shortLabel: 'Consult',
-      color: 'bg-blue-100 border-blue-300 text-blue-800',
-      hoverColor: 'hover:bg-blue-25',
-      selectedColor: 'bg-blue-100 border-blue-400',
-      dragColor: 'bg-blue-200 border-blue-500',
-      badgeColor: 'bg-blue-500 text-white'
-    },
-    {
-      key: 'printed-try-in',
-      label: 'Printed Try In',
-      shortLabel: 'Try In',
       color: 'bg-blue-100 border-blue-300 text-blue-800',
       hoverColor: 'hover:bg-blue-25',
       selectedColor: 'bg-blue-100 border-blue-400',
@@ -522,6 +628,16 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       key: 'data-collection',
       label: 'Data Collection',
       shortLabel: 'Data Collection',
+      color: 'bg-blue-100 border-blue-300 text-blue-800',
+      hoverColor: 'hover:bg-blue-25',
+      selectedColor: 'bg-blue-100 border-blue-400',
+      dragColor: 'bg-blue-200 border-blue-500',
+      badgeColor: 'bg-blue-500 text-white'
+    },
+    {
+      key: 'printed-try-in',
+      label: 'Appliance Delivery',
+      shortLabel: 'Delivery',
       color: 'bg-blue-100 border-blue-300 text-blue-800',
       hoverColor: 'hover:bg-blue-25',
       selectedColor: 'bg-blue-100 border-blue-400',
@@ -598,6 +714,20 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   }, []);
 
   const getTypeColors = (typeKey: string) => {
+    // Special handling for surgical-revision - it should have its own colors but appear in surgery column
+    if (typeKey === 'surgical-revision') {
+      return {
+        key: 'surgical-revision',
+        label: 'Surgical Revision',
+        shortLabel: 'Revision',
+        color: 'bg-blue-100 border-blue-300 text-blue-800',
+        hoverColor: 'hover:bg-blue-25',
+        selectedColor: 'bg-blue-100 border-blue-400',
+        dragColor: 'bg-blue-200 border-blue-500',
+        badgeColor: 'bg-purple-500 text-white'
+      };
+    }
+
     return appointmentTypes.find(type => type.key === typeKey) || {
       key: typeKey,
       label: typeKey,
@@ -1143,7 +1273,12 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
                   // Check if there's an appointment in this exact location - if so, don't show selection
                   const hasAppointmentInSelection = appointments.some(appointment => {
-                    if (appointment.type !== type.key) return false;
+                    // Map both 'surgery' and 'surgical-revision' to the surgery column
+                    const appointmentMatchesColumn = type.key === 'surgery'
+                      ? (appointment.type === 'surgery' || appointment.type === 'surgical-revision')
+                      : appointment.type === type.key;
+
+                    if (!appointmentMatchesColumn) return false;
 
                     const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
                     const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
@@ -1211,7 +1346,13 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
               const typeColors = getTypeColors(type.key);
 
               // Get all appointments for this type
-              const typeAppointments = appointments.filter(apt => apt.type === type.key);
+              // Map both 'surgery' and 'surgical-revision' to the surgery column
+              const typeAppointments = appointments.filter(apt => {
+                if (type.key === 'surgery') {
+                  return apt.type === 'surgery' || apt.type === 'surgical-revision';
+                }
+                return apt.type === type.key;
+              });
 
               return typeAppointments.map((appointment) => {
                 const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
@@ -1298,7 +1439,9 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         // Different layouts for 15 and 30 minute appointments
                         if (durationMinutes === 15) {
                           // Single line layout for 15-minute appointments
-                          const firstLetter = typeColors.shortLabel?.charAt(0) || typeColors.label?.charAt(0) || 'A';
+                          // Get the actual appointment type colors for the badge
+                          const actualTypeColors = getTypeColors(appointment.type);
+                          const firstLetter = actualTypeColors.shortLabel?.charAt(0) || actualTypeColors.label?.charAt(0) || 'A';
                           const columnWidth = getColumnWidth();
 
                           // Determine time font size based on column width
@@ -1310,31 +1453,37 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           }
 
                           return (
-                            <div className="flex items-center justify-between h-full w-full overflow-hidden">
-                              <div className="flex flex-col gap-0.5 flex-1 min-w-0 pr-1">
-                                <div className="flex items-center gap-1">
-                                  <h4
-                                    className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
-                                    onClick={(e) => {
-                                      console.log('15-minute appointment patient name clicked');
-                                      e.stopPropagation();
-                                      handlePatientNameClick(appointment);
-                                    }}
-                                  >
-                                    {appointment.patient}
-                                  </h4>
-                                </div>
-                                {appointment.assignedUserName && (
-                                  <div className="text-[9px] text-gray-500 truncate">
-                                    👤 {appointment.assignedUserName}
-                                  </div>
-                                )}
-                                <div className="text-[9px] font-semibold text-gray-700">
+                            <div className="flex flex-col h-full w-full overflow-hidden">
+                              {/* Top row - Patient name and status code */}
+                              <div className="flex items-start justify-between gap-1 mb-0.5">
+                                <h4
+                                  className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
+                                  onClick={(e) => {
+                                    console.log('15-minute appointment patient name clicked');
+                                    e.stopPropagation();
+                                    handlePatientNameClick(appointment);
+                                  }}
+                                >
+                                  {appointment.patient}
+                                </h4>
+                                <div className="text-[9px] font-semibold text-gray-700 flex-shrink-0">
                                   {appointment.statusCode}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-0.5 flex-shrink-0">
-                                <div className="flex flex-col items-end">
+                              {/* Middle - Assigned user and subtype */}
+                              {appointment.assignedUserName && (
+                                <div className="text-[9px] text-gray-500 truncate">
+                                  👤 {appointment.assignedUserName}
+                                </div>
+                              )}
+                              {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
+                                <div className="text-[9px] font-medium text-blue-600 truncate">
+                                  📋 {getSubtypeLabel(appointment.subtype)}
+                                </div>
+                              )}
+                              {/* Bottom row - Time and badge */}
+                              <div className="flex items-end justify-between gap-0.5 mt-auto">
+                                <div className="flex flex-col items-start">
                                   <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
                                     {formatAppointmentTime(appointment.startTime)}
                                   </span>
@@ -1342,7 +1491,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                     {formatAppointmentTime(appointment.endTime)}
                                   </span>
                                 </div>
-                                <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full uppercase ${typeColors.badgeColor || 'bg-gray-500'}`}>
+                                <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full uppercase ${actualTypeColors.badgeColor || 'bg-gray-500'}`}>
                                   {firstLetter}
                                 </span>
                               </div>
@@ -1352,11 +1501,11 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           // Layout for 30-minute and longer appointments
                           return (
                             <div className="flex flex-col h-full justify-between">
-                              {/* Top section - Name, assigned user, and status */}
+                              {/* Top section - Name and status code */}
                               <div className="flex flex-col gap-0.5">
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-start justify-between gap-1">
                                   <h4
-                                    className="font-semibold text-sm text-gray-800 truncate underline cursor-pointer hover:text-blue-600 transition-colors"
+                                    className="font-semibold text-sm text-gray-800 truncate flex-1 underline cursor-pointer hover:text-blue-600 transition-colors"
                                     onClick={(e) => {
                                       console.log('30+ minute appointment patient name clicked');
                                       e.stopPropagation();
@@ -1365,21 +1514,28 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                                   >
                                     {appointment.patient}
                                   </h4>
+                                  <div className="text-[10px] font-semibold text-gray-700 flex-shrink-0">
+                                    {appointment.statusCode}
+                                  </div>
                                 </div>
                                 {appointment.assignedUserName && (
                                   <div className="text-[10px] text-gray-500 truncate">
                                     👤 {appointment.assignedUserName}
                                   </div>
                                 )}
-                                <div className="text-[10px] font-semibold text-gray-700">
-                                  {appointment.statusCode}
-                                </div>
+                                {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
+                                  <div className="text-[10px] font-medium text-blue-600 truncate">
+                                    📋 {getSubtypeLabel(appointment.subtype)}
+                                  </div>
+                                )}
                               </div>
                               {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
                               <div className="flex justify-between items-end gap-1 min-w-0 w-full overflow-hidden">
                                 {(() => {
                                   const columnWidth = getColumnWidth();
-                                  const label = typeColors.shortLabel || typeColors.label;
+                                  // Get the actual appointment type colors for the badge
+                                  const actualTypeColors = getTypeColors(appointment.type);
+                                  const label = actualTypeColors.shortLabel || actualTypeColors.label;
 
                                   // Determine display text, badge size, and time size based on column width
                                   let displayText, badgeSize, badgePadding, timeFontSize;
@@ -1418,7 +1574,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
                                   return (
                                     <>
-                                      <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase ${typeColors.badgeColor || 'bg-gray-100 text-gray-800'} ${badgeSize} ${badgePadding}`}>
+                                      <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase ${actualTypeColors.badgeColor || 'bg-gray-100 text-gray-800'} ${badgeSize} ${badgePadding}`}>
                                         {label === 'Data Collection' ? 'Data' : displayText}
                                       </span>
                                       <div className="flex flex-col items-end flex-shrink-0">
@@ -1450,6 +1606,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                       </div>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="w-56 touch-manipulation select-none">
+                      <ContextMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
+                        <ClipboardList className="mr-2 h-4 w-4" />
+                        Encounter Form
+                      </ContextMenuItem>
+                      <ContextMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
+                        <FileEdit className="mr-2 h-4 w-4" />
+                        Add New Lab Script
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
                       <ContextMenuSub>
                         <ContextMenuSubTrigger className="touch-manipulation select-none" {...handleSubMenuTrigger()}>
                           <CheckCircle className="mr-2 h-4 w-4" />
@@ -1496,13 +1661,21 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                             <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
                             2 Week Calls
                           </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
+                            <XCircle className="mr-2 h-4 w-4 text-red-700" />
+                            No Show
+                          </ContextMenuItem>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'RESCH'))}>
+                            <Calendar className="mr-2 h-4 w-4 text-amber-600" />
+                            Appointment Rescheduled
+                          </ContextMenuItem>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
+                            <XCircle className="mr-2 h-4 w-4 text-slate-600" />
+                            Appointment Cancelled
+                          </ContextMenuItem>
                         </ContextMenuSubContent>
                       </ContextMenuSub>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem {...handleMenuItemAction(() => handleEditAppointment(appointment))}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Appointment
-                      </ContextMenuItem>
                       <ContextMenuSeparator />
                       {appointment.type === 'consultation' ? (
                         <ContextMenuItem {...handleMenuItemAction(() => handleNavigateToConsultation(appointment.id))}>
@@ -1524,6 +1697,10 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                         View Comfort Preference
                       </ContextMenuItem>
                       <ContextMenuSeparator />
+                      <ContextMenuItem {...handleMenuItemAction(() => handleEditAppointment(appointment))}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Appointment
+                      </ContextMenuItem>
                       <ContextMenuItem {...handleMenuItemAction(() => handleDeleteFromMenu(appointment.id))} className="text-red-600 focus:text-red-600">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Appointment
@@ -1721,6 +1898,22 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Encounter Form Dialog */}
+      <EncounterFormDialog
+        open={encounterFormDialogOpen}
+        onOpenChange={setEncounterFormDialogOpen}
+        patientName={encounterPatientName}
+        appointmentId={encounterAppointmentId}
+      />
+
+      {/* Lab Script Form Dialog */}
+      <NewLabScriptForm
+        open={labScriptFormOpen}
+        onClose={() => setLabScriptFormOpen(false)}
+        onSubmit={handleLabScriptSubmit}
+        initialPatientName={labScriptPatientName}
+      />
     </div>
   );
 }
