@@ -27,6 +27,9 @@ interface AppointmentFormProps {
   initialTime?: string;
   initialEndTime?: string;
   appointmentType?: string;
+  appointmentSubtype?: string;
+  initialPatientName?: string;
+  initialPatientId?: string;
   editingAppointment?: any;
 }
 
@@ -38,6 +41,9 @@ export function AppointmentForm({
   initialTime,
   initialEndTime,
   appointmentType,
+  appointmentSubtype,
+  initialPatientName,
+  initialPatientId,
   editingAppointment
 }: AppointmentFormProps) {
   const [selectedPatient, setSelectedPatient] = useState(''); // Patient name for display
@@ -60,7 +66,10 @@ export function AppointmentForm({
     'follow-up': [
       { value: '7-day-followup', label: '7 Day Follow-up' },
       { value: '30-day-followup', label: '30 Days Follow-up' },
-      { value: 'observation-followup', label: 'Follow-up for Observation' }
+      { value: 'observation-followup', label: 'Follow-up for Observation' },
+      { value: '3-month-followup', label: '3 Months Follow Up' },
+      { value: '6-month-followup', label: '6 Months Follow Up' },
+      { value: '12-month-followup', label: '12 Months Follow Up' }
     ],
     'printed-try-in': [
       { value: 'printed-try-in-delivery', label: 'Printed Try-in Delivery' },
@@ -69,7 +78,8 @@ export function AppointmentForm({
     ],
     'data-collection': [
       { value: '75-day-data-collection', label: '75 Days Data Collection for PTI' },
-      { value: 'final-data-collection', label: 'Final Data Collection' }
+      { value: 'final-data-collection', label: 'Final Data Collection' },
+      { value: 'data-collection-printed-try-in', label: 'Data collection for Printed-try-in' }
     ]
   };
 
@@ -309,11 +319,28 @@ export function AppointmentForm({
         setNotes(editingAppointment.notes || '');
       } else {
         // Reset form for new appointment (only when dialog first opens)
-        setSelectedPatient('');
-        setSelectedPatientId('');
+        // Set initial patient if provided
+        if (initialPatientName) {
+          setSelectedPatient(initialPatientName);
+        } else {
+          setSelectedPatient('');
+        }
+
+        if (initialPatientId) {
+          setSelectedPatientId(initialPatientId);
+        } else {
+          setSelectedPatientId('');
+        }
+
         setSelectedUserId('');
         setNotes('');
-        setSelectedSubtype('');
+
+        // Set initial subtype if provided
+        if (appointmentSubtype && appointmentSubtype.trim() !== '') {
+          setSelectedSubtype(appointmentSubtype);
+        } else {
+          setSelectedSubtype('');
+        }
 
         // Only set appointment type if it's valid
         if (appointmentType && appointmentType.trim() !== '') {

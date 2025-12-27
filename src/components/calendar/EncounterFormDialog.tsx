@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SignaturePad } from "@/components/SignaturePad";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PatientDetails {
@@ -35,19 +36,24 @@ interface EncounterFormDialogProps {
   onOpenChange: (open: boolean) => void;
   patientName: string;
   appointmentId: string;
+  onEncounterSaved?: () => void;
+  isViewMode?: boolean;
 }
 
 export function EncounterFormDialog({
   open,
   onOpenChange,
   patientName,
-  appointmentId
+  appointmentId,
+  onEncounterSaved,
+  isViewMode = false
 }: EncounterFormDialogProps) {
   const [patientDetails, setPatientDetails] = useState<PatientDetails | null>(null);
   const [appointmentDetails, setAppointmentDetails] = useState<AppointmentDetails | null>(null);
   const [assignedUserName, setAssignedUserName] = useState<string>('N/A');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const { toast } = useToast();
 
   // Encounter form fields - General
@@ -73,7 +79,7 @@ export function EncounterFormDialog({
   const [surgeryIvSedationFlowChart, setSurgeryIvSedationFlowChart] = useState<string>('');
   const [surgerySurgicalRecallSheet, setSurgerySurgicalRecallSheet] = useState<string>('');
 
-  // Staff checklist for 75-day follow-up and final data collection
+  // Staff checklist for 75-day data collection and final data collection
   const [extraIntraOralPictures, setExtraIntraOralPictures] = useState<string>('');
   const [facialScan, setFacialScan] = useState<string>('');
   const [postSurgeryJawRecords, setPostSurgeryJawRecords] = useState<string>('');
@@ -82,6 +88,9 @@ export function EncounterFormDialog({
 
   // Clinical notes
   const [clinicalNotes, setClinicalNotes] = useState<string>('');
+
+  // Form status
+  const [formStatus, setFormStatus] = useState<'draft' | 'complete'>('draft');
 
   // Fetch patient details and encounter data when dialog opens
   useEffect(() => {
@@ -165,6 +174,8 @@ export function EncounterFormDialog({
       }
 
       if (data) {
+        console.log('📥 Loading encounter data');
+
         setEncounterId(data.id);
         setBiteAdjustment(data.bite_adjustment || '');
         setFollowUpPictures(data.follow_up_pictures_taken || '');
@@ -192,6 +203,8 @@ export function EncounterFormDialog({
         setIcamRequired(data.icam_required || '');
         // Clinical notes
         setClinicalNotes(data.clinical_notes || '');
+        // Form status
+        setFormStatus(data.form_status || 'draft');
       } else {
         // Reset to defaults if no encounter exists
         setEncounterId(null);
@@ -264,6 +277,8 @@ export function EncounterFormDialog({
   const handleSave = async () => {
     setSaving(true);
     try {
+      console.log('🔍 Saving encounter data');
+
       const encounterData: any = {
         appointment_id: appointmentId,
         patient_name: patientName,
@@ -277,8 +292,11 @@ export function EncounterFormDialog({
         smoker_signature_date: smokerSignatureDate,
         smoker_signature: smokerSignature,
         clinical_notes: clinicalNotes,
+        form_status: 'complete', // Automatically set to complete when saving
         updated_at: new Date().toISOString()
       };
+
+      console.log('📝 Encounter data to save:', encounterData);
 
       // Add 7-day-followup and 30-day-followup specific fields if applicable
       if (appointmentDetails?.subtype === '7-day-followup' ||
@@ -302,9 +320,10 @@ export function EncounterFormDialog({
         encounterData.functional_issue = functionalIssue;
       }
 
-      // Add 75-day-followup and final-data-collection staff checklist fields if applicable
-      if (appointmentDetails?.subtype === '75-day-followup' ||
-          appointmentDetails?.subtype === 'final-data-collection') {
+      // Add 75-day-data-collection, final-data-collection, and data-collection-printed-try-in staff checklist fields if applicable
+      if (appointmentDetails?.subtype === '75-day-data-collection' ||
+          appointmentDetails?.subtype === 'final-data-collection' ||
+          appointmentDetails?.subtype === 'data-collection-printed-try-in') {
         encounterData.extra_intra_oral_pictures = extraIntraOralPictures;
         encounterData.facial_scan = facialScan;
         encounterData.post_surgery_jaw_records = postSurgeryJawRecords;
@@ -314,17 +333,43 @@ export function EncounterFormDialog({
 
       if (encounterId) {
         // Update existing encounter
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('encounters')
           .update(encounterData)
-          .eq('id', encounterId);
+          .eq('id', encounterId)
+          .select()
+          .single();
 
         if (error) throw error;
+
+        console.log('✅ Encounter updated successfully:', data);
+
+        // Mark appointment as encounter completed
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: appointmentError } = await supabase
+          .from('appointments')
+          .update({
+            encounter_completed: true,
+            encounter_completed_at: new Date().toISOString(),
+            encounter_completed_by: user?.id || null
+          })
+          .eq('id', appointmentId);
+
+        if (appointmentError) {
+          console.error('Error updating appointment:', appointmentError);
+        }
 
         toast({
           title: "Success",
           description: "Encounter form updated successfully",
         });
+
+        // If we were in edit mode, go back to view mode instead of closing
+        if (isEditMode) {
+          setIsEditMode(false);
+        } else {
+          onOpenChange(false);
+        }
       } else {
         // Create new encounter
         const { data, error } = await supabase
@@ -335,14 +380,38 @@ export function EncounterFormDialog({
 
         if (error) throw error;
 
+        console.log('✅ Encounter created successfully:', data);
+
         setEncounterId(data.id);
+
+        // Mark appointment as encounter completed
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: appointmentError } = await supabase
+          .from('appointments')
+          .update({
+            encounter_completed: true,
+            encounter_completed_at: new Date().toISOString(),
+            encounter_completed_by: user?.id || null
+          })
+          .eq('id', appointmentId);
+
+        if (appointmentError) {
+          console.error('Error updating appointment:', appointmentError);
+        }
+
         toast({
           title: "Success",
           description: "Encounter form saved successfully",
         });
+
+        // Close dialog after creating new encounter
+        onOpenChange(false);
       }
 
-      onOpenChange(false);
+      // Call the callback to refresh encounter status
+      if (onEncounterSaved) {
+        onEncounterSaved();
+      }
     } catch (error) {
       console.error('Error saving encounter:', error);
       toast({
@@ -355,11 +424,32 @@ export function EncounterFormDialog({
     }
   };
 
+  // Determine if we're in view mode (encounter exists and not editing)
+  const showViewMode = isViewMode && !isEditMode && encounterId;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col touch-manipulation p-0">
-        <DialogHeader className="px-6 pt-6 pb-4">
-          <DialogTitle className="text-2xl font-bold text-blue-900">Encounter Form</DialogTitle>
+        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-2xl font-bold text-blue-900">
+                {showViewMode ? 'Encounter Form - View' : 'Encounter Form'}
+              </DialogTitle>
+              {showViewMode && (
+                <p className="text-sm text-blue-600 mt-1">Read-only view • Click Edit to make changes</p>
+              )}
+            </div>
+            {showViewMode && (
+              <Button
+                onClick={() => setIsEditMode(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         {loading ? (
@@ -368,8 +458,54 @@ export function EncounterFormDialog({
           </div>
         ) : (
           <>
+            {showViewMode && (
+              <div className="bg-blue-100 border-b border-blue-200 px-6 py-3">
+                <div className="flex items-center gap-2 text-blue-800">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span className="text-sm font-medium">Viewing saved encounter form in read-only mode</span>
+                </div>
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto px-6 pb-4">
-              <div className="space-y-4">
+              <div className={`space-y-4 ${showViewMode ? 'pointer-events-none select-none' : ''}`}>
+                {/* View Mode Summary Card */}
+                {showViewMode && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="bg-green-500 text-white rounded-full p-2">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-green-900">Encounter Completed</h4>
+                        <p className="text-xs text-green-700">This encounter form has been saved</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                      <div className="bg-white/60 rounded p-2">
+                        <p className="text-gray-600 font-medium">Bite Adjustment</p>
+                        <p className="font-semibold text-gray-900">{biteAdjustment || 'N/A'}</p>
+                      </div>
+                      <div className="bg-white/60 rounded p-2">
+                        <p className="text-gray-600 font-medium">Pictures Taken</p>
+                        <p className="font-semibold text-gray-900">{followUpPictures || 'N/A'}</p>
+                      </div>
+                      <div className="bg-white/60 rounded p-2">
+                        <p className="text-gray-600 font-medium">Data Collection</p>
+                        <p className="font-semibold text-gray-900">{dataCollection || 'N/A'}</p>
+                      </div>
+                      <div className="bg-white/60 rounded p-2">
+                        <p className="text-gray-600 font-medium">New Design</p>
+                        <p className="font-semibold text-gray-900">{newDesignRequired || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Two-Column Layout: Patient Info (Left) and Appointment Info (Right) */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Patient Information - Left Column (1/3 width) */}
@@ -432,6 +568,14 @@ export function EncounterFormDialog({
                         />
                       </div>
                       <div className="flex items-center gap-2">
+                        <Label className="text-xs font-medium text-blue-700 w-24 flex-shrink-0">Status:</Label>
+                        <Input
+                          value={appointmentDetails?.status || 'N/A'}
+                          disabled
+                          className="bg-white cursor-not-allowed h-7 text-xs border-blue-200 flex-1"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
                         <Label className="text-xs font-medium text-blue-700 w-24 flex-shrink-0">Date:</Label>
                         <Input
                           value={formatDate(appointmentDetails?.date || null)}
@@ -473,8 +617,9 @@ export function EncounterFormDialog({
                 <div className={`grid grid-cols-1 gap-4 ${
                   (appointmentDetails?.subtype === '7-day-followup' ||
                    appointmentDetails?.subtype === '30-day-followup' ||
-                   appointmentDetails?.subtype === '75-day-followup' ||
+                   appointmentDetails?.subtype === '75-day-data-collection' ||
                    appointmentDetails?.subtype === 'final-data-collection' ||
+                   appointmentDetails?.subtype === 'data-collection-printed-try-in' ||
                    appointmentDetails?.appointment_type === 'surgery' ||
                    appointmentDetails?.appointment_type === 'surgical-revision')
                     ? 'md:grid-cols-2'
@@ -1320,16 +1465,17 @@ export function EncounterFormDialog({
                     </div>
                   )}
 
-                  {/* Staff Checklist - Show only for 75-day-followup and final-data-collection */}
-                  {(appointmentDetails?.subtype === '75-day-followup' ||
-                    appointmentDetails?.subtype === 'final-data-collection') && (
-                    <div className="bg-orange-50 p-6 rounded-lg border border-orange-200">
-                      <h3 className="text-lg font-semibold mb-6 text-orange-900">Staff Checklist</h3>
+                  {/* Staff Checklist - Show only for 75-day-data-collection, final-data-collection, and data-collection-printed-try-in */}
+                  {(appointmentDetails?.subtype === '75-day-data-collection' ||
+                    appointmentDetails?.subtype === 'final-data-collection' ||
+                    appointmentDetails?.subtype === 'data-collection-printed-try-in') && (
+                    <div className="bg-orange-50 p-6 rounded-lg border border-orange-300">
+                      <h3 className="text-lg font-semibold mb-6 text-amber-900">Staff Checklist</h3>
 
                       <div className="space-y-3">
                         {/* Extra Intra Oral Pictures */}
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold text-orange-900">
+                          <Label className="text-sm font-medium text-amber-900">
                             Extra Intra Oral Pictures
                           </Label>
                           <RadioGroup value={extraIntraOralPictures} onValueChange={setExtraIntraOralPictures}>
@@ -1391,7 +1537,7 @@ export function EncounterFormDialog({
 
                         {/* Facial Scan */}
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold text-orange-900">
+                          <Label className="text-sm font-medium text-amber-900">
                             Facial Scan
                           </Label>
                           <RadioGroup value={facialScan} onValueChange={setFacialScan}>
@@ -1453,7 +1599,7 @@ export function EncounterFormDialog({
 
                         {/* Post Surgery Jaw Records */}
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold text-orange-900">
+                          <Label className="text-sm font-medium text-amber-900">
                             Post Surgery Jaw Records
                           </Label>
                           <RadioGroup value={postSurgeryJawRecords} onValueChange={setPostSurgeryJawRecords}>
@@ -1515,7 +1661,7 @@ export function EncounterFormDialog({
 
                         {/* Tissue Scan */}
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold text-orange-900">
+                          <Label className="text-sm font-medium text-amber-900">
                             Tissue Scan
                           </Label>
                           <RadioGroup value={tissueScan} onValueChange={setTissueScan}>
@@ -1577,7 +1723,7 @@ export function EncounterFormDialog({
 
                         {/* ICAM Required */}
                         <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold text-orange-900">
+                          <Label className="text-sm font-medium text-amber-900">
                             ICAM Required
                           </Label>
                           <RadioGroup value={icamRequired} onValueChange={setIcamRequired}>
@@ -1882,7 +2028,7 @@ export function EncounterFormDialog({
                       value={clinicalNotes}
                       onChange={(e) => setClinicalNotes(e.target.value)}
                       placeholder="Enter any clinical notes, observations, or additional information about this encounter..."
-                      className="w-full min-h-[120px] px-3 py-2 text-sm border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y bg-white"
+                      className={`w-full min-h-[120px] px-3 py-2 text-sm border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y ${showViewMode ? 'bg-gray-50' : 'bg-white'}`}
                       rows={5}
                     />
                   </div>
@@ -1891,28 +2037,47 @@ export function EncounterFormDialog({
             </div>
 
           {/* Footer with Action Buttons */}
-          <div className="border-t bg-gray-50 px-6 py-4 flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Encounter'
+          <div className="border-t bg-gray-50 px-6 py-4 flex justify-between gap-3">
+            <div>
+              {showViewMode && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Last updated: {new Date().toLocaleDateString()}
+                </p>
               )}
-            </Button>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (isEditMode) {
+                    // Reload encounter data to discard unsaved changes
+                    fetchEncounterData();
+                    setIsEditMode(false);
+                  } else {
+                    onOpenChange(false);
+                  }
+                }}
+                disabled={saving}
+              >
+                {showViewMode ? 'Close' : isEditMode ? 'Cancel Edit' : 'Cancel'}
+              </Button>
+              {!showViewMode && (
+                <Button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Encounter'
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
           </>
         )}

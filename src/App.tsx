@@ -16,6 +16,7 @@ import LeadInPage from "./pages/LeadInPage";
 import LeadDetailsPage from "./pages/LeadDetailsPage";
 import NewPatientLeadPage from "./pages/NewPatientLeadPage";
 import { AppointmentsPage } from "./pages/AppointmentsPage";
+import { NextAppointmentsPage } from "./pages/NextAppointmentsPage";
 import ConsultationPage from "./pages/ConsultationPage";
 import ConsultationSessionPage from "./pages/ConsultationSessionPage";
 import { PatientsPage } from "./pages/PatientsPage";
@@ -198,14 +199,24 @@ const App = () => {
                   </>
                 )}
                 {isFeatureEnabled('appointments') && (
-                  <Route
-                    path="appointments"
-                    element={
-                      <PermissionGuard permission="appointments.read">
-                        <AppointmentsPage />
-                      </PermissionGuard>
-                    }
-                  />
+                  <>
+                    <Route
+                      path="appointments"
+                      element={
+                        <PermissionGuard permission="appointments.read">
+                          <AppointmentsPage />
+                        </PermissionGuard>
+                      }
+                    />
+                    <Route
+                      path="appointments/next-appointments"
+                      element={
+                        <PermissionGuard permission="appointments.read">
+                          <NextAppointmentsPage />
+                        </PermissionGuard>
+                      }
+                    />
+                  </>
                 )}
                 {isFeatureEnabled('consultation') && (
                   <>

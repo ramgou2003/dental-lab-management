@@ -17,8 +17,16 @@ export interface Appointment {
   statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk' | 'NSHOW' | 'RESCH' | 'CANCL'; // Status code
   date: string; // YYYY-MM-DD format
   notes?: string;
+  encounterCompleted?: boolean; // Whether encounter form has been completed
+  encounterCompletedAt?: string; // When encounter was completed
+  encounterCompletedBy?: string; // User who completed the encounter
   createdAt: string;
   updatedAt: string;
+  nextAppointmentScheduled?: boolean;
+  nextAppointmentDate?: string;
+  nextAppointmentTime?: string;
+  nextAppointmentType?: string;
+  nextAppointmentSubtype?: string;
 }
 
 // Helper function to map status code to full status name
@@ -50,6 +58,8 @@ export function getStatusNameFromCode(statusCode: Appointment['statusCode']): st
       return 'Appointment Rescheduled';
     case 'CANCL':
       return 'Appointment Cancelled';
+    case 'CMPLT':
+      return 'Appointment Completed';
     default:
       return 'Not Confirmed';
   }
@@ -80,7 +90,7 @@ export function useAppointments() {
       }
 
       // Transform Supabase data to match our Appointment interface
-      const transformedAppointments: Appointment[] = (data || []).map(appointment => ({
+      const transformedAppointments: Appointment[] = ((data || []) as any[]).map(appointment => ({
         id: appointment.id,
         title: appointment.title,
         patient: appointment.patient_name,
@@ -95,8 +105,16 @@ export function useAppointments() {
         statusCode: appointment.status_code as Appointment['statusCode'],
         date: appointment.date,
         notes: appointment.notes || undefined,
+        encounterCompleted: appointment.encounter_completed || false,
+        encounterCompletedAt: appointment.encounter_completed_at || undefined,
+        encounterCompletedBy: appointment.encounter_completed_by || undefined,
         createdAt: appointment.created_at,
-        updatedAt: appointment.updated_at
+        updatedAt: appointment.updated_at,
+        nextAppointmentScheduled: appointment.next_appointment_scheduled || false,
+        nextAppointmentDate: appointment.next_appointment_date || undefined,
+        nextAppointmentTime: appointment.next_appointment_time || undefined,
+        nextAppointmentType: appointment.next_appointment_type || undefined,
+        nextAppointmentSubtype: appointment.next_appointment_subtype || undefined
       }));
 
       console.log(`📅 Fetched ${transformedAppointments.length} appointments from database`);
@@ -170,6 +188,9 @@ export function useAppointments() {
                 statusCode: payload.new.status_code as Appointment['statusCode'],
                 date: payload.new.date,
                 notes: payload.new.notes || undefined,
+                encounterCompleted: payload.new.encounter_completed || false,
+                encounterCompletedAt: payload.new.encounter_completed_at || undefined,
+                encounterCompletedBy: payload.new.encounter_completed_by || undefined,
                 createdAt: payload.new.created_at,
                 updatedAt: payload.new.updated_at
               };
@@ -225,6 +246,9 @@ export function useAppointments() {
                 statusCode: payload.new.status_code as Appointment['statusCode'],
                 date: payload.new.date,
                 notes: payload.new.notes || undefined,
+                encounterCompleted: payload.new.encounter_completed || false,
+                encounterCompletedAt: payload.new.encounter_completed_at || undefined,
+                encounterCompletedBy: payload.new.encounter_completed_by || undefined,
                 createdAt: payload.new.created_at,
                 updatedAt: payload.new.updated_at
               };
@@ -558,7 +582,7 @@ export function useAppointments() {
         }
         return a.date.localeCompare(b.date);
       });
-    
+
     return limit ? upcoming.slice(0, limit) : upcoming;
   };
 

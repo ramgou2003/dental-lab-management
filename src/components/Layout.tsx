@@ -53,7 +53,7 @@ const Layout = () => {
     const path = location.pathname;
     if (path === "/" || path === "/dashboard") return "dashboard";
     if (path.startsWith("/lead-in")) return "lead-in";
-    if (path === "/appointments") return "appointments";
+    if (path.startsWith("/appointments")) return "appointments";
     if (path.startsWith("/consultation")) return "consultation";
     if (path.startsWith("/patients")) return "patients";
     if (path.startsWith("/lab")) {

@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Plus, Search, ClipboardList } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -22,6 +23,7 @@ export function CalendarHeader({
   onSearchChange,
   canCreateAppointments = true
 }: CalendarHeaderProps) {
+  const navigate = useNavigate();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const navigateDate = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
@@ -120,6 +122,16 @@ export function CalendarHeader({
               className="pl-10 h-9 w-80 bg-white/70 border-blue-300 text-blue-900 placeholder:text-blue-400"
             />
           </div>
+
+          {/* Next Appointments Queue Button */}
+          <Button
+            onClick={() => navigate('/appointments/next-appointments')}
+            variant="outline"
+            className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100 hover:text-green-800 h-9 px-4 font-semibold"
+          >
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Next Appointments
+          </Button>
 
           {/* New Appointment Button */}
           {canCreateAppointments && (

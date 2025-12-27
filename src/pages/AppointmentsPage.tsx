@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
-import { DayView } from "@/components/calendar/DayView";
+import { DayView, type DayViewHandle } from "@/components/calendar/DayView";
 import { AppointmentForm } from "@/components/calendar/AppointmentForm";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { useAppointments, type Appointment } from "@/hooks/useAppointments";
@@ -8,7 +9,32 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "@/components/ui/sonner";
 
 export function AppointmentsPage() {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [searchParams, setSearchParams] = useSearchParams();
+  const dayViewRef = useRef<DayViewHandle>(null);
+
+  const [currentDate, setCurrentDate] = useState(() => {
+    const dateParam = searchParams.get('date');
+    if (dateParam) {
+      return new Date(dateParam + 'T00:00:00');
+    }
+    return new Date();
+  });
+
+  // Sync URL with current date
+  useEffect(() => {
+    const dateStr = currentDate.getFullYear() + '-' +
+      String(currentDate.getMonth() + 1).padStart(2, '0') + '-' +
+      String(currentDate.getDate()).padStart(2, '0');
+
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (newParams.get('date') !== dateStr) {
+        newParams.set('date', dateStr);
+        return newParams;
+      }
+      return prev;
+    }, { replace: true });
+  }, [currentDate, setSearchParams]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
@@ -176,6 +202,7 @@ export function AppointmentsPage() {
             onStatusChange={handleStatusChange}
             onEdit={handleEditAppointment}
             onDelete={handleDeleteAppointment}
+            ref={dayViewRef}
           />
         </div>
       </div>
@@ -210,9 +237,10 @@ export function AppointmentsPage() {
         onStatusChange={handleStatusChange}
         canUpdateAppointments={canUpdateAppointments()}
         canDeleteAppointments={canDeleteAppointments()}
+        onOpenHealthHistory={(patientId, patientName) => dayViewRef.current?.openHealthHistory(patientId, patientName)}
+        onOpenComfortPreference={(patientId, patientName) => dayViewRef.current?.openComfortPreference(patientId, patientName)}
+        onOpenEncounter={(appointment) => dayViewRef.current?.openEncounterForm(appointment as any)}
       />
-
-
     </div>
   );
 }

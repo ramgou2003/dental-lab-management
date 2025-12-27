@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Clock, User, MapPin, MoreHorizontal, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit, Trash2, ClipboardList, Calendar, FileEdit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,24 +23,49 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { HealthHistoryDialog } from "@/components/HealthHistoryDialog";
 import { ComfortPreferenceDialog } from "@/components/ComfortPreferenceDialog";
 import { EncounterFormDialog } from "@/components/calendar/EncounterFormDialog";
+import { AppointmentSchedulerDialog } from "@/components/calendar/AppointmentSchedulerDialog";
 import { NewLabScriptForm } from "@/components/NewLabScriptForm";
 import { supabase as supabaseClient } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
 
-interface Appointment {
+export interface Appointment {
   id: string;
   title: string;
   patient: string;
+  patientId?: string;
   startTime: string;
   endTime: string;
   type: string;
   subtype?: string; // Appointment subtype
+  assignedUserId?: string;
+  assignedUserName?: string;
   status: string; // Full status name
-  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk' | 'NSHOW' | 'RESCH' | 'CANCL'; // Status code
+  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk' | 'NSHOW' | 'RESCH' | 'CANCL' | 'CMPLT'; // Status code
   notes?: string;
+  encounterCompleted?: boolean;
+  nextAppointmentScheduled?: boolean;
+  nextAppointmentDate?: string;
+  nextAppointmentTime?: string;
+  nextAppointmentType?: string;
+  nextAppointmentSubtype?: string;
+}
+
+interface User {
+  id: string;
+  full_name: string;
+  email: string;
 }
 
 interface DayViewProps {
@@ -54,10 +79,36 @@ interface DayViewProps {
   onStatusChange?: (appointmentId: string, newStatusCode: Appointment['statusCode']) => void;
   onEdit?: (appointment: Appointment) => void;
   onDelete?: (appointmentId: string) => void;
+  isSchedulerMode?: boolean; // When true, only shows calendar grid without navigation/toolbar
 }
 
-export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange, onEdit, onDelete }: DayViewProps) {
+export interface DayViewHandle {
+  openHealthHistory: (patientId: string, patientName: string) => void;
+  openComfortPreference: (patientId: string, patientName: string) => void;
+  openEncounterForm: (appointment: Appointment) => void;
+}
+
+export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange, onEdit, onDelete, isSchedulerMode = false }, ref) => {
   const navigate = useNavigate();
+
+  useImperativeHandle(ref, () => ({
+    openHealthHistory: (patientId: string, patientName: string) => {
+      setSelectedPatientId(patientId);
+      setSelectedPatientName(patientName);
+      setHealthHistoryDialogOpen(true);
+    },
+    openComfortPreference: (patientId: string, patientName: string) => {
+      setSelectedPatientId(patientId);
+      setSelectedPatientName(patientName);
+      setComfortPreferenceDialogOpen(true);
+    },
+    openEncounterForm: (appointment: Appointment) => {
+      setEncounterAppointmentId(appointment.id);
+      setEncounterPatientName(appointment.patient);
+      setEncounterFormDialogOpen(true);
+      // We might need to check status too, but for opening the form this is enough
+    }
+  }));
 
   // State for long-press handling (appointment cards)
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
@@ -69,7 +120,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   // State for status change confirmation
   const [statusChangeConfirmation, setStatusChangeConfirmation] = useState<{
     appointmentId: string;
-    newStatus: Appointment['status'];
+    newStatus: Appointment['statusCode'];
     appointmentDetails: string;
   } | null>(null);
 
@@ -81,6 +132,12 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
 
   // State for time slot long-press handling
   const [timeSlotLongPressTimer, setTimeSlotLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Assigned user state for next appointment
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [nextAppointmentAssignedUserId, setNextAppointmentAssignedUserId] = useState<string>('');
+
   const [isTimeSlotLongPress, setIsTimeSlotLongPress] = useState(false);
 
   // State for health history and comfort preference dialogs
@@ -93,10 +150,73 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   const [encounterFormDialogOpen, setEncounterFormDialogOpen] = useState(false);
   const [encounterAppointmentId, setEncounterAppointmentId] = useState<string>("");
   const [encounterPatientName, setEncounterPatientName] = useState<string>("");
+  const [appointmentEncounterStatus, setAppointmentEncounterStatus] = useState<Record<string, boolean>>({});
 
   // State for lab script form dialog
   const [labScriptFormOpen, setLabScriptFormOpen] = useState(false);
   const [labScriptPatientName, setLabScriptPatientName] = useState<string>("");
+
+  // State for encounter form missing dialog
+  const [encounterFormMissingDialog, setEncounterFormMissingDialog] = useState<{
+    appointmentId: string;
+    patientName: string;
+  } | null>(null);
+
+  // State for next appointment scheduling dialog
+  const [nextAppointmentDialog, setNextAppointmentDialog] = useState<{
+    appointmentId: string;
+    patientId: string;
+    patientName: string;
+  } | null>(null);
+  const [showNextAppointmentForm, setShowNextAppointmentForm] = useState(false);
+  const [nextAppointmentType, setNextAppointmentType] = useState<string>('');
+  const [nextAppointmentSubtype, setNextAppointmentSubtype] = useState<string>('');
+  const [nextAppointmentDate, setNextAppointmentDate] = useState<string>('');
+  const [nextAppointmentStartTime, setNextAppointmentStartTime] = useState<string>('');
+  const [nextAppointmentEndTime, setNextAppointmentEndTime] = useState<string>('');
+  const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
+  const [schedulingNextAppointment, setSchedulingNextAppointment] = useState(false);
+
+  // Use a REF to store patient info - refs are NOT affected by React state updates or dialog handlers
+  // This guarantees the patient info persists throughout the entire scheduling flow
+  const nextAppointmentPatientRef = useRef<{
+    patientId: string;
+    patientName: string;
+    currentApptId: string;
+  }>({ patientId: '', patientName: '', currentApptId: '' });
+
+  // Next appointment type options
+  const nextAppointmentTypes = [
+    { value: 'consultation', label: 'Consult' },
+    { value: 'follow-up', label: 'Follow-up' },
+    { value: 'data-collection', label: 'Data Collection' },
+    { value: 'printed-try-in', label: 'Appliance Delivery' },
+    { value: 'surgery', label: 'Surgery' },
+    { value: 'surgical-revision', label: 'Surgical Revision' },
+    { value: 'emergency', label: 'Emergency' }
+  ];
+
+  // Next appointment subtype options based on type
+  const nextAppointmentSubtypes: Record<string, { value: string; label: string }[]> = {
+    'follow-up': [
+      { value: '7-day-followup', label: '7 Day Follow-up' },
+      { value: '30-day-followup', label: '30 Days Follow-up' },
+      { value: 'observation-followup', label: 'Follow-up for Observation' },
+      { value: '3-month-followup', label: '3 Months Follow Up' },
+      { value: '6-month-followup', label: '6 Months Follow Up' },
+      { value: '12-month-followup', label: '12 Months Follow Up' }
+    ],
+    'data-collection': [
+      { value: '75-day-data-collection', label: '75 Days Data Collection for PTI' },
+      { value: 'final-data-collection', label: 'Final Data Collection' },
+      { value: 'data-collection-printed-try-in', label: 'Data collection for Printed-try-in' }
+    ],
+    'printed-try-in': [
+      { value: 'printed-try-in-delivery', label: 'Printed Try-in Delivery' },
+      { value: '82-day-appliance-delivery', label: '82 Days PTI Delivery' },
+      { value: '120-day-final-delivery', label: '120 Days Final Delivery' }
+    ]
+  };
 
   // Function to get status capsule color
   const getStatusDotColor = (status: string) => {
@@ -140,11 +260,15 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       '7-day-followup': '7 Day',
       '30-day-followup': '30 Day',
       'observation-followup': 'Observation',
+      '3-month-followup': '3 Month',
+      '6-month-followup': '6 Month',
+      '12-month-followup': '12 Month',
       'printed-try-in-delivery': 'PTI',
       '82-day-appliance-delivery': '82 Day PTI',
       '120-day-final-delivery': '120 Day Final',
       '75-day-data-collection': '75 Day PTI',
-      'final-data-collection': 'Final'
+      'final-data-collection': 'Final',
+      'data-collection-printed-try-in': 'DC PTI'
     };
 
     return subtypeLabels[subtype] || null;
@@ -199,7 +323,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
   };
 
   // Handler for status change from context menu
-  const handleStatusChangeFromMenu = (appointmentId: string, newStatus: Appointment['status']) => {
+  const handleStatusChangeFromMenu = (appointmentId: string, newStatus: Appointment['statusCode']) => {
     // Find the appointment details
     const appointment = appointments.find(apt => apt.id === appointmentId);
     if (!appointment) return;
@@ -520,6 +644,40 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     }, 100);
   };
 
+  // Check if encounter exists for appointments
+  const checkEncounterStatus = async (appointmentIds: string[]) => {
+    if (appointmentIds.length === 0) return;
+
+    try {
+      const { data, error } = await (supabaseClient as any)
+        .from('encounters')
+        .select('appointment_id')
+        .in('appointment_id', appointmentIds);
+
+      if (error) {
+        console.error('Error checking encounter status:', error);
+        return;
+      }
+
+      const statusMap: Record<string, boolean> = {};
+      appointmentIds.forEach(id => {
+        statusMap[id] = data?.some(encounter => encounter.appointment_id === id) || false;
+      });
+
+      setAppointmentEncounterStatus(statusMap);
+    } catch (error) {
+      console.error('Error checking encounter status:', error);
+    }
+  };
+
+  // Check encounter status when appointments change
+  useEffect(() => {
+    const appointmentIds = appointments.map(apt => apt.id);
+    if (appointmentIds.length > 0) {
+      checkEncounterStatus(appointmentIds);
+    }
+  }, [appointments]);
+
   // Handler for encounter form
   const handleEncounterForm = (appointment: Appointment) => {
     // Close menu immediately
@@ -531,6 +689,258 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       setEncounterPatientName(appointment.patient);
       setEncounterFormDialogOpen(true);
     }, 100);
+  };
+
+  // Handler for completing appointment
+  const handleCompleteAppointment = async (appointment: Appointment) => {
+    // Close menu immediately
+    setOpenContextMenuId(null);
+
+    try {
+      // First, check if encounter form exists and is complete
+      const { data: encounterData, error: encounterError } = await (supabaseClient as any)
+        .from('encounters')
+        .select('id, form_status')
+        .eq('appointment_id', appointment.id)
+        .maybeSingle();
+
+      if (encounterError) {
+        console.error('Error checking encounter form:', encounterError);
+        toast.error('Failed to check encounter form status');
+        return;
+      }
+
+      // If no encounter form exists or it's not complete, show dialog
+      if (!encounterData || encounterData.form_status !== 'complete') {
+        setTimeout(() => {
+          setEncounterFormMissingDialog({
+            appointmentId: appointment.id,
+            patientName: appointment.patient
+          });
+        }, 100);
+        return;
+      }
+
+      // If encounter form is complete, show next appointment dialog
+      setTimeout(() => {
+        setNextAppointmentDialog({
+          appointmentId: appointment.id,
+          patientId: appointment.patientId,
+          patientName: appointment.patient
+        });
+      }, 100);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to check encounter form');
+    }
+  };
+
+  // Handler for completing appointment without scheduling next appointment
+  const handleCompleteWithoutNextAppointment = async () => {
+    if (!nextAppointmentDialog) return;
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+
+      // 1. Mark appointment as complete
+      const { error } = await (supabaseClient as any)
+        .from('appointments')
+        .update({
+          encounter_completed: true,
+          encounter_completed_at: new Date().toISOString(),
+          encounter_completed_by: user?.id || null,
+          status: 'Appointment Completed',
+          status_code: 'CMPLT',
+          next_appointment_scheduled: false
+        })
+        .eq('id', nextAppointmentDialog.appointmentId);
+
+      if (error) {
+        console.error('Error completing appointment:', error);
+        toast.error('Failed to complete appointment');
+        return;
+      }
+
+      // 2. Update existing encounter to ensure it shows in "Unscheduled" list (NextAppointmentsPage)
+      //    We need to ensure it has a type and date, otherwise it won't appear.
+      const { data: existingEncounter } = await (supabaseClient as any)
+        .from('encounters')
+        .select('next_appointment_type, next_appointment_date')
+        .eq('appointment_id', nextAppointmentDialog.appointmentId)
+        .maybeSingle();
+
+      if (existingEncounter) {
+        const updates: any = {
+          next_appointment_scheduled: false
+        };
+
+        // Default to 'follow-up' and Today if not specified in form
+        if (!existingEncounter.next_appointment_type) {
+          updates.next_appointment_type = 'follow-up';
+        }
+        if (!existingEncounter.next_appointment_date) {
+          updates.next_appointment_date = new Date().toISOString();
+        }
+
+        const { error: encounterError } = await (supabaseClient as any)
+          .from('encounters')
+          .update(updates)
+          .eq('appointment_id', nextAppointmentDialog.appointmentId);
+
+        if (encounterError) {
+          console.error('Error updating encounter for unscheduled list:', encounterError);
+          // Non-blocking error, user still completed appointment
+        }
+      }
+
+      toast.success('Appointment marked as complete');
+
+      // Close dialog
+      setNextAppointmentDialog(null);
+
+      // Verify immediate local state update via parent callback
+      if (onStatusChange) {
+        onStatusChange(nextAppointmentDialog.appointmentId, 'CMPLT');
+      }
+
+      // Refresh encounter status
+      checkEncounterStatus([nextAppointmentDialog.appointmentId]);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to complete appointment');
+    }
+  };
+
+  // Handler for scheduling next appointment from the scheduler dialog
+  // Handler for when user selects a time in the scheduler - returns to form with time
+  const handleTimeSelected = (appointmentData: {
+    type: string;
+    subtype: string | null;
+    date: string;
+    startTime: string;
+    endTime: string;
+  }) => {
+    console.log('handleTimeSelected called with:', appointmentData);
+
+    // Update the date and time state
+    setNextAppointmentDate(appointmentData.date);
+    setNextAppointmentStartTime(appointmentData.startTime);
+    setNextAppointmentEndTime(appointmentData.endTime);
+
+    // Close scheduler and return to the form
+    setShowSchedulerDialog(false);
+  };
+
+  // Handler for creating the appointment from the form
+  const handleCreateNextAppointment = async () => {
+    // Get patient info from the ref (guaranteed to persist throughout the flow)
+    const { patientId, patientName, currentApptId } = nextAppointmentPatientRef.current;
+
+    console.log('Creating appointment with ref values:', { patientId, patientName, currentApptId });
+
+    if (!patientId || !patientName || !currentApptId) {
+      console.log('Patient info is missing from ref:', nextAppointmentPatientRef.current);
+      toast.error('Patient information is missing. Please try again.');
+      return;
+    }
+
+    if (!nextAppointmentStartTime || !nextAppointmentEndTime) {
+      toast.error('Please select a time slot first');
+      return;
+    }
+
+    if (!nextAppointmentType || !nextAppointmentDate) {
+      toast.error('Please select appointment type and date');
+      return;
+    }
+
+    setSchedulingNextAppointment(true);
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+
+      // First, mark current appointment as complete
+      const { error: completeError } = await (supabaseClient as any)
+        .from('appointments')
+        .update({
+          encounter_completed: true,
+          encounter_completed_at: new Date().toISOString(),
+          encounter_completed_by: user?.id || null,
+          status: 'Appointment Completed',
+          status_code: 'CMPLT',
+          next_appointment_scheduled: true,
+          next_appointment_date: nextAppointmentDate,
+          next_appointment_time: nextAppointmentStartTime,
+          next_appointment_type: nextAppointmentType,
+          next_appointment_subtype: nextAppointmentSubtype || null
+        })
+        .eq('id', currentApptId);
+
+      if (completeError) {
+        console.error('Error completing appointment:', completeError);
+        toast.error('Failed to complete appointment');
+        setSchedulingNextAppointment(false);
+        return;
+      }
+
+      // Determine appointment title
+      const appointmentTitle = nextAppointmentSubtype
+        ? nextAppointmentSubtypes[nextAppointmentType]?.find(s => s.value === nextAppointmentSubtype)?.label || nextAppointmentType
+        : nextAppointmentTypes.find(t => t.value === nextAppointmentType)?.label || nextAppointmentType;
+
+      // Create the next appointment using ref values
+      const { error: createError } = await supabaseClient
+        .from('appointments')
+        .insert({
+          patient_id: patientId,
+          patient_name: patientName,
+          title: appointmentTitle,
+          date: nextAppointmentDate,
+          start_time: nextAppointmentStartTime,
+          end_time: nextAppointmentEndTime,
+          appointment_type: nextAppointmentType,
+          subtype: nextAppointmentSubtype || null,
+          status: 'Not Confirmed',
+          status_code: '?????',
+          assigned_user_id: nextAppointmentAssignedUserId || null
+        });
+
+      if (createError) {
+        console.error('Error creating next appointment:', createError);
+        toast.error('Appointment completed but failed to schedule next appointment');
+        setSchedulingNextAppointment(false);
+        checkEncounterStatus([currentApptId]);
+        return;
+      }
+
+      toast.success('Appointment completed and next appointment scheduled');
+
+      // Update local state for the completed appointment
+      // Verify immediate local state update via parent callback
+      if (onStatusChange) {
+        onStatusChange(currentApptId, 'CMPLT');
+      }
+
+      // Close dialogs and reset ALL state
+      setShowNextAppointmentForm(false);
+      setNextAppointmentDialog(null);
+      setSchedulingNextAppointment(false);
+      setNextAppointmentType('');
+      setNextAppointmentSubtype('');
+      setNextAppointmentDate('');
+      setNextAppointmentStartTime('');
+      setNextAppointmentEndTime('');
+      setNextAppointmentAssignedUserId('');
+      // Reset the ref
+      nextAppointmentPatientRef.current = { patientId: '', patientName: '', currentApptId: '' };
+
+      // Refresh encounter status
+      checkEncounterStatus([currentApptId]);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to complete appointment');
+      setSchedulingNextAppointment(false);
+    }
   };
 
   // Wrapper for navigate to consultation
@@ -556,7 +966,7 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
 
-      const { data: userProfile } = await supabaseClient
+      const { data: userProfile } = await (supabaseClient as any)
         .from('user_profiles')
         .select('id, full_name')
         .eq('user_id', user?.id)
@@ -665,6 +1075,46 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       badgeColor: 'bg-blue-500 text-white'
     }
   ];
+  // Fetch users from Supabase for assignment
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await (supabaseClient as any)
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .eq('status', 'active')
+        .order('full_name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching users:', error);
+        return;
+      }
+
+      if (data) {
+        const usersList = data as unknown as User[];
+        setUsers(usersList);
+
+        // Auto-assign DC if it's a consultation
+        if (nextAppointmentType === 'consultation' && !nextAppointmentAssignedUserId) {
+          const dcUser = usersList.find(user => user.full_name.trim().toLowerCase() === 'dc');
+          if (dcUser) {
+            setNextAppointmentAssignedUserId(dcUser.id);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Fetch users when next appointment dialog opens
+  useEffect(() => {
+    if (showNextAppointmentForm) {
+      fetchUsers();
+    }
+  }, [showNextAppointmentForm, nextAppointmentType]);
 
   // Drag selection state
   const [isDragging, setIsDragging] = useState(false);
@@ -713,7 +1163,49 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
     persistentSelectionRef.current = { start: null, end: null, column: null, isVisible: false };
   }, []);
 
-  const getTypeColors = (typeKey: string) => {
+  const getTypeColors = (typeKey: string, encounterCompleted?: boolean, statusCode?: string) => {
+    // If status is completed (gray), it takes precedence over everything
+    if (statusCode === 'CMPLT') {
+      return {
+        key: typeKey,
+        label: appointmentTypes.find(type => type.key === typeKey)?.label || typeKey,
+        shortLabel: appointmentTypes.find(type => type.key === typeKey)?.shortLabel || typeKey,
+        color: 'bg-gray-100 border-gray-300 text-gray-800',
+        hoverColor: 'hover:bg-gray-200',
+        selectedColor: 'bg-gray-200 border-gray-400',
+        dragColor: 'bg-gray-300 border-gray-500',
+        badgeColor: 'bg-gray-500 text-white'
+      };
+    }
+
+    // If status is No Show or Cancelled (red)
+    if (statusCode === 'NSHOW' || statusCode === 'CANCL') {
+      return {
+        key: typeKey,
+        label: appointmentTypes.find(type => type.key === typeKey)?.label || typeKey,
+        shortLabel: appointmentTypes.find(type => type.key === typeKey)?.shortLabel || typeKey,
+        color: 'bg-red-100 border-red-300 text-red-800',
+        hoverColor: 'hover:bg-red-200',
+        selectedColor: 'bg-red-200 border-red-400',
+        dragColor: 'bg-red-300 border-red-500',
+        badgeColor: 'bg-red-500 text-white'
+      };
+    }
+
+    // If encounter is completed, use green theme
+    if (encounterCompleted) {
+      return {
+        key: typeKey,
+        label: appointmentTypes.find(type => type.key === typeKey)?.label || typeKey,
+        shortLabel: appointmentTypes.find(type => type.key === typeKey)?.shortLabel || typeKey,
+        color: 'bg-green-100 border-green-300 text-green-800',
+        hoverColor: 'hover:bg-green-50',
+        selectedColor: 'bg-green-100 border-green-400',
+        dragColor: 'bg-green-200 border-green-500',
+        badgeColor: appointmentTypes.find(type => type.key === typeKey)?.badgeColor || 'bg-green-500 text-white'
+      };
+    }
+
     // Special handling for surgical-revision - it should have its own colors but appear in surgery column
     if (typeKey === 'surgical-revision') {
       return {
@@ -863,8 +1355,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
       // Check if this is a single click (same slot) or a drag selection
       const isSingleClick = dragStart.hour === dragEnd.hour && dragStart.minute === dragEnd.minute;
       const isDraggedSelection = Math.abs(endTotalMinutes - startTotalMinutes) > 0 ||
-                                dragStart.hour !== dragEnd.hour ||
-                                dragStart.minute !== dragEnd.minute;
+        dragStart.hour !== dragEnd.hour ||
+        dragStart.minute !== dragEnd.minute;
 
       // Create appointment for both single clicks (15 minutes) and drag selections
       if (isSingleClick || isDraggedSelection) {
@@ -1343,8 +1835,6 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
           {/* Continuous appointment rectangles - positioned absolutely over the entire grid */}
           <div className="absolute inset-0 pointer-events-none z-20">
             {appointmentTypes.map((type, typeIndex) => {
-              const typeColors = getTypeColors(type.key);
-
               // Get all appointments for this type
               // Map both 'surgery' and 'surgical-revision' to the surgery column
               const typeAppointments = appointments.filter(apt => {
@@ -1355,6 +1845,8 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
               });
 
               return typeAppointments.map((appointment) => {
+                // Get type colors based on appointment type and encounter completion status
+                const typeColors = getTypeColors(appointment.type, appointment.encounterCompleted, appointment.statusCode);
                 const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
                 const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
 
@@ -1427,255 +1919,276 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                           handleAppointmentTouchMove(e);
                         }}
                       >
-                    {/* Vertical status capsule on the left edge */}
-                    <div className={`absolute left-1 top-1 bottom-1 right-1 w-3 rounded-full ${getStatusDotColor(appointment.statusCode)}`}></div>
-                    <div className="p-1 pl-5 pr-1 h-full flex flex-col justify-between">
-                      {(() => {
-                        // Calculate appointment duration in minutes
-                        const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
-                        const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
-                        const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+                        {/* Vertical status capsule on the left edge */}
+                        <div className={`absolute left-1 top-1 bottom-1 right-1 w-3 rounded-full ${getStatusDotColor(appointment.statusCode)}`}></div>
+                        <div className="p-1 pl-5 pr-1 h-full flex flex-col justify-between">
+                          {(() => {
+                            // Calculate appointment duration in minutes
+                            const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                            const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+                            const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
 
-                        // Different layouts for 15 and 30 minute appointments
-                        if (durationMinutes === 15) {
-                          // Single line layout for 15-minute appointments
-                          // Get the actual appointment type colors for the badge
-                          const actualTypeColors = getTypeColors(appointment.type);
-                          const firstLetter = actualTypeColors.shortLabel?.charAt(0) || actualTypeColors.label?.charAt(0) || 'A';
-                          const columnWidth = getColumnWidth();
+                            // Different layouts for 15 and 30 minute appointments
+                            if (durationMinutes === 15) {
+                              // Single line layout for 15-minute appointments
+                              // Get the actual appointment type colors for the badge
+                              const actualTypeColors = getTypeColors(appointment.type);
+                              const firstLetter = actualTypeColors.shortLabel?.charAt(0) || actualTypeColors.label?.charAt(0) || 'A';
+                              const columnWidth = getColumnWidth();
 
-                          // Determine time font size based on column width
-                          let timeFontSize = 'text-xs';
-                          if (columnWidth < 100) {
-                            timeFontSize = 'text-[9px]';
-                          } else if (columnWidth < 120) {
-                            timeFontSize = 'text-[10px]';
-                          }
+                              // Determine time font size based on column width
+                              let timeFontSize = 'text-xs';
+                              if (columnWidth < 100) {
+                                timeFontSize = 'text-[9px]';
+                              } else if (columnWidth < 120) {
+                                timeFontSize = 'text-[10px]';
+                              }
 
-                          return (
-                            <div className="flex flex-col h-full w-full overflow-hidden">
-                              {/* Top row - Patient name and status code */}
-                              <div className="flex items-start justify-between gap-1 mb-0.5">
-                                <h4
-                                  className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
-                                  onClick={(e) => {
-                                    console.log('15-minute appointment patient name clicked');
-                                    e.stopPropagation();
-                                    handlePatientNameClick(appointment);
-                                  }}
-                                >
-                                  {appointment.patient}
-                                </h4>
-                                <div className="text-[9px] font-semibold text-gray-700 flex-shrink-0">
-                                  {appointment.statusCode}
-                                </div>
-                              </div>
-                              {/* Middle - Assigned user and subtype */}
-                              {appointment.assignedUserName && (
-                                <div className="text-[9px] text-gray-500 truncate">
-                                  👤 {appointment.assignedUserName}
-                                </div>
-                              )}
-                              {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
-                                <div className="text-[9px] font-medium text-blue-600 truncate">
-                                  📋 {getSubtypeLabel(appointment.subtype)}
-                                </div>
-                              )}
-                              {/* Bottom row - Time and badge */}
-                              <div className="flex items-end justify-between gap-0.5 mt-auto">
-                                <div className="flex flex-col items-start">
-                                  <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
-                                    {formatAppointmentTime(appointment.startTime)}
-                                  </span>
-                                  <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
-                                    {formatAppointmentTime(appointment.endTime)}
-                                  </span>
-                                </div>
-                                <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full uppercase ${actualTypeColors.badgeColor || 'bg-gray-500'}`}>
-                                  {firstLetter}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        } else {
-                          // Layout for 30-minute and longer appointments
-                          return (
-                            <div className="flex flex-col h-full justify-between">
-                              {/* Top section - Name and status code */}
-                              <div className="flex flex-col gap-0.5">
-                                <div className="flex items-start justify-between gap-1">
-                                  <h4
-                                    className="font-semibold text-sm text-gray-800 truncate flex-1 underline cursor-pointer hover:text-blue-600 transition-colors"
-                                    onClick={(e) => {
-                                      console.log('30+ minute appointment patient name clicked');
-                                      e.stopPropagation();
-                                      handlePatientNameClick(appointment);
-                                    }}
-                                  >
-                                    {appointment.patient}
-                                  </h4>
-                                  <div className="text-[10px] font-semibold text-gray-700 flex-shrink-0">
-                                    {appointment.statusCode}
+                              return (
+                                <div className="flex flex-col h-full w-full overflow-hidden">
+                                  {/* Top row - Patient name and status code */}
+                                  <div className="flex items-start justify-between gap-1 mb-0.5">
+                                    <h4
+                                      className="font-medium text-xs text-gray-800 truncate flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors"
+                                      onClick={(e) => {
+                                        console.log('15-minute appointment patient name clicked');
+                                        e.stopPropagation();
+                                        handlePatientNameClick(appointment);
+                                      }}
+                                    >
+                                      {appointment.patient}
+                                    </h4>
+                                    <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded text-white shadow-sm ${getStatusDotColor(appointment.statusCode)} flex-shrink-0`}>
+                                      {appointment.statusCode}
+                                    </div>
                                   </div>
-                                </div>
-                                {appointment.assignedUserName && (
-                                  <div className="text-[10px] text-gray-500 truncate">
-                                    👤 {appointment.assignedUserName}
-                                  </div>
-                                )}
-                                {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
-                                  <div className="text-[10px] font-medium text-blue-600 truncate">
-                                    📋 {getSubtypeLabel(appointment.subtype)}
-                                  </div>
-                                )}
-                              </div>
-                              {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
-                              <div className="flex justify-between items-end gap-1 min-w-0 w-full overflow-hidden">
-                                {(() => {
-                                  const columnWidth = getColumnWidth();
-                                  // Get the actual appointment type colors for the badge
-                                  const actualTypeColors = getTypeColors(appointment.type);
-                                  const label = actualTypeColors.shortLabel || actualTypeColors.label;
-
-                                  // Determine display text, badge size, and time size based on column width
-                                  let displayText, badgeSize, badgePadding, timeFontSize;
-
-                                  if (columnWidth >= 140) {
-                                    // Wide columns - show full text
-                                    displayText = label;
-                                    badgeSize = 'text-[11px]';
-                                    badgePadding = 'px-1.5 py-0.5';
-                                    timeFontSize = 'text-xs';
-                                  } else if (columnWidth >= 120) {
-                                    // Medium columns - show full text but smaller
-                                    displayText = label;
-                                    badgeSize = 'text-[10px]';
-                                    badgePadding = 'px-1 py-0.5';
-                                    timeFontSize = 'text-[10px]';
-                                  } else if (columnWidth >= 100) {
-                                    // Narrow columns - start abbreviating "Data Collection"
-                                    displayText = (label === 'Data Collection') ? 'Data' : label;
-                                    badgeSize = 'text-[9px]';
-                                    badgePadding = 'px-1 py-0.5';
-                                    timeFontSize = 'text-[10px]';
-                                  } else if (columnWidth >= 80) {
-                                    // Very narrow - abbreviate and smaller size
-                                    displayText = (label === 'Data Collection') ? 'Data' : label;
-                                    badgeSize = 'text-[8px]';
-                                    badgePadding = 'px-0.5 py-0.5';
-                                    timeFontSize = 'text-[9px]';
-                                  } else {
-                                    // Ultra narrow - minimal badge and time
-                                    displayText = (label === 'Data Collection') ? 'Data' : label;
-                                    badgeSize = 'text-[7px]';
-                                    badgePadding = 'px-0.5 py-0';
-                                    timeFontSize = 'text-[8px]';
-                                  }
-
-                                  return (
-                                    <>
-                                      <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase ${actualTypeColors.badgeColor || 'bg-gray-100 text-gray-800'} ${badgeSize} ${badgePadding}`}>
-                                        {label === 'Data Collection' ? 'Data' : displayText}
+                                  {/* Middle - Assigned user and subtype */}
+                                  {appointment.assignedUserName && (
+                                    <div className="text-[9px] text-gray-500 truncate">
+                                      👤 {appointment.assignedUserName}
+                                    </div>
+                                  )}
+                                  {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
+                                    <div className="text-[9px] font-medium text-blue-600 truncate">
+                                      📋 {getSubtypeLabel(appointment.subtype)}
+                                    </div>
+                                  )}
+                                  {/* Bottom row - Time and badge */}
+                                  <div className="flex items-end justify-between gap-0.5 mt-auto">
+                                    <div className="flex flex-col items-start">
+                                      <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                        {formatAppointmentTime(appointment.startTime)}
                                       </span>
-                                      <div className="flex flex-col items-end flex-shrink-0">
-                                        <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
-                                          {formatAppointmentTime(appointment.startTime)}
-                                        </span>
-                                        <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
-                                          {formatAppointmentTime(appointment.endTime)}
-                                        </span>
+                                      <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                        {formatAppointmentTime(appointment.endTime)}
+                                      </span>
+                                    </div>
+                                    <span className={`inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white rounded-full uppercase ${actualTypeColors.badgeColor || 'bg-gray-500'}`}>
+                                      {firstLetter}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              // Layout for 30-minute and longer appointments
+                              return (
+                                <div className="flex flex-col h-full justify-between">
+                                  {/* Top section - Name and status code */}
+                                  <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-start justify-between gap-1">
+                                      <h4
+                                        className="font-semibold text-sm text-gray-800 truncate flex-1 underline cursor-pointer hover:text-blue-600 transition-colors"
+                                        onClick={(e) => {
+                                          console.log('30+ minute appointment patient name clicked');
+                                          e.stopPropagation();
+                                          handlePatientNameClick(appointment);
+                                        }}
+                                      >
+                                        {appointment.patient}
+                                      </h4>
+                                      <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white shadow-sm ${getStatusDotColor(appointment.statusCode)} flex-shrink-0`}>
+                                        {appointment.statusCode}
                                       </div>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          );
-                        }
-                      })()}
-                      {(() => {
-                        // Calculate appointment duration in minutes
-                        const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
-                        const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
-                        const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+                                    </div>
+                                    {appointment.assignedUserName && (
+                                      <div className="text-[10px] text-gray-500 truncate">
+                                        👤 {appointment.assignedUserName}
+                                      </div>
+                                    )}
+                                    {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
+                                      <div className="text-[10px] font-medium text-blue-600 truncate">
+                                        📋 {getSubtypeLabel(appointment.subtype)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
+                                  <div className="flex justify-between items-end gap-1 min-w-0 w-full overflow-hidden">
+                                    {(() => {
+                                      const columnWidth = getColumnWidth();
+                                      // Get the actual appointment type colors for the badge
+                                      const actualTypeColors = getTypeColors(
+                                        appointment.type,
+                                        appointmentEncounterStatus[appointment.id] || appointment.encounterCompleted,
+                                        appointment.statusCode
+                                      );
+                                      const label = actualTypeColors.shortLabel || actualTypeColors.label;
 
-                        // No additional badge needed since it's now inline for 30+ minute appointments
-                        return null;
-                      })()}
-                    </div>
+                                      // Determine display text, badge size, and time size based on column width
+                                      let displayText, badgeSize, badgePadding, timeFontSize;
+
+                                      if (columnWidth >= 140) {
+                                        // Wide columns - show full text
+                                        displayText = label;
+                                        badgeSize = 'text-[11px]';
+                                        badgePadding = 'px-1.5 py-0.5';
+                                        timeFontSize = 'text-xs';
+                                      } else if (columnWidth >= 120) {
+                                        // Medium columns - show full text but smaller
+                                        displayText = label;
+                                        badgeSize = 'text-[10px]';
+                                        badgePadding = 'px-1 py-0.5';
+                                        timeFontSize = 'text-[10px]';
+                                      } else if (columnWidth >= 100) {
+                                        // Narrow columns - start abbreviating "Data Collection"
+                                        displayText = (label === 'Data Collection') ? 'Data' : label;
+                                        badgeSize = 'text-[9px]';
+                                        badgePadding = 'px-1 py-0.5';
+                                        timeFontSize = 'text-[10px]';
+                                      } else if (columnWidth >= 80) {
+                                        // Very narrow - abbreviate and smaller size
+                                        displayText = (label === 'Data Collection') ? 'Data' : label;
+                                        badgeSize = 'text-[8px]';
+                                        badgePadding = 'px-0.5 py-0.5';
+                                        timeFontSize = 'text-[9px]';
+                                      } else {
+                                        // Ultra narrow - minimal badge and time
+                                        displayText = (label === 'Data Collection') ? 'Data' : label;
+                                        badgeSize = 'text-[7px]';
+                                        badgePadding = 'px-0.5 py-0';
+                                        timeFontSize = 'text-[8px]';
+                                      }
+
+                                      return (
+                                        <>
+                                          <div className="flex gap-1 items-center overflow-hidden">
+                                            <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase ${actualTypeColors.badgeColor || 'bg-gray-100 text-gray-800'} ${badgeSize} ${badgePadding}`}>
+                                              {label === 'Data Collection' ? 'Data' : displayText}
+                                            </span>
+                                            {appointment.statusCode === 'CMPLT' && (
+                                              <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase bg-gray-600 text-white ${badgeSize} ${badgePadding}`}>
+                                                Completed
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex flex-col items-end flex-shrink-0">
+                                            <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                              {formatAppointmentTime(appointment.startTime)}
+                                            </span>
+                                            <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                              {formatAppointmentTime(appointment.endTime)}
+                                            </span>
+                                          </div>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                              );
+                            }
+                          })()}
+                          {(() => {
+                            // Calculate appointment duration in minutes
+                            const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                            const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+                            const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+
+                            // No additional badge needed since it's now inline for 30+ minute appointments
+                            return null;
+                          })()}
+                        </div>
                       </div>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="w-56 touch-manipulation select-none">
                       <ContextMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
                         <ClipboardList className="mr-2 h-4 w-4" />
-                        Encounter Form
+                        {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
                       </ContextMenuItem>
                       <ContextMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
                         <FileEdit className="mr-2 h-4 w-4" />
                         Add New Lab Script
                       </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuSub>
-                        <ContextMenuSubTrigger className="touch-manipulation select-none" {...handleSubMenuTrigger()}>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Change Status
-                        </ContextMenuSubTrigger>
-                        <ContextMenuSubContent className="touch-manipulation select-none">
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
-                            <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
-                            Not Confirmed
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
-                            <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                            Appointment Confirmed
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
-                            <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                            Electronically Confirmed
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
-                            <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
-                            Emergency Patient
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
-                            <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
-                            Patient has Arrived
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
-                            <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
-                            Ready for Operatory
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
-                            <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
-                            Left 1st Message
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
-                            <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
-                            Left 2nd Message
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
-                            <CheckCircle className="mr-2 h-4 w-4 text-indigo-600" />
-                            Multi-Appointment
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
-                            <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
-                            2 Week Calls
-                          </ContextMenuItem>
+                      {appointment.statusCode !== 'CMPLT' && (
+                        <>
                           <ContextMenuSeparator />
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
-                            <XCircle className="mr-2 h-4 w-4 text-red-700" />
-                            No Show
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'RESCH'))}>
-                            <Calendar className="mr-2 h-4 w-4 text-amber-600" />
-                            Appointment Rescheduled
-                          </ContextMenuItem>
-                          <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
-                            <XCircle className="mr-2 h-4 w-4 text-slate-600" />
-                            Appointment Cancelled
-                          </ContextMenuItem>
-                        </ContextMenuSubContent>
-                      </ContextMenuSub>
+                          <ContextMenuSub>
+                            <ContextMenuSubTrigger className="touch-manipulation select-none" {...handleSubMenuTrigger()}>
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Change Status
+                            </ContextMenuSubTrigger>
+                            <ContextMenuSubContent className="touch-manipulation select-none">
+                              <ContextMenuItem {...handleMenuItemAction(() => handleCompleteAppointment(appointment))}>
+                                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                Complete Appointment
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
+                                <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
+                                Not Confirmed
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
+                                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                Appointment Confirmed
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
+                                <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                Electronically Confirmed
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
+                                <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
+                                Emergency Patient
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
+                                <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
+                                Patient has Arrived
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
+                                <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
+                                Ready for Operatory
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
+                                <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
+                                Left 1st Message
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
+                                <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
+                                Left 2nd Message
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
+                                <CheckCircle className="mr-2 h-4 w-4 text-indigo-600" />
+                                Multi-Appointment
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
+                                <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
+                                2 Week Calls
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
+                                <XCircle className="mr-2 h-4 w-4 text-red-700" />
+                                No Show
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'RESCH'))}>
+                                <Calendar className="mr-2 h-4 w-4 text-amber-600" />
+                                Reschedule Appointment
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
+                                <XCircle className="mr-2 h-4 w-4 text-slate-600" />
+                                Cancel Appointment
+                              </ContextMenuItem>
+
+                            </ContextMenuSubContent>
+                          </ContextMenuSub>
+                        </>
+                      )}
                       <ContextMenuSeparator />
                       {appointment.type === 'consultation' ? (
                         <ContextMenuItem {...handleMenuItemAction(() => handleNavigateToConsultation(appointment.id))}>
@@ -1737,13 +2250,11 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                       return (
                         <div
                           key={type.key}
-                          className={`p-2 transition-all relative ${
-                            typeIndex < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''
-                          } ${
-                            hasActiveSelection
+                          className={`p-2 transition-all relative ${typeIndex < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''
+                            } ${hasActiveSelection
                               ? ``
                               : `cursor-pointer`
-                          }`}
+                            }`}
                           onMouseDown={(e) => {
                             // Calculate which 15-minute slot was clicked based on position
                             const rect = e.currentTarget.getBoundingClientRect();
@@ -1798,11 +2309,10 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
                             return (
                               <div
                                 key={minute}
-                                className={`absolute inset-x-0 transition-all ${
-                                  hasAppointment
-                                    ? 'cursor-default'
-                                    : 'cursor-pointer hover:bg-gray-50'
-                                }`}
+                                className={`absolute inset-x-0 transition-all ${hasAppointment
+                                  ? 'cursor-default'
+                                  : 'cursor-pointer hover:bg-gray-50'
+                                  }`}
                                 style={{
                                   top: `${(minute / 60) * 100}%`,
                                   height: '25%',
@@ -1835,85 +2345,445 @@ export function DayView({ date, appointments, onAppointmentClick, onTimeSlotClic
         </div>
       </div>
 
-      {/* Health History Dialog */}
-      <HealthHistoryDialog
-        open={healthHistoryDialogOpen}
-        onOpenChange={setHealthHistoryDialogOpen}
-        patientId={selectedPatientId}
-        patientName={selectedPatientName}
-      />
+      {/* Only render dialogs when not in scheduler mode */}
+      {!isSchedulerMode && (
+        <>
+          {/* Health History Dialog */}
+          <HealthHistoryDialog
+            open={healthHistoryDialogOpen}
+            onOpenChange={setHealthHistoryDialogOpen}
+            patientId={selectedPatientId}
+            patientName={selectedPatientName}
+          />
 
-      {/* Comfort Preference Dialog */}
-      <ComfortPreferenceDialog
-        open={comfortPreferenceDialogOpen}
-        onOpenChange={setComfortPreferenceDialogOpen}
-        patientId={selectedPatientId}
-        patientName={selectedPatientName}
-      />
+          {/* Comfort Preference Dialog */}
+          <ComfortPreferenceDialog
+            open={comfortPreferenceDialogOpen}
+            onOpenChange={setComfortPreferenceDialogOpen}
+            patientId={selectedPatientId}
+            patientName={selectedPatientName}
+          />
 
-      {/* Status Change Confirmation Dialog */}
-      <AlertDialog open={!!statusChangeConfirmation} onOpenChange={(open) => {
-        if (!open) {
-          cancelStatusChange();
-        }
-      }}>
-        <AlertDialogContent className="touch-manipulation">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to change the status to <strong>{statusChangeConfirmation ? getStatusNameFromCode(statusChangeConfirmation.newStatus) : ''}</strong>?
-              <br /><br />
-              <span className="text-sm text-gray-600">
-                Appointment: {statusChangeConfirmation?.appointmentDetails}
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelStatusChange} className="touch-manipulation">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmStatusChange} className="touch-manipulation">Confirm</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          {/* Status Change Confirmation Dialog */}
+          <AlertDialog open={!!statusChangeConfirmation} onOpenChange={(open) => {
+            if (!open) {
+              cancelStatusChange();
+            }
+          }}>
+            <AlertDialogContent className="touch-manipulation">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to change the status to <strong>{statusChangeConfirmation ? getStatusNameFromCode(statusChangeConfirmation.newStatus) : ''}</strong>?
+                  <br /><br />
+                  <span className="text-sm text-gray-600">
+                    Appointment: {statusChangeConfirmation?.appointmentDetails}
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={cancelStatusChange} className="touch-manipulation">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmStatusChange} className="touch-manipulation">Confirm</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteConfirmation} onOpenChange={(open) => {
-        if (!open) {
-          cancelDelete();
-        }
-      }}>
-        <AlertDialogContent className="touch-manipulation">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Appointment</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this appointment? This action cannot be undone.
-              <br /><br />
-              <span className="text-sm text-gray-600">
-                Appointment: {deleteConfirmation?.appointmentDetails}
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelDelete} className="touch-manipulation">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 touch-manipulation">Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog open={!!deleteConfirmation} onOpenChange={(open) => {
+            if (!open) {
+              cancelDelete();
+            }
+          }}>
+            <AlertDialogContent className="touch-manipulation">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Appointment</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this appointment? This action cannot be undone.
+                  <br /><br />
+                  <span className="text-sm text-gray-600">
+                    Appointment: {deleteConfirmation?.appointmentDetails}
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={cancelDelete} className="touch-manipulation">Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 touch-manipulation">Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-      {/* Encounter Form Dialog */}
-      <EncounterFormDialog
-        open={encounterFormDialogOpen}
-        onOpenChange={setEncounterFormDialogOpen}
-        patientName={encounterPatientName}
-        appointmentId={encounterAppointmentId}
-      />
+          {/* Encounter Form Missing Dialog */}
+          <AlertDialog open={!!encounterFormMissingDialog} onOpenChange={(open) => {
+            if (!open) {
+              setEncounterFormMissingDialog(null);
+            }
+          }}>
+            <AlertDialogContent className="touch-manipulation">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Encounter Form Required</AlertDialogTitle>
+                <AlertDialogDescription>
+                  The encounter form must be completed before marking this appointment as complete.
+                  <br /><br />
+                  <span className="text-sm text-gray-600">
+                    Patient: {encounterFormMissingDialog?.patientName}
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setEncounterFormMissingDialog(null)} className="touch-manipulation">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (encounterFormMissingDialog) {
+                      // Close the dialog
+                      setEncounterFormMissingDialog(null);
 
-      {/* Lab Script Form Dialog */}
-      <NewLabScriptForm
-        open={labScriptFormOpen}
-        onClose={() => setLabScriptFormOpen(false)}
-        onSubmit={handleLabScriptSubmit}
-        initialPatientName={labScriptPatientName}
-      />
+                      // Open encounter form
+                      setTimeout(() => {
+                        setEncounterAppointmentId(encounterFormMissingDialog.appointmentId);
+                        setEncounterPatientName(encounterFormMissingDialog.patientName);
+                        setEncounterFormDialogOpen(true);
+                      }, 100);
+                    }
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 touch-manipulation"
+                >
+                  Go to Encounter Form
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Complete Appointment Confirmation Dialog */}
+          <AlertDialog open={!!nextAppointmentDialog && !showNextAppointmentForm && !showSchedulerDialog} onOpenChange={(open) => {
+            console.log('First dialog onOpenChange:', { open, schedulingNextAppointment, showNextAppointmentForm, showSchedulerDialog });
+            // Only reset if this dialog is actually closing (not form or scheduler open)
+            if (!open && !schedulingNextAppointment && !showNextAppointmentForm && !showSchedulerDialog) {
+              console.log('First dialog: RESETTING nextAppointmentDialog to null');
+              setNextAppointmentDialog(null);
+            }
+          }}>
+            <AlertDialogContent className="touch-manipulation">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Complete Appointment</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Would you like to schedule the next appointment for this patient?
+                  <br />
+                  <span className="text-sm text-gray-600">
+                    Patient: {nextAppointmentDialog?.patientName}
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={handleCompleteWithoutNextAppointment}
+                  disabled={schedulingNextAppointment}
+                  className="touch-manipulation"
+                >
+                  Complete Without Scheduling
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Store patient info in REF - refs are NOT affected by React state updates
+                    // This guarantees we have the data when creating the appointment
+                    if (nextAppointmentDialog) {
+                      console.log('Storing patient info in ref:', nextAppointmentDialog);
+                      nextAppointmentPatientRef.current = {
+                        patientId: nextAppointmentDialog.patientId,
+                        patientName: nextAppointmentDialog.patientName,
+                        currentApptId: nextAppointmentDialog.appointmentId
+                      };
+                    }
+                    // Reset form fields
+                    setNextAppointmentType('');
+                    setNextAppointmentSubtype('');
+                    setNextAppointmentDate('');
+                    setNextAppointmentStartTime('');
+                    setNextAppointmentEndTime('');
+                    // Show the form
+                    setShowNextAppointmentForm(true);
+                  }}
+                  disabled={schedulingNextAppointment}
+                  className="bg-blue-600 hover:bg-blue-700 text-white touch-manipulation"
+                >
+                  Schedule Next Appointment
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Next Appointment Details Form Dialog */}
+          <AlertDialog open={showNextAppointmentForm && !showSchedulerDialog} onOpenChange={(open) => {
+            console.log('Second dialog onOpenChange:', { open, showSchedulerDialog, schedulingNextAppointment });
+            // Only reset if user is actually canceling, not when opening the scheduler or scheduling
+            if (!open && !showSchedulerDialog && !schedulingNextAppointment) {
+              console.log('Second dialog: RESETTING nextAppointmentDialog to null');
+              setShowNextAppointmentForm(false);
+              setNextAppointmentDialog(null);
+              setNextAppointmentStartTime('');
+              setNextAppointmentEndTime('');
+            }
+          }}>
+            <AlertDialogContent className="touch-manipulation max-w-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Next Appointment Details</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {nextAppointmentStartTime
+                    ? 'Review the appointment details and click Schedule to confirm.'
+                    : 'Select the appointment type and date, then open the calendar to schedule the time.'}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="space-y-4 py-4">
+                {/* Patient Name - Prominently displayed */}
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <span className="text-sm text-blue-600 font-medium">Patient</span>
+                      <p className="text-lg font-semibold text-blue-900">
+                        {nextAppointmentPatientRef.current.patientName || 'Unknown Patient'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Appointment Type */}
+                  <div className="space-y-2">
+                    <Label htmlFor="next-appointment-type">Appointment Type *</Label>
+                    <Select
+                      value={nextAppointmentType}
+                      onValueChange={(value) => {
+                        setNextAppointmentType(value);
+                        setNextAppointmentSubtype(''); // Reset subtype when type changes
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {nextAppointmentTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Appointment Subtype - Conditional */}
+                  {nextAppointmentType && nextAppointmentSubtypes[nextAppointmentType] && (
+                    <div className="space-y-2">
+                      <Label htmlFor="next-appointment-subtype">Appointment Subtype *</Label>
+                      <Select
+                        value={nextAppointmentSubtype}
+                        onValueChange={setNextAppointmentSubtype}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select subtype" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {nextAppointmentSubtypes[nextAppointmentType].map((subtype) => (
+                            <SelectItem key={subtype.value} value={subtype.value}>
+                              {subtype.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Appointment Date */}
+                  <div className="space-y-2">
+                    <Label htmlFor="next-appointment-date">Appointment Date *</Label>
+                    <Input
+                      id="next-appointment-date"
+                      type="date"
+                      value={nextAppointmentDate}
+                      onChange={(e) => setNextAppointmentDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+
+                  {/* Selected Time - Show when time is selected */}
+                  {nextAppointmentStartTime && nextAppointmentEndTime && (
+                    <div className="space-y-2">
+                      <Label>Selected Time</Label>
+                      <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <Clock className="h-4 w-4 text-green-600" />
+                        <span className="font-medium text-green-800">
+                          {(() => {
+                            const formatTime = (time: string) => {
+                              const [hours, minutes] = time.split(':');
+                              const hour = parseInt(hours);
+                              const ampm = hour >= 12 ? 'PM' : 'AM';
+                              const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                              return `${displayHour}:${minutes} ${ampm}`;
+                            };
+                            return `${formatTime(nextAppointmentStartTime)} - ${formatTime(nextAppointmentEndTime)}`;
+                          })()}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setNextAppointmentStartTime('');
+                            setNextAppointmentEndTime('');
+                          }}
+                          className="ml-auto text-green-600 hover:text-green-800 h-6 px-2"
+                        >
+                          Change
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Assigned User Selection */}
+                <div className="space-y-2 mt-4 border-t pt-4">
+                  <Label className="text-sm font-medium text-blue-700">
+                    Assign To
+                  </Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {/* Unassigned button */}
+                    <Button
+                      type="button"
+                      variant={!nextAppointmentAssignedUserId ? "default" : "outline"}
+                      className={`${!nextAppointmentAssignedUserId
+                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                        : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                        }`}
+                      onClick={() => setNextAppointmentAssignedUserId("")}
+                      disabled={loadingUsers}
+                    >
+                      Unassigned
+                    </Button>
+
+                    {/* User buttons */}
+                    {users.map((user) => (
+                      <Button
+                        key={user.id}
+                        type="button"
+                        variant={nextAppointmentAssignedUserId === user.id ? "default" : "outline"}
+                        className={`${nextAppointmentAssignedUserId === user.id
+                          ? "bg-blue-600 hover:bg-blue-700 text-white"
+                          : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                          }`}
+                        onClick={() => setNextAppointmentAssignedUserId(user.id)}
+                        disabled={loadingUsers}
+                      >
+                        {user.full_name}
+                      </Button>
+                    ))}
+
+                    {users.length === 0 && !loadingUsers && (
+                      <p className="text-sm text-gray-500 col-span-4">No users found</p>
+                    )}
+
+                    {loadingUsers && (
+                      <p className="text-sm text-gray-500 col-span-4">Loading users...</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <AlertDialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowNextAppointmentForm(false);
+                    setNextAppointmentDialog(null);
+                    setNextAppointmentStartTime('');
+                    setNextAppointmentEndTime('');
+                  }}
+                  className="touch-manipulation"
+                >
+                  Cancel
+                </Button>
+
+                {/* Show different button based on whether time is selected */}
+                {nextAppointmentStartTime && nextAppointmentEndTime ? (
+                  <Button
+                    onClick={() => handleCreateNextAppointment()}
+                    disabled={schedulingNextAppointment}
+                    className="bg-green-600 hover:bg-green-700 text-white touch-manipulation"
+                  >
+                    {schedulingNextAppointment ? 'Scheduling...' : 'Schedule Appointment'}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      // Validate fields
+                      if (!nextAppointmentType || !nextAppointmentDate) {
+                        toast.error('Please select appointment type and date');
+                        return;
+                      }
+
+                      // Validate subtype if required
+                      if (nextAppointmentSubtypes[nextAppointmentType] && !nextAppointmentSubtype) {
+                        toast.error('Please select appointment subtype');
+                        return;
+                      }
+
+                      // Open calendar dialog
+                      setShowSchedulerDialog(true);
+                    }}
+                    disabled={!nextAppointmentType || !nextAppointmentDate || (nextAppointmentSubtypes[nextAppointmentType] && !nextAppointmentSubtype)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white touch-manipulation"
+                  >
+                    Open Calendar to Schedule Time
+                  </Button>
+                )}
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Appointment Scheduler Dialog */}
+          <AppointmentSchedulerDialog
+            open={showSchedulerDialog}
+            onOpenChange={(open) => {
+              setShowSchedulerDialog(open);
+              // When closing scheduler, just go back to form (don't reset everything)
+              // The form will handle final cleanup when user cancels there
+            }}
+            patientName={nextAppointmentDialog?.patientName || ''}
+            patientId={nextAppointmentDialog?.patientId || ''}
+            initialDate={nextAppointmentDate}
+            appointmentType={nextAppointmentType}
+            appointmentSubtype={nextAppointmentSubtype}
+            onSchedule={handleTimeSelected}
+          />
+
+          {/* Encounter Form Dialog */}
+          <EncounterFormDialog
+            open={encounterFormDialogOpen}
+            onOpenChange={setEncounterFormDialogOpen}
+            patientName={encounterPatientName}
+            appointmentId={encounterAppointmentId}
+            isViewMode={appointmentEncounterStatus[encounterAppointmentId]}
+            onEncounterSaved={() => {
+              // Refresh encounter status after saving
+              const appointmentIds = appointments.map(apt => apt.id);
+              if (appointmentIds.length > 0) {
+                checkEncounterStatus(appointmentIds);
+              }
+            }}
+          />
+
+          {/* Lab Script Form Dialog */}
+          <NewLabScriptForm
+            open={labScriptFormOpen}
+            onClose={() => setLabScriptFormOpen(false)}
+            onSubmit={handleLabScriptSubmit}
+            initialPatientName={labScriptPatientName}
+          />
+        </>
+      )}
     </div>
   );
 }
+);
+DayView.displayName = 'DayView';
