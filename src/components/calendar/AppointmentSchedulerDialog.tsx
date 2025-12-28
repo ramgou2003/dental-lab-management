@@ -10,7 +10,7 @@ interface AppointmentSchedulerDialogProps {
   onOpenChange: (open: boolean) => void;
   patientName: string;
   patientId: string;
-  initialDate?: string; // YYYY-MM-DD format
+  initialDate?: Date; // Date object
   appointmentType?: string;
   appointmentSubtype?: string;
   onSchedule: (appointmentData: {
@@ -43,8 +43,7 @@ export function AppointmentSchedulerDialog({
   // Set initial date when dialog opens
   useEffect(() => {
     if (open && initialDate) {
-      const [year, month, day] = initialDate.split('-').map(Number);
-      setCurrentDate(new Date(year, month - 1, day));
+      setCurrentDate(initialDate);
     }
     // Reset selection when dialog opens
     if (open) {

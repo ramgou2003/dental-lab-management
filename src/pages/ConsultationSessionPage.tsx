@@ -1215,7 +1215,7 @@ const ConsultationSessionPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col min-h-[125vh] bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 flex-shrink-0">
         <div className="w-full px-6">

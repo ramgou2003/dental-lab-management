@@ -3,8 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { X, Search } from "lucide-react";
+import { X, Search, Calendar as CalendarIcon, Clock, XCircle, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "sonner";
 
 interface Patient {
   id: string;
@@ -26,6 +31,8 @@ interface AppointmentFormProps {
   initialDate?: Date;
   initialTime?: string;
   initialEndTime?: string;
+  initialValues?: any;
+  onOpenCalendar?: (currentData: any) => void;
   appointmentType?: string;
   appointmentSubtype?: string;
   initialPatientName?: string;
@@ -44,15 +51,17 @@ export function AppointmentForm({
   appointmentSubtype,
   initialPatientName,
   initialPatientId,
-  editingAppointment
+  editingAppointment,
+  initialValues,
+  onOpenCalendar
 }: AppointmentFormProps) {
   const [selectedPatient, setSelectedPatient] = useState(''); // Patient name for display
   const [selectedPatientId, setSelectedPatientId] = useState(''); // Patient ID for database
   const [selectedAppointmentType, setSelectedAppointmentType] = useState('');
   const [selectedSubtype, setSelectedSubtype] = useState('');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('09:30');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
@@ -86,7 +95,7 @@ export function AppointmentForm({
   // Helper function to format date for input (YYYY-MM-DD) using EST timezone
   const formatDateForInput = (date: Date) => {
     // Convert to EST timezone
-    const estDate = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const estDate = new Date(date.toLocaleString("en-US", { timeZone: "America/New_York" }));
     const year = estDate.getFullYear();
     const month = String(estDate.getMonth() + 1).padStart(2, '0');
     const day = String(estDate.getDate()).padStart(2, '0');
@@ -104,9 +113,10 @@ export function AppointmentForm({
   };
 
   // Helper function to format date for database in EST
-  const formatDateForDatabase = (date: Date) => {
+  const formatDateForDatabase = (date: Date | undefined) => {
+    if (!date) return undefined;
     // Convert to EST timezone
-    const estDate = new Date(date.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const estDate = new Date(date.toLocaleString("en-US", { timeZone: "America/New_York" }));
     const year = estDate.getFullYear();
     const month = String(estDate.getMonth() + 1).padStart(2, '0');
     const day = String(estDate.getDate()).padStart(2, '0');
@@ -119,7 +129,7 @@ export function AppointmentForm({
     try {
       // Check if this is a consultation appointment
       const isConsultation = selectedAppointmentType === 'consultation' ||
-                            editingAppointment?.type === 'consultation';
+        editingAppointment?.type === 'consultation';
 
       if (isConsultation) {
         // Fetch from both patients and consultation_patients tables
@@ -217,22 +227,7 @@ export function AppointmentForm({
     { id: 'emergency', name: 'Emergency' }
   ];
 
-  // Generate time slots for dropdowns (15-minute intervals)
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = 7; hour <= 19; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-        const period = hour >= 12 ? 'PM' : 'AM';
-        const displayTime = `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
-        slots.push({ value: timeString, label: displayTime });
-      }
-    }
-    return slots;
-  };
 
-  const timeSlots = generateTimeSlots();
 
   // Fetch patients and users when dialog opens
   useEffect(() => {
@@ -281,7 +276,34 @@ export function AppointmentForm({
         initialEndTime
       });
 
-      if (editingAppointment) {
+      if (initialValues) {
+        // Hydrate from draft values (Prioritize this over editingAppointment to preserve in-flight edits)
+        console.log('💧 Hydrating form from initialValues:', initialValues);
+        setSelectedPatient(initialValues.patient || '');
+        setSelectedPatientId(initialValues.patientId || '');
+        setSelectedUserId(initialValues.assignedUserId || '');
+        setSelectedAppointmentType(initialValues.type || '');
+        setSelectedSubtype(initialValues.subtype || '');
+        setNotes(initialValues.notes || '');
+
+        if (initialDate) {
+          setSelectedDate(initialDate);
+        } else if (initialValues.date) {
+          // Check if date is Date object or string
+          if (initialValues.date instanceof Date) {
+            setSelectedDate(initialValues.date);
+          } else {
+            setSelectedDate(createDateFromInput(initialValues.date));
+          }
+        }
+
+        if (initialTime) setStartTime(initialTime);
+        else if (initialValues.startTime) setStartTime(initialValues.startTime);
+
+        if (initialEndTime) setEndTime(initialEndTime);
+        else if (initialValues.endTime) setEndTime(initialValues.endTime);
+
+      } else if (editingAppointment) {
         console.log('🔄 Initializing form with editing appointment:', editingAppointment);
         console.log('👤 Assigned User ID from appointment:', editingAppointment.assignedUserId);
 
@@ -353,20 +375,20 @@ export function AppointmentForm({
         if (initialDate) {
           setSelectedDate(initialDate);
         } else {
-          setSelectedDate(new Date());
+          setSelectedDate(undefined);
         }
 
         // Set times with validation
         if (initialTime && initialTime.trim() !== '') {
           setStartTime(initialTime);
         } else {
-          setStartTime('09:00');
+          setStartTime('');
         }
 
         if (initialEndTime && initialEndTime.trim() !== '') {
           setEndTime(initialEndTime);
         } else {
-          setEndTime('09:30');
+          setEndTime('');
         }
       }
     }
@@ -398,7 +420,7 @@ export function AppointmentForm({
 
   // Watch for prop changes and update form accordingly (but not appointment type - that's set on open)
   useEffect(() => {
-    if (isOpen && !editingAppointment) {
+    if (isOpen) {
       console.log('Props changed, updating form:', { initialTime, initialEndTime });
 
       if (initialTime && initialTime.trim() !== '' && initialTime !== startTime) {
@@ -413,7 +435,7 @@ export function AppointmentForm({
         setSelectedDate(initialDate);
       }
     }
-  }, [initialTime, initialEndTime, initialDate, isOpen, editingAppointment, startTime, endTime, selectedDate]);
+  }, [initialTime, initialEndTime, initialDate, isOpen, editingAppointment]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -424,10 +446,8 @@ export function AppointmentForm({
 
     // Validate subtype is required for appointment types that have subtypes
     if (selectedAppointmentType && subtypeOptions[selectedAppointmentType] && !selectedSubtype) {
-      toast({
-        title: "Validation Error",
+      toast.error("Validation Error", {
         description: "Please select an appointment subtype",
-        variant: "destructive",
       });
       return;
     }
@@ -543,10 +563,10 @@ export function AppointmentForm({
                         patient.last_name.toLowerCase().includes(query)
                       );
                     }).length === 0 && (
-                      <div className="py-6 text-center text-sm text-gray-500">
-                        No patients found
-                      </div>
-                    )}
+                        <div className="py-6 text-center text-sm text-gray-500">
+                          No patients found
+                        </div>
+                      )}
                   </div>
                 </SelectContent>
               </Select>
@@ -600,51 +620,105 @@ export function AppointmentForm({
               <label className="text-sm font-medium text-blue-700">
                 Date *
               </label>
-              <input
-                type="date"
-                value={formatDateForInput(selectedDate)}
-                onChange={(e) => setSelectedDate(createDateFromInput(e.target.value))}
-                className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
-            {/* Start Time */}
+            {/* Action Column: Time Display OR Open Calendar Button */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-blue-700">
-                Start Time *
+              <label className={!startTime && !endTime ? "invisible text-sm font-medium" : "text-sm font-medium text-blue-700"}>
+                {startTime && endTime ? "Selected Time" : "Action"}
               </label>
-              <Select value={startTime || undefined} onValueChange={setStartTime}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select start time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeSlots.map((slot) => (
-                    <SelectItem key={slot.value} value={slot.value}>
-                      {slot.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            {/* End Time */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-blue-700">
-                End Time *
-              </label>
-              <Select value={endTime || undefined} onValueChange={setEndTime}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select end time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeSlots.map((slot) => (
-                    <SelectItem key={slot.value} value={slot.value}>
-                      {slot.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {startTime && endTime ? (
+                /* Selected Time Display */
+                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-md h-10 w-full">
+                  <Clock className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <span className="font-medium text-green-800 text-sm truncate flex-1 leading-none">
+                    {(() => {
+                      const formatTime = (time: string) => {
+                        const [hours, minutes] = time.split(':');
+                        const hour = parseInt(hours);
+                        const ampm = hour >= 12 ? 'PM' : 'AM';
+                        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                        return `${displayHour}:${minutes} ${ampm}`;
+                      };
+                      return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+                    })()}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
+                    onClick={() => {
+                      if (onOpenCalendar) {
+                        const currentData = {
+                          patient: selectedPatient,
+                          patientId: selectedPatientId,
+                          assignedUserId: selectedUserId,
+                          type: selectedAppointmentType,
+                          subtype: selectedSubtype,
+                          notes: notes,
+                          date: selectedDate,
+                        };
+                        onOpenCalendar(currentData);
+                      }
+                    }}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                /* Open Calendar Button */
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenCalendar) {
+                      const currentData = {
+                        patient: selectedPatient,
+                        patientId: selectedPatientId,
+                        assignedUserId: selectedUserId,
+                        type: selectedAppointmentType,
+                        subtype: selectedSubtype,
+                        notes: notes,
+                        date: selectedDate,
+                        // Don't pass time as we are picking it
+                      };
+                      onOpenCalendar(currentData);
+                    }
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Open Calendar
+                </Button>
+              )}
             </div>
+          </div>
+
+          <div className={`grid grid-cols-2 gap-4 ${startTime && endTime ? '' : 'hidden'}`}>
+            {/* Hidden inputs to preserve state logic if needed, or we just rely on state variables */}
           </div>
 
           {/* Assigned User Selection */}
@@ -657,11 +731,10 @@ export function AppointmentForm({
               <Button
                 type="button"
                 variant={selectedUserId === "" ? "default" : "outline"}
-                className={`${
-                  selectedUserId === ""
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "border-blue-300 text-blue-700 hover:bg-blue-50"
-                }`}
+                className={`${selectedUserId === ""
+                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                  }`}
                 onClick={() => {
                   console.log('👤 User selection changed:', { from: selectedUserId, to: "" });
                   setSelectedUserId("");
@@ -677,11 +750,10 @@ export function AppointmentForm({
                   key={user.id}
                   type="button"
                   variant={selectedUserId === user.id ? "default" : "outline"}
-                  className={`${
-                    selectedUserId === user.id
-                      ? "bg-blue-600 hover:bg-blue-700 text-white"
-                      : "border-blue-300 text-blue-700 hover:bg-blue-50"
-                  }`}
+                  className={`${selectedUserId === user.id
+                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                    }`}
                   onClick={() => {
                     console.log('👤 User selection changed:', { from: selectedUserId, to: user.id });
                     setSelectedUserId(user.id);
@@ -734,7 +806,7 @@ export function AppointmentForm({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </DialogContent >
+    </Dialog >
   );
 }

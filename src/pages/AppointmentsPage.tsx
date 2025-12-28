@@ -4,9 +4,11 @@ import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { DayView, type DayViewHandle } from "@/components/calendar/DayView";
 import { AppointmentForm } from "@/components/calendar/AppointmentForm";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
+import { AppointmentSchedulerDialog } from "@/components/calendar/AppointmentSchedulerDialog";
 import { useAppointments, type Appointment } from "@/hooks/useAppointments";
 import { usePermissions } from "@/hooks/usePermissions";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 export function AppointmentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -45,6 +47,9 @@ export function AppointmentsPage() {
   const [initialFormTime, setInitialFormTime] = useState<string | undefined>(undefined);
   const [initialFormEndTime, setInitialFormEndTime] = useState<string | undefined>(undefined);
   const [selectedAppointmentType, setSelectedAppointmentType] = useState<string | undefined>(undefined);
+  const [draftAppointmentData, setDraftAppointmentData] = useState<any>(null);
+  const [isPickingTime, setIsPickingTime] = useState(false);
+  const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
 
   const { canCreateAppointments, canUpdateAppointments, canDeleteAppointments } = usePermissions();
   const {
@@ -81,51 +86,58 @@ export function AppointmentsPage() {
     setInitialFormDate(undefined);
     setInitialFormTime(undefined);
     setInitialFormEndTime(undefined);
+    setDraftAppointmentData(null);
+    setIsPickingTime(false);
     setSelectedAppointmentType(undefined);
     setShowAppointmentForm(true);
   };
 
   const handleTimeSlotClick = (startTime: string, endTime: string, appointmentType?: string) => {
-    console.log('handleTimeSlotClick called with:', { startTime, endTime, appointmentType });
+    console.log('handleTimeSlotClick called with:', { startTime, endTime, appointmentType, isPickingTime });
 
     // Day view: startTime and endTime from drag selection
-    setEditingAppointment(null);
-    setInitialFormDate(currentDate);
-    setInitialFormTime(startTime || '09:00');
-    setInitialFormEndTime(endTime || '09:30');
-    setSelectedAppointmentType(appointmentType || '');
+    // Default to empty values (user must pick from calendar)
+    setInitialFormDate(undefined);
+    setInitialFormTime('');
+    setInitialFormEndTime('');
 
-    // Open dialog immediately - no delay
-    console.log('Opening appointment form with state:', {
-      date: currentDate,
-      startTime: startTime || '09:00',
-      endTime: endTime || '09:30',
-      type: appointmentType || ''
-    });
+    if (appointmentType) {
+      setSelectedAppointmentType(appointmentType);
+    }
+
+    // Preserve draft data if we're in picking mode
+    // (Wait, handling clicking on main calendar directly)
+    // If scheduler dialog is open, this handler won't be called from main calendar for that selection
+    // But if user clicks main calendar background...
     setShowAppointmentForm(true);
   };
 
-  const handleClearSelection = () => {
-    // Trigger selection clearing by incrementing the trigger
-    console.log('Clearing selection from parent');
-    setClearSelectionTrigger(prev => prev + 1);
-  };
-
   const handleAppointmentClick = (appointment: Appointment) => {
-    // Clear any existing selection when clicking on an appointment
-    handleClearSelection();
     setSelectedAppointment(appointment);
     setShowAppointmentDetails(true);
   };
 
   const handleEditAppointment = (appointment: Appointment) => {
     if (!canUpdateAppointments()) {
-      toast.error("You don't have permission to edit appointments");
+      toast.error("You don't have permission to update appointments");
       return;
     }
     setEditingAppointment(appointment);
+    // Parse date correctly: date string is YYYY-MM-DD
+    setInitialFormDate(new Date(appointment.date + 'T00:00:00'));
+    setInitialFormTime(appointment.startTime);
+    setInitialFormEndTime(appointment.endTime);
+    // Note: appointment interface has date, startTime, endTime
     setShowAppointmentDetails(false);
     setShowAppointmentForm(true);
+  };
+
+  const handleClearSelection = () => {
+    setClearSelectionTrigger(prev => prev + 1);
+    setInitialFormDate(undefined);
+    setInitialFormTime(undefined);
+    setInitialFormEndTime(undefined);
+    setSelectedAppointmentType(undefined);
   };
 
   const handleDeleteAppointment = async (appointmentId: string) => {
@@ -209,7 +221,7 @@ export function AppointmentsPage() {
 
       {/* Appointment Form Modal */}
       <AppointmentForm
-        isOpen={showAppointmentForm}
+        isOpen={showAppointmentForm && !showSchedulerDialog}
         onClose={() => {
           // Clear selection when dialog is closed/canceled
           handleClearSelection();
@@ -222,6 +234,34 @@ export function AppointmentsPage() {
         initialEndTime={initialFormEndTime}
         appointmentType={selectedAppointmentType}
         editingAppointment={editingAppointment}
+        initialValues={draftAppointmentData}
+        onOpenCalendar={(data) => {
+          console.log('📅 User requested to open calendar for time selection', data);
+          setDraftAppointmentData(data);
+          // Set initial date from form data if available
+          if (data.date) {
+            setInitialFormDate(data.date);
+          }
+          setShowSchedulerDialog(true);
+        }}
+      />
+
+      {/* Appointment Scheduler Dialog */}
+      <AppointmentSchedulerDialog
+        open={showSchedulerDialog}
+        onOpenChange={setShowSchedulerDialog}
+        patientName={draftAppointmentData?.patient || "New Patient"}
+        patientId={draftAppointmentData?.patientId || ""}
+        initialDate={initialFormDate}
+        appointmentType={draftAppointmentData?.selectedAppointmentType}
+        appointmentSubtype={draftAppointmentData?.selectedSubtype}
+        onSchedule={(scheduleData) => {
+          console.log('Scheduled from dialog:', scheduleData);
+          setShowSchedulerDialog(false);
+          setInitialFormDate(new Date(scheduleData.date + 'T00:00:00'));
+          setInitialFormTime(scheduleData.startTime);
+          setInitialFormEndTime(scheduleData.endTime);
+        }}
       />
 
       {/* Appointment Details Modal */}
@@ -235,11 +275,6 @@ export function AppointmentsPage() {
         onEdit={handleEditAppointment}
         onDelete={handleDeleteAppointment}
         onStatusChange={handleStatusChange}
-        canUpdateAppointments={canUpdateAppointments()}
-        canDeleteAppointments={canDeleteAppointments()}
-        onOpenHealthHistory={(patientId, patientName) => dayViewRef.current?.openHealthHistory(patientId, patientName)}
-        onOpenComfortPreference={(patientId, patientName) => dayViewRef.current?.openComfortPreference(patientId, patientName)}
-        onOpenEncounter={(appointment) => dayViewRef.current?.openEncounterForm(appointment as any)}
       />
     </div>
   );

@@ -292,59 +292,57 @@ export function Sidebar({
       transition: isResizing ? 'none' : 'width 0.3s ease-in-out'
     }}
   >
-      {/* Header - Clinic Logo */}
-      <div className="border-b border-gray-200 py-1.5 px-[4px]">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center justify-start w-full p-2 pl-3 h-14 hover:bg-gray-50 rounded-lg transition-colors duration-200"
-          title="Go to Dashboard"
-        >
-          <div className="relative flex items-center">
-            {/* Wide logo for expanded state */}
-            <img
-              src="/logo-wide.png"
-              alt="Clinic Logo"
-              className={`h-14 max-w-[240px] object-contain object-left transition-all duration-300 ${
-                collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+    {/* Header - Clinic Logo */}
+    <div className="border-b border-gray-200 py-1.5 px-[4px]">
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="flex items-center justify-start w-full p-2 pl-3 h-14 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+        title="Go to Dashboard"
+      >
+        <div className="relative flex items-center">
+          {/* Wide logo for expanded state */}
+          <img
+            src="/logo-wide.png"
+            alt="Clinic Logo"
+            className={`h-14 max-w-[240px] object-contain object-left transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
               }`}
-              onError={(e) => {
-                // Fallback to SVG if PNG doesn't exist
-                e.currentTarget.src = "/logo-wide.svg";
-                e.currentTarget.onerror = () => {
-                  // Final fallback to placeholder
-                  e.currentTarget.style.display = 'none';
-                };
-              }}
-            />
+            onError={(e) => {
+              // Fallback to SVG if PNG doesn't exist
+              e.currentTarget.src = "/logo-wide.svg";
+              e.currentTarget.onerror = () => {
+                // Final fallback to placeholder
+                e.currentTarget.style.display = 'none';
+              };
+            }}
+          />
 
-            {/* Icon logo for collapsed state */}
-            <img
-              src="/logo-icon.png"
-              alt="Clinic Logo"
-              className={`h-24 w-24 object-contain transition-all duration-300 ${
-                collapsed ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'
+          {/* Icon logo for collapsed state */}
+          <img
+            src="/logo-icon.png"
+            alt="Clinic Logo"
+            className={`h-24 w-24 object-contain transition-all duration-300 ${collapsed ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'
               }`}
-              onError={(e) => {
-                // Fallback to SVG if PNG doesn't exist
-                e.currentTarget.src = "/logo-icon.svg";
-                e.currentTarget.onerror = () => {
-                  // Final fallback to placeholder
-                  e.currentTarget.style.display = 'none';
-                };
-              }}
-            />
-          </div>
+            onError={(e) => {
+              // Fallback to SVG if PNG doesn't exist
+              e.currentTarget.src = "/logo-icon.svg";
+              e.currentTarget.onerror = () => {
+                // Final fallback to placeholder
+                e.currentTarget.style.display = 'none';
+              };
+            }}
+          />
+        </div>
 
-          {/* Fallback placeholder when logo files don't exist */}
-          <div className="hidden items-center justify-start h-10 w-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-white font-bold text-lg">
-            {collapsed ? "C" : "CLINIC"}
-          </div>
-        </button>
-      </div>
-      
-      {/* Navigation */}
-      <nav className="flex-1 p-4 px-[9px] space-y-1 overflow-y-auto">
-        {navigation.map(item => {
+        {/* Fallback placeholder when logo files don't exist */}
+        <div className="hidden items-center justify-start h-10 w-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg text-white font-bold text-lg">
+          {collapsed ? "C" : "CLINIC"}
+        </div>
+      </button>
+    </div>
+
+    {/* Navigation */}
+    <nav className="flex-1 p-4 px-[9px] space-y-1 overflow-y-auto">
+      {navigation.map(item => {
         // Hide admin-only items for non-admin users
         if (item.adminOnly && !isAdminUser()) {
           return null;
@@ -385,147 +383,147 @@ export function Sidebar({
         }) : [];
 
         return <div key={item.section} className="relative">
-            <button
-              onClick={() => handleMenuClick(item)}
-              className={cn(
-                "flex items-center justify-between w-full text-left px-3 py-3.5 rounded-lg transition-colors duration-200 relative h-12",
-                isActive || isSubmenuActive
-                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              )}
-              title={collapsed ? item.name : undefined}
-            >
-              <div className="flex items-center">
-                {(isActive || isSubmenuActive) && <div className="absolute left-0 top-2 bottom-2 w-1 bg-indigo-600 rounded-r-full" />}
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-                  {item.name}
-                </span>
-              </div>
-              {hasSubmenu && !collapsed && (
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 transition-transform duration-200",
-                    isExpanded ? "rotate-180" : ""
-                  )}
-                />
-              )}
-            </button>
-
-            {/* Submenu - Show when expanded with smooth animation */}
-            {hasSubmenu && (
-              <div
-                className={cn(
-                  "overflow-hidden transition-all duration-300 ease-in-out",
-                  isExpanded ? "max-h-96 opacity-100 mt-1" : "max-h-0 opacity-0"
-                )}
-              >
-                <div className={cn(
-                  "space-y-1",
-                  collapsed ? "flex flex-col items-center" : ""
-                )}>
-                  {visibleSubmenuItems.map(subItem => {
-                    const isSubActive = activeSection === subItem.section;
-                    return (
-                      <button
-                        key={subItem.section}
-                        onClick={() => navigate(subItem.href)}
-                        className={cn(
-                          "flex items-center text-left rounded-lg transition-colors duration-200 border-2",
-                          collapsed
-                            ? "w-10 h-10 justify-center"
-                            : "w-full px-3 py-2.5 text-sm",
-                          isSubActive
-                            ? "bg-indigo-50 text-indigo-700 border-indigo-500 font-medium"
-                            : "text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-indigo-300"
-                        )}
-                        title={collapsed ? subItem.name : undefined}
-                      >
-                        <subItem.icon className={cn(
-                          "flex-shrink-0",
-                          collapsed ? "h-5 w-5" : "h-4 w-4"
-                        )} />
-                        {!collapsed && <span className="ml-2">{subItem.name}</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+          <button
+            onClick={() => handleMenuClick(item)}
+            className={cn(
+              "flex items-center justify-between w-full text-left px-3 py-3.5 rounded-lg transition-colors duration-200 relative h-12",
+              isActive || isSubmenuActive
+                ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             )}
-          </div>;
-      })}
-      </nav>
-      
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-100 space-y-1 px-[11px]">
-
-        <button onClick={onToggleCollapse} className="flex items-center w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200" title={collapsed ? "Expand" : "Collapse"}>
-          {collapsed ? <ChevronRight className="h-5 w-5 flex-shrink-0" /> : <ChevronLeft className="h-5 w-5 flex-shrink-0" />}
-          <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-            {collapsed ? "Expand" : "Collapse"}
-          </span>
-        </button>
-
-        <button
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className={cn(
-            "flex items-center w-full text-left px-3 py-2 rounded-lg transition-colors duration-200",
-            loggingOut
-              ? "text-gray-400 bg-gray-50 cursor-not-allowed"
-              : "text-red-600 hover:bg-red-50"
-          )}
-          title={collapsed ? (loggingOut ? "Logging out..." : "Logout") : undefined}
-        >
-          {loggingOut ? (
-            <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin" />
-          ) : (
-            <LogOut className="h-5 w-5 flex-shrink-0" />
-          )}
-          <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-            {loggingOut ? "Logging out..." : "Logout"}
-          </span>
-        </button>
-
-        {/* Profile Section - Moved from header */}
-        <div className="border-t border-gray-100 pt-3 mt-3">
-          <button onClick={() => navigate('/profile')} className="flex items-center justify-start w-full text-left hover:bg-gray-50 rounded-lg py-1.5 pl-0.5 pr-1 transition-colors duration-200">
-            <div className="bg-blue-600 text-white rounded-full size-9 flex-shrink-0 flex items-center justify-center font-semibold text-sm">
-              {userProfile ? getInitials(userProfile.first_name, userProfile.last_name) : "U"}
+            title={collapsed ? item.name : undefined}
+          >
+            <div className="flex items-center">
+              {(isActive || isSubmenuActive) && <div className="absolute left-0 top-2 bottom-2 w-1 bg-indigo-600 rounded-r-full" />}
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                {item.name}
+              </span>
             </div>
-            <div className={`transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden pointer-events-none' : 'opacity-100 ml-3'}`}>
-              <h1 className="text-gray-900 text-sm font-semibold whitespace-nowrap">
-                {userProfile ?
-                  `${isDentist ? 'Dr. ' : ''}${userProfile.first_name} ${userProfile.last_name}` :
-                  "User"
-                }
-              </h1>
-              <p className="text-gray-500 text-xs whitespace-nowrap">
-                {userProfile ? userProfile.email : ""}
-              </p>
-            </div>
+            {hasSubmenu && !collapsed && (
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  isExpanded ? "rotate-180" : ""
+                )}
+              />
+            )}
           </button>
+
+          {/* Submenu - Show when expanded with smooth animation */}
+          {hasSubmenu && (
+            <div
+              className={cn(
+                "overflow-hidden transition-all duration-300 ease-in-out",
+                isExpanded ? "max-h-96 opacity-100 mt-1" : "max-h-0 opacity-0"
+              )}
+            >
+              <div className={cn(
+                "space-y-1",
+                collapsed ? "flex flex-col items-center" : ""
+              )}>
+                {visibleSubmenuItems.map(subItem => {
+                  const isSubActive = activeSection === subItem.section;
+                  return (
+                    <button
+                      key={subItem.section}
+                      onClick={() => navigate(subItem.href)}
+                      className={cn(
+                        "flex items-center text-left rounded-lg transition-colors duration-200 border-2",
+                        collapsed
+                          ? "w-10 h-10 justify-center"
+                          : "w-full px-3 py-2.5 text-sm",
+                        isSubActive
+                          ? "bg-indigo-50 text-indigo-700 border-indigo-500 font-medium"
+                          : "text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-indigo-300"
+                      )}
+                      title={collapsed ? subItem.name : undefined}
+                    >
+                      <subItem.icon className={cn(
+                        "flex-shrink-0",
+                        collapsed ? "h-5 w-5" : "h-4 w-4"
+                      )} />
+                      {!collapsed && <span className="ml-2">{subItem.name}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>;
+      })}
+    </nav>
+
+    {/* Footer */}
+    <div className="p-4 border-t border-gray-100 space-y-1 px-[11px]">
+
+      <button onClick={onToggleCollapse} className="flex items-center w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200" title={collapsed ? "Expand" : "Collapse"}>
+        {collapsed ? <ChevronRight className="h-5 w-5 flex-shrink-0" /> : <ChevronLeft className="h-5 w-5 flex-shrink-0" />}
+        <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+          {collapsed ? "Expand" : "Collapse"}
+        </span>
+      </button>
+
+      <button
+        onClick={handleLogout}
+        disabled={loggingOut}
+        className={cn(
+          "flex items-center w-full text-left px-3 py-2 rounded-lg transition-colors duration-200",
+          loggingOut
+            ? "text-gray-400 bg-gray-50 cursor-not-allowed"
+            : "text-red-600 hover:bg-red-50"
+        )}
+        title={collapsed ? (loggingOut ? "Logging out..." : "Logout") : undefined}
+      >
+        {loggingOut ? (
+          <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin" />
+        ) : (
+          <LogOut className="h-5 w-5 flex-shrink-0" />
+        )}
+        <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+          {loggingOut ? "Logging out..." : "Logout"}
+        </span>
+      </button>
+
+      {/* Profile Section - Moved from header */}
+      <div className="border-t border-gray-100 pt-3 mt-3">
+        <button onClick={() => navigate('/profile')} className="flex items-center justify-start w-full text-left hover:bg-gray-50 rounded-lg py-1.5 pl-0.5 pr-1 transition-colors duration-200">
+          <div className="bg-blue-600 text-white rounded-full size-9 flex-shrink-0 flex items-center justify-center font-semibold text-sm">
+            {userProfile ? getInitials(userProfile.first_name, userProfile.last_name) : "U"}
+          </div>
+          <div className={`transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden pointer-events-none' : 'opacity-100 ml-3'}`}>
+            <h1 className="text-gray-900 text-sm font-semibold whitespace-nowrap">
+              {userProfile ?
+                `${isDentist ? 'Dr. ' : ''}${userProfile.first_name} ${userProfile.last_name}` :
+                "User"
+              }
+            </h1>
+            <p className="text-gray-500 text-xs whitespace-nowrap">
+              {userProfile ? userProfile.email : ""}
+            </p>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    {/* Resize Handle - Only visible when expanded */}
+    {!collapsed && (
+      <div
+        className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 cursor-col-resize bg-gray-100 hover:bg-gray-200 rounded-md px-1 py-3 transition-colors duration-200 shadow-sm border border-gray-300 touch-none"
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        title="Drag to resize sidebar"
+      >
+        {/* Dots pattern for grip */}
+        <div className="flex flex-col space-y-1">
+          <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+          <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+          <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+          <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+          <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+          <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
         </div>
       </div>
-
-      {/* Resize Handle - Only visible when expanded */}
-      {!collapsed && (
-        <div
-          className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 cursor-col-resize bg-gray-100 hover:bg-gray-200 rounded-md px-1 py-3 transition-colors duration-200 shadow-sm border border-gray-300 touch-none"
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
-          title="Drag to resize sidebar"
-        >
-          {/* Dots pattern for grip */}
-          <div className="flex flex-col space-y-1">
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
-          </div>
-        </div>
-      )}
-    </div>;
+    )}
+  </div>;
 }

@@ -461,7 +461,7 @@ export function PatientProfilePage() {
   const [editingTreatment, setEditingTreatment] = useState<any>(null);
   const [isEditingTreatment, setIsEditingTreatment] = useState(false);
   const [showDeleteTreatmentConfirmation, setShowDeleteTreatmentConfirmation] = useState(false);
-  const [treatmentToDelete, setTreatmentToDelete] = useState<{type: 'upper' | 'lower'} | null>(null);
+  const [treatmentToDelete, setTreatmentToDelete] = useState<{ type: 'upper' | 'lower' } | null>(null);
 
   // Fetch patient-specific lab scripts and manufacturing items
   const { labScripts, loading: labScriptsLoading, updateLabScript } = usePatientLabScripts(patientId);
@@ -502,7 +502,7 @@ export function PatientProfilePage() {
   // State for clinical report dialogs
   const [showClinicalReportForm, setShowClinicalReportForm] = useState(false);
   const [showViewClinicalReport, setShowViewClinicalReport] = useState(false);
-  const [insertionStatus, setInsertionStatus] = useState<{canSubmit: boolean; reason: string; message: string} | null>(null);
+  const [insertionStatus, setInsertionStatus] = useState<{ canSubmit: boolean; reason: string; message: string } | null>(null);
 
   // State for delivery dialogs
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
@@ -732,7 +732,7 @@ export function PatientProfilePage() {
     // Check if morning medications field is properly filled
     const morningMedicationsValid = ivSedationFormData.morningMedications &&
       (ivSedationFormData.morningMedications === 'no' ||
-       (ivSedationFormData.morningMedications !== 'yes' && ivSedationFormData.morningMedications.trim().length > 0));
+        (ivSedationFormData.morningMedications !== 'yes' && ivSedationFormData.morningMedications.trim().length > 0));
 
     const basicFields = !!(
       ivSedationFormData.npoStatus &&
@@ -2473,15 +2473,15 @@ export function PatientProfilePage() {
         if (manufacturingItem.status !== 'completed') {
           // Format the manufacturing status for better user experience
           const statusDisplay = manufacturingItem.status === 'pending-printing' ? 'Pending Printing' :
-                                manufacturingItem.status === 'in-production' ? 'Printing' :
-                                manufacturingItem.status === 'quality-check' ? 'Quality Check' :
-                                manufacturingItem.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            manufacturingItem.status === 'in-production' ? 'Printing' :
+              manufacturingItem.status === 'quality-check' ? 'Quality Check' :
+                manufacturingItem.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
 
           // Add helpful context based on the manufacturing stage
           const contextMessage = manufacturingItem.status === 'pending-printing' ? 'The appliance is waiting to start printing.' :
-                                 manufacturingItem.status === 'in-production' ? 'The appliance is currently being printed.' :
-                                 manufacturingItem.status === 'quality-check' ? 'The appliance is undergoing quality inspection.' :
-                                 'The appliance is still being processed.';
+            manufacturingItem.status === 'in-production' ? 'The appliance is currently being printed.' :
+              manufacturingItem.status === 'quality-check' ? 'The appliance is undergoing quality inspection.' :
+                'The appliance is still being processed.';
 
           return { canSubmit: false, reason: 'not_completed', message: `Appliance is still in manufacturing (Status: ${statusDisplay}). ${contextMessage} Please complete manufacturing first.` };
         }
@@ -4120,8 +4120,8 @@ export function PatientProfilePage() {
         if (!ivSedationFormData.npoStatus) errors.push('NPO Status');
         // Morning medications validation
         if (!ivSedationFormData.morningMedications ||
-            (ivSedationFormData.morningMedications !== 'no' &&
-             ivSedationFormData.morningMedications === 'yes')) {
+          (ivSedationFormData.morningMedications !== 'no' &&
+            ivSedationFormData.morningMedications === 'yes')) {
           errors.push('Morning Medications (please specify medications if Yes is selected)');
         }
         if (!ivSedationFormData.allergies || ivSedationFormData.allergies.length === 0) errors.push('Allergies');
@@ -4833,15 +4833,15 @@ export function PatientProfilePage() {
       }
 
       if (reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") ||
-          reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION")) {
+        reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION")) {
         if (dataCollected.surgicalPictures === null) {
           missingPictures.push("Surgical Pictures");
         }
       }
 
       if (!reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") &&
-          !reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") &&
-          !reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION")) {
+        !reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") &&
+        !reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION")) {
         if (dataCollected.followUpPictures === null) {
           missingPictures.push("Follow-Up Pictures");
         }
@@ -5239,13 +5239,12 @@ export function PatientProfilePage() {
                       <div className="flex items-center gap-1">
                         <Badge
                           variant="outline"
-                          className={`font-medium text-xs ${
-                            patient.status === 'ACTIVE'
+                          className={`font-medium text-xs ${patient.status === 'ACTIVE'
                               ? 'bg-green-50 border-green-200 text-green-700'
                               : patient.status === 'INACTIVE'
-                              ? 'bg-red-50 border-red-200 text-red-700'
-                              : 'bg-blue-50 border-blue-200 text-blue-700'
-                          }`}
+                                ? 'bg-red-50 border-red-200 text-red-700'
+                                : 'bg-blue-50 border-blue-200 text-blue-700'
+                            }`}
                         >
                           {patient.status}
                         </Badge>
@@ -5262,19 +5261,18 @@ export function PatientProfilePage() {
                       <div className="flex items-center gap-1">
                         <Badge
                           variant="outline"
-                          className={`font-medium text-xs ${
-                            patient.treatment_status === 'Treatment Not Started'
+                          className={`font-medium text-xs ${patient.treatment_status === 'Treatment Not Started'
                               ? 'bg-gray-50 border-gray-200 text-gray-700'
                               : patient.treatment_status === 'Treatment In Progress'
-                              ? 'bg-blue-50 border-blue-200 text-blue-700'
-                              : patient.treatment_status === 'Treatment Completed'
-                              ? 'bg-green-50 border-green-200 text-green-700'
-                              : patient.treatment_status === 'Patient Deceased'
-                              ? 'bg-black border-gray-800 text-white'
-                              : patient.treatment_status === 'Dismissed DNC'
-                              ? 'bg-red-50 border-red-200 text-red-700'
-                              : 'bg-gray-50 border-gray-200 text-gray-700'
-                          }`}
+                                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                : patient.treatment_status === 'Treatment Completed'
+                                  ? 'bg-green-50 border-green-200 text-green-700'
+                                  : patient.treatment_status === 'Patient Deceased'
+                                    ? 'bg-black border-gray-800 text-white'
+                                    : patient.treatment_status === 'Dismissed DNC'
+                                      ? 'bg-red-50 border-red-200 text-red-700'
+                                      : 'bg-gray-50 border-gray-200 text-gray-700'
+                            }`}
                         >
                           {patient.treatment_status || 'No Treatment Status'}
                         </Badge>
@@ -5302,19 +5300,17 @@ export function PatientProfilePage() {
                         <div className="flex items-center gap-1.5">
                           <span className="font-medium text-blue-800">App:</span>
                           <div className="flex items-center gap-1">
-                            <span className={`px-1 py-0.5 rounded text-xs font-medium ${
-                              patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT"
+                            <span className={`px-1 py-0.5 rounded text-xs font-medium ${patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT"
                                 ? 'bg-blue-100 text-blue-700'
                                 : 'bg-gray-100 text-gray-500'
-                            }`}>
+                              }`}>
                               U
                             </span>
                             <span className="text-gray-400">|</span>
-                            <span className={`px-1 py-0.5 rounded text-xs font-medium ${
-                              patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT"
+                            <span className={`px-1 py-0.5 rounded text-xs font-medium ${patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT"
                                 ? 'bg-blue-100 text-blue-700'
                                 : 'bg-gray-100 text-gray-500'
-                            }`}>
+                              }`}>
                               L
                             </span>
                           </div>
@@ -5325,8 +5321,8 @@ export function PatientProfilePage() {
                           <span className="font-medium text-blue-800">Shade:</span>
                           <span className="text-gray-700 bg-white px-1.5 py-0.5 rounded text-xs">
                             {labScripts.find(script => script.shade)?.shade ||
-                             deliveryItems.find(item => item.patient_name === patient.full_name && item.shade)?.shade ||
-                             "N/A"}
+                              deliveryItems.find(item => item.patient_name === patient.full_name && item.shade)?.shade ||
+                              "N/A"}
                           </span>
                         </div>
 
@@ -5454,627 +5450,626 @@ export function PatientProfilePage() {
               <div className="h-full flex flex-col">
                 {/* Modern Info Cards Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 pl-0 pr-0 pt-2 pb-2" style={{ height: 'calc(100vh - 280px)' }}>
-                {/* Personal Information */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
-                  <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                    <div className="p-1.5 bg-blue-100 rounded-lg">
-                      <User className="h-4 w-4 text-blue-600" />
+                  {/* Personal Information */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                      <div className="p-1.5 bg-blue-100 rounded-lg">
+                        <User className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <h3 className="text-base font-semibold text-gray-900">Personal Information</h3>
                     </div>
-                    <h3 className="text-base font-semibold text-gray-900">Personal Information</h3>
-                  </div>
-                  <div className="flex-1 overflow-y-auto px-3 pt-3 pb-2 min-h-0">
-                    <div className="space-y-3 pb-2">
-                      {/* Basic Information Section */}
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-2.5 border border-blue-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                          <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Basic Information</h4>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-white rounded-md p-2 border border-blue-200">
-                            <p className="text-xs font-medium text-blue-600 mb-0.5">First Name</p>
-                            <p className="text-sm font-semibold text-gray-900">{patient.first_name}</p>
-                          </div>
-                          <div className="bg-white rounded-md p-2 border border-blue-200">
-                            <p className="text-xs font-medium text-blue-600 mb-0.5">Last Name</p>
-                            <p className="text-sm font-semibold text-gray-900">{patient.last_name}</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          <div className="bg-white rounded-md p-2 border border-blue-200">
-                            <p className="text-xs font-medium text-blue-600 mb-0.5">Date of Birth</p>
-                            <p className="text-sm font-semibold text-gray-900">
-                              {patient.date_of_birth
-                                ? new Date(patient.date_of_birth).toLocaleDateString()
-                                : "Not available"}
-                            </p>
-                            {patient.date_of_birth && calculateAge(patient.date_of_birth) !== null && (
-                              <p className="text-xs text-blue-600 font-medium">{calculateAge(patient.date_of_birth)} years old</p>
-                            )}
-                          </div>
-                          <div className="bg-white rounded-md p-2 border border-blue-200">
-                            <p className="text-xs font-medium text-blue-600 mb-0.5">Gender</p>
-                            <p className="text-sm font-semibold text-gray-900 capitalize">{patient.gender || "Not specified"}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Contact Information Section */}
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-2.5 border border-blue-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                          <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Contact Information</h4>
-                        </div>
-                        <div className="bg-white rounded-md p-2 border border-blue-200 mb-2">
-                          <p className="text-xs font-medium text-blue-600 mb-0.5">Phone Number</p>
-                          <p className="text-sm font-semibold text-gray-900">{patient.phone || "Not provided"}</p>
-                        </div>
-                        <div className="bg-white rounded-md p-2 border border-blue-200 mb-2">
-                          <p className="text-xs font-medium text-blue-600 mb-0.5">Email</p>
-                          <p className="text-sm font-semibold text-gray-900">{patient.email || "Not provided"}</p>
-                        </div>
-                        <div className="bg-white rounded-md p-2 border border-blue-200">
-                          <p className="text-xs font-medium text-blue-600 mb-0.5">Address</p>
-                          <div className="space-y-0.5">
-                            {patient.street && <p className="text-sm font-semibold text-gray-900">{patient.street}</p>}
-                            <p className="text-sm font-semibold text-gray-900">
-                              {[patient.city, patient.state, patient.zip_code].filter(Boolean).join(", ") || "Not provided"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Emergency Contact Section */}
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-2.5 border border-blue-100">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-2 min-h-0">
+                      <div className="space-y-3 pb-2">
+                        {/* Basic Information Section */}
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-2.5 border border-blue-100">
+                          <div className="flex items-center gap-2 mb-2">
                             <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                            <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Emergency Contact</h4>
+                            <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Basic Information</h4>
                           </div>
-                          <button
-                            onClick={() => setShowEditEmergencyContact(true)}
-                            className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
-                            title="Edit emergency contact"
-                          >
-                            <Pencil className="h-3.5 w-3.5 text-blue-600 hover:text-blue-700" />
-                          </button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-white rounded-md p-2 border border-blue-200">
+                              <p className="text-xs font-medium text-blue-600 mb-0.5">First Name</p>
+                              <p className="text-sm font-semibold text-gray-900">{patient.first_name}</p>
+                            </div>
+                            <div className="bg-white rounded-md p-2 border border-blue-200">
+                              <p className="text-xs font-medium text-blue-600 mb-0.5">Last Name</p>
+                              <p className="text-sm font-semibold text-gray-900">{patient.last_name}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            <div className="bg-white rounded-md p-2 border border-blue-200">
+                              <p className="text-xs font-medium text-blue-600 mb-0.5">Date of Birth</p>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {patient.date_of_birth
+                                  ? new Date(patient.date_of_birth).toLocaleDateString()
+                                  : "Not available"}
+                              </p>
+                              {patient.date_of_birth && calculateAge(patient.date_of_birth) !== null && (
+                                <p className="text-xs text-blue-600 font-medium">{calculateAge(patient.date_of_birth)} years old</p>
+                              )}
+                            </div>
+                            <div className="bg-white rounded-md p-2 border border-blue-200">
+                              <p className="text-xs font-medium text-blue-600 mb-0.5">Gender</p>
+                              <p className="text-sm font-semibold text-gray-900 capitalize">{patient.gender || "Not specified"}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-1 gap-2">
-                          <div className="bg-white rounded-md p-2 border border-blue-200">
-                            <p className="text-xs font-medium text-blue-600 mb-0.5">Contact Name</p>
-                            <p className="text-sm font-semibold text-gray-900">{patient.emergency_contact_name || "Not provided"}</p>
-                          </div>
-                          <div className="bg-white rounded-md p-2 border border-blue-200">
-                            <p className="text-xs font-medium text-blue-600 mb-0.5">Relationship</p>
-                            <p className="text-sm font-semibold text-gray-900">{patient.emergency_contact_relationship || "Not provided"}</p>
-                          </div>
-                          <div className="bg-white rounded-md p-2 border border-blue-200">
-                            <p className="text-xs font-medium text-blue-600 mb-0.5">Contact Phone</p>
-                            <p className="text-sm font-semibold text-gray-900">{patient.emergency_contact_phone || "Not provided"}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Treatment Information */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
-                  <div className="flex items-center justify-center px-4 py-3 border-b border-gray-200 flex-shrink-0 relative">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <Activity className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">Treatment Information</h3>
-                    </div>
-                    <div className="absolute right-4">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              onClick={handleAddTreatment}
-                              size="sm"
-                              className="bg-blue-600 hover:bg-blue-700 text-white h-7 w-7 p-0 rounded-md shadow-sm hover:shadow-md transition-all duration-200"
+                        {/* Contact Information Section */}
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-2.5 border border-blue-100">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                            <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Contact Information</h4>
+                          </div>
+                          <div className="bg-white rounded-md p-2 border border-blue-200 mb-2">
+                            <p className="text-xs font-medium text-blue-600 mb-0.5">Phone Number</p>
+                            <p className="text-sm font-semibold text-gray-900">{patient.phone || "Not provided"}</p>
+                          </div>
+                          <div className="bg-white rounded-md p-2 border border-blue-200 mb-2">
+                            <p className="text-xs font-medium text-blue-600 mb-0.5">Email</p>
+                            <p className="text-sm font-semibold text-gray-900">{patient.email || "Not provided"}</p>
+                          </div>
+                          <div className="bg-white rounded-md p-2 border border-blue-200">
+                            <p className="text-xs font-medium text-blue-600 mb-0.5">Address</p>
+                            <div className="space-y-0.5">
+                              {patient.street && <p className="text-sm font-semibold text-gray-900">{patient.street}</p>}
+                              <p className="text-sm font-semibold text-gray-900">
+                                {[patient.city, patient.state, patient.zip_code].filter(Boolean).join(", ") || "Not provided"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Emergency Contact Section */}
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-2.5 border border-blue-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                              <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Emergency Contact</h4>
+                            </div>
+                            <button
+                              onClick={() => setShowEditEmergencyContact(true)}
+                              className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
+                              title="Edit emergency contact"
                             >
-                              <Plus className="h-3.5 w-3.5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Add Treatment</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0">
-                    <div className="space-y-3 pb-2">
-                      {/* Display all treatments */}
-                      {patientTreatments.length > 0 ? (
-                        patientTreatments.map((treatment, index) => (
-                          <div key={treatment.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                                <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">
-                                  {treatment.upper_arch && treatment.lower_arch ? 'Dual Arch Treatment' :
-                                   treatment.upper_arch ? 'Upper Arch Treatment' :
-                                   treatment.lower_arch ? 'Lower Arch Treatment' : 'Treatment'}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  onClick={() => handleEditTreatment(treatment.id)}
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  onClick={() => handleDeleteTreatment(treatment.id)}
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 text-red-600 hover:text-red-800 hover:bg-red-100"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
+                              <Pencil className="h-3.5 w-3.5 text-blue-600 hover:text-blue-700" />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 gap-2">
+                            <div className="bg-white rounded-md p-2 border border-blue-200">
+                              <p className="text-xs font-medium text-blue-600 mb-0.5">Contact Name</p>
+                              <p className="text-sm font-semibold text-gray-900">{patient.emergency_contact_name || "Not provided"}</p>
                             </div>
-
-                            <div className="space-y-2">
-                              {/* Upper Treatment */}
-                              {treatment.upper_treatment && treatment.upper_treatment !== "NO TREATMENT" && (
-                                <div className="space-y-1">
-                                  <Badge variant="outline" className="bg-white border-blue-300 text-blue-800 text-xs font-medium">
-                                    Upper: {treatment.upper_treatment}
-                                  </Badge>
-                                  {treatment.upper_surgery_date && (
-                                    <div className="text-xs text-blue-700 font-medium">
-                                      Upper Surgery: {new Date(treatment.upper_surgery_date).toLocaleDateString('en-US')}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Lower Treatment */}
-                              {treatment.lower_treatment && treatment.lower_treatment !== "NO TREATMENT" && (
-                                <div className="space-y-1">
-                                  <Badge variant="outline" className="bg-white border-blue-300 text-blue-800 text-xs font-medium">
-                                    Lower: {treatment.lower_treatment}
-                                  </Badge>
-                                  {treatment.lower_surgery_date && (
-                                    <div className="text-xs text-blue-700 font-medium">
-                                      Lower Surgery: {new Date(treatment.lower_surgery_date).toLocaleDateString('en-US')}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                            <div className="bg-white rounded-md p-2 border border-blue-200">
+                              <p className="text-xs font-medium text-blue-600 mb-0.5">Relationship</p>
+                              <p className="text-sm font-semibold text-gray-900">{patient.emergency_contact_relationship || "Not provided"}</p>
+                            </div>
+                            <div className="bg-white rounded-md p-2 border border-blue-200">
+                              <p className="text-xs font-medium text-blue-600 mb-0.5">Contact Phone</p>
+                              <p className="text-sm font-semibold text-gray-900">{patient.emergency_contact_phone || "Not provided"}</p>
                             </div>
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <p className="text-sm text-gray-500">No treatment information available</p>
-                          <p className="text-xs text-gray-400 mt-1">Click the + button to add treatment details</p>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Health History */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <Heart className="h-4 w-4 text-blue-600" />
                       </div>
-                      <h3 className="text-base font-semibold text-gray-900">Health History</h3>
                     </div>
-                    {patientHealthHistory.hasData ? (
-                      <button
-                        onClick={() => setShowMedicalHistoryForm(true)}
-                        className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
-                        title="Edit health history"
-                      >
-                        <Pencil className="h-3.5 w-3.5 text-blue-600 hover:text-blue-700" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => setShowMedicalHistoryForm(true)}
-                        className="text-xs px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center gap-1"
-                        title="Add health history"
-                      >
-                        <Plus className="h-3 w-3" />
-                        Add
-                      </button>
-                    )}
                   </div>
-                  <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                    <div className="space-y-3 pb-2">
-                      {patientHealthHistory.hasData ? (
-                        <>
-                          {/* Medical Conditions */}
-                          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-2.5 border border-red-100">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
-                              <h4 className="text-xs font-bold text-red-900 uppercase tracking-wide">Medical Conditions</h4>
-                            </div>
-                            {patientHealthHistory.medicalConditions.length > 0 ? (
-                              <div className="flex flex-wrap gap-1.5">
-                                {patientHealthHistory.medicalConditions.map((condition, index) => (
-                                  <Badge
-                                    key={index}
-                                    variant={condition.critical ? "destructive" : "secondary"}
-                                    className={`text-xs ${
-                                      condition.critical
-                                        ? 'bg-red-100 text-red-800 border-red-300'
-                                        : 'bg-blue-100 text-blue-800 border-blue-300'
-                                    }`}
+
+                  {/* Treatment Information */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
+                    <div className="flex items-center justify-center px-4 py-3 border-b border-gray-200 flex-shrink-0 relative">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <Activity className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <h3 className="text-base font-semibold text-gray-900">Treatment Information</h3>
+                      </div>
+                      <div className="absolute right-4">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                onClick={handleAddTreatment}
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white h-7 w-7 p-0 rounded-md shadow-sm hover:shadow-md transition-all duration-200"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Add Treatment</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0">
+                      <div className="space-y-3 pb-2">
+                        {/* Display all treatments */}
+                        {patientTreatments.length > 0 ? (
+                          patientTreatments.map((treatment, index) => (
+                            <div key={treatment.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                  <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">
+                                    {treatment.upper_arch && treatment.lower_arch ? 'Dual Arch Treatment' :
+                                      treatment.upper_arch ? 'Upper Arch Treatment' :
+                                        treatment.lower_arch ? 'Lower Arch Treatment' : 'Treatment'}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    onClick={() => handleEditTreatment(treatment.id)}
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
                                   >
-                                    {condition.critical && <AlertTriangle className="h-3 w-3 mr-1 inline" />}
-                                    {condition.name}
-                                    {condition.details && ` (${condition.details})`}
-                                  </Badge>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-xs text-gray-600 italic">No medical conditions reported</p>
-                            )}
-                          </div>
-
-                          {/* Allergies */}
-                          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-2.5 border border-yellow-100">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></div>
-                              <h4 className="text-xs font-bold text-yellow-900 uppercase tracking-wide">Allergies</h4>
-                            </div>
-                            {patientHealthHistory.allergies.none ? (
-                              <p className="text-xs text-gray-600 italic">No known allergies</p>
-                            ) : (
-                              <div className="space-y-2">
-                                {patientHealthHistory.allergies.dental.length > 0 && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-yellow-800 mb-1">Dental:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {patientHealthHistory.allergies.dental.map((allergy, index) => (
-                                        <Badge key={index} className="text-xs bg-orange-100 text-orange-800 border-orange-300">
-                                          <Shield className="h-3 w-3 mr-1 inline" />
-                                          {allergy}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {patientHealthHistory.allergies.medications.length > 0 && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-yellow-800 mb-1">Medications:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {patientHealthHistory.allergies.medications.map((allergy, index) => (
-                                        <Badge key={index} className="text-xs bg-red-100 text-red-800 border-red-300">
-                                          <Pill className="h-3 w-3 mr-1 inline" />
-                                          {allergy}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {patientHealthHistory.allergies.other.length > 0 && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-yellow-800 mb-1">Other:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {patientHealthHistory.allergies.other.map((allergy, index) => (
-                                        <Badge key={index} className="text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
-                                          {allergy}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {patientHealthHistory.allergies.food && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-yellow-800 mb-1">Food:</p>
-                                    <p className="text-xs text-gray-700">{patientHealthHistory.allergies.food}</p>
-                                  </div>
-                                )}
-                                {patientHealthHistory.allergies.dental.length === 0 &&
-                                 patientHealthHistory.allergies.medications.length === 0 &&
-                                 patientHealthHistory.allergies.other.length === 0 &&
-                                 !patientHealthHistory.allergies.food && (
-                                  <p className="text-xs text-gray-600 italic">No allergies reported</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Current Medications */}
-                          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-2.5 border border-purple-100">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-1.5 h-1.5 bg-purple-600 rounded-full"></div>
-                              <h4 className="text-xs font-bold text-purple-900 uppercase tracking-wide">Current Medications</h4>
-                            </div>
-                            {patientHealthHistory.currentMedications.none ? (
-                              <p className="text-xs text-gray-600 italic">Not taking any medications</p>
-                            ) : (
-                              <div className="space-y-2">
-                                {patientHealthHistory.currentMedications.emergency.length > 0 && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-purple-800 mb-1 flex items-center gap-1">
-                                      <AlertTriangle className="h-3 w-3 text-red-600" />
-                                      Emergency:
-                                    </p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {patientHealthHistory.currentMedications.emergency.map((med, index) => (
-                                        <Badge key={index} className="text-xs bg-red-100 text-red-800 border-red-300">
-                                          {med}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {patientHealthHistory.currentMedications.bone.length > 0 && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-purple-800 mb-1">Bone/Osteoporosis:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {patientHealthHistory.currentMedications.bone.map((med, index) => (
-                                        <Badge key={index} className="text-xs bg-purple-100 text-purple-800 border-purple-300">
-                                          {med}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {patientHealthHistory.currentMedications.specialized.length > 0 && (
-                                  <div>
-                                    <p className="text-xs font-semibold text-purple-800 mb-1">Specialized:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {patientHealthHistory.currentMedications.specialized.map((med, index) => (
-                                        <Badge key={index} className="text-xs bg-indigo-100 text-indigo-800 border-indigo-300">
-                                          {med}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {patientHealthHistory.currentMedications.complete && (
-                                  <div className="bg-white rounded-md p-2 border border-purple-200">
-                                    <p className="text-xs font-semibold text-purple-800 mb-1">Complete List:</p>
-                                    <p className="text-xs text-gray-700 whitespace-pre-wrap">{patientHealthHistory.currentMedications.complete}</p>
-                                  </div>
-                                )}
-                                {patientHealthHistory.currentMedications.emergency.length === 0 &&
-                                 patientHealthHistory.currentMedications.bone.length === 0 &&
-                                 patientHealthHistory.currentMedications.specialized.length === 0 &&
-                                 !patientHealthHistory.currentMedications.complete && (
-                                  <p className="text-xs text-gray-600 italic">No medications reported</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Current Pharmacy */}
-                          {(patientHealthHistory.currentPharmacy.name || patientHealthHistory.currentPharmacy.city) && (
-                            <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg p-2.5 border border-teal-100">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="p-1 bg-teal-100 rounded">
-                                  <svg className="h-3.5 w-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                  </svg>
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleDeleteTreatment(treatment.id)}
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0 text-red-600 hover:text-red-800 hover:bg-red-100"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 </div>
-                                <h4 className="text-xs font-semibold text-teal-900">Current Pharmacy</h4>
                               </div>
-                              <div className="space-y-1.5 pl-6">
-                                {patientHealthHistory.currentPharmacy.name && (
-                                  <div className="flex items-start gap-2">
-                                    <span className="text-xs font-medium text-teal-700 min-w-[60px]">Name:</span>
-                                    <span className="text-xs text-gray-700">{patientHealthHistory.currentPharmacy.name}</span>
-                                  </div>
-                                )}
-                                {patientHealthHistory.currentPharmacy.city && (
-                                  <div className="flex items-start gap-2">
-                                    <span className="text-xs font-medium text-teal-700 min-w-[60px]">City:</span>
-                                    <span className="text-xs text-gray-700">{patientHealthHistory.currentPharmacy.city}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
 
-                          {/* Source Information */}
-                          <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
-                              <FileText className="h-3 w-3" />
-                              <span className="font-medium">Source:</span>
-                              <span>New Patient Packet</span>
-                              {patientHealthHistory.packetDate && (
-                                <>
-                                  <span>•</span>
-                                  <span>{new Date(patientHealthHistory.packetDate).toLocaleDateString()}</span>
-                                </>
-                              )}
+                              <div className="space-y-2">
+                                {/* Upper Treatment */}
+                                {treatment.upper_treatment && treatment.upper_treatment !== "NO TREATMENT" && (
+                                  <div className="space-y-1">
+                                    <Badge variant="outline" className="bg-white border-blue-300 text-blue-800 text-xs font-medium">
+                                      Upper: {treatment.upper_treatment}
+                                    </Badge>
+                                    {treatment.upper_surgery_date && (
+                                      <div className="text-xs text-blue-700 font-medium">
+                                        Upper Surgery: {new Date(treatment.upper_surgery_date).toLocaleDateString('en-US')}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Lower Treatment */}
+                                {treatment.lower_treatment && treatment.lower_treatment !== "NO TREATMENT" && (
+                                  <div className="space-y-1">
+                                    <Badge variant="outline" className="bg-white border-blue-300 text-blue-800 text-xs font-medium">
+                                      Lower: {treatment.lower_treatment}
+                                    </Badge>
+                                    {treatment.lower_surgery_date && (
+                                      <div className="text-xs text-blue-700 font-medium">
+                                        Lower Surgery: {new Date(treatment.lower_surgery_date).toLocaleDateString('en-US')}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <p className="text-sm text-gray-500">No treatment information available</p>
+                            <p className="text-xs text-gray-400 mt-1">Click the + button to add treatment details</p>
                           </div>
-                        </>
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mx-auto mb-3">
-                            <Heart className="h-8 w-8 text-gray-300" />
-                          </div>
-                          <p className="text-sm font-medium text-gray-500 mb-1">No Health History Available</p>
-                          <p className="text-xs text-gray-400 mb-3">Add medical history, allergies, and medications</p>
-                          <button
-                            onClick={() => setShowMedicalHistoryForm(true)}
-                            className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 inline-flex items-center gap-1"
-                          >
-                            <Plus className="h-3 w-3" />
-                            Add Health History
-                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Health History */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <Heart className="h-4 w-4 text-blue-600" />
                         </div>
+                        <h3 className="text-base font-semibold text-gray-900">Health History</h3>
+                      </div>
+                      {patientHealthHistory.hasData ? (
+                        <button
+                          onClick={() => setShowMedicalHistoryForm(true)}
+                          className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
+                          title="Edit health history"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-blue-600 hover:text-blue-700" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setShowMedicalHistoryForm(true)}
+                          className="text-xs px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center gap-1"
+                          title="Add health history"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add
+                        </button>
                       )}
                     </div>
-                  </div>
-                </div>
-
-                {/* Comfort Preferences */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-pink-100 rounded-lg">
-                        <Smile className="h-4 w-4 text-pink-600" />
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">Preferences</h3>
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                    <div className="space-y-3 pb-2">
-                      {patientHealthHistory.hasData && (
-                        patientHealthHistory.comfortPreferences.anxietyControl.length > 0 ||
-                        patientHealthHistory.comfortPreferences.painInjection.length > 0 ||
-                        patientHealthHistory.comfortPreferences.communication.length > 0 ||
-                        patientHealthHistory.comfortPreferences.sensorySensitivities.length > 0 ||
-                        patientHealthHistory.comfortPreferences.physicalComfort.length > 0 ||
-                        patientHealthHistory.comfortPreferences.servicePreferences.length > 0 ||
-                        patientHealthHistory.comfortPreferences.otherConcerns
-                      ) ? (
-                        <>
-                          {/* Anxiety Control */}
-                          {patientHealthHistory.comfortPreferences.anxietyControl.length > 0 && (
-                            <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg p-2.5 border border-pink-100">
+                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                      <div className="space-y-3 pb-2">
+                        {patientHealthHistory.hasData ? (
+                          <>
+                            {/* Medical Conditions */}
+                            <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-2.5 border border-red-100">
                               <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1.5 h-1.5 bg-pink-600 rounded-full"></div>
-                                <h4 className="text-xs font-bold text-pink-900 uppercase tracking-wide">Anxiety Control</h4>
+                                <div className="w-1.5 h-1.5 bg-red-600 rounded-full"></div>
+                                <h4 className="text-xs font-bold text-red-900 uppercase tracking-wide">Medical Conditions</h4>
                               </div>
-                              <div className="space-y-1">
-                                {patientHealthHistory.comfortPreferences.anxietyControl.map((item, index) => (
-                                  <div key={index} className="flex items-start gap-1.5">
-                                    <div className="w-1 h-1 bg-pink-400 rounded-full mt-1.5 flex-shrink-0"></div>
-                                    <p className="text-xs text-gray-700">{item}</p>
-                                  </div>
-                                ))}
-                              </div>
+                              {patientHealthHistory.medicalConditions.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {patientHealthHistory.medicalConditions.map((condition, index) => (
+                                    <Badge
+                                      key={index}
+                                      variant={condition.critical ? "destructive" : "secondary"}
+                                      className={`text-xs ${condition.critical
+                                          ? 'bg-red-100 text-red-800 border-red-300'
+                                          : 'bg-blue-100 text-blue-800 border-blue-300'
+                                        }`}
+                                    >
+                                      {condition.critical && <AlertTriangle className="h-3 w-3 mr-1 inline" />}
+                                      {condition.name}
+                                      {condition.details && ` (${condition.details})`}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-600 italic">No medical conditions reported</p>
+                              )}
                             </div>
-                          )}
 
-                          {/* Pain & Injection */}
-                          {patientHealthHistory.comfortPreferences.painInjection.length > 0 && (
-                            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2.5 border border-purple-100">
+                            {/* Allergies */}
+                            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-2.5 border border-yellow-100">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></div>
+                                <h4 className="text-xs font-bold text-yellow-900 uppercase tracking-wide">Allergies</h4>
+                              </div>
+                              {patientHealthHistory.allergies.none ? (
+                                <p className="text-xs text-gray-600 italic">No known allergies</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {patientHealthHistory.allergies.dental.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-yellow-800 mb-1">Dental:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {patientHealthHistory.allergies.dental.map((allergy, index) => (
+                                          <Badge key={index} className="text-xs bg-orange-100 text-orange-800 border-orange-300">
+                                            <Shield className="h-3 w-3 mr-1 inline" />
+                                            {allergy}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {patientHealthHistory.allergies.medications.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-yellow-800 mb-1">Medications:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {patientHealthHistory.allergies.medications.map((allergy, index) => (
+                                          <Badge key={index} className="text-xs bg-red-100 text-red-800 border-red-300">
+                                            <Pill className="h-3 w-3 mr-1 inline" />
+                                            {allergy}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {patientHealthHistory.allergies.other.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-yellow-800 mb-1">Other:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {patientHealthHistory.allergies.other.map((allergy, index) => (
+                                          <Badge key={index} className="text-xs bg-yellow-100 text-yellow-800 border-yellow-300">
+                                            {allergy}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {patientHealthHistory.allergies.food && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-yellow-800 mb-1">Food:</p>
+                                      <p className="text-xs text-gray-700">{patientHealthHistory.allergies.food}</p>
+                                    </div>
+                                  )}
+                                  {patientHealthHistory.allergies.dental.length === 0 &&
+                                    patientHealthHistory.allergies.medications.length === 0 &&
+                                    patientHealthHistory.allergies.other.length === 0 &&
+                                    !patientHealthHistory.allergies.food && (
+                                      <p className="text-xs text-gray-600 italic">No allergies reported</p>
+                                    )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Current Medications */}
+                            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-2.5 border border-purple-100">
                               <div className="flex items-center gap-2 mb-2">
                                 <div className="w-1.5 h-1.5 bg-purple-600 rounded-full"></div>
-                                <h4 className="text-xs font-bold text-purple-900 uppercase tracking-wide">Pain & Injection</h4>
+                                <h4 className="text-xs font-bold text-purple-900 uppercase tracking-wide">Current Medications</h4>
                               </div>
-                              <div className="space-y-1">
-                                {patientHealthHistory.comfortPreferences.painInjection.map((item, index) => (
-                                  <div key={index} className="flex items-start gap-1.5">
-                                    <div className="w-1 h-1 bg-purple-400 rounded-full mt-1.5 flex-shrink-0"></div>
-                                    <p className="text-xs text-gray-700">{item}</p>
-                                  </div>
-                                ))}
-                              </div>
+                              {patientHealthHistory.currentMedications.none ? (
+                                <p className="text-xs text-gray-600 italic">Not taking any medications</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {patientHealthHistory.currentMedications.emergency.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-purple-800 mb-1 flex items-center gap-1">
+                                        <AlertTriangle className="h-3 w-3 text-red-600" />
+                                        Emergency:
+                                      </p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {patientHealthHistory.currentMedications.emergency.map((med, index) => (
+                                          <Badge key={index} className="text-xs bg-red-100 text-red-800 border-red-300">
+                                            {med}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {patientHealthHistory.currentMedications.bone.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-purple-800 mb-1">Bone/Osteoporosis:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {patientHealthHistory.currentMedications.bone.map((med, index) => (
+                                          <Badge key={index} className="text-xs bg-purple-100 text-purple-800 border-purple-300">
+                                            {med}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {patientHealthHistory.currentMedications.specialized.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-purple-800 mb-1">Specialized:</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {patientHealthHistory.currentMedications.specialized.map((med, index) => (
+                                          <Badge key={index} className="text-xs bg-indigo-100 text-indigo-800 border-indigo-300">
+                                            {med}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {patientHealthHistory.currentMedications.complete && (
+                                    <div className="bg-white rounded-md p-2 border border-purple-200">
+                                      <p className="text-xs font-semibold text-purple-800 mb-1">Complete List:</p>
+                                      <p className="text-xs text-gray-700 whitespace-pre-wrap">{patientHealthHistory.currentMedications.complete}</p>
+                                    </div>
+                                  )}
+                                  {patientHealthHistory.currentMedications.emergency.length === 0 &&
+                                    patientHealthHistory.currentMedications.bone.length === 0 &&
+                                    patientHealthHistory.currentMedications.specialized.length === 0 &&
+                                    !patientHealthHistory.currentMedications.complete && (
+                                      <p className="text-xs text-gray-600 italic">No medications reported</p>
+                                    )}
+                                </div>
+                              )}
                             </div>
-                          )}
 
-                          {/* Communication */}
-                          {patientHealthHistory.comfortPreferences.communication.length > 0 && (
-                            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-2.5 border border-blue-100">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                                <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Communication</h4>
-                              </div>
-                              <div className="space-y-1">
-                                {patientHealthHistory.comfortPreferences.communication.map((item, index) => (
-                                  <div key={index} className="flex items-start gap-1.5">
-                                    <div className="w-1 h-1 bg-blue-400 rounded-full mt-1.5 flex-shrink-0"></div>
-                                    <p className="text-xs text-gray-700">{item}</p>
+                            {/* Current Pharmacy */}
+                            {(patientHealthHistory.currentPharmacy.name || patientHealthHistory.currentPharmacy.city) && (
+                              <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg p-2.5 border border-teal-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="p-1 bg-teal-100 rounded">
+                                    <svg className="h-3.5 w-3.5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
                                   </div>
-                                ))}
+                                  <h4 className="text-xs font-semibold text-teal-900">Current Pharmacy</h4>
+                                </div>
+                                <div className="space-y-1.5 pl-6">
+                                  {patientHealthHistory.currentPharmacy.name && (
+                                    <div className="flex items-start gap-2">
+                                      <span className="text-xs font-medium text-teal-700 min-w-[60px]">Name:</span>
+                                      <span className="text-xs text-gray-700">{patientHealthHistory.currentPharmacy.name}</span>
+                                    </div>
+                                  )}
+                                  {patientHealthHistory.currentPharmacy.city && (
+                                    <div className="flex items-start gap-2">
+                                      <span className="text-xs font-medium text-teal-700 min-w-[60px]">City:</span>
+                                      <span className="text-xs text-gray-700">{patientHealthHistory.currentPharmacy.city}</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
-                          {/* Sensory Sensitivities */}
-                          {patientHealthHistory.comfortPreferences.sensorySensitivities.length > 0 && (
-                            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-2.5 border border-amber-100">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1.5 h-1.5 bg-amber-600 rounded-full"></div>
-                                <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wide">Sensory Sensitivities</h4>
-                              </div>
-                              <div className="space-y-1">
-                                {patientHealthHistory.comfortPreferences.sensorySensitivities.map((item, index) => (
-                                  <div key={index} className="flex items-start gap-1.5">
-                                    <div className="w-1 h-1 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></div>
-                                    <p className="text-xs text-gray-700">{item}</p>
-                                  </div>
-                                ))}
+                            {/* Source Information */}
+                            <div className="bg-gray-50 rounded-lg p-2 border border-gray-200">
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <FileText className="h-3 w-3" />
+                                <span className="font-medium">Source:</span>
+                                <span>New Patient Packet</span>
+                                {patientHealthHistory.packetDate && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{new Date(patientHealthHistory.packetDate).toLocaleDateString()}</span>
+                                  </>
+                                )}
                               </div>
                             </div>
-                          )}
-
-                          {/* Physical Comfort */}
-                          {patientHealthHistory.comfortPreferences.physicalComfort.length > 0 && (
-                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-2.5 border border-green-100">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                <h4 className="text-xs font-bold text-green-900 uppercase tracking-wide">Physical Comfort</h4>
-                              </div>
-                              <div className="space-y-1">
-                                {patientHealthHistory.comfortPreferences.physicalComfort.map((item, index) => (
-                                  <div key={index} className="flex items-start gap-1.5">
-                                    <div className="w-1 h-1 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></div>
-                                    <p className="text-xs text-gray-700">{item}</p>
-                                  </div>
-                                ))}
-                              </div>
+                          </>
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mx-auto mb-3">
+                              <Heart className="h-8 w-8 text-gray-300" />
                             </div>
-                          )}
-
-                          {/* Service Preferences */}
-                          {patientHealthHistory.comfortPreferences.servicePreferences.length > 0 && (
-                            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-2.5 border border-indigo-100">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full"></div>
-                                <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wide">Service Preferences</h4>
-                              </div>
-                              <div className="space-y-1">
-                                {patientHealthHistory.comfortPreferences.servicePreferences.map((item, index) => (
-                                  <div key={index} className="flex items-start gap-1.5">
-                                    <div className="w-1 h-1 bg-indigo-400 rounded-full mt-1.5 flex-shrink-0"></div>
-                                    <p className="text-xs text-gray-700">{item}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Other Concerns */}
-                          {patientHealthHistory.comfortPreferences.otherConcerns && (
-                            <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-2.5 border border-gray-200">
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1.5 h-1.5 bg-gray-600 rounded-full"></div>
-                                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Other Concerns</h4>
-                              </div>
-                              <p className="text-xs text-gray-700 leading-relaxed">{patientHealthHistory.comfortPreferences.otherConcerns}</p>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center mx-auto mb-3">
-                            <Smile className="h-8 w-8 text-pink-300" />
+                            <p className="text-sm font-medium text-gray-500 mb-1">No Health History Available</p>
+                            <p className="text-xs text-gray-400 mb-3">Add medical history, allergies, and medications</p>
+                            <button
+                              onClick={() => setShowMedicalHistoryForm(true)}
+                              className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 inline-flex items-center gap-1"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Add Health History
+                            </button>
                           </div>
-                          <p className="text-sm font-medium text-gray-500 mb-1">No Preferences Available</p>
-                          <p className="text-xs text-gray-400 mb-3">Add comfort preferences in health history</p>
-                          <button
-                            onClick={() => setShowMedicalHistoryForm(true)}
-                            className="text-xs px-3 py-1.5 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition-colors duration-200 inline-flex items-center gap-1"
-                          >
-                            <Plus className="h-3 w-3" />
-                            Add Preferences
-                          </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+
+                  {/* Comfort Preferences */}
+                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-pink-100 rounded-lg">
+                          <Smile className="h-4 w-4 text-pink-600" />
+                        </div>
+                        <h3 className="text-base font-semibold text-gray-900">Preferences</h3>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                      <div className="space-y-3 pb-2">
+                        {patientHealthHistory.hasData && (
+                          patientHealthHistory.comfortPreferences.anxietyControl.length > 0 ||
+                          patientHealthHistory.comfortPreferences.painInjection.length > 0 ||
+                          patientHealthHistory.comfortPreferences.communication.length > 0 ||
+                          patientHealthHistory.comfortPreferences.sensorySensitivities.length > 0 ||
+                          patientHealthHistory.comfortPreferences.physicalComfort.length > 0 ||
+                          patientHealthHistory.comfortPreferences.servicePreferences.length > 0 ||
+                          patientHealthHistory.comfortPreferences.otherConcerns
+                        ) ? (
+                          <>
+                            {/* Anxiety Control */}
+                            {patientHealthHistory.comfortPreferences.anxietyControl.length > 0 && (
+                              <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg p-2.5 border border-pink-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-1.5 h-1.5 bg-pink-600 rounded-full"></div>
+                                  <h4 className="text-xs font-bold text-pink-900 uppercase tracking-wide">Anxiety Control</h4>
+                                </div>
+                                <div className="space-y-1">
+                                  {patientHealthHistory.comfortPreferences.anxietyControl.map((item, index) => (
+                                    <div key={index} className="flex items-start gap-1.5">
+                                      <div className="w-1 h-1 bg-pink-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                      <p className="text-xs text-gray-700">{item}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Pain & Injection */}
+                            {patientHealthHistory.comfortPreferences.painInjection.length > 0 && (
+                              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-2.5 border border-purple-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-1.5 h-1.5 bg-purple-600 rounded-full"></div>
+                                  <h4 className="text-xs font-bold text-purple-900 uppercase tracking-wide">Pain & Injection</h4>
+                                </div>
+                                <div className="space-y-1">
+                                  {patientHealthHistory.comfortPreferences.painInjection.map((item, index) => (
+                                    <div key={index} className="flex items-start gap-1.5">
+                                      <div className="w-1 h-1 bg-purple-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                      <p className="text-xs text-gray-700">{item}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Communication */}
+                            {patientHealthHistory.comfortPreferences.communication.length > 0 && (
+                              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-2.5 border border-blue-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                                  <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Communication</h4>
+                                </div>
+                                <div className="space-y-1">
+                                  {patientHealthHistory.comfortPreferences.communication.map((item, index) => (
+                                    <div key={index} className="flex items-start gap-1.5">
+                                      <div className="w-1 h-1 bg-blue-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                      <p className="text-xs text-gray-700">{item}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Sensory Sensitivities */}
+                            {patientHealthHistory.comfortPreferences.sensorySensitivities.length > 0 && (
+                              <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-2.5 border border-amber-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-1.5 h-1.5 bg-amber-600 rounded-full"></div>
+                                  <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wide">Sensory Sensitivities</h4>
+                                </div>
+                                <div className="space-y-1">
+                                  {patientHealthHistory.comfortPreferences.sensorySensitivities.map((item, index) => (
+                                    <div key={index} className="flex items-start gap-1.5">
+                                      <div className="w-1 h-1 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                      <p className="text-xs text-gray-700">{item}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Physical Comfort */}
+                            {patientHealthHistory.comfortPreferences.physicalComfort.length > 0 && (
+                              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-2.5 border border-green-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                  <h4 className="text-xs font-bold text-green-900 uppercase tracking-wide">Physical Comfort</h4>
+                                </div>
+                                <div className="space-y-1">
+                                  {patientHealthHistory.comfortPreferences.physicalComfort.map((item, index) => (
+                                    <div key={index} className="flex items-start gap-1.5">
+                                      <div className="w-1 h-1 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                      <p className="text-xs text-gray-700">{item}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Service Preferences */}
+                            {patientHealthHistory.comfortPreferences.servicePreferences.length > 0 && (
+                              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-2.5 border border-indigo-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full"></div>
+                                  <h4 className="text-xs font-bold text-indigo-900 uppercase tracking-wide">Service Preferences</h4>
+                                </div>
+                                <div className="space-y-1">
+                                  {patientHealthHistory.comfortPreferences.servicePreferences.map((item, index) => (
+                                    <div key={index} className="flex items-start gap-1.5">
+                                      <div className="w-1 h-1 bg-indigo-400 rounded-full mt-1.5 flex-shrink-0"></div>
+                                      <p className="text-xs text-gray-700">{item}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Other Concerns */}
+                            {patientHealthHistory.comfortPreferences.otherConcerns && (
+                              <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-2.5 border border-gray-200">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-1.5 h-1.5 bg-gray-600 rounded-full"></div>
+                                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Other Concerns</h4>
+                                </div>
+                                <p className="text-xs text-gray-700 leading-relaxed">{patientHealthHistory.comfortPreferences.otherConcerns}</p>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center mx-auto mb-3">
+                              <Smile className="h-8 w-8 text-pink-300" />
+                            </div>
+                            <p className="text-sm font-medium text-gray-500 mb-1">No Preferences Available</p>
+                            <p className="text-xs text-gray-400 mb-3">Add comfort preferences in health history</p>
+                            <button
+                              onClick={() => setShowMedicalHistoryForm(true)}
+                              className="text-xs px-3 py-1.5 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition-colors duration-200 inline-flex items-center gap-1"
+                            >
+                              <Plus className="h-3 w-3" />
+                              Add Preferences
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -6111,19 +6106,18 @@ export function PatientProfilePage() {
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
-                                  <div className={`w-3 h-3 rounded-full ${
-                                    appointment.status === 'confirmed' ? 'bg-green-500' :
-                                    appointment.status === 'not-confirmed' ? 'bg-orange-500' :
-                                    appointment.status === 'cancelled' ? 'bg-red-500' :
-                                    appointment.status === 'pending' ? 'bg-yellow-500' :
-                                    'bg-gray-400'
-                                  }`}></div>
+                                  <div className={`w-3 h-3 rounded-full ${appointment.status === 'confirmed' ? 'bg-green-500' :
+                                      appointment.status === 'not-confirmed' ? 'bg-orange-500' :
+                                        appointment.status === 'cancelled' ? 'bg-red-500' :
+                                          appointment.status === 'pending' ? 'bg-yellow-500' :
+                                            'bg-gray-400'
+                                    }`}></div>
                                   <h3 className="font-semibold text-gray-900">{appointment.type}</h3>
                                   <Badge variant={
                                     appointment.status === 'confirmed' ? 'default' :
-                                    appointment.status === 'not-confirmed' ? 'secondary' :
-                                    appointment.status === 'cancelled' ? 'destructive' :
-                                    'outline'
+                                      appointment.status === 'not-confirmed' ? 'secondary' :
+                                        appointment.status === 'cancelled' ? 'destructive' :
+                                          'outline'
                                   }>
                                     {appointment.status}
                                   </Badge>
@@ -6314,13 +6308,12 @@ export function PatientProfilePage() {
 
                               {/* Arch Type */}
                               <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                  script.arch_type === 'dual' ? 'bg-purple-100 text-purple-700' :
-                                  script.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-green-100 text-green-700'
-                                }`}>
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${script.arch_type === 'dual' ? 'bg-purple-100 text-purple-700' :
+                                    script.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
+                                      'bg-green-100 text-green-700'
+                                  }`}>
                                   {script.arch_type === 'dual' ? 'Dual Arch' :
-                                   script.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}
+                                    script.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}
                                 </span>
                               </div>
 
@@ -6343,13 +6336,12 @@ export function PatientProfilePage() {
 
                               {/* Status */}
                               <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
-                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                  script.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                                  script.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                                  script.status === 'delayed' ? 'bg-red-100 text-red-700' :
-                                  script.status === 'hold' ? 'bg-purple-100 text-purple-700' :
-                                  'bg-amber-100 text-amber-700'
-                                }`}>
+                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${script.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                    script.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                                      script.status === 'delayed' ? 'bg-red-100 text-red-700' :
+                                        script.status === 'hold' ? 'bg-purple-100 text-purple-700' :
+                                          'bg-amber-100 text-amber-700'
+                                  }`}>
                                   {script.status}
                                 </span>
                               </div>
@@ -6357,15 +6349,15 @@ export function PatientProfilePage() {
                               {/* Actions */}
                               <div className="col-span-2 h-full flex items-center justify-end pr-2">
                                 <div className="flex gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => handleViewLabScript(script)}
-                                  title="View Details"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleViewLabScript(script)}
+                                    title="View Details"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </div>
                             </div>
@@ -6445,17 +6437,16 @@ export function PatientProfilePage() {
                                   </div>
                                   {/* Status Badge */}
                                   <div className="mt-2">
-                                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                      item.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                      item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
-                                      item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
-                                      'bg-amber-100 text-amber-700'
-                                    }`}>
+                                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                        item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
+                                          item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
+                                            'bg-amber-100 text-amber-700'
+                                      }`}>
                                       {item.status === 'pending-printing' ? 'New Script' :
-                                       item.status === 'in-production' ? 'Printing' :
-                                       item.status === 'quality-check' ? 'Inspection' :
-                                       item.status === 'completed' ? 'Completed' :
-                                       item.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                        item.status === 'in-production' ? 'Printing' :
+                                          item.status === 'quality-check' ? 'Inspection' :
+                                            item.status === 'completed' ? 'Completed' :
+                                              item.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                     </span>
                                   </div>
                                 </div>
@@ -6563,16 +6554,15 @@ export function PatientProfilePage() {
                               {/* Right side - Status and View Button */}
                               <div className="ml-4 flex items-center gap-3">
                                 {/* Status Badge */}
-                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                                  item.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
-                                  item.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
-                                  item.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
+                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${item.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
+                                    item.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
+                                      item.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
+                                        'bg-gray-100 text-gray-800'
+                                  }`}>
                                   {item.delivery_status === 'ready-for-delivery' ? 'Ready for Delivery' :
-                                   item.delivery_status === 'patient-scheduled' ? 'Scheduled' :
-                                   item.delivery_status === 'inserted' ? 'Inserted' :
-                                   item.delivery_status}
+                                    item.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                                      item.delivery_status === 'inserted' ? 'Inserted' :
+                                        item.delivery_status}
                                 </span>
 
                                 {/* View Details Button */}
@@ -6684,41 +6674,35 @@ export function PatientProfilePage() {
                                 }
                               }
                             }}
-                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors mb-1 border ${
-                              selectedDocCategory === category.id
+                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors mb-1 border ${selectedDocCategory === category.id
                                 ? 'bg-blue-50 border-blue-300'
                                 : dragOverCategory === category.id
-                                ? 'bg-green-50 border-green-400 ring-2 ring-green-300'
-                                : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
-                            }`}
+                                  ? 'bg-green-50 border-green-400 ring-2 ring-green-300'
+                                  : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                              }`}
                           >
                             <div className="flex items-center gap-3">
-                              <div className={`p-1.5 rounded-lg ${
-                                selectedDocCategory === category.id ? 'bg-blue-100' :
-                                dragOverCategory === category.id ? 'bg-green-100' :
-                                'bg-gray-100'
-                              }`}>
-                                <category.icon className={`h-4 w-4 ${
-                                  selectedDocCategory === category.id ? 'text-blue-600' :
-                                  dragOverCategory === category.id ? 'text-green-600' :
-                                  'text-gray-600'
-                                }`} />
+                              <div className={`p-1.5 rounded-lg ${selectedDocCategory === category.id ? 'bg-blue-100' :
+                                  dragOverCategory === category.id ? 'bg-green-100' :
+                                    'bg-gray-100'
+                                }`}>
+                                <category.icon className={`h-4 w-4 ${selectedDocCategory === category.id ? 'text-blue-600' :
+                                    dragOverCategory === category.id ? 'text-green-600' :
+                                      'text-gray-600'
+                                  }`} />
                               </div>
-                              <span className={`text-sm ${
-                                selectedDocCategory === category.id ? 'text-blue-700 font-medium' : 'text-gray-700'
-                              }`}>{category.name}</span>
+                              <span className={`text-sm ${selectedDocCategory === category.id ? 'text-blue-700 font-medium' : 'text-gray-700'
+                                }`}>{category.name}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                selectedDocCategory === category.id
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${selectedDocCategory === category.id
                                   ? 'bg-blue-200 text-blue-700'
                                   : 'bg-gray-200 text-gray-600'
-                              }`}>
+                                }`}>
                                 {docCount}
                               </span>
-                              <ChevronRight className={`h-4 w-4 ${
-                                selectedDocCategory === category.id ? 'text-blue-500' : 'text-gray-400'
-                              }`} />
+                              <ChevronRight className={`h-4 w-4 ${selectedDocCategory === category.id ? 'text-blue-500' : 'text-gray-400'
+                                }`} />
                             </div>
                           </div>
                         );
@@ -6737,16 +6721,16 @@ export function PatientProfilePage() {
                           <h3 className="text-sm font-semibold text-blue-700 whitespace-nowrap">
                             {selectedDocCategory
                               ? [
-                                  { id: 'all', name: 'All' },
-                                  { id: 'consultation', name: 'Consultation' },
-                                  { id: 'administrative', name: 'Administrative Documents' },
-                                  { id: 'data-collection', name: 'Data Collection Sheets' },
-                                  { id: 'surgical', name: 'Surgical Day Workflow' },
-                                  { id: 'post-surgery', name: 'Post Surgery Workflow' },
-                                  { id: 'lab', name: 'Lab' },
-                                  { id: 'report-cards', name: 'Report Cards' },
-                                  { id: 'miscellaneous', name: 'Miscellaneous' },
-                                ].find(c => c.id === selectedDocCategory)?.name + ' Documents'
+                                { id: 'all', name: 'All' },
+                                { id: 'consultation', name: 'Consultation' },
+                                { id: 'administrative', name: 'Administrative Documents' },
+                                { id: 'data-collection', name: 'Data Collection Sheets' },
+                                { id: 'surgical', name: 'Surgical Day Workflow' },
+                                { id: 'post-surgery', name: 'Post Surgery Workflow' },
+                                { id: 'lab', name: 'Lab' },
+                                { id: 'report-cards', name: 'Report Cards' },
+                                { id: 'miscellaneous', name: 'Miscellaneous' },
+                              ].find(c => c.id === selectedDocCategory)?.name + ' Documents'
                               : 'Documents'
                             }
                           </h3>
@@ -6817,9 +6801,8 @@ export function PatientProfilePage() {
                     <div className="border-b border-blue-100" />
                     {/* Content */}
                     <div
-                      className={`flex-1 overflow-y-auto p-4 relative transition-all duration-200 ${
-                        docAreaDragActive && selectedDocCategory ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''
-                      }`}
+                      className={`flex-1 overflow-y-auto p-4 relative transition-all duration-200 ${docAreaDragActive && selectedDocCategory ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''
+                        }`}
                       onDragOver={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -6955,11 +6938,11 @@ export function PatientProfilePage() {
                           // Filter by search term
                           const filteredDocs = documentSearchTerm
                             ? allDocs.filter(doc =>
-                                doc.title?.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
-                                doc.file_name?.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
-                                doc.description?.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
-                                doc.displayCategory?.toLowerCase().includes(documentSearchTerm.toLowerCase())
-                              )
+                              doc.title?.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+                              doc.file_name?.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+                              doc.description?.toLowerCase().includes(documentSearchTerm.toLowerCase()) ||
+                              doc.displayCategory?.toLowerCase().includes(documentSearchTerm.toLowerCase())
+                            )
                             : allDocs;
 
                           // Sort by created_at descending
@@ -6996,12 +6979,11 @@ export function PatientProfilePage() {
                                       >
                                         <div className="flex items-start justify-between gap-3">
                                           <div className="flex items-start gap-3 flex-1 min-w-0">
-                                            <div className={`p-2.5 rounded-xl flex-shrink-0 ${
-                                              isImage ? 'bg-purple-100' :
-                                              isPdf ? 'bg-red-100' :
-                                              isUploaded ? 'bg-blue-100' :
-                                              'bg-gray-100'
-                                            }`}>
+                                            <div className={`p-2.5 rounded-xl flex-shrink-0 ${isImage ? 'bg-purple-100' :
+                                                isPdf ? 'bg-red-100' :
+                                                  isUploaded ? 'bg-blue-100' :
+                                                    'bg-gray-100'
+                                              }`}>
                                               {isImage ? (
                                                 <FileImage className="h-5 w-5 text-purple-600" />
                                               ) : isPdf ? (
@@ -7021,11 +7003,10 @@ export function PatientProfilePage() {
                                                   {doc.displayCategory}
                                                 </span>
                                                 {isUploaded && doc.file_type && (
-                                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                                    isImage ? 'bg-purple-100 text-purple-700' :
-                                                    isPdf ? 'bg-red-100 text-red-700' :
-                                                    'bg-gray-100 text-gray-700'
-                                                  }`}>
+                                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
+                                                      isPdf ? 'bg-red-100 text-red-700' :
+                                                        'bg-gray-100 text-gray-700'
+                                                    }`}>
                                                     {isImage ? 'Image' : isPdf ? 'PDF' : doc.file_type.split('/')[1]?.toUpperCase() || 'FILE'}
                                                   </span>
                                                 )}
@@ -7169,18 +7150,16 @@ export function PatientProfilePage() {
                                 >
                                   <div className="flex items-start justify-between">
                                     <div className="flex items-start gap-3">
-                                      <div className={`p-2.5 rounded-xl ${
-                                        consultation.consultation_status === 'completed' ? 'bg-green-100' :
-                                        consultation.consultation_status === 'in_progress' ? 'bg-blue-100' :
-                                        consultation.consultation_status === 'scheduled' ? 'bg-purple-100' :
-                                        'bg-yellow-100'
-                                      }`}>
-                                        <Stethoscope className={`h-5 w-5 ${
-                                          consultation.consultation_status === 'completed' ? 'text-green-600' :
-                                          consultation.consultation_status === 'in_progress' ? 'text-blue-600' :
-                                          consultation.consultation_status === 'scheduled' ? 'text-purple-600' :
-                                          'text-yellow-600'
-                                        }`} />
+                                      <div className={`p-2.5 rounded-xl ${consultation.consultation_status === 'completed' ? 'bg-green-100' :
+                                          consultation.consultation_status === 'in_progress' ? 'bg-blue-100' :
+                                            consultation.consultation_status === 'scheduled' ? 'bg-purple-100' :
+                                              'bg-yellow-100'
+                                        }`}>
+                                        <Stethoscope className={`h-5 w-5 ${consultation.consultation_status === 'completed' ? 'text-green-600' :
+                                            consultation.consultation_status === 'in_progress' ? 'text-blue-600' :
+                                              consultation.consultation_status === 'scheduled' ? 'text-purple-600' :
+                                                'text-yellow-600'
+                                          }`} />
                                       </div>
                                       <div>
                                         <h4 className="text-sm font-semibold text-gray-900">
@@ -7191,27 +7170,25 @@ export function PatientProfilePage() {
                                           })}
                                         </h4>
                                         <div className="flex items-center gap-2 mt-1">
-                                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                            consultation.consultation_status === 'completed' ? 'bg-green-100 text-green-700' :
-                                            consultation.consultation_status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                                            consultation.consultation_status === 'scheduled' ? 'bg-purple-100 text-purple-700' :
-                                            'bg-yellow-100 text-yellow-700'
-                                          }`}>
+                                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${consultation.consultation_status === 'completed' ? 'bg-green-100 text-green-700' :
+                                              consultation.consultation_status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                                consultation.consultation_status === 'scheduled' ? 'bg-purple-100 text-purple-700' :
+                                                  'bg-yellow-100 text-yellow-700'
+                                            }`}>
                                             {consultation.consultation_status === 'completed' ? 'Completed' :
-                                             consultation.consultation_status === 'in_progress' ? 'In Progress' :
-                                             consultation.consultation_status === 'scheduled' ? 'Scheduled' :
-                                             consultation.consultation_status === 'draft' ? 'Pending' :
-                                             consultation.consultation_status?.charAt(0).toUpperCase() + consultation.consultation_status?.slice(1) || 'Pending'}
+                                              consultation.consultation_status === 'in_progress' ? 'In Progress' :
+                                                consultation.consultation_status === 'scheduled' ? 'Scheduled' :
+                                                  consultation.consultation_status === 'draft' ? 'Pending' :
+                                                    consultation.consultation_status?.charAt(0).toUpperCase() + consultation.consultation_status?.slice(1) || 'Pending'}
                                           </span>
                                           {consultation.treatment_decision && (
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                              consultation.treatment_decision === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
-                                              consultation.treatment_decision === 'not-accepted' ? 'bg-red-100 text-red-700' :
-                                              'bg-yellow-100 text-yellow-700'
-                                            }`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${consultation.treatment_decision === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
+                                                consultation.treatment_decision === 'not-accepted' ? 'bg-red-100 text-red-700' :
+                                                  'bg-yellow-100 text-yellow-700'
+                                              }`}>
                                               {consultation.treatment_decision === 'accepted' ? 'Accepted' :
-                                               consultation.treatment_decision === 'not-accepted' ? 'Not Accepted' :
-                                               'Follow-up Required'}
+                                                consultation.treatment_decision === 'not-accepted' ? 'Not Accepted' :
+                                                  'Follow-up Required'}
                                             </span>
                                           )}
                                         </div>
@@ -7293,11 +7270,10 @@ export function PatientProfilePage() {
                                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
                                               Uploaded
                                             </span>
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                              isImage ? 'bg-purple-100 text-purple-700' :
-                                              isPdf ? 'bg-red-100 text-red-700' :
-                                              'bg-gray-100 text-gray-700'
-                                            }`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
+                                                isPdf ? 'bg-red-100 text-red-700' :
+                                                  'bg-gray-100 text-gray-700'
+                                              }`}>
                                               {getFileTypeLabel()}
                                             </span>
                                             <span className="text-xs text-gray-400">
@@ -7436,10 +7412,9 @@ export function PatientProfilePage() {
                                       <div>
                                         <h4 className="text-sm font-semibold text-gray-900">New Patient Packet</h4>
                                         <div className="flex items-center gap-2 mt-1">
-                                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                            packet.form_status === 'completed' ? 'bg-green-100 text-green-700' :
-                                            packet.form_status === 'reviewed' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-                                          }`}>
+                                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${packet.form_status === 'completed' ? 'bg-green-100 text-green-700' :
+                                              packet.form_status === 'reviewed' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                                            }`}>
                                             {packet.form_status === 'completed' ? 'Completed' : packet.form_status === 'reviewed' ? 'Reviewed' : 'Submitted'}
                                           </span>
                                           <span className="text-xs text-gray-400">{new Date(packet.created_at).toLocaleDateString()}</span>
@@ -7966,11 +7941,10 @@ export function PatientProfilePage() {
                                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
                                               Uploaded
                                             </span>
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                              isImage ? 'bg-purple-100 text-purple-700' :
-                                              isPdf ? 'bg-red-100 text-red-700' :
-                                              'bg-gray-100 text-gray-700'
-                                            }`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
+                                                isPdf ? 'bg-red-100 text-red-700' :
+                                                  'bg-gray-100 text-gray-700'
+                                              }`}>
                                               {getFileTypeLabel()}
                                             </span>
                                             <span className="text-xs text-gray-400">
@@ -8198,11 +8172,10 @@ export function PatientProfilePage() {
                                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
                                               Uploaded
                                             </span>
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                              isImage ? 'bg-purple-100 text-purple-700' :
-                                              isPdf ? 'bg-red-100 text-red-700' :
-                                              'bg-gray-100 text-gray-700'
-                                            }`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
+                                                isPdf ? 'bg-red-100 text-red-700' :
+                                                  'bg-gray-100 text-gray-700'
+                                              }`}>
                                               {getFileTypeLabel()}
                                             </span>
                                             <span className="text-xs text-gray-400">
@@ -8441,11 +8414,10 @@ export function PatientProfilePage() {
                                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
                                               Uploaded
                                             </span>
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                              isImage ? 'bg-purple-100 text-purple-700' :
-                                              isPdf ? 'bg-red-100 text-red-700' :
-                                              'bg-gray-100 text-gray-700'
-                                            }`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
+                                                isPdf ? 'bg-red-100 text-red-700' :
+                                                  'bg-gray-100 text-gray-700'
+                                              }`}>
                                               {getFileTypeLabel()}
                                             </span>
                                             <span className="text-xs text-gray-400">
@@ -8834,11 +8806,10 @@ export function PatientProfilePage() {
                                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
                                               Uploaded
                                             </span>
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                              isImage ? 'bg-purple-100 text-purple-700' :
-                                              isPdf ? 'bg-red-100 text-red-700' :
-                                              'bg-gray-100 text-gray-700'
-                                            }`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
+                                                isPdf ? 'bg-red-100 text-red-700' :
+                                                  'bg-gray-100 text-gray-700'
+                                              }`}>
                                               {getFileTypeLabel()}
                                             </span>
                                             <span className="text-xs text-gray-400">
@@ -8990,11 +8961,10 @@ export function PatientProfilePage() {
                                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
                                               Uploaded
                                             </span>
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                              isImage ? 'bg-purple-100 text-purple-700' :
-                                              isPdf ? 'bg-red-100 text-red-700' :
-                                              'bg-gray-100 text-gray-700'
-                                            }`}>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
+                                                isPdf ? 'bg-red-100 text-red-700' :
+                                                  'bg-gray-100 text-gray-700'
+                                              }`}>
                                               {getFileTypeLabel()}
                                             </span>
                                             <span className="text-xs text-gray-400">
@@ -9221,13 +9191,12 @@ export function PatientProfilePage() {
                 <div className="space-y-4">
                   {/* Drag & Drop Zone */}
                   <div
-                    className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
-                      dragActive
+                    className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${dragActive
                         ? 'border-blue-500 bg-blue-50'
                         : selectedFile
                           ? 'border-green-300 bg-green-50'
                           : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                     onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                     onDragLeave={() => setDragActive(false)}
                     onDrop={(e) => {
@@ -10345,151 +10314,1986 @@ export function PatientProfilePage() {
                 {/* Clinical Forms Grid with Horizontal Scroll */}
                 <div className="overflow-x-auto pl-0 pr-0 pt-2 pb-2" style={{ height: 'calc(100vh - 280px)' }}>
                   <div className="flex gap-3 h-full" style={{ minWidth: 'max-content' }}>
-                  {/* Administrative Forms */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <Settings className="h-4 w-4 text-blue-600" />
+                    {/* Administrative Forms */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
+                      {/* Header */}
+                      <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <Settings className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <h3 className="text-base font-semibold text-gray-900">Administrative Forms ({patientPackets.length + financialAgreements.length + consentForms.length + medicalRecordsReleaseForms.length + informedConsentSmokingForms.length + finalDesignApprovalForms.length + thankYouPreSurgeryForms.length + threeYearCarePackageForms.length + fiveYearWarrantyForms.length + partialPaymentAgreementForms.length + treatmentPlanForms.length})</h3>
                       </div>
-                      <h3 className="text-base font-semibold text-gray-900">Administrative Forms ({patientPackets.length + financialAgreements.length + consentForms.length + medicalRecordsReleaseForms.length + informedConsentSmokingForms.length + finalDesignApprovalForms.length + thankYouPreSurgeryForms.length + threeYearCarePackageForms.length + fiveYearWarrantyForms.length + partialPaymentAgreementForms.length + treatmentPlanForms.length})</h3>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                      <div className="space-y-3 pb-2">
-                        {/* Dropdown and Add Button Row */}
-                        <div className="flex items-center gap-2">
-                          {/* Form Type Dropdown */}
-                          <Select value={selectedAdminFormType} onValueChange={setSelectedAdminFormType}>
-                            <SelectTrigger className="flex-1 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30">
-                              <SelectValue placeholder="Choose administrative form..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="new-patient-packet">New Patient Packet</SelectItem>
-                              <SelectItem value="financial-agreement">Financial Agreement</SelectItem>
-                              <SelectItem value="consent-full-arch">Consent Packet</SelectItem>
-                              <SelectItem value="medical-records-release">Medical Records Release Form</SelectItem>
-                              <SelectItem value="informed-consent-smoking">Informed Consent Form For Smoking</SelectItem>
-                              <SelectItem value="three-year-care-package">3-Year Care Package Enrollment Form</SelectItem>
-                              {/* <SelectItem value="five-year-warranty">5-Year Extended Warranty Plan</SelectItem> */}
-                              <SelectItem value="partial-payment-agreement">Partial Payment Agreement for Future Treatment</SelectItem>
-                              <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
-                              <SelectItem value="thank-you-pre-surgery">Thank You and Pre-Surgery Form</SelectItem>
-                              <SelectItem value="create-treatment-plan">Create Treatment Plan</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      {/* Content */}
+                      <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                        <div className="space-y-3 pb-2">
+                          {/* Dropdown and Add Button Row */}
+                          <div className="flex items-center gap-2">
+                            {/* Form Type Dropdown */}
+                            <Select value={selectedAdminFormType} onValueChange={setSelectedAdminFormType}>
+                              <SelectTrigger className="flex-1 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/30">
+                                <SelectValue placeholder="Choose administrative form..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="new-patient-packet">New Patient Packet</SelectItem>
+                                <SelectItem value="financial-agreement">Financial Agreement</SelectItem>
+                                <SelectItem value="consent-full-arch">Consent Packet</SelectItem>
+                                <SelectItem value="medical-records-release">Medical Records Release Form</SelectItem>
+                                <SelectItem value="informed-consent-smoking">Informed Consent Form For Smoking</SelectItem>
+                                <SelectItem value="three-year-care-package">3-Year Care Package Enrollment Form</SelectItem>
+                                {/* <SelectItem value="five-year-warranty">5-Year Extended Warranty Plan</SelectItem> */}
+                                <SelectItem value="partial-payment-agreement">Partial Payment Agreement for Future Treatment</SelectItem>
+                                <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
+                                <SelectItem value="thank-you-pre-surgery">Thank You and Pre-Surgery Form</SelectItem>
+                                <SelectItem value="create-treatment-plan">Create Treatment Plan</SelectItem>
+                              </SelectContent>
+                            </Select>
 
-                          {/* Square Add Button */}
+                            {/* Square Add Button */}
+                            <button
+                              className="flex-shrink-0 w-10 h-10 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center text-gray-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={!selectedAdminFormType}
+                              onClick={() => {
+                                if (selectedAdminFormType === 'consent-full-arch') {
+                                  setShowConsentFullArchForm(true);
+                                } else if (selectedAdminFormType === 'financial-agreement') {
+                                  setShowFinancialAgreementForm(true);
+                                } else if (selectedAdminFormType === 'final-design-approval') {
+                                  setShowFinalDesignApprovalForm(true);
+                                } else if (selectedAdminFormType === 'medical-records-release') {
+                                  // Reset editing states for new form
+                                  setEditingMedicalRecordsReleaseForm(null);
+                                  setIsEditingMedicalRecordsReleaseForm(false);
+                                  setIsViewingMedicalRecordsReleaseForm(false);
+                                  setShowMedicalRecordsReleaseForm(true);
+                                } else if (selectedAdminFormType === 'new-patient-packet') {
+                                  setShowNewPatientPacketForm(true);
+                                } else if (selectedAdminFormType === 'informed-consent-smoking') {
+                                  setShowInformedConsentSmokingForm(true);
+                                } else if (selectedAdminFormType === 'thank-you-pre-surgery') {
+                                  setShowThankYouPreSurgeryForm(true);
+                                } else if (selectedAdminFormType === 'three-year-care-package') {
+                                  setShowThreeYearCarePackageForm(true);
+                                } else if (selectedAdminFormType === 'five-year-warranty') {
+                                  setShowFiveYearWarrantyForm(true);
+                                } else if (selectedAdminFormType === 'partial-payment-agreement') {
+                                  setShowPartialPaymentAgreementForm(true);
+                                } else if (selectedAdminFormType === 'create-treatment-plan') {
+                                  setShowTreatmentPlanForm(true);
+                                } else {
+                                  // Handle other form types here
+                                  alert(`Opening ${selectedAdminFormType} form - Not implemented yet`);
+                                }
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          {/* Administrative Forms List */}
+                          {(loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms || loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms || loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms || loadingFiveYearWarrantyForms || loadingPartialPaymentAgreementForms || loadingTreatmentPlanForms) ? (
+                            <div className="text-center py-6">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                              <p className="text-sm text-gray-500">Loading administrative forms...</p>
+                            </div>
+                          ) : (patientPackets.length > 0 || financialAgreements.length > 0 || consentForms.length > 0 || medicalRecordsReleaseForms.length > 0 || informedConsentSmokingForms.length > 0 || finalDesignApprovalForms.length > 0 || thankYouPreSurgeryForms.length > 0 || threeYearCarePackageForms.length > 0 || fiveYearWarrantyForms.length > 0 || partialPaymentAgreementForms.length > 0 || treatmentPlanForms.length > 0) ? (
+                            <div className="space-y-2">
+                              {patientPackets.map((packet) => (
+                                <div
+                                  key={packet.id}
+                                  className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                  onClick={() => handleViewPatientPacket(packet)}
+                                >
+                                  {/* Header with date and status */}
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${packet.form_status === 'completed' ? 'bg-green-500' :
+                                          packet.form_status === 'reviewed' ? 'bg-blue-500' : 'bg-orange-500'
+                                        }`}></div>
+                                      <span className="text-sm font-semibold text-gray-900">
+                                        New Patient Packet
+                                      </span>
+                                    </div>
+
+                                    {/* Status Badge */}
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${packet.form_status === 'completed'
+                                        ? 'bg-green-100 text-green-800 border border-green-200'
+                                        : packet.form_status === 'reviewed'
+                                          ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                          : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                      }`}>
+                                      {packet.form_status === 'completed' ? 'Completed' :
+                                        packet.form_status === 'reviewed' ? 'Reviewed' : 'Draft'}
+                                    </span>
+                                  </div>
+
+                                  {/* Submitted Date */}
+                                  <div className="mb-3">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-gray-500">Submitted on:</span>
+                                      <span className="font-medium text-gray-700">
+                                        {packet.submitted_at ?
+                                          new Date(packet.submitted_at).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          }) :
+                                          new Date(packet.created_at).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })
+                                        }
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Action Buttons */}
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{packet.created_at ? new Date(packet.created_at).toLocaleDateString() : 'Unknown date'}</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                      {/* Download PDF button */}
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            // Convert database format to form format for PDF generation
+                                            const formData = convertDatabaseToFormData(packet);
+                                            await generateNewPatientPacketPdf(formData);
+                                            toast({
+                                              title: "Success",
+                                              description: "PDF downloaded successfully!",
+                                            });
+                                          } catch (error) {
+                                            console.error('Error generating PDF:', error);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to generate PDF",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                        className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                        title="Download PDF"
+                                      >
+                                        <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                      </button>
+
+                                      {/* Edit button - visible to all users if draft, only admins if completed */}
+                                      {(packet.form_status === 'draft' || isAdminUser()) && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditPatientPacket(packet);
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Edit patient packet"
+                                        >
+                                          <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                        </button>
+                                      )}
+
+                                      {/* Delete button - only visible to admins */}
+                                      {isAdminUser() && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeletePatientPacket(packet);
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Delete patient packet"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {financialAgreements.map((agreement) => (
+                                <div
+                                  key={agreement.id}
+                                  className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                  onClick={() => handleViewFinancialAgreement(agreement)}
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${agreement.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                        }`}></div>
+                                      <span className="text-sm font-semibold text-gray-900">
+                                        Financial Agreement
+                                      </span>
+                                    </div>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${agreement.status === 'completed'
+                                        ? 'bg-green-100 text-green-800 border border-green-200'
+                                        : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                      }`}>
+                                      {agreement.status === 'completed' ? 'Completed' : 'Draft'}
+                                    </span>
+                                  </div>
+
+                                  {/* Submitted Date */}
+                                  <div className="mb-3">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-gray-500">Submitted on:</span>
+                                      <span className="font-medium text-gray-700">
+                                        {agreement.created_at ?
+                                          new Date(agreement.created_at).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          }) :
+                                          'Draft - Not submitted'
+                                        }
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Action Buttons */}
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{new Date(agreement.created_at).toLocaleDateString()}</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                      {/* Download PDF button */}
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            // Map database fields to PDF generator format
+                                            const pdfData = {
+                                              patientName: agreement.patient_name || '',
+                                              chartNumber: agreement.chart_number || '',
+                                              dateOfBirth: agreement.date_of_birth || '',
+                                              dateOfExecution: agreement.date_of_execution || '',
+                                              timeOfExecution: agreement.time_of_execution || '',
+                                              acceptedTreatments: agreement.accepted_treatments || [],
+                                              totalCostOfTreatment: agreement.total_cost_of_treatment?.toString() || '',
+                                              patientPaymentToday: agreement.patient_payment_today?.toString() || '',
+                                              remainingBalance: agreement.remaining_balance?.toString() || '',
+                                              remainingPaymentPlan: agreement.remaining_payment_plan || '',
+                                              paymentAmount: agreement.payment_amount?.toString() || '',
+                                              paymentTermsInitials: agreement.payment_terms_initials || '',
+                                              labFeeInitials: agreement.lab_fee_initials || '',
+                                              carePackageFee: agreement.care_package_fee?.toString() || '',
+                                              carePackageElection: agreement.care_package_election || '',
+                                              warrantyInitials: agreement.warranty_initials || '',
+                                              capacityConfirmed: agreement.capacity_confirmed,
+                                              hipaaAcknowledged: agreement.hipaa_acknowledged,
+                                              capacityInitials: agreement.capacity_initials || '',
+                                              disputeInitials: agreement.dispute_initials || '',
+                                              termsAgreed: agreement.terms_agreed,
+                                              patientSignature: agreement.patient_signature || '',
+                                              patientSignatureDate: agreement.patient_signature_date || '',
+                                              patientSignatureTime: agreement.patient_signature_time || '',
+                                              witnessName: agreement.witness_name || '',
+                                              witnessRole: agreement.witness_role || '',
+                                              witnessSignature: agreement.witness_signature || '',
+                                              witnessSignatureDate: agreement.witness_signature_date || '',
+                                              witnessSignatureTime: agreement.witness_signature_time || '',
+                                              downloadedToDentalManagementSoftware: agreement.downloaded_to_dental_management_software,
+                                              confirmedByStaffInitials: agreement.confirmed_by_staff_initials || ''
+                                            };
+
+                                            await generateFinancialAgreementPdf(pdfData);
+                                            toast({
+                                              title: "Success",
+                                              description: "PDF downloaded successfully!",
+                                            });
+                                          } catch (error) {
+                                            console.error('Error generating PDF:', error);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to generate PDF. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                        className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                        title="Download PDF"
+                                      >
+                                        <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                      </button>
+
+                                      {/* Edit button - visible to all users if draft, only admins if completed */}
+                                      {(agreement.status === 'draft' || isAdminUser()) && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingFinancialAgreement(agreement);
+                                            setIsEditingFinancialAgreement(true);
+                                            setShowFinancialAgreementForm(true);
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Edit financial agreement"
+                                        >
+                                          <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                        </button>
+                                      )}
+
+                                      {/* Delete button - only visible to admins */}
+                                      {isAdminUser() && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setFinancialAgreementToDelete(agreement);
+                                            setShowDeleteFinancialAgreementConfirm(true);
+                                          }}
+                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                          title="Delete financial agreement"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Consent Forms Section */}
+                              {consentForms.length > 0 && (
+                                <>
+                                  {consentForms.map((form) => {
+                                    const displayData = formatConsentFormForDisplay(form);
+                                    return (
+                                      <div
+                                        key={form.id}
+                                        className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                        onClick={async () => {
+                                          try {
+                                            console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+                                            // Fetch fresh data from Supabase
+                                            const freshData = await getConsentForm(form.id);
+                                            console.log('📥 Fresh data from Supabase:', freshData);
+
+                                            if (freshData.data) {
+                                              const formattedData = formatConsentFormForDisplay(freshData.data);
+                                              console.log('✅ Formatted fresh data for view:', formattedData);
+                                              setSelectedConsentForm(formattedData);
+                                              setIsViewingConsentForm(true);
+                                              setShowConsentFullArchForm(true);
+                                            } else {
+                                              console.error('❌ No data found for form ID:', form.id);
+                                              toast({
+                                                title: "Error",
+                                                description: "Could not load form data. Please try again.",
+                                                variant: "destructive",
+                                              });
+                                            }
+                                          } catch (error) {
+                                            console.error('❌ Error fetching form data for view:', error);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to load form data. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
+                                                form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                              }`}></div>
+                                            <span className="text-sm font-semibold text-gray-900">
+                                              Consent Packet
+                                            </span>
+                                          </div>
+                                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-700' :
+                                              form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                            }`}>
+                                            {form.status === 'signed' ? 'Signed' :
+                                              form.status === 'completed' ? 'Completed' : 'Draft'}
+                                          </span>
+                                        </div>
+
+                                        {/* Submitted Date */}
+                                        <div className="mb-3">
+                                          <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">Submitted on:</span>
+                                            <span className="font-medium text-gray-700">
+                                              {new Date(form.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                          </div>
+
+                                          <div className="flex items-center gap-1">
+                                            {/* Download PDF button */}
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  // Fetch fresh data from Supabase
+                                                  const freshData = await getConsentForm(form.id);
+
+                                                  if (freshData.data) {
+                                                    const formattedData = formatConsentFormForDisplay(freshData.data);
+                                                    await generateConsentFullArchPdf(formattedData);
+                                                    toast({
+                                                      title: "Success",
+                                                      description: "PDF downloaded successfully!",
+                                                    });
+                                                  } else {
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Could not load form data for PDF generation.",
+                                                      variant: "destructive",
+                                                    });
+                                                  }
+                                                } catch (error) {
+                                                  console.error('Error generating PDF:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Failed to generate PDF",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Download PDF"
+                                            >
+                                              <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                            </button>
+
+                                            {/* Edit button - visible to all users if draft, only admins if completed */}
+                                            {(form.status === 'draft' || isAdminUser()) && (
+                                              <button
+                                                onClick={async (e) => {
+                                                  e.stopPropagation();
+                                                  try {
+                                                    console.log('✏️ Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                    // Fetch fresh data from Supabase
+                                                    const freshData = await getConsentForm(form.id);
+                                                    console.log('📥 Fresh data from Supabase:', freshData);
+
+                                                    if (freshData.data) {
+                                                      const formattedData = formatConsentFormForDisplay(freshData.data);
+                                                      console.log('✅ Formatted fresh data for edit:', formattedData);
+                                                      setSelectedConsentForm(formattedData);
+                                                      setIsEditingConsentForm(true);
+                                                      setIsViewingConsentForm(false);
+                                                      setShowConsentFullArchForm(true);
+                                                    } else {
+                                                      console.error('❌ No data found for form ID:', form.id);
+                                                      toast({
+                                                        title: "Error",
+                                                        description: "Could not load form data. Please try again.",
+                                                        variant: "destructive",
+                                                      });
+                                                    }
+                                                  } catch (error) {
+                                                    console.error('❌ Error fetching form data for edit:', error);
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Failed to load form data. Please try again.",
+                                                      variant: "destructive",
+                                                    });
+                                                  }
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Edit consent packet"
+                                              >
+                                                <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                              </button>
+                                            )}
+
+                                            {/* Delete button - only visible to admins */}
+                                            {isAdminUser() && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setConsentFormToDelete(form);
+                                                  setShowDeleteConsentFormConfirm(true);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Delete consent packet"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+
+                              {/* Medical Records Release Forms Section */}
+                              {medicalRecordsReleaseForms.length > 0 && (
+                                <>
+                                  {medicalRecordsReleaseForms.map((form) => {
+                                    const displayData = formatMedicalRecordsReleaseFormForDisplay(form);
+                                    return (
+                                      <div
+                                        key={form.id}
+                                        className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                        onClick={() => {
+                                          setEditingMedicalRecordsReleaseForm(form);
+                                          setIsEditingMedicalRecordsReleaseForm(false);
+                                          setIsViewingMedicalRecordsReleaseForm(true);
+                                          setShowMedicalRecordsReleaseForm(true);
+                                        }}
+                                      >
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${form.status === 'completed' ? 'bg-green-500' :
+                                                form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                              }`}></div>
+                                            <span className="text-sm font-semibold text-gray-900">
+                                              Medical Records Release Form
+                                            </span>
+                                          </div>
+                                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${form.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                              form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                            }`}>
+                                            {form.status === 'completed' ? 'Completed' :
+                                              form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                          </span>
+                                        </div>
+
+                                        {/* Date */}
+                                        <div className="mb-3">
+                                          <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">
+                                              {form.status === 'completed' ? 'Completed on:' :
+                                                form.status === 'submitted' ? 'Submitted on:' : 'Created on:'}
+                                            </span>
+                                            <span className="font-medium text-gray-700">
+                                              {new Date(form.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                          </div>
+
+                                          <div className="flex items-center gap-1">
+                                            {/* Download PDF button */}
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  // Map database fields to PDF generator format
+                                                  const pdfData = {
+                                                    firstName: form.first_name || '',
+                                                    lastName: form.last_name || '',
+                                                    dateOfBirth: form.date_of_birth || '',
+                                                    hasAgreed: form.has_agreed,
+                                                    patientSignature: form.patient_signature || '',
+                                                    signatureDate: form.signature_date || '',
+                                                    signatureTime: form.signature_time || ''
+                                                  };
+
+                                                  await generateMedicalRecordsReleasePdf(pdfData);
+                                                  toast({
+                                                    title: "Success",
+                                                    description: "PDF downloaded successfully!",
+                                                  });
+                                                } catch (error) {
+                                                  console.error('Error generating PDF:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Failed to generate PDF. Please try again.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Download PDF"
+                                            >
+                                              <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                            </button>
+
+                                            {/* Edit button - visible to all users if draft, only admins if completed */}
+                                            {(form.status === 'draft' || isAdminUser()) && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setEditingMedicalRecordsReleaseForm(form);
+                                                  setIsEditingMedicalRecordsReleaseForm(true);
+                                                  setIsViewingMedicalRecordsReleaseForm(false);
+                                                  setShowMedicalRecordsReleaseForm(true);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Edit medical records release form"
+                                              >
+                                                <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                              </button>
+                                            )}
+
+                                            {/* Delete button - only visible to admins */}
+                                            {isAdminUser() && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setMedicalRecordsReleaseFormToDelete(form);
+                                                  setShowDeleteMedicalRecordsReleaseFormConfirm(true);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Delete medical records release form"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+
+                              {/* Informed Consent Smoking Forms Section */}
+                              {informedConsentSmokingForms.length > 0 && (
+                                <>
+                                  {informedConsentSmokingForms.map((form) => {
+                                    const displayData = formatInformedConsentSmokingFormForDisplay(form);
+                                    return (
+                                      <div
+                                        key={form.id}
+                                        className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                        onClick={() => {
+                                          setEditingInformedConsentSmokingForm(form);
+                                          setIsEditingInformedConsentSmokingForm(false);
+                                          setIsViewingInformedConsentSmokingForm(true);
+                                          setShowInformedConsentSmokingForm(true);
+                                        }}
+                                      >
+                                        <div className="flex items-start justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
+                                                form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                              }`}></div>
+                                            <span className="text-sm font-semibold text-gray-900">
+                                              Informed Consent - Nicotine Use Form
+                                            </span>
+                                          </div>
+                                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                              form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                            }`}>
+                                            {form.status === 'signed' ? 'Signed' :
+                                              form.status === 'completed' ? 'Completed' : 'Draft'}
+                                          </span>
+                                        </div>
+
+                                        {/* Submitted/Created Date */}
+                                        <div className="mb-3">
+                                          <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">
+                                              {form.status === 'draft' ? 'Created on:' :
+                                                form.status === 'signed' ? 'Signed on:' : 'Completed on:'}
+                                            </span>
+                                            <span className="font-medium text-gray-700">
+                                              {new Date(form.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                          </div>
+
+                                          <div className="flex items-center gap-1">
+                                            {/* Download PDF button */}
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  // Map database fields to PDF generator format
+                                                  const pdfData = {
+                                                    firstName: form.first_name || '',
+                                                    lastName: form.last_name || '',
+                                                    dateOfBirth: form.date_of_birth || '',
+                                                    nicotineUse: form.nicotine_use || '',
+                                                    understandsNicotineEffects: form.understands_nicotine_effects,
+                                                    understandsRisks: form.understands_risks,
+                                                    understandsTimeline: form.understands_timeline,
+                                                    understandsInsurance: form.understands_insurance,
+                                                    offeredResources: form.offered_resources,
+                                                    takesResponsibility: form.takes_responsibility,
+                                                    patientSignature: form.patient_signature || '',
+                                                    signatureDate: form.signature_date || '',
+                                                    signedConsent: form.signed_consent || '',
+                                                    refusalReason: form.refusal_reason || ''
+                                                  };
+
+                                                  await generateInformedConsentSmokingPdf(pdfData);
+                                                  toast({
+                                                    title: "Success",
+                                                    description: "PDF downloaded successfully!",
+                                                  });
+                                                } catch (error) {
+                                                  console.error('Error generating PDF:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Failed to generate PDF. Please try again.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Download PDF"
+                                            >
+                                              <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                            </button>
+
+                                            {/* Edit button - visible to all users if draft, only admins if completed */}
+                                            {(form.status === 'draft' || isAdminUser()) && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setEditingInformedConsentSmokingForm(form);
+                                                  setIsEditingInformedConsentSmokingForm(true);
+                                                  setIsViewingInformedConsentSmokingForm(false);
+                                                  setShowInformedConsentSmokingForm(true);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Edit informed consent smoking form"
+                                              >
+                                                <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                              </button>
+                                            )}
+
+                                            {/* Delete button - only visible to admins */}
+                                            {isAdminUser() && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setInformedConsentSmokingFormToDelete(form);
+                                                  setShowDeleteInformedConsentSmokingFormConfirm(true);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Delete informed consent smoking form"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+
+                              {/* Final Design Approval Forms Section */}
+                              {finalDesignApprovalForms.length > 0 && (
+                                <>
+                                  {finalDesignApprovalForms.map((form) => {
+                                    const displayData = formatFinalDesignApprovalFormForDisplay(form);
+                                    return (
+                                      <div
+                                        key={form.id}
+                                        className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                        onClick={async () => {
+                                          try {
+                                            console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+                                            // Fetch fresh data from Supabase
+                                            const freshData = await getFinalDesignApprovalForm(form.id);
+                                            console.log('📥 Fresh data from Supabase:', freshData);
+
+                                            if (freshData.data) {
+                                              const formattedData = formatFinalDesignApprovalFormForDisplay(freshData.data);
+                                              console.log('✅ Formatted fresh data for view:', formattedData);
+                                              setSelectedFinalDesignApprovalForm(formattedData);
+                                              setIsViewingFinalDesignApprovalForm(true);
+                                              setShowFinalDesignApprovalForm(true);
+                                            } else {
+                                              console.error('❌ No data found for form ID:', form.id);
+                                              toast({
+                                                title: "Error",
+                                                description: "Could not load form data. Please try again.",
+                                                variant: "destructive",
+                                              });
+                                            }
+                                          } catch (error) {
+                                            console.error('❌ Error fetching form data for view:', error);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to load form data. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
+                                                form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                              }`}></div>
+                                            <span className="text-sm font-semibold text-gray-900">
+                                              Final Design Approval Form
+                                            </span>
+                                          </div>
+                                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-700' :
+                                              form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                            }`}>
+                                            {form.status === 'signed' ? 'Signed' :
+                                              form.status === 'completed' ? 'Completed' : 'Draft'}
+                                          </span>
+                                        </div>
+
+                                        {/* Submitted Date */}
+                                        <div className="mb-3">
+                                          <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">Submitted on:</span>
+                                            <span className="font-medium text-gray-700">
+                                              {new Date(form.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                          </div>
+
+                                          <div className="flex items-center gap-1">
+                                            {/* Download PDF button */}
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  await generateFinalDesignApprovalPdf(displayData);
+                                                  toast({
+                                                    title: "Success",
+                                                    description: "Final Design Approval PDF exported successfully!",
+                                                  });
+                                                } catch (error) {
+                                                  console.error('Error exporting PDF:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Failed to export PDF",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Download PDF"
+                                            >
+                                              <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                            </button>
+
+                                            {/* Edit button - visible to all users if draft, only admins if completed */}
+                                            {(form.status === 'draft' || isAdminUser()) && (
+                                              <button
+                                                onClick={async (e) => {
+                                                  e.stopPropagation();
+                                                  try {
+                                                    console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                    // Fetch fresh data from Supabase
+                                                    const freshData = await getFinalDesignApprovalForm(form.id);
+                                                    console.log('📥 Fresh data from Supabase:', freshData);
+
+                                                    if (freshData.data) {
+                                                      const formattedData = formatFinalDesignApprovalFormForDisplay(freshData.data);
+                                                      console.log('✅ Formatted fresh data:', formattedData);
+                                                      setSelectedFinalDesignApprovalForm(formattedData);
+                                                      setIsEditingFinalDesignApprovalForm(true);
+                                                      setShowFinalDesignApprovalForm(true);
+                                                    } else {
+                                                      console.error('❌ No data found for form ID:', form.id);
+                                                      toast({
+                                                        title: "Error",
+                                                        description: "Could not load form data. Please try again.",
+                                                        variant: "destructive",
+                                                      });
+                                                    }
+                                                  } catch (error) {
+                                                    console.error('❌ Error fetching form data:', error);
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Failed to load form data. Please try again.",
+                                                      variant: "destructive",
+                                                    });
+                                                  }
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Edit final design approval form"
+                                              >
+                                                <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                              </button>
+                                            )}
+
+                                            {/* Delete button - only visible to admins */}
+                                            {isAdminUser() && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setFinalDesignApprovalFormToDelete(form);
+                                                  setShowDeleteFinalDesignApprovalFormConfirm(true);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Delete final design approval form"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+
+                              {/* Thank You Pre-Surgery Forms Section */}
+                              {thankYouPreSurgeryForms.length > 0 && (
+                                <>
+                                  {thankYouPreSurgeryForms.map((form) => {
+                                    const displayData = formatThankYouPreSurgeryFormForDisplay(form);
+                                    return (
+                                      <div
+                                        key={form.id}
+                                        className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                        onClick={async () => {
+                                          try {
+                                            console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+                                            // Fetch fresh data from Supabase
+                                            const freshData = await getThankYouPreSurgeryForm(form.id);
+                                            console.log('📥 Fresh data from Supabase:', freshData);
+
+                                            if (freshData.data) {
+                                              const formattedData = formatThankYouPreSurgeryFormForDisplay(freshData.data);
+                                              console.log('✅ Formatted fresh data for view:', formattedData);
+                                              setSelectedThankYouPreSurgeryForm(formattedData);
+                                              setIsViewingThankYouPreSurgeryForm(true);
+                                              setShowThankYouPreSurgeryForm(true);
+                                            } else {
+                                              console.error('❌ No data found for form ID:', form.id);
+                                              toast({
+                                                title: "Error",
+                                                description: "Could not load form data. Please try again.",
+                                                variant: "destructive",
+                                              });
+                                            }
+                                          } catch (error) {
+                                            console.error('❌ Error fetching form data for view:', error);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to load form data. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
+                                                form.status === 'submitted' ? 'bg-green-500' : 'bg-orange-500'
+                                              }`}></div>
+                                            <span className="text-sm font-semibold text-gray-900">
+                                              Thank You & Pre-Surgery Form
+                                            </span>
+                                          </div>
+                                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-700' :
+                                              form.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                            }`}>
+                                            {form.status === 'signed' ? 'Signed' :
+                                              form.status === 'submitted' ? 'Submitted' : 'Draft'}
+                                          </span>
+                                        </div>
+
+                                        {/* Submitted Date */}
+                                        <div className="mb-3">
+                                          <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">Submitted on:</span>
+                                            <span className="font-medium text-gray-700">
+                                              {new Date(form.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              })}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{new Date(form.created_at).toLocaleDateString()}</span>
+                                          </div>
+
+                                          <div className="flex items-center gap-1">
+                                            {/* Download PDF button */}
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  await generateThankYouPreSurgeryPdf(displayData);
+                                                  toast({
+                                                    title: "Success",
+                                                    description: "Thank You & Pre-Surgery PDF exported successfully!",
+                                                  });
+                                                } catch (error) {
+                                                  console.error('Error exporting PDF:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Failed to export PDF",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Download PDF"
+                                            >
+                                              <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                            </button>
+
+                                            {/* Edit button - visible to all users if draft, only admins if completed */}
+                                            {(form.status === 'draft' || isAdminUser()) && (
+                                              <button
+                                                onClick={async (e) => {
+                                                  e.stopPropagation();
+                                                  try {
+                                                    console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                    // Fetch fresh data from Supabase
+                                                    const freshData = await getThankYouPreSurgeryForm(form.id);
+                                                    console.log('📥 Fresh data from Supabase:', freshData);
+
+                                                    if (freshData.data) {
+                                                      const formattedData = formatThankYouPreSurgeryFormForDisplay(freshData.data);
+                                                      console.log('✅ Formatted fresh data:', formattedData);
+                                                      setSelectedThankYouPreSurgeryForm(formattedData);
+                                                      setIsEditingThankYouPreSurgeryForm(true);
+                                                      setShowThankYouPreSurgeryForm(true);
+                                                    } else {
+                                                      console.error('❌ No data found for form ID:', form.id);
+                                                      toast({
+                                                        title: "Error",
+                                                        description: "Could not load form data. Please try again.",
+                                                        variant: "destructive",
+                                                      });
+                                                    }
+                                                  } catch (error) {
+                                                    console.error('❌ Error fetching form data:', error);
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Failed to load form data. Please try again.",
+                                                      variant: "destructive",
+                                                    });
+                                                  }
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Edit thank you pre-surgery form"
+                                              >
+                                                <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                              </button>
+                                            )}
+
+                                            {/* Delete button - only visible to admins */}
+                                            {isAdminUser() && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setThankYouPreSurgeryFormToDelete(form);
+                                                  setShowDeleteThankYouPreSurgeryFormConfirm(true);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Delete thank you pre-surgery form"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+
+                              {/* 3-Year Care Package Forms Section */}
+                              {threeYearCarePackageForms.length > 0 && (
+                                <>
+                                  {threeYearCarePackageForms.map((form) => {
+                                    const displayData = formatThreeYearCarePackageFormForDisplay(form);
+                                    return (
+                                      <div
+                                        key={form.id}
+                                        className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                        onClick={() => {
+                                          setSelectedThreeYearCarePackageForm(form);
+                                          setIsViewingThreeYearCarePackageForm(true);
+                                          setShowThreeYearCarePackageForm(true);
+                                        }}
+                                      >
+                                        {/* Header with form name and status */}
+                                        <div className="flex items-start justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
+                                                form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                              }`}></div>
+                                            <span className="text-sm font-semibold text-gray-900">
+                                              3-Year Care Package Enrollment Agreement
+                                            </span>
+                                          </div>
+
+                                          {/* Status Badge */}
+                                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                              form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                            }`}>
+                                            {form.status === 'signed' ? 'Signed' :
+                                              form.status === 'completed' ? 'Completed' : 'Draft'}
+                                          </span>
+                                        </div>
+
+                                        {/* Submitted/Created Date */}
+                                        <div className="mb-3">
+                                          <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-500">
+                                              {form.status === 'draft' ? 'Created on:' :
+                                                form.status === 'signed' ? 'Signed on:' : 'Completed on:'}
+                                            </span>
+                                            <span className="font-medium text-gray-700">
+                                              {form.created_at ? new Date(form.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              }) : 'Unknown date'}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{form.created_at ? new Date(form.created_at).toLocaleDateString() : 'Unknown date'}</span>
+                                          </div>
+
+                                          <div className="flex items-center gap-1">
+                                            {/* Download PDF button */}
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  await generateThreeYearCarePackagePdf(displayData);
+                                                  toast({
+                                                    title: "Success",
+                                                    description: "3-Year Care Package PDF exported successfully!",
+                                                  });
+                                                } catch (error) {
+                                                  console.error('Error exporting PDF:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Failed to export PDF",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Download PDF"
+                                            >
+                                              <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                            </button>
+
+                                            {/* Edit button - visible to all users if draft, only admins if completed */}
+                                            {(form.status === 'draft' || isAdminUser()) && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedThreeYearCarePackageForm(form);
+                                                  setIsEditingThreeYearCarePackageForm(true);
+                                                  setIsViewingThreeYearCarePackageForm(false);
+                                                  setShowThreeYearCarePackageForm(true);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Edit 3-Year Care Package form"
+                                              >
+                                                <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                              </button>
+                                            )}
+
+                                            {/* Delete button - only visible to admins */}
+                                            {isAdminUser() && (
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setThreeYearCarePackageFormToDelete(form);
+                                                  setShowDeleteThreeYearCarePackageFormConfirm(true);
+                                                }}
+                                                className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                title="Delete 3-Year Care Package form"
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </>
+                              )}
+
+                              {/* 5-Year Warranty Forms Section */}
+                              {fiveYearWarrantyForms.length > 0 && (
+                                <>
+                                  {fiveYearWarrantyForms.map((form) => (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={() => {
+                                        setSelectedFiveYearWarrantyForm(form);
+                                        setIsViewingFiveYearWarrantyForm(true);
+                                        setShowFiveYearWarrantyForm(true);
+                                      }}
+                                    >
+                                      {/* Header with form name and status */}
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${form.status === 'completed' ? 'bg-green-500' :
+                                              form.status === 'signed' ? 'bg-green-500' : 'bg-purple-500'
+                                            }`}></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            5-Year Extended Warranty Plan
+                                          </span>
+                                        </div>
+                                        {/* Status Badge - moved to top right */}
+                                        {form.status === 'draft' && (
+                                          <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                                            Draft
+                                          </span>
+                                        )}
+                                        {form.status === 'completed' && (
+                                          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                            Completed
+                                          </span>
+                                        )}
+                                        {form.status === 'signed' && (
+                                          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                            Signed
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* Submitted Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {form.created_at ?
+                                              new Date(form.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              }) : 'No date'
+                                            }
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{form.created_at ? new Date(form.created_at).toLocaleDateString() : 'Unknown date'}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          {/* Download PDF button - Coming soon */}
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              toast({
+                                                title: "Coming Soon",
+                                                description: "PDF export for 5-Year Warranty forms will be available soon!",
+                                              });
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Download PDF (Coming Soon)"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
+                                          {/* Edit button - visible to all users if draft, only admins if completed */}
+                                          {((form.status === 'draft' || !form.status) || isAdminUser()) && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedFiveYearWarrantyForm(form);
+                                                setIsEditingFiveYearWarrantyForm(true);
+                                                setIsViewingFiveYearWarrantyForm(false);
+                                                setShowFiveYearWarrantyForm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit 5-Year Warranty form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
+
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setFiveYearWarrantyFormToDelete(form);
+                                                setShowDeleteFiveYearWarrantyFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete 5-Year Warranty form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </>
+                              )}
+
+                              {/* Partial Payment Agreement Forms Section */}
+                              {partialPaymentAgreementForms.length > 0 && (
+                                <>
+                                  {partialPaymentAgreementForms.map((form) => (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={async () => {
+                                        try {
+                                          console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+                                          // Fetch fresh data from Supabase
+                                          const freshData = await partialPaymentAgreementService.getFormById(form.id);
+                                          console.log('📥 Fresh data from Supabase:', freshData);
+
+                                          if (freshData) {
+                                            const formattedData = formatPartialPaymentAgreementFormForDisplay(freshData);
+                                            console.log('✅ Formatted fresh data for view:', formattedData);
+                                            setSelectedPartialPaymentAgreementForm(formattedData);
+                                            setIsViewingPartialPaymentAgreementForm(true);
+                                            setShowPartialPaymentAgreementForm(true);
+                                          } else {
+                                            console.error('❌ No data found for form ID:', form.id);
+                                            toast({
+                                              title: "Error",
+                                              description: "Could not load form data. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                          }
+                                        } catch (error) {
+                                          console.error('❌ Error fetching form data for view:', error);
+                                          toast({
+                                            title: "Error",
+                                            description: "Failed to load form data. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      {/* Header with form name and status */}
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${form.status === 'completed' ? 'bg-green-500' :
+                                              form.status === 'signed' ? 'bg-green-500' : 'bg-orange-500'
+                                            }`}></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            Partial Payment Agreement
+                                          </span>
+                                        </div>
+                                        {/* Status Badge - moved to top right */}
+                                        {form.status === 'draft' && (
+                                          <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                                            Draft
+                                          </span>
+                                        )}
+                                        {form.status === 'completed' && (
+                                          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                            Completed
+                                          </span>
+                                        )}
+                                        {form.status === 'signed' && (
+                                          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                            Signed
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* Submitted Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Submitted on:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {form.created_at ?
+                                              new Date(form.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                              }) : 'No date'
+                                            }
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{form.created_at ? new Date(form.created_at).toLocaleDateString() : 'Unknown date'}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          {/* Download PDF button */}
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                const formattedData = formatPartialPaymentAgreementFormForDisplay(form);
+                                                await generatePartialPaymentAgreementPdf(formattedData);
+                                                toast({
+                                                  title: "Success",
+                                                  description: "Partial Payment Agreement PDF exported successfully!",
+                                                });
+                                              } catch (error) {
+                                                console.error('Error exporting PDF:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to export PDF",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Download PDF"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
+                                          {/* Edit button - visible to all users if draft, only admins if completed */}
+                                          {((form.status === 'draft' || !form.status) || isAdminUser()) && (
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+                                                  // Fetch fresh data from Supabase
+                                                  const freshData = await partialPaymentAgreementService.getFormById(form.id);
+                                                  console.log('📥 Fresh data from Supabase:', freshData);
+
+                                                  if (freshData) {
+                                                    const formattedData = formatPartialPaymentAgreementFormForDisplay(freshData);
+                                                    console.log('✅ Formatted fresh data:', formattedData);
+                                                    setSelectedPartialPaymentAgreementForm(formattedData);
+                                                    setIsEditingPartialPaymentAgreementForm(true);
+                                                    setShowPartialPaymentAgreementForm(true);
+                                                  } else {
+                                                    console.error('❌ No data found for form ID:', form.id);
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Could not load form data. Please try again.",
+                                                      variant: "destructive",
+                                                    });
+                                                  }
+                                                } catch (error) {
+                                                  console.error('❌ Error fetching form data:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "Failed to load form data. Please try again.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
+
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setPartialPaymentAgreementFormToDelete(form);
+                                                setShowDeletePartialPaymentAgreementFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </>
+                              )}
+
+                              {/* Treatment Plan Forms Section */}
+                              {treatmentPlanForms.length > 0 && (
+                                <>
+                                  {treatmentPlanForms.map((form) => (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={async () => {
+                                        try {
+                                          console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
+
+                                          const { data: freshFormData, error } = await getTreatmentPlanForm(form.id);
+
+                                          if (error) {
+                                            console.error('❌ Error fetching fresh Treatment Plan form data:', error);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to load form data. Please try again.",
+                                              variant: "destructive",
+                                            });
+                                            return;
+                                          }
+
+                                          console.log('✅ Fresh Treatment Plan form data loaded:', freshFormData);
+                                          setSelectedTreatmentPlanForm(freshFormData);
+                                          setIsViewingTreatmentPlanForm(true);
+                                          setShowTreatmentPlanForm(true);
+                                        } catch (error) {
+                                          console.error('❌ Unexpected error loading Treatment Plan form:', error);
+                                          toast({
+                                            title: "Error",
+                                            description: "An unexpected error occurred. Please try again.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      {/* Header with form name and status */}
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${form.form_status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                            }`}></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            Treatment Plan
+                                          </span>
+                                        </div>
+                                        {/* Status Badge - moved to top right */}
+                                        {form.form_status === 'draft' && (
+                                          <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                                            Draft
+                                          </span>
+                                        )}
+                                        {form.form_status === 'completed' && (
+                                          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                            Completed
+                                          </span>
+                                        )}
+                                      </div>
+
+
+
+                                      {/* Plan Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Plan Date:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {form.plan_date ?
+                                              new Date(form.plan_date).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                              }) : 'Not set'
+                                            }
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>Created: {new Date(form.created_at).toLocaleDateString()}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          {/* Download PDF button */}
+                                          <button
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              try {
+                                                await generateTreatmentPlanPDF({
+                                                  firstName: form.first_name || '',
+                                                  lastName: form.last_name || '',
+                                                  dateOfBirth: form.date_of_birth || '',
+                                                  planDate: form.plan_date || '',
+                                                  treatments: form.treatments || [],
+                                                  procedures: form.procedures || [],
+                                                  discount: form.discount || 0,
+                                                  letterheadImagePath: '/letterhead.png'
+                                                });
+                                                toast({
+                                                  title: "Success",
+                                                  description: "Treatment Plan PDF exported successfully!",
+                                                });
+                                              } catch (error) {
+                                                console.error('Error exporting PDF:', error);
+                                                toast({
+                                                  title: "Error",
+                                                  description: "Failed to export Treatment Plan PDF",
+                                                  variant: "destructive",
+                                                });
+                                              }
+                                            }}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                            title="Download PDF"
+                                          >
+                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
+                                          </button>
+
+                                          {/* Edit button - visible to all users if draft, only admins if completed */}
+                                          {(form.form_status === 'draft' || isAdminUser()) && (
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                  console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
+
+                                                  const { data: freshFormData, error } = await getTreatmentPlanForm(form.id);
+
+                                                  if (error) {
+                                                    console.error('❌ Error fetching fresh Treatment Plan form data:', error);
+                                                    toast({
+                                                      title: "Error",
+                                                      description: "Failed to load form data. Please try again.",
+                                                      variant: "destructive",
+                                                    });
+                                                    return;
+                                                  }
+
+                                                  console.log('✅ Fresh Treatment Plan form data loaded for editing:', freshFormData);
+                                                  setSelectedTreatmentPlanForm(freshFormData);
+                                                  setIsEditingTreatmentPlanForm(true);
+                                                  setIsViewingTreatmentPlanForm(false);
+                                                  setShowTreatmentPlanForm(true);
+                                                } catch (error) {
+                                                  console.error('❌ Unexpected error loading Treatment Plan form for editing:', error);
+                                                  toast({
+                                                    title: "Error",
+                                                    description: "An unexpected error occurred. Please try again.",
+                                                    variant: "destructive",
+                                                  });
+                                                }
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
+
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setTreatmentPlanFormToDelete(form);
+                                                setShowDeleteTreatmentPlanFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6">
+                              <Settings className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                              <p className="text-sm font-medium text-gray-500 mb-1">No administrative forms</p>
+                              <p className="text-xs text-gray-400">Select a form type and click add to create</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Consultations */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
+                      {/* Header */}
+                      <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                        <div className="p-1.5 bg-purple-100 rounded-lg">
+                          <Activity className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <h3 className="text-base font-semibold text-gray-900">Consultations ({consultationForms.length})</h3>
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                        <div className="space-y-3 pb-2">
+                          {/* Consultations List */}
+                          {loadingConsultationForms ? (
+                            <div className="text-center py-6">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                              <p className="text-sm text-gray-500">Loading consultations...</p>
+                            </div>
+                          ) : consultationForms.length > 0 ? (
+                            <div className="space-y-2">
+                              {consultationForms.map((consultation, index) => (
+                                <div
+                                  key={consultation.id || index}
+                                  className="bg-white rounded-lg p-3 border border-gray-200 hover:border-purple-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                  onClick={() => handleViewConsultation(consultation)}
+                                >
+                                  {/* Header with consultation number */}
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                      <span className="text-sm font-semibold text-gray-900">
+                                        Consultation #{index + 1}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Status Badges Row */}
+                                  <div className="flex flex-wrap gap-1 mb-3">
+                                    {/* Consultation Status */}
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${consultation.consultation_status === 'completed'
+                                        ? 'bg-green-100 text-green-800 border-green-200'
+                                        : consultation.consultation_status === 'in-progress'
+                                          ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                          : consultation.consultation_status === 'scheduled'
+                                            ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                            : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                      }`}>
+                                      {consultation.consultation_status === 'completed' ? 'Completed' :
+                                        consultation.consultation_status === 'in-progress' ? 'In Progress' :
+                                          consultation.consultation_status === 'scheduled' ? 'Scheduled' :
+                                            consultation.consultation_status === 'draft' ? 'Pending' :
+                                              consultation.consultation_status || 'Pending'}
+                                    </span>
+
+                                    {/* Outcome Status (Treatment Decision) */}
+                                    {consultation.treatment_decision && (
+                                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${consultation.treatment_decision === 'accepted'
+                                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                          : consultation.treatment_decision === 'declined'
+                                            ? 'bg-red-100 text-red-800 border-red-200'
+                                            : consultation.treatment_decision === 'followup-required'
+                                              ? 'bg-orange-100 text-orange-800 border-orange-200'
+                                              : 'bg-purple-100 text-purple-800 border-purple-200'
+                                        }`}>
+                                        {consultation.treatment_decision === 'accepted' ? 'Treatment Accepted' :
+                                          consultation.treatment_decision === 'declined' ? 'Treatment Declined' :
+                                            consultation.treatment_decision === 'followup-required' ? 'Follow-up Required' :
+                                              consultation.treatment_decision.charAt(0).toUpperCase() + consultation.treatment_decision.slice(1)}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Consultation Date */}
+                                  <div className="mb-3">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-gray-500">Consultation Date:</span>
+                                      <span className="font-medium text-gray-700">
+                                        {consultation.consultation_date
+                                          ? new Date(consultation.consultation_date).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                          })
+                                          : new Date(consultation.created_at).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                          })
+                                        }
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Patient Name */}
+                                  <div className="mb-2">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-gray-500">Patient:</span>
+                                      <span className="font-medium text-gray-700">
+                                        {consultation.patient_name}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Additional Status Information */}
+                                  {(consultation.treatment_plan_approved !== null || consultation.follow_up_required) && (
+                                    <div className="mb-2 space-y-1">
+                                      {consultation.treatment_plan_approved !== null && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Treatment Plan:</span>
+                                          <span className={`font-medium ${consultation.treatment_plan_approved
+                                              ? 'text-green-700'
+                                              : 'text-red-700'
+                                            }`}>
+                                            {consultation.treatment_plan_approved ? 'Approved' : 'Not Approved'}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {consultation.follow_up_required && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Follow-up:</span>
+                                          <span className="font-medium text-orange-700">Required</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Action buttons */}
+                                  <div className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-gray-100">
+                                    {/* View button */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewConsultation(consultation);
+                                      }}
+                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      title="View consultation"
+                                    >
+                                      <Eye className="h-3.5 w-3.5 text-gray-400 hover:text-purple-600" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-6">
+                              <Activity className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+                              <p className="text-sm font-medium text-gray-500 mb-1">No consultations</p>
+                              <p className="text-xs text-gray-400">Consultation forms will appear here when available</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Data Collection Sheet */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
+                      {/* Header */}
+                      <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <h3 className="text-base font-semibold text-gray-900">Data Collection Sheet ({dataCollectionSheets.length})</h3>
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                        <div className="space-y-3 pb-2">
+                          {/* Add Button */}
                           <button
-                            className="flex-shrink-0 w-10 h-10 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center text-gray-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={!selectedAdminFormType}
-                            onClick={() => {
-                              if (selectedAdminFormType === 'consent-full-arch') {
-                                setShowConsentFullArchForm(true);
-                              } else if (selectedAdminFormType === 'financial-agreement') {
-                                setShowFinancialAgreementForm(true);
-                              } else if (selectedAdminFormType === 'final-design-approval') {
-                                setShowFinalDesignApprovalForm(true);
-                              } else if (selectedAdminFormType === 'medical-records-release') {
-                                // Reset editing states for new form
-                                setEditingMedicalRecordsReleaseForm(null);
-                                setIsEditingMedicalRecordsReleaseForm(false);
-                                setIsViewingMedicalRecordsReleaseForm(false);
-                                setShowMedicalRecordsReleaseForm(true);
-                              } else if (selectedAdminFormType === 'new-patient-packet') {
-                                setShowNewPatientPacketForm(true);
-                              } else if (selectedAdminFormType === 'informed-consent-smoking') {
-                                setShowInformedConsentSmokingForm(true);
-                              } else if (selectedAdminFormType === 'thank-you-pre-surgery') {
-                                setShowThankYouPreSurgeryForm(true);
-                              } else if (selectedAdminFormType === 'three-year-care-package') {
-                                setShowThreeYearCarePackageForm(true);
-                              } else if (selectedAdminFormType === 'five-year-warranty') {
-                                setShowFiveYearWarrantyForm(true);
-                              } else if (selectedAdminFormType === 'partial-payment-agreement') {
-                                setShowPartialPaymentAgreementForm(true);
-                              } else if (selectedAdminFormType === 'create-treatment-plan') {
-                                setShowTreatmentPlanForm(true);
-                              } else {
-                                // Handle other form types here
-                                alert(`Opening ${selectedAdminFormType} form - Not implemented yet`);
-                              }
-                            }}
+                            onClick={handleDataCollectionFormOpen}
+                            className="w-full px-4 py-2 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
                           >
                             <Plus className="h-4 w-4" />
+                            <span className="text-sm font-medium">Add Data Collection Sheet</span>
                           </button>
-                        </div>
 
-                        {/* Administrative Forms List */}
-                        {(loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms || loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms || loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms || loadingFiveYearWarrantyForms || loadingPartialPaymentAgreementForms || loadingTreatmentPlanForms) ? (
-                          <div className="text-center py-6">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                            <p className="text-sm text-gray-500">Loading administrative forms...</p>
-                          </div>
-                        ) : (patientPackets.length > 0 || financialAgreements.length > 0 || consentForms.length > 0 || medicalRecordsReleaseForms.length > 0 || informedConsentSmokingForms.length > 0 || finalDesignApprovalForms.length > 0 || thankYouPreSurgeryForms.length > 0 || threeYearCarePackageForms.length > 0 || fiveYearWarrantyForms.length > 0 || partialPaymentAgreementForms.length > 0 || treatmentPlanForms.length > 0) ? (
-                          <div className="space-y-2">
-                            {patientPackets.map((packet) => (
-                              <div
-                                key={packet.id}
-                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                onClick={() => handleViewPatientPacket(packet)}
-                              >
+                          {/* Data Collection Sheets */}
+                          {dataCollectionSheets.length > 0 ? (
+                            dataCollectionSheets.map((sheet) => (
+                              <div key={sheet.id} className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                onClick={() => handleViewDataCollectionSheet(sheet)}>
                                 {/* Header with date and status */}
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${
-                                      packet.form_status === 'completed' ? 'bg-green-500' :
-                                      packet.form_status === 'reviewed' ? 'bg-blue-500' : 'bg-orange-500'
-                                    }`}></div>
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                     <span className="text-sm font-semibold text-gray-900">
-                                      New Patient Packet
-                                    </span>
-                                  </div>
-
-                                  {/* Status Badge */}
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    packet.form_status === 'completed'
-                                      ? 'bg-green-100 text-green-800 border border-green-200'
-                                      : packet.form_status === 'reviewed'
-                                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                                      : 'bg-orange-100 text-orange-800 border border-orange-200'
-                                  }`}>
-                                    {packet.form_status === 'completed' ? 'Completed' :
-                                     packet.form_status === 'reviewed' ? 'Reviewed' : 'Draft'}
-                                  </span>
-                                </div>
-
-                                {/* Submitted Date */}
-                                <div className="mb-3">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-500">Submitted on:</span>
-                                    <span className="font-medium text-gray-700">
-                                      {packet.submitted_at ?
-                                        new Date(packet.submitted_at).toLocaleDateString('en-US', {
-                                          year: 'numeric',
-                                          month: 'short',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        }) :
-                                        new Date(packet.created_at).toLocaleDateString('en-US', {
-                                          year: 'numeric',
-                                          month: 'short',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })
-                                      }
+                                      {new Date(sheet.collection_date).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
                                     </span>
                                   </div>
                                 </div>
 
-                                {/* Action Buttons */}
+                                {/* Main reason */}
+                                <div className="mb-2">
+                                  <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                                    {sheet.reasons_for_collection?.[0] || 'Data Collection'}
+                                  </p>
+                                  {sheet.reasons_for_collection?.length > 1 && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      +{sheet.reasons_for_collection.length - 1} more reason{sheet.reasons_for_collection.length > 2 ? 's' : ''}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Timestamp and Action Buttons */}
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                                    <Clock className="h-3 w-3" />
-                                    <span>{packet.created_at ? new Date(packet.created_at).toLocaleDateString() : 'Unknown date'}</span>
-                                  </div>
+                                  <p className="text-xs text-gray-500">
+                                    Created {new Date(sheet.created_at).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })} at {new Date(sheet.created_at).toLocaleTimeString([], {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </p>
 
                                   <div className="flex items-center gap-1">
                                     {/* Download PDF button */}
@@ -10497,9 +12301,33 @@ export function PatientProfilePage() {
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         try {
-                                          // Convert database format to form format for PDF generation
-                                          const formData = convertDatabaseToFormData(packet);
-                                          await generateNewPatientPacketPdf(formData);
+                                          await generateDataCollectionPdf({
+                                            patientName: sheet.patient_name,
+                                            collectionDate: sheet.collection_date,
+                                            reasonsForCollection: sheet.reasons_for_collection || [],
+                                            customReason: sheet.custom_reason,
+                                            currentUpperAppliance: sheet.current_upper_appliance,
+                                            currentLowerAppliance: sheet.current_lower_appliance,
+                                            preSurgicalPictures: sheet.pre_surgical_pictures,
+                                            surgicalPictures: sheet.surgical_pictures,
+                                            followUpPictures: sheet.follow_up_pictures,
+                                            fracturedAppliancePictures: sheet.fractured_appliance_pictures,
+                                            cbctTaken: sheet.cbct_taken,
+                                            preSurgicalJawRecordsUpper: sheet.pre_surgical_jaw_records_upper,
+                                            preSurgicalJawRecordsLower: sheet.pre_surgical_jaw_records_lower,
+                                            facialScan: sheet.facial_scan,
+                                            jawRecordsUpper: sheet.jaw_records_upper,
+                                            jawRecordsLower: sheet.jaw_records_lower,
+                                            tissueScanUpper: sheet.tissue_scan_upper,
+                                            tissueScanLower: sheet.tissue_scan_lower,
+                                            photogrammetryUpper: sheet.photogrammetry_upper,
+                                            photogrammetryLower: sheet.photogrammetry_lower,
+                                            dcRefScanUpper: sheet.dc_ref_scan_upper,
+                                            dcRefScanLower: sheet.dc_ref_scan_lower,
+                                            appliance360Upper: sheet.appliance_360_upper,
+                                            appliance360Lower: sheet.appliance_360_lower,
+                                            additionalNotes: sheet.additional_notes
+                                          });
                                           toast({
                                             title: "Success",
                                             description: "PDF downloaded successfully!",
@@ -10519,87 +12347,154 @@ export function PatientProfilePage() {
                                       <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
                                     </button>
 
-                                    {/* Edit button - visible to all users if draft, only admins if completed */}
-                                    {(packet.form_status === 'draft' || isAdminUser()) && (
+                                    {/* Three dots menu */}
+                                    <div className="relative">
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleEditPatientPacket(packet);
+                                          setActiveDropdown(activeDropdown === sheet.id ? null : sheet.id);
                                         }}
                                         className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                        title="Edit patient packet"
                                       >
-                                        <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                        <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                                       </button>
-                                    )}
 
-                                    {/* Delete button - only visible to admins */}
-                                    {isAdminUser() && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeletePatientPacket(packet);
-                                        }}
-                                        className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                        title="Delete patient packet"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                      </button>
-                                    )}
+                                      {/* Dropdown menu */}
+                                      {activeDropdown === sheet.id && (
+                                        <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setActiveDropdown(null);
+                                              handleEditDataCollectionSheet(sheet);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5" />
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteDataCollectionSheet(sheet);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                            Delete
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            ))}
+                            ))
+                          ) : (
+                            <div className="text-center py-8">
+                              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                              <p className="text-sm font-medium text-gray-500 mb-1">No data collection sheets</p>
+                              <p className="text-xs text-gray-400">Use the button above to create your first sheet</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-                            {financialAgreements.map((agreement) => (
+                    {/* IV Sedation Flow Chart */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
+                      {/* Header */}
+                      <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <Activity className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <h3 className="text-base font-semibold text-gray-900">
+                          IV Sedation Flow Chart ({ivSedationSheets.length})
+                        </h3>
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                        <div className="space-y-3 pb-2">
+                          {/* Add Button */}
+                          <button
+                            onClick={handleIVSedationFormOpen}
+                            className="w-full px-4 py-2 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span className="text-sm font-medium">Add IV Sedation Flow Chart</span>
+                          </button>
+
+                          {/* IV Sedation Forms */}
+                          {ivSedationSheets.length > 0 ? (
+                            ivSedationSheets.map((sheet) => (
                               <div
-                                key={agreement.id}
-                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                onClick={() => handleViewFinancialAgreement(agreement)}
+                                key={sheet.id}
+                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all duration-200 relative cursor-pointer"
+                                onClick={() => handleViewIVSedationSheet(sheet)}
                               >
+                                {/* Header with date and status */}
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${
-                                      agreement.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
-                                    }`}></div>
+                                    <div className={`w-2 h-2 rounded-full ${sheet.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                      }`}></div>
                                     <span className="text-sm font-semibold text-gray-900">
-                                      Financial Agreement
+                                      {new Date(sheet.sedation_date).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
                                     </span>
                                   </div>
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    agreement.status === 'completed'
+
+                                  {/* Status Badge */}
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${sheet.status === 'completed'
                                       ? 'bg-green-100 text-green-800 border border-green-200'
                                       : 'bg-orange-100 text-orange-800 border border-orange-200'
-                                  }`}>
-                                    {agreement.status === 'completed' ? 'Completed' : 'Draft'}
+                                    }`}>
+                                    {sheet.status === 'completed' ? 'Completed' : 'Draft'}
                                   </span>
                                 </div>
 
-                                {/* Submitted Date */}
-                                <div className="mb-3">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-500">Submitted on:</span>
-                                    <span className="font-medium text-gray-700">
-                                      {agreement.created_at ?
-                                        new Date(agreement.created_at).toLocaleDateString('en-US', {
-                                          year: 'numeric',
-                                          month: 'short',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        }) :
-                                        'Draft - Not submitted'
-                                      }
-                                    </span>
-                                  </div>
+                                {/* Content preview */}
+                                <div className="space-y-1">
+                                  {sheet.upper_treatment && sheet.upper_treatment !== 'NO TREATMENT' && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-gray-500">Upper:</span>
+                                      <div className="text-right">
+                                        <span className="text-xs text-gray-700">{sheet.upper_treatment}</span>
+                                        {sheet.upper_surgery_type && (
+                                          <span className="block text-xs text-blue-600 font-medium">
+                                            {sheet.upper_surgery_type}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {sheet.lower_treatment && sheet.lower_treatment !== 'NO TREATMENT' && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-gray-500">Lower:</span>
+                                      <div className="text-right">
+                                        <span className="text-xs text-gray-700">{sheet.lower_treatment}</span>
+                                        {sheet.lower_surgery_type && (
+                                          <span className="block text-xs text-blue-600 font-medium">
+                                            {sheet.lower_surgery_type}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
 
-                                {/* Action Buttons */}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                                    <Clock className="h-3 w-3" />
-                                    <span>{new Date(agreement.created_at).toLocaleDateString()}</span>
-                                  </div>
+                                {/* Footer with timestamp */}
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(sheet.created_at).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
 
                                   <div className="flex items-center gap-1">
                                     {/* Download PDF button */}
@@ -10607,42 +12502,7 @@ export function PatientProfilePage() {
                                       onClick={async (e) => {
                                         e.stopPropagation();
                                         try {
-                                          // Map database fields to PDF generator format
-                                          const pdfData = {
-                                            patientName: agreement.patient_name || '',
-                                            chartNumber: agreement.chart_number || '',
-                                            dateOfBirth: agreement.date_of_birth || '',
-                                            dateOfExecution: agreement.date_of_execution || '',
-                                            timeOfExecution: agreement.time_of_execution || '',
-                                            acceptedTreatments: agreement.accepted_treatments || [],
-                                            totalCostOfTreatment: agreement.total_cost_of_treatment?.toString() || '',
-                                            patientPaymentToday: agreement.patient_payment_today?.toString() || '',
-                                            remainingBalance: agreement.remaining_balance?.toString() || '',
-                                            remainingPaymentPlan: agreement.remaining_payment_plan || '',
-                                            paymentAmount: agreement.payment_amount?.toString() || '',
-                                            paymentTermsInitials: agreement.payment_terms_initials || '',
-                                            labFeeInitials: agreement.lab_fee_initials || '',
-                                            carePackageFee: agreement.care_package_fee?.toString() || '',
-                                            carePackageElection: agreement.care_package_election || '',
-                                            warrantyInitials: agreement.warranty_initials || '',
-                                            capacityConfirmed: agreement.capacity_confirmed,
-                                            hipaaAcknowledged: agreement.hipaa_acknowledged,
-                                            capacityInitials: agreement.capacity_initials || '',
-                                            disputeInitials: agreement.dispute_initials || '',
-                                            termsAgreed: agreement.terms_agreed,
-                                            patientSignature: agreement.patient_signature || '',
-                                            patientSignatureDate: agreement.patient_signature_date || '',
-                                            patientSignatureTime: agreement.patient_signature_time || '',
-                                            witnessName: agreement.witness_name || '',
-                                            witnessRole: agreement.witness_role || '',
-                                            witnessSignature: agreement.witness_signature || '',
-                                            witnessSignatureDate: agreement.witness_signature_date || '',
-                                            witnessSignatureTime: agreement.witness_signature_time || '',
-                                            downloadedToDentalManagementSoftware: agreement.downloaded_to_dental_management_software,
-                                            confirmedByStaffInitials: agreement.confirmed_by_staff_initials || ''
-                                          };
-
-                                          await generateFinancialAgreementPdf(pdfData);
+                                          await handleDownloadIVSedationPDF(sheet);
                                           toast({
                                             title: "Success",
                                             description: "PDF downloaded successfully!",
@@ -10651,7 +12511,7 @@ export function PatientProfilePage() {
                                           console.error('Error generating PDF:', error);
                                           toast({
                                             title: "Error",
-                                            description: "Failed to generate PDF. Please try again.",
+                                            description: "Failed to generate PDF",
                                             variant: "destructive",
                                           });
                                         }
@@ -10662,2127 +12522,210 @@ export function PatientProfilePage() {
                                       <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
                                     </button>
 
-                                    {/* Edit button - visible to all users if draft, only admins if completed */}
-                                    {(agreement.status === 'draft' || isAdminUser()) && (
+                                    {/* Three dots menu */}
+                                    <div className="relative">
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEditingFinancialAgreement(agreement);
-                                          setIsEditingFinancialAgreement(true);
-                                          setShowFinancialAgreementForm(true);
+                                          setIVSedationActiveDropdown(ivSedationActiveDropdown === sheet.id ? null : sheet.id);
                                         }}
                                         className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                        title="Edit financial agreement"
                                       >
-                                        <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                        <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                                       </button>
-                                    )}
 
-                                    {/* Delete button - only visible to admins */}
-                                    {isAdminUser() && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setFinancialAgreementToDelete(agreement);
-                                          setShowDeleteFinancialAgreementConfirm(true);
-                                        }}
-                                        className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                        title="Delete financial agreement"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                      </button>
-                                    )}
+                                      {/* Dropdown menu */}
+                                      {ivSedationActiveDropdown === sheet.id && (
+                                        <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setIVSedationActiveDropdown(null);
+                                              handleEditIVSedationSheet(sheet);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5" />
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteIVSedationSheet(sheet);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                            Delete
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            ))}
-
-                            {/* Consent Forms Section */}
-                            {consentForms.length > 0 && (
-                              <>
-                                {consentForms.map((form) => {
-                                  const displayData = formatConsentFormForDisplay(form);
-                                  return (
-                                    <div
-                                      key={form.id}
-                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                      onClick={async () => {
-                                        try {
-                                          console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
-                                          // Fetch fresh data from Supabase
-                                          const freshData = await getConsentForm(form.id);
-                                          console.log('📥 Fresh data from Supabase:', freshData);
-
-                                          if (freshData.data) {
-                                            const formattedData = formatConsentFormForDisplay(freshData.data);
-                                            console.log('✅ Formatted fresh data for view:', formattedData);
-                                            setSelectedConsentForm(formattedData);
-                                            setIsViewingConsentForm(true);
-                                            setShowConsentFullArchForm(true);
-                                          } else {
-                                            console.error('❌ No data found for form ID:', form.id);
-                                            toast({
-                                              title: "Error",
-                                              description: "Could not load form data. Please try again.",
-                                              variant: "destructive",
-                                            });
-                                          }
-                                        } catch (error) {
-                                          console.error('❌ Error fetching form data for view:', error);
-                                          toast({
-                                            title: "Error",
-                                            description: "Failed to load form data. Please try again.",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <div className={`w-2 h-2 rounded-full ${
-                                            form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
-                                          }`}></div>
-                                          <span className="text-sm font-semibold text-gray-900">
-                                            Consent Packet
-                                          </span>
-                                        </div>
-                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                                        }`}>
-                                          {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'completed' ? 'Completed' : 'Draft'}
-                                        </span>
-                                      </div>
-
-                                      {/* Submitted Date */}
-                                      <div className="mb-3">
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-500">Submitted on:</span>
-                                          <span className="font-medium text-gray-700">
-                                            {new Date(form.created_at).toLocaleDateString('en-US', {
-                                              year: 'numeric',
-                                              month: 'short',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            })}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Action Buttons */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                                          <Clock className="h-3 w-3" />
-                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                          {/* Download PDF button */}
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                // Fetch fresh data from Supabase
-                                                const freshData = await getConsentForm(form.id);
-
-                                                if (freshData.data) {
-                                                  const formattedData = formatConsentFormForDisplay(freshData.data);
-                                                  await generateConsentFullArchPdf(formattedData);
-                                                  toast({
-                                                    title: "Success",
-                                                    description: "PDF downloaded successfully!",
-                                                  });
-                                                } else {
-                                                  toast({
-                                                    title: "Error",
-                                                    description: "Could not load form data for PDF generation.",
-                                                    variant: "destructive",
-                                                  });
-                                                }
-                                              } catch (error) {
-                                                console.error('Error generating PDF:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to generate PDF",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Download PDF"
-                                          >
-                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
-
-                                          {/* Edit button - visible to all users if draft, only admins if completed */}
-                                          {(form.status === 'draft' || isAdminUser()) && (
-                                            <button
-                                              onClick={async (e) => {
-                                                e.stopPropagation();
-                                                try {
-                                                  console.log('✏️ Edit button clicked - Fetching fresh data for form ID:', form.id);
-                                                  // Fetch fresh data from Supabase
-                                                  const freshData = await getConsentForm(form.id);
-                                                  console.log('📥 Fresh data from Supabase:', freshData);
-
-                                                  if (freshData.data) {
-                                                    const formattedData = formatConsentFormForDisplay(freshData.data);
-                                                    console.log('✅ Formatted fresh data for edit:', formattedData);
-                                                    setSelectedConsentForm(formattedData);
-                                                    setIsEditingConsentForm(true);
-                                                    setIsViewingConsentForm(false);
-                                                    setShowConsentFullArchForm(true);
-                                                  } else {
-                                                    console.error('❌ No data found for form ID:', form.id);
-                                                    toast({
-                                                      title: "Error",
-                                                      description: "Could not load form data. Please try again.",
-                                                      variant: "destructive",
-                                                    });
-                                                  }
-                                                } catch (error) {
-                                                  console.error('❌ Error fetching form data for edit:', error);
-                                                  toast({
-                                                    title: "Error",
-                                                    description: "Failed to load form data. Please try again.",
-                                                    variant: "destructive",
-                                                  });
-                                                }
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Edit consent packet"
-                                            >
-                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                            </button>
-                                          )}
-
-                                          {/* Delete button - only visible to admins */}
-                                          {isAdminUser() && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setConsentFormToDelete(form);
-                                                setShowDeleteConsentFormConfirm(true);
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Delete consent packet"
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </>
-                            )}
-
-                            {/* Medical Records Release Forms Section */}
-                            {medicalRecordsReleaseForms.length > 0 && (
-                              <>
-                                {medicalRecordsReleaseForms.map((form) => {
-                                  const displayData = formatMedicalRecordsReleaseFormForDisplay(form);
-                                  return (
-                                    <div
-                                      key={form.id}
-                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                      onClick={() => {
-                                        setEditingMedicalRecordsReleaseForm(form);
-                                        setIsEditingMedicalRecordsReleaseForm(false);
-                                        setIsViewingMedicalRecordsReleaseForm(true);
-                                        setShowMedicalRecordsReleaseForm(true);
-                                      }}
-                                    >
-                                      <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <div className={`w-2 h-2 rounded-full ${
-                                            form.status === 'completed' ? 'bg-green-500' :
-                                            form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
-                                          }`}></div>
-                                          <span className="text-sm font-semibold text-gray-900">
-                                            Medical Records Release Form
-                                          </span>
-                                        </div>
-                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                          form.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
-                                        }`}>
-                                          {form.status === 'completed' ? 'Completed' :
-                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
-                                        </span>
-                                      </div>
-
-                                      {/* Date */}
-                                      <div className="mb-3">
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-500">
-                                            {form.status === 'completed' ? 'Completed on:' :
-                                             form.status === 'submitted' ? 'Submitted on:' : 'Created on:'}
-                                          </span>
-                                          <span className="font-medium text-gray-700">
-                                            {new Date(form.created_at).toLocaleDateString('en-US', {
-                                              year: 'numeric',
-                                              month: 'short',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            })}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Action Buttons */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                                          <Clock className="h-3 w-3" />
-                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                          {/* Download PDF button */}
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                // Map database fields to PDF generator format
-                                                const pdfData = {
-                                                  firstName: form.first_name || '',
-                                                  lastName: form.last_name || '',
-                                                  dateOfBirth: form.date_of_birth || '',
-                                                  hasAgreed: form.has_agreed,
-                                                  patientSignature: form.patient_signature || '',
-                                                  signatureDate: form.signature_date || '',
-                                                  signatureTime: form.signature_time || ''
-                                                };
-
-                                                await generateMedicalRecordsReleasePdf(pdfData);
-                                                toast({
-                                                  title: "Success",
-                                                  description: "PDF downloaded successfully!",
-                                                });
-                                              } catch (error) {
-                                                console.error('Error generating PDF:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to generate PDF. Please try again.",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Download PDF"
-                                          >
-                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
-
-                                          {/* Edit button - visible to all users if draft, only admins if completed */}
-                                          {(form.status === 'draft' || isAdminUser()) && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditingMedicalRecordsReleaseForm(form);
-                                                setIsEditingMedicalRecordsReleaseForm(true);
-                                                setIsViewingMedicalRecordsReleaseForm(false);
-                                                setShowMedicalRecordsReleaseForm(true);
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Edit medical records release form"
-                                            >
-                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                            </button>
-                                          )}
-
-                                          {/* Delete button - only visible to admins */}
-                                          {isAdminUser() && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setMedicalRecordsReleaseFormToDelete(form);
-                                                setShowDeleteMedicalRecordsReleaseFormConfirm(true);
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Delete medical records release form"
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </>
-                            )}
-
-                            {/* Informed Consent Smoking Forms Section */}
-                            {informedConsentSmokingForms.length > 0 && (
-                              <>
-                                {informedConsentSmokingForms.map((form) => {
-                                  const displayData = formatInformedConsentSmokingFormForDisplay(form);
-                                  return (
-                                    <div
-                                      key={form.id}
-                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                      onClick={() => {
-                                        setEditingInformedConsentSmokingForm(form);
-                                        setIsEditingInformedConsentSmokingForm(false);
-                                        setIsViewingInformedConsentSmokingForm(true);
-                                        setShowInformedConsentSmokingForm(true);
-                                      }}
-                                    >
-                                      <div className="flex items-start justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <div className={`w-2 h-2 rounded-full ${
-                                            form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
-                                          }`}></div>
-                                          <span className="text-sm font-semibold text-gray-900">
-                                            Informed Consent - Nicotine Use Form
-                                          </span>
-                                        </div>
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                          form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
-                                          form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
-                                        }`}>
-                                          {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'completed' ? 'Completed' : 'Draft'}
-                                        </span>
-                                      </div>
-
-                                      {/* Submitted/Created Date */}
-                                      <div className="mb-3">
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-500">
-                                            {form.status === 'draft' ? 'Created on:' :
-                                             form.status === 'signed' ? 'Signed on:' : 'Completed on:'}
-                                          </span>
-                                          <span className="font-medium text-gray-700">
-                                            {new Date(form.created_at).toLocaleDateString('en-US', {
-                                              year: 'numeric',
-                                              month: 'short',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            })}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Action Buttons */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                                          <Clock className="h-3 w-3" />
-                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                          {/* Download PDF button */}
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                // Map database fields to PDF generator format
-                                                const pdfData = {
-                                                  firstName: form.first_name || '',
-                                                  lastName: form.last_name || '',
-                                                  dateOfBirth: form.date_of_birth || '',
-                                                  nicotineUse: form.nicotine_use || '',
-                                                  understandsNicotineEffects: form.understands_nicotine_effects,
-                                                  understandsRisks: form.understands_risks,
-                                                  understandsTimeline: form.understands_timeline,
-                                                  understandsInsurance: form.understands_insurance,
-                                                  offeredResources: form.offered_resources,
-                                                  takesResponsibility: form.takes_responsibility,
-                                                  patientSignature: form.patient_signature || '',
-                                                  signatureDate: form.signature_date || '',
-                                                  signedConsent: form.signed_consent || '',
-                                                  refusalReason: form.refusal_reason || ''
-                                                };
-
-                                                await generateInformedConsentSmokingPdf(pdfData);
-                                                toast({
-                                                  title: "Success",
-                                                  description: "PDF downloaded successfully!",
-                                                });
-                                              } catch (error) {
-                                                console.error('Error generating PDF:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to generate PDF. Please try again.",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Download PDF"
-                                          >
-                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
-
-                                          {/* Edit button - visible to all users if draft, only admins if completed */}
-                                          {(form.status === 'draft' || isAdminUser()) && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditingInformedConsentSmokingForm(form);
-                                                setIsEditingInformedConsentSmokingForm(true);
-                                                setIsViewingInformedConsentSmokingForm(false);
-                                                setShowInformedConsentSmokingForm(true);
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Edit informed consent smoking form"
-                                            >
-                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                            </button>
-                                          )}
-
-                                          {/* Delete button - only visible to admins */}
-                                          {isAdminUser() && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setInformedConsentSmokingFormToDelete(form);
-                                                setShowDeleteInformedConsentSmokingFormConfirm(true);
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Delete informed consent smoking form"
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </>
-                            )}
-
-                            {/* Final Design Approval Forms Section */}
-                            {finalDesignApprovalForms.length > 0 && (
-                              <>
-                                {finalDesignApprovalForms.map((form) => {
-                                  const displayData = formatFinalDesignApprovalFormForDisplay(form);
-                                  return (
-                                    <div
-                                      key={form.id}
-                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                      onClick={async () => {
-                                        try {
-                                          console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
-                                          // Fetch fresh data from Supabase
-                                          const freshData = await getFinalDesignApprovalForm(form.id);
-                                          console.log('📥 Fresh data from Supabase:', freshData);
-
-                                          if (freshData.data) {
-                                            const formattedData = formatFinalDesignApprovalFormForDisplay(freshData.data);
-                                            console.log('✅ Formatted fresh data for view:', formattedData);
-                                            setSelectedFinalDesignApprovalForm(formattedData);
-                                            setIsViewingFinalDesignApprovalForm(true);
-                                            setShowFinalDesignApprovalForm(true);
-                                          } else {
-                                            console.error('❌ No data found for form ID:', form.id);
-                                            toast({
-                                              title: "Error",
-                                              description: "Could not load form data. Please try again.",
-                                              variant: "destructive",
-                                            });
-                                          }
-                                        } catch (error) {
-                                          console.error('❌ Error fetching form data for view:', error);
-                                          toast({
-                                            title: "Error",
-                                            description: "Failed to load form data. Please try again.",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <div className={`w-2 h-2 rounded-full ${
-                                            form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
-                                          }`}></div>
-                                          <span className="text-sm font-semibold text-gray-900">
-                                            Final Design Approval Form
-                                          </span>
-                                        </div>
-                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                                        }`}>
-                                          {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'completed' ? 'Completed' : 'Draft'}
-                                        </span>
-                                      </div>
-
-                                      {/* Submitted Date */}
-                                      <div className="mb-3">
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-500">Submitted on:</span>
-                                          <span className="font-medium text-gray-700">
-                                            {new Date(form.created_at).toLocaleDateString('en-US', {
-                                              year: 'numeric',
-                                              month: 'short',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            })}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Action Buttons */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                                          <Clock className="h-3 w-3" />
-                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                          {/* Download PDF button */}
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                await generateFinalDesignApprovalPdf(displayData);
-                                                toast({
-                                                  title: "Success",
-                                                  description: "Final Design Approval PDF exported successfully!",
-                                                });
-                                              } catch (error) {
-                                                console.error('Error exporting PDF:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to export PDF",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Download PDF"
-                                          >
-                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
-
-                                          {/* Edit button - visible to all users if draft, only admins if completed */}
-                                          {(form.status === 'draft' || isAdminUser()) && (
-                                            <button
-                                              onClick={async (e) => {
-                                                e.stopPropagation();
-                                                try {
-                                                  console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
-                                                  // Fetch fresh data from Supabase
-                                                  const freshData = await getFinalDesignApprovalForm(form.id);
-                                                  console.log('📥 Fresh data from Supabase:', freshData);
-
-                                                  if (freshData.data) {
-                                                    const formattedData = formatFinalDesignApprovalFormForDisplay(freshData.data);
-                                                    console.log('✅ Formatted fresh data:', formattedData);
-                                                    setSelectedFinalDesignApprovalForm(formattedData);
-                                                    setIsEditingFinalDesignApprovalForm(true);
-                                                    setShowFinalDesignApprovalForm(true);
-                                                  } else {
-                                                    console.error('❌ No data found for form ID:', form.id);
-                                                    toast({
-                                                      title: "Error",
-                                                      description: "Could not load form data. Please try again.",
-                                                      variant: "destructive",
-                                                    });
-                                                  }
-                                                } catch (error) {
-                                                  console.error('❌ Error fetching form data:', error);
-                                                  toast({
-                                                    title: "Error",
-                                                    description: "Failed to load form data. Please try again.",
-                                                    variant: "destructive",
-                                                  });
-                                                }
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Edit final design approval form"
-                                            >
-                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                            </button>
-                                          )}
-
-                                          {/* Delete button - only visible to admins */}
-                                          {isAdminUser() && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setFinalDesignApprovalFormToDelete(form);
-                                                setShowDeleteFinalDesignApprovalFormConfirm(true);
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Delete final design approval form"
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </>
-                            )}
-
-                            {/* Thank You Pre-Surgery Forms Section */}
-                            {thankYouPreSurgeryForms.length > 0 && (
-                              <>
-                                {thankYouPreSurgeryForms.map((form) => {
-                                  const displayData = formatThankYouPreSurgeryFormForDisplay(form);
-                                  return (
-                                    <div
-                                      key={form.id}
-                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                      onClick={async () => {
-                                        try {
-                                          console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
-                                          // Fetch fresh data from Supabase
-                                          const freshData = await getThankYouPreSurgeryForm(form.id);
-                                          console.log('📥 Fresh data from Supabase:', freshData);
-
-                                          if (freshData.data) {
-                                            const formattedData = formatThankYouPreSurgeryFormForDisplay(freshData.data);
-                                            console.log('✅ Formatted fresh data for view:', formattedData);
-                                            setSelectedThankYouPreSurgeryForm(formattedData);
-                                            setIsViewingThankYouPreSurgeryForm(true);
-                                            setShowThankYouPreSurgeryForm(true);
-                                          } else {
-                                            console.error('❌ No data found for form ID:', form.id);
-                                            toast({
-                                              title: "Error",
-                                              description: "Could not load form data. Please try again.",
-                                              variant: "destructive",
-                                            });
-                                          }
-                                        } catch (error) {
-                                          console.error('❌ Error fetching form data for view:', error);
-                                          toast({
-                                            title: "Error",
-                                            description: "Failed to load form data. Please try again.",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      }}
-                                    >
-                                      <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <div className={`w-2 h-2 rounded-full ${
-                                            form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'submitted' ? 'bg-green-500' : 'bg-orange-500'
-                                          }`}></div>
-                                          <span className="text-sm font-semibold text-gray-900">
-                                            Thank You & Pre-Surgery Form
-                                          </span>
-                                        </div>
-                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                          form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                          form.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                                        }`}>
-                                          {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'submitted' ? 'Submitted' : 'Draft'}
-                                        </span>
-                                      </div>
-
-                                      {/* Submitted Date */}
-                                      <div className="mb-3">
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-500">Submitted on:</span>
-                                          <span className="font-medium text-gray-700">
-                                            {new Date(form.created_at).toLocaleDateString('en-US', {
-                                              year: 'numeric',
-                                              month: 'short',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            })}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Action Buttons */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                                          <Clock className="h-3 w-3" />
-                                          <span>{new Date(form.created_at).toLocaleDateString()}</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                          {/* Download PDF button */}
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                await generateThankYouPreSurgeryPdf(displayData);
-                                                toast({
-                                                  title: "Success",
-                                                  description: "Thank You & Pre-Surgery PDF exported successfully!",
-                                                });
-                                              } catch (error) {
-                                                console.error('Error exporting PDF:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to export PDF",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Download PDF"
-                                          >
-                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
-
-                                          {/* Edit button - visible to all users if draft, only admins if completed */}
-                                          {(form.status === 'draft' || isAdminUser()) && (
-                                            <button
-                                              onClick={async (e) => {
-                                                e.stopPropagation();
-                                                try {
-                                                  console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
-                                                  // Fetch fresh data from Supabase
-                                                  const freshData = await getThankYouPreSurgeryForm(form.id);
-                                                  console.log('📥 Fresh data from Supabase:', freshData);
-
-                                                  if (freshData.data) {
-                                                    const formattedData = formatThankYouPreSurgeryFormForDisplay(freshData.data);
-                                                    console.log('✅ Formatted fresh data:', formattedData);
-                                                    setSelectedThankYouPreSurgeryForm(formattedData);
-                                                    setIsEditingThankYouPreSurgeryForm(true);
-                                                    setShowThankYouPreSurgeryForm(true);
-                                                  } else {
-                                                    console.error('❌ No data found for form ID:', form.id);
-                                                    toast({
-                                                      title: "Error",
-                                                      description: "Could not load form data. Please try again.",
-                                                      variant: "destructive",
-                                                    });
-                                                  }
-                                                } catch (error) {
-                                                  console.error('❌ Error fetching form data:', error);
-                                                  toast({
-                                                    title: "Error",
-                                                    description: "Failed to load form data. Please try again.",
-                                                    variant: "destructive",
-                                                  });
-                                                }
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Edit thank you pre-surgery form"
-                                            >
-                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                            </button>
-                                          )}
-
-                                          {/* Delete button - only visible to admins */}
-                                          {isAdminUser() && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setThankYouPreSurgeryFormToDelete(form);
-                                                setShowDeleteThankYouPreSurgeryFormConfirm(true);
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Delete thank you pre-surgery form"
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </>
-                            )}
-
-                            {/* 3-Year Care Package Forms Section */}
-                            {threeYearCarePackageForms.length > 0 && (
-                              <>
-                                {threeYearCarePackageForms.map((form) => {
-                                  const displayData = formatThreeYearCarePackageFormForDisplay(form);
-                                  return (
-                                    <div
-                                      key={form.id}
-                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                      onClick={() => {
-                                        setSelectedThreeYearCarePackageForm(form);
-                                        setIsViewingThreeYearCarePackageForm(true);
-                                        setShowThreeYearCarePackageForm(true);
-                                      }}
-                                    >
-                                      {/* Header with form name and status */}
-                                      <div className="flex items-start justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                          <div className={`w-2 h-2 rounded-full ${
-                                            form.status === 'signed' ? 'bg-green-500' :
-                                            form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
-                                          }`}></div>
-                                          <span className="text-sm font-semibold text-gray-900">
-                                            3-Year Care Package Enrollment Agreement
-                                          </span>
-                                        </div>
-
-                                        {/* Status Badge */}
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                          form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
-                                          form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
-                                        }`}>
-                                          {form.status === 'signed' ? 'Signed' :
-                                           form.status === 'completed' ? 'Completed' : 'Draft'}
-                                        </span>
-                                      </div>
-
-                                      {/* Submitted/Created Date */}
-                                      <div className="mb-3">
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-500">
-                                            {form.status === 'draft' ? 'Created on:' :
-                                             form.status === 'signed' ? 'Signed on:' : 'Completed on:'}
-                                          </span>
-                                          <span className="font-medium text-gray-700">
-                                            {form.created_at ? new Date(form.created_at).toLocaleDateString('en-US', {
-                                              year: 'numeric',
-                                              month: 'short',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            }) : 'Unknown date'}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Action Buttons */}
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                                          <Clock className="h-3 w-3" />
-                                          <span>{form.created_at ? new Date(form.created_at).toLocaleDateString() : 'Unknown date'}</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                          {/* Download PDF button */}
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                await generateThreeYearCarePackagePdf(displayData);
-                                                toast({
-                                                  title: "Success",
-                                                  description: "3-Year Care Package PDF exported successfully!",
-                                                });
-                                              } catch (error) {
-                                                console.error('Error exporting PDF:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to export PDF",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Download PDF"
-                                          >
-                                            <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                          </button>
-
-                                          {/* Edit button - visible to all users if draft, only admins if completed */}
-                                          {(form.status === 'draft' || isAdminUser()) && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedThreeYearCarePackageForm(form);
-                                                setIsEditingThreeYearCarePackageForm(true);
-                                                setIsViewingThreeYearCarePackageForm(false);
-                                                setShowThreeYearCarePackageForm(true);
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Edit 3-Year Care Package form"
-                                            >
-                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                            </button>
-                                          )}
-
-                                          {/* Delete button - only visible to admins */}
-                                          {isAdminUser() && (
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setThreeYearCarePackageFormToDelete(form);
-                                                setShowDeleteThreeYearCarePackageFormConfirm(true);
-                                              }}
-                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                              title="Delete 3-Year Care Package form"
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </>
-                            )}
-
-                            {/* 5-Year Warranty Forms Section */}
-                            {fiveYearWarrantyForms.length > 0 && (
-                              <>
-                                {fiveYearWarrantyForms.map((form) => (
-                                  <div
-                                    key={form.id}
-                                    className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                    onClick={() => {
-                                      setSelectedFiveYearWarrantyForm(form);
-                                      setIsViewingFiveYearWarrantyForm(true);
-                                      setShowFiveYearWarrantyForm(true);
-                                    }}
-                                  >
-                                    {/* Header with form name and status */}
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${
-                                          form.status === 'completed' ? 'bg-green-500' :
-                                          form.status === 'signed' ? 'bg-green-500' : 'bg-purple-500'
-                                        }`}></div>
-                                        <span className="text-sm font-semibold text-gray-900">
-                                          5-Year Extended Warranty Plan
-                                        </span>
-                                      </div>
-                                      {/* Status Badge - moved to top right */}
-                                      {form.status === 'draft' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
-                                          Draft
-                                        </span>
-                                      )}
-                                      {form.status === 'completed' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                          Completed
-                                        </span>
-                                      )}
-                                      {form.status === 'signed' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                          Signed
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* Submitted Date */}
-                                    <div className="mb-3">
-                                      <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500">Submitted on:</span>
-                                        <span className="font-medium text-gray-700">
-                                          {form.created_at ?
-                                            new Date(form.created_at).toLocaleDateString('en-US', {
-                                              year: 'numeric',
-                                              month: 'short',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            }) : 'No date'
-                                          }
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                                        <Clock className="h-3 w-3" />
-                                        <span>{form.created_at ? new Date(form.created_at).toLocaleDateString() : 'Unknown date'}</span>
-                                      </div>
-
-                                      <div className="flex items-center gap-1">
-                                        {/* Download PDF button - Coming soon */}
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            toast({
-                                              title: "Coming Soon",
-                                              description: "PDF export for 5-Year Warranty forms will be available soon!",
-                                            });
-                                          }}
-                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                          title="Download PDF (Coming Soon)"
-                                        >
-                                          <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                        </button>
-
-                                        {/* Edit button - visible to all users if draft, only admins if completed */}
-                                        {((form.status === 'draft' || !form.status) || isAdminUser()) && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setSelectedFiveYearWarrantyForm(form);
-                                              setIsEditingFiveYearWarrantyForm(true);
-                                              setIsViewingFiveYearWarrantyForm(false);
-                                              setShowFiveYearWarrantyForm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Edit 5-Year Warranty form"
-                                          >
-                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                          </button>
-                                        )}
-
-                                        {/* Delete button - only visible to admins */}
-                                        {isAdminUser() && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setFiveYearWarrantyFormToDelete(form);
-                                              setShowDeleteFiveYearWarrantyFormConfirm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Delete 5-Year Warranty form"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </>
-                            )}
-
-                            {/* Partial Payment Agreement Forms Section */}
-                            {partialPaymentAgreementForms.length > 0 && (
-                              <>
-                                {partialPaymentAgreementForms.map((form) => (
-                                  <div
-                                    key={form.id}
-                                    className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                    onClick={async () => {
-                                      try {
-                                        console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
-                                        // Fetch fresh data from Supabase
-                                        const freshData = await partialPaymentAgreementService.getFormById(form.id);
-                                        console.log('📥 Fresh data from Supabase:', freshData);
-
-                                        if (freshData) {
-                                          const formattedData = formatPartialPaymentAgreementFormForDisplay(freshData);
-                                          console.log('✅ Formatted fresh data for view:', formattedData);
-                                          setSelectedPartialPaymentAgreementForm(formattedData);
-                                          setIsViewingPartialPaymentAgreementForm(true);
-                                          setShowPartialPaymentAgreementForm(true);
-                                        } else {
-                                          console.error('❌ No data found for form ID:', form.id);
-                                          toast({
-                                            title: "Error",
-                                            description: "Could not load form data. Please try again.",
-                                            variant: "destructive",
-                                          });
-                                        }
-                                      } catch (error) {
-                                        console.error('❌ Error fetching form data for view:', error);
-                                        toast({
-                                          title: "Error",
-                                          description: "Failed to load form data. Please try again.",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    {/* Header with form name and status */}
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${
-                                          form.status === 'completed' ? 'bg-green-500' :
-                                          form.status === 'signed' ? 'bg-green-500' : 'bg-orange-500'
-                                        }`}></div>
-                                        <span className="text-sm font-semibold text-gray-900">
-                                          Partial Payment Agreement
-                                        </span>
-                                      </div>
-                                      {/* Status Badge - moved to top right */}
-                                      {form.status === 'draft' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
-                                          Draft
-                                        </span>
-                                      )}
-                                      {form.status === 'completed' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                          Completed
-                                        </span>
-                                      )}
-                                      {form.status === 'signed' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                          Signed
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* Submitted Date */}
-                                    <div className="mb-3">
-                                      <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500">Submitted on:</span>
-                                        <span className="font-medium text-gray-700">
-                                          {form.created_at ?
-                                            new Date(form.created_at).toLocaleDateString('en-US', {
-                                              year: 'numeric',
-                                              month: 'short',
-                                              day: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            }) : 'No date'
-                                          }
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                                        <Clock className="h-3 w-3" />
-                                        <span>{form.created_at ? new Date(form.created_at).toLocaleDateString() : 'Unknown date'}</span>
-                                      </div>
-
-                                      <div className="flex items-center gap-1">
-                                        {/* Download PDF button */}
-                                        <button
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            try {
-                                              const formattedData = formatPartialPaymentAgreementFormForDisplay(form);
-                                              await generatePartialPaymentAgreementPdf(formattedData);
-                                              toast({
-                                                title: "Success",
-                                                description: "Partial Payment Agreement PDF exported successfully!",
-                                              });
-                                            } catch (error) {
-                                              console.error('Error exporting PDF:', error);
-                                              toast({
-                                                title: "Error",
-                                                description: "Failed to export PDF",
-                                                variant: "destructive",
-                                              });
-                                            }
-                                          }}
-                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                          title="Download PDF"
-                                        >
-                                          <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                        </button>
-
-                                        {/* Edit button - visible to all users if draft, only admins if completed */}
-                                        {((form.status === 'draft' || !form.status) || isAdminUser()) && (
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
-                                                // Fetch fresh data from Supabase
-                                                const freshData = await partialPaymentAgreementService.getFormById(form.id);
-                                                console.log('📥 Fresh data from Supabase:', freshData);
-
-                                                if (freshData) {
-                                                  const formattedData = formatPartialPaymentAgreementFormForDisplay(freshData);
-                                                  console.log('✅ Formatted fresh data:', formattedData);
-                                                  setSelectedPartialPaymentAgreementForm(formattedData);
-                                                  setIsEditingPartialPaymentAgreementForm(true);
-                                                  setShowPartialPaymentAgreementForm(true);
-                                                } else {
-                                                  console.error('❌ No data found for form ID:', form.id);
-                                                  toast({
-                                                    title: "Error",
-                                                    description: "Could not load form data. Please try again.",
-                                                    variant: "destructive",
-                                                  });
-                                                }
-                                              } catch (error) {
-                                                console.error('❌ Error fetching form data:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "Failed to load form data. Please try again.",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Edit form"
-                                          >
-                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                          </button>
-                                        )}
-
-                                        {/* Delete button - only visible to admins */}
-                                        {isAdminUser() && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setPartialPaymentAgreementFormToDelete(form);
-                                              setShowDeletePartialPaymentAgreementFormConfirm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Delete form"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </>
-                            )}
-
-                            {/* Treatment Plan Forms Section */}
-                            {treatmentPlanForms.length > 0 && (
-                              <>
-                                {treatmentPlanForms.map((form) => (
-                                  <div
-                                    key={form.id}
-                                    className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                    onClick={async () => {
-                                      try {
-                                        console.log('👁️ View button clicked - Fetching fresh data for form ID:', form.id);
-
-                                        const { data: freshFormData, error } = await getTreatmentPlanForm(form.id);
-
-                                        if (error) {
-                                          console.error('❌ Error fetching fresh Treatment Plan form data:', error);
-                                          toast({
-                                            title: "Error",
-                                            description: "Failed to load form data. Please try again.",
-                                            variant: "destructive",
-                                          });
-                                          return;
-                                        }
-
-                                        console.log('✅ Fresh Treatment Plan form data loaded:', freshFormData);
-                                        setSelectedTreatmentPlanForm(freshFormData);
-                                        setIsViewingTreatmentPlanForm(true);
-                                        setShowTreatmentPlanForm(true);
-                                      } catch (error) {
-                                        console.error('❌ Unexpected error loading Treatment Plan form:', error);
-                                        toast({
-                                          title: "Error",
-                                          description: "An unexpected error occurred. Please try again.",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    {/* Header with form name and status */}
-                                    <div className="flex items-center justify-between mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${
-                                          form.form_status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
-                                        }`}></div>
-                                        <span className="text-sm font-semibold text-gray-900">
-                                          Treatment Plan
-                                        </span>
-                                      </div>
-                                      {/* Status Badge - moved to top right */}
-                                      {form.form_status === 'draft' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
-                                          Draft
-                                        </span>
-                                      )}
-                                      {form.form_status === 'completed' && (
-                                        <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                          Completed
-                                        </span>
-                                      )}
-                                    </div>
-
-
-
-                                    {/* Plan Date */}
-                                    <div className="mb-3">
-                                      <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500">Plan Date:</span>
-                                        <span className="font-medium text-gray-700">
-                                          {form.plan_date ?
-                                            new Date(form.plan_date).toLocaleDateString('en-US', {
-                                              year: 'numeric',
-                                              month: 'short',
-                                              day: 'numeric'
-                                            }) : 'Not set'
-                                          }
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                                        <Clock className="h-3 w-3" />
-                                        <span>Created: {new Date(form.created_at).toLocaleDateString()}</span>
-                                      </div>
-
-                                      <div className="flex items-center gap-1">
-                                        {/* Download PDF button */}
-                                        <button
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            try {
-                                              await generateTreatmentPlanPDF({
-                                                firstName: form.first_name || '',
-                                                lastName: form.last_name || '',
-                                                dateOfBirth: form.date_of_birth || '',
-                                                planDate: form.plan_date || '',
-                                                treatments: form.treatments || [],
-                                                procedures: form.procedures || [],
-                                                discount: form.discount || 0,
-                                                letterheadImagePath: '/letterhead.png'
-                                              });
-                                              toast({
-                                                title: "Success",
-                                                description: "Treatment Plan PDF exported successfully!",
-                                              });
-                                            } catch (error) {
-                                              console.error('Error exporting PDF:', error);
-                                              toast({
-                                                title: "Error",
-                                                description: "Failed to export Treatment Plan PDF",
-                                                variant: "destructive",
-                                              });
-                                            }
-                                          }}
-                                          className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                          title="Download PDF"
-                                        >
-                                          <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                        </button>
-
-                                        {/* Edit button - visible to all users if draft, only admins if completed */}
-                                        {(form.form_status === 'draft' || isAdminUser()) && (
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation();
-                                              try {
-                                                console.log('🔄 Edit button clicked - Fetching fresh data for form ID:', form.id);
-
-                                                const { data: freshFormData, error } = await getTreatmentPlanForm(form.id);
-
-                                                if (error) {
-                                                  console.error('❌ Error fetching fresh Treatment Plan form data:', error);
-                                                  toast({
-                                                    title: "Error",
-                                                    description: "Failed to load form data. Please try again.",
-                                                    variant: "destructive",
-                                                  });
-                                                  return;
-                                                }
-
-                                                console.log('✅ Fresh Treatment Plan form data loaded for editing:', freshFormData);
-                                                setSelectedTreatmentPlanForm(freshFormData);
-                                                setIsEditingTreatmentPlanForm(true);
-                                                setIsViewingTreatmentPlanForm(false);
-                                                setShowTreatmentPlanForm(true);
-                                              } catch (error) {
-                                                console.error('❌ Unexpected error loading Treatment Plan form for editing:', error);
-                                                toast({
-                                                  title: "Error",
-                                                  description: "An unexpected error occurred. Please try again.",
-                                                  variant: "destructive",
-                                                });
-                                              }
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Edit form"
-                                          >
-                                            <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
-                                          </button>
-                                        )}
-
-                                        {/* Delete button - only visible to admins */}
-                                        {isAdminUser() && (
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setTreatmentPlanFormToDelete(form);
-                                              setShowDeleteTreatmentPlanFormConfirm(true);
-                                            }}
-                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                            title="Delete form"
-                                          >
-                                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-center py-6">
-                            <Settings className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                            <p className="text-sm font-medium text-gray-500 mb-1">No administrative forms</p>
-                            <p className="text-xs text-gray-400">Select a form type and click add to create</p>
-                          </div>
-                        )}
+                            ))
+                          ) : (
+                            <div className="text-center py-8">
+                              <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                              <p className="text-sm font-medium text-gray-500 mb-1">No IV sedation flow charts</p>
+                              <p className="text-xs text-gray-400">Use the button above to create your first flow chart</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Consultations */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                      <div className="p-1.5 bg-purple-100 rounded-lg">
-                        <Activity className="h-4 w-4 text-purple-600" />
+                    {/* Surgical Recall Sheet */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
+                      {/* Header */}
+                      <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                        <div className="p-1.5 bg-blue-100 rounded-lg">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <h3 className="text-base font-semibold text-gray-900">Surgical Recall Sheet ({surgicalRecallSheets.length})</h3>
                       </div>
-                      <h3 className="text-base font-semibold text-gray-900">Consultations ({consultationForms.length})</h3>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                      <div className="space-y-3 pb-2">
-                        {/* Consultations List */}
-                        {loadingConsultationForms ? (
-                          <div className="text-center py-6">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
-                            <p className="text-sm text-gray-500">Loading consultations...</p>
-                          </div>
-                        ) : consultationForms.length > 0 ? (
-                          <div className="space-y-2">
-                            {consultationForms.map((consultation, index) => (
+                      {/* Content */}
+                      <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
+                        <div className="space-y-3 pb-2">
+                          {/* Add Button */}
+                          <button
+                            onClick={() => setShowSurgicalRecallForm(true)}
+                            className="w-full px-4 py-2 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span className="text-sm font-medium">Add Surgical Recall Sheet</span>
+                          </button>
+
+                          {/* Surgical Recall Sheets */}
+                          {surgicalRecallSheets.length > 0 ? (
+                            surgicalRecallSheets.map((sheet) => (
                               <div
-                                key={consultation.id || index}
-                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-purple-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                onClick={() => handleViewConsultation(consultation)}
+                                key={sheet.id}
+                                className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                onClick={() => handleViewSurgicalRecallSheet(sheet)}
                               >
-                                {/* Header with consultation number */}
+                                {/* Header with date and status */}
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                    <div className={`w-2 h-2 rounded-full ${sheet.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                      }`}></div>
                                     <span className="text-sm font-semibold text-gray-900">
-                                      Consultation #{index + 1}
+                                      {new Date(sheet.surgery_date).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
                                     </span>
                                   </div>
+
+                                  {/* Status Badge */}
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${sheet.status === 'completed'
+                                      ? 'bg-green-100 text-green-800 border border-green-200'
+                                      : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                    }`}>
+                                    {sheet.status === 'completed' ? 'Completed' : 'Draft'}
+                                  </span>
                                 </div>
 
-                                {/* Status Badges Row */}
-                                <div className="flex flex-wrap gap-1 mb-3">
-                                  {/* Consultation Status */}
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                                    consultation.consultation_status === 'completed'
-                                      ? 'bg-green-100 text-green-800 border-green-200'
-                                      : consultation.consultation_status === 'in-progress'
-                                      ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                      : consultation.consultation_status === 'scheduled'
-                                      ? 'bg-purple-100 text-purple-800 border-purple-200'
-                                      : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                  }`}>
-                                    {consultation.consultation_status === 'completed' ? 'Completed' :
-                                     consultation.consultation_status === 'in-progress' ? 'In Progress' :
-                                     consultation.consultation_status === 'scheduled' ? 'Scheduled' :
-                                     consultation.consultation_status === 'draft' ? 'Pending' :
-                                     consultation.consultation_status || 'Pending'}
-                                  </span>
-
-                                  {/* Outcome Status (Treatment Decision) */}
-                                  {consultation.treatment_decision && (
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                                      consultation.treatment_decision === 'accepted'
-                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                        : consultation.treatment_decision === 'declined'
-                                        ? 'bg-red-100 text-red-800 border-red-200'
-                                        : consultation.treatment_decision === 'followup-required'
-                                        ? 'bg-orange-100 text-orange-800 border-orange-200'
-                                        : 'bg-purple-100 text-purple-800 border-purple-200'
-                                    }`}>
-                                      {consultation.treatment_decision === 'accepted' ? 'Treatment Accepted' :
-                                       consultation.treatment_decision === 'declined' ? 'Treatment Declined' :
-                                       consultation.treatment_decision === 'followup-required' ? 'Follow-up Required' :
-                                       consultation.treatment_decision.charAt(0).toUpperCase() + consultation.treatment_decision.slice(1)}
-                                    </span>
+                                {/* Content preview */}
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-500">Arch Type:</span>
+                                    <span className="text-xs text-gray-700 capitalize">{sheet.arch_type}</span>
+                                  </div>
+                                  {sheet.upper_surgery_type && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-gray-500">Upper:</span>
+                                      <span className="text-xs text-blue-600 font-medium">{sheet.upper_surgery_type}</span>
+                                    </div>
+                                  )}
+                                  {sheet.lower_surgery_type && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-gray-500">Lower:</span>
+                                      <span className="text-xs text-blue-600 font-medium">{sheet.lower_surgery_type}</span>
+                                    </div>
                                   )}
                                 </div>
 
-                                {/* Consultation Date */}
-                                <div className="mb-3">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-500">Consultation Date:</span>
-                                    <span className="font-medium text-gray-700">
-                                      {consultation.consultation_date
-                                        ? new Date(consultation.consultation_date).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric'
-                                          })
-                                        : new Date(consultation.created_at).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric'
-                                          })
-                                      }
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Patient Name */}
-                                <div className="mb-2">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-500">Patient:</span>
-                                    <span className="font-medium text-gray-700">
-                                      {consultation.patient_name}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Additional Status Information */}
-                                {(consultation.treatment_plan_approved !== null || consultation.follow_up_required) && (
-                                  <div className="mb-2 space-y-1">
-                                    {consultation.treatment_plan_approved !== null && (
-                                      <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500">Treatment Plan:</span>
-                                        <span className={`font-medium ${
-                                          consultation.treatment_plan_approved
-                                            ? 'text-green-700'
-                                            : 'text-red-700'
-                                        }`}>
-                                          {consultation.treatment_plan_approved ? 'Approved' : 'Not Approved'}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {consultation.follow_up_required && (
-                                      <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500">Follow-up:</span>
-                                        <span className="font-medium text-orange-700">Required</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* Action buttons */}
-                                <div className="flex items-center justify-end gap-1 mt-2 pt-2 border-t border-gray-100">
-                                  {/* View button */}
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleViewConsultation(consultation);
-                                    }}
-                                    className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                    title="View consultation"
-                                  >
-                                    <Eye className="h-3.5 w-3.5 text-gray-400 hover:text-purple-600" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-6">
-                            <Activity className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                            <p className="text-sm font-medium text-gray-500 mb-1">No consultations</p>
-                            <p className="text-xs text-gray-400">Consultation forms will appear here when available</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Data Collection Sheet */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">Data Collection Sheet ({dataCollectionSheets.length})</h3>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                      <div className="space-y-3 pb-2">
-                        {/* Add Button */}
-                        <button
-                          onClick={handleDataCollectionFormOpen}
-                          className="w-full px-4 py-2 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-                        >
-                          <Plus className="h-4 w-4" />
-                          <span className="text-sm font-medium">Add Data Collection Sheet</span>
-                        </button>
-
-                        {/* Data Collection Sheets */}
-                        {dataCollectionSheets.length > 0 ? (
-                          dataCollectionSheets.map((sheet) => (
-                            <div key={sheet.id} className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                                 onClick={() => handleViewDataCollectionSheet(sheet)}>
-                              {/* Header with date and status */}
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                  <span className="text-sm font-semibold text-gray-900">
-                                    {new Date(sheet.collection_date).toLocaleDateString('en-US', {
+                                {/* Footer with timestamp */}
+                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(sheet.created_at).toLocaleDateString('en-US', {
                                       month: 'short',
                                       day: 'numeric',
-                                      year: 'numeric'
+                                      hour: '2-digit',
+                                      minute: '2-digit'
                                     })}
                                   </span>
-                                </div>
-                              </div>
 
-                              {/* Main reason */}
-                              <div className="mb-2">
-                                <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                                  {sheet.reasons_for_collection?.[0] || 'Data Collection'}
-                                </p>
-                                {sheet.reasons_for_collection?.length > 1 && (
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    +{sheet.reasons_for_collection.length - 1} more reason{sheet.reasons_for_collection.length > 2 ? 's' : ''}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Timestamp and Action Buttons */}
-                              <div className="flex items-center justify-between">
-                                <p className="text-xs text-gray-500">
-                                  Created {new Date(sheet.created_at).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })} at {new Date(sheet.created_at).toLocaleTimeString([], {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </p>
-
-                                <div className="flex items-center gap-1">
-                                  {/* Download PDF button */}
-                                  <button
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      try {
-                                        await generateDataCollectionPdf({
-                                          patientName: sheet.patient_name,
-                                          collectionDate: sheet.collection_date,
-                                          reasonsForCollection: sheet.reasons_for_collection || [],
-                                          customReason: sheet.custom_reason,
-                                          currentUpperAppliance: sheet.current_upper_appliance,
-                                          currentLowerAppliance: sheet.current_lower_appliance,
-                                          preSurgicalPictures: sheet.pre_surgical_pictures,
-                                          surgicalPictures: sheet.surgical_pictures,
-                                          followUpPictures: sheet.follow_up_pictures,
-                                          fracturedAppliancePictures: sheet.fractured_appliance_pictures,
-                                          cbctTaken: sheet.cbct_taken,
-                                          preSurgicalJawRecordsUpper: sheet.pre_surgical_jaw_records_upper,
-                                          preSurgicalJawRecordsLower: sheet.pre_surgical_jaw_records_lower,
-                                          facialScan: sheet.facial_scan,
-                                          jawRecordsUpper: sheet.jaw_records_upper,
-                                          jawRecordsLower: sheet.jaw_records_lower,
-                                          tissueScanUpper: sheet.tissue_scan_upper,
-                                          tissueScanLower: sheet.tissue_scan_lower,
-                                          photogrammetryUpper: sheet.photogrammetry_upper,
-                                          photogrammetryLower: sheet.photogrammetry_lower,
-                                          dcRefScanUpper: sheet.dc_ref_scan_upper,
-                                          dcRefScanLower: sheet.dc_ref_scan_lower,
-                                          appliance360Upper: sheet.appliance_360_upper,
-                                          appliance360Lower: sheet.appliance_360_lower,
-                                          additionalNotes: sheet.additional_notes
-                                        });
-                                        toast({
-                                          title: "Success",
-                                          description: "PDF downloaded successfully!",
-                                        });
-                                      } catch (error) {
-                                        console.error('Error generating PDF:', error);
-                                        toast({
-                                          title: "Error",
-                                          description: "Failed to generate PDF",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }}
-                                    className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                    title="Download PDF"
-                                  >
-                                    <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                  </button>
-
-                                  {/* Three dots menu */}
-                                  <div className="relative">
+                                  <div className="flex items-center gap-2">
+                                    {/* Download PDF button */}
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setActiveDropdown(activeDropdown === sheet.id ? null : sheet.id);
+                                        handleDownloadSurgicalRecallPdf(sheet);
                                       }}
-                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      className="p-1 rounded-full hover:bg-blue-50 transition-colors duration-200 group"
+                                      title="Download PDF"
                                     >
-                                      <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                      <Download className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
                                     </button>
 
-                                    {/* Dropdown menu */}
-                                    {activeDropdown === sheet.id && (
-                                      <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setActiveDropdown(null);
-                                            handleEditDataCollectionSheet(sheet);
-                                          }}
-                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
-                                        >
-                                          <Edit2 className="h-3.5 w-3.5" />
-                                          Edit
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteDataCollectionSheet(sheet);
-                                          }}
-                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                          Delete
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8">
-                            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-sm font-medium text-gray-500 mb-1">No data collection sheets</p>
-                            <p className="text-xs text-gray-400">Use the button above to create your first sheet</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                                    {/* Three dots menu */}
+                                    <div className="relative">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSurgicalRecallActiveDropdown(surgicalRecallActiveDropdown === sheet.id ? null : sheet.id);
+                                        }}
+                                        className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                      >
+                                        <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                      </button>
 
-                  {/* IV Sedation Flow Chart */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <Activity className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">
-                        IV Sedation Flow Chart ({ivSedationSheets.length})
-                      </h3>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                      <div className="space-y-3 pb-2">
-                        {/* Add Button */}
-                        <button
-                          onClick={handleIVSedationFormOpen}
-                          className="w-full px-4 py-2 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-                        >
-                          <Plus className="h-4 w-4" />
-                          <span className="text-sm font-medium">Add IV Sedation Flow Chart</span>
-                        </button>
+                                      {/* Dropdown menu */}
+                                      {surgicalRecallActiveDropdown === sheet.id && (
+                                        <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSurgicalRecallActiveDropdown(null);
+                                              handleEditSurgicalRecallSheet(sheet);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5" />
+                                            Edit
+                                          </button>
 
-                        {/* IV Sedation Forms */}
-                        {ivSedationSheets.length > 0 ? (
-                          ivSedationSheets.map((sheet) => (
-                            <div
-                              key={sheet.id}
-                              className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all duration-200 relative cursor-pointer"
-                              onClick={() => handleViewIVSedationSheet(sheet)}
-                            >
-                              {/* Header with date and status */}
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${
-                                    sheet.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
-                                  }`}></div>
-                                  <span className="text-sm font-semibold text-gray-900">
-                                    {new Date(sheet.sedation_date).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
-                                    })}
-                                  </span>
-                                </div>
-
-                                {/* Status Badge */}
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  sheet.status === 'completed'
-                                    ? 'bg-green-100 text-green-800 border border-green-200'
-                                    : 'bg-orange-100 text-orange-800 border border-orange-200'
-                                }`}>
-                                  {sheet.status === 'completed' ? 'Completed' : 'Draft'}
-                                </span>
-                              </div>
-
-                              {/* Content preview */}
-                              <div className="space-y-1">
-                                {sheet.upper_treatment && sheet.upper_treatment !== 'NO TREATMENT' && (
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-500">Upper:</span>
-                                    <div className="text-right">
-                                      <span className="text-xs text-gray-700">{sheet.upper_treatment}</span>
-                                      {sheet.upper_surgery_type && (
-                                        <span className="block text-xs text-blue-600 font-medium">
-                                          {sheet.upper_surgery_type}
-                                        </span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteSurgicalRecallSheet(sheet);
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                            Delete
+                                          </button>
+                                        </div>
                                       )}
                                     </div>
                                   </div>
-                                )}
-                                {sheet.lower_treatment && sheet.lower_treatment !== 'NO TREATMENT' && (
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-500">Lower:</span>
-                                    <div className="text-right">
-                                      <span className="text-xs text-gray-700">{sheet.lower_treatment}</span>
-                                      {sheet.lower_surgery_type && (
-                                        <span className="block text-xs text-blue-600 font-medium">
-                                          {sheet.lower_surgery_type}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Footer with timestamp */}
-                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                                <span className="text-xs text-gray-400">
-                                  {new Date(sheet.created_at).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </span>
-
-                                <div className="flex items-center gap-1">
-                                  {/* Download PDF button */}
-                                  <button
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      try {
-                                        await handleDownloadIVSedationPDF(sheet);
-                                        toast({
-                                          title: "Success",
-                                          description: "PDF downloaded successfully!",
-                                        });
-                                      } catch (error) {
-                                        console.error('Error generating PDF:', error);
-                                        toast({
-                                          title: "Error",
-                                          description: "Failed to generate PDF",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }}
-                                    className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                    title="Download PDF"
-                                  >
-                                    <Download className="h-3.5 w-3.5 text-gray-400 hover:text-green-600" />
-                                  </button>
-
-                                  {/* Three dots menu */}
-                                  <div className="relative">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIVSedationActiveDropdown(ivSedationActiveDropdown === sheet.id ? null : sheet.id);
-                                      }}
-                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                    >
-                                      <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                                    </button>
-
-                                    {/* Dropdown menu */}
-                                    {ivSedationActiveDropdown === sheet.id && (
-                                      <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIVSedationActiveDropdown(null);
-                                            handleEditIVSedationSheet(sheet);
-                                          }}
-                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
-                                        >
-                                          <Edit2 className="h-3.5 w-3.5" />
-                                          Edit
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteIVSedationSheet(sheet);
-                                          }}
-                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                          Delete
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
                                 </div>
                               </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-8">
+                              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                              <p className="text-sm font-medium text-gray-500 mb-1">No surgical recall sheets</p>
+                              <p className="text-xs text-gray-400">Use the button above to create your first surgical recall sheet</p>
                             </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8">
-                            <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-sm font-medium text-gray-500 mb-1">No IV sedation flow charts</p>
-                            <p className="text-xs text-gray-400">Use the button above to create your first flow chart</p>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Surgical Recall Sheet */}
-                  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col h-full max-h-full overflow-hidden flex-shrink-0" style={{ width: '350px' }}>
-                    {/* Header */}
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-b border-gray-200 flex-shrink-0">
-                      <div className="p-1.5 bg-blue-100 rounded-lg">
-                        <FileText className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">Surgical Recall Sheet ({surgicalRecallSheets.length})</h3>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto px-3 pt-3 pb-1 min-h-0 scrollbar-enhanced">
-                      <div className="space-y-3 pb-2">
-                        {/* Add Button */}
-                        <button
-                          onClick={() => setShowSurgicalRecallForm(true)}
-                          className="w-full px-4 py-2 bg-transparent border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-                        >
-                          <Plus className="h-4 w-4" />
-                          <span className="text-sm font-medium">Add Surgical Recall Sheet</span>
-                        </button>
-
-                        {/* Surgical Recall Sheets */}
-                        {surgicalRecallSheets.length > 0 ? (
-                          surgicalRecallSheets.map((sheet) => (
-                            <div
-                              key={sheet.id}
-                              className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
-                              onClick={() => handleViewSurgicalRecallSheet(sheet)}
-                            >
-                              {/* Header with date and status */}
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${
-                                    sheet.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
-                                  }`}></div>
-                                  <span className="text-sm font-semibold text-gray-900">
-                                    {new Date(sheet.surgery_date).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
-                                    })}
-                                  </span>
-                                </div>
-
-                                {/* Status Badge */}
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  sheet.status === 'completed'
-                                    ? 'bg-green-100 text-green-800 border border-green-200'
-                                    : 'bg-orange-100 text-orange-800 border border-orange-200'
-                                }`}>
-                                  {sheet.status === 'completed' ? 'Completed' : 'Draft'}
-                                </span>
-                              </div>
-
-                              {/* Content preview */}
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-gray-500">Arch Type:</span>
-                                  <span className="text-xs text-gray-700 capitalize">{sheet.arch_type}</span>
-                                </div>
-                                {sheet.upper_surgery_type && (
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-500">Upper:</span>
-                                    <span className="text-xs text-blue-600 font-medium">{sheet.upper_surgery_type}</span>
-                                  </div>
-                                )}
-                                {sheet.lower_surgery_type && (
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-500">Lower:</span>
-                                    <span className="text-xs text-blue-600 font-medium">{sheet.lower_surgery_type}</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Footer with timestamp */}
-                              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                                <span className="text-xs text-gray-400">
-                                  {new Date(sheet.created_at).toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </span>
-
-                                <div className="flex items-center gap-2">
-                                  {/* Download PDF button */}
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDownloadSurgicalRecallPdf(sheet);
-                                    }}
-                                    className="p-1 rounded-full hover:bg-blue-50 transition-colors duration-200 group"
-                                    title="Download PDF"
-                                  >
-                                    <Download className="h-4 w-4 text-gray-400 group-hover:text-blue-600" />
-                                  </button>
-
-                                  {/* Three dots menu */}
-                                  <div className="relative">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSurgicalRecallActiveDropdown(surgicalRecallActiveDropdown === sheet.id ? null : sheet.id);
-                                      }}
-                                      className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                    >
-                                      <MoreVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                                    </button>
-
-                                    {/* Dropdown menu */}
-                                    {surgicalRecallActiveDropdown === sheet.id && (
-                                      <div className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[120px]">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSurgicalRecallActiveDropdown(null);
-                                            handleEditSurgicalRecallSheet(sheet);
-                                          }}
-                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2 transition-colors duration-200"
-                                        >
-                                          <Edit2 className="h-3.5 w-3.5" />
-                                          Edit
-                                        </button>
-
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteSurgicalRecallSheet(sheet);
-                                          }}
-                                          className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors duration-200"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                          Delete
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8">
-                            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-sm font-medium text-gray-500 mb-1">No surgical recall sheets</p>
-                            <p className="text-xs text-gray-400">Use the button above to create your first surgical recall sheet</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
 
 
 
@@ -12870,16 +12813,15 @@ export function PatientProfilePage() {
                   <p className="text-lg text-gray-600">{selectedDeliveryItem.patient_name}</p>
                 </div>
                 <div className="ml-auto">
-                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                    selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
-                    selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
-                    selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
+                      selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
+                        selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
+                          'bg-gray-100 text-gray-800'
+                    }`}>
                     {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
-                     selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
-                     selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
-                     selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                        selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
+                          selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
                 </div>
               </div>
@@ -12965,16 +12907,15 @@ export function PatientProfilePage() {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="font-medium text-green-800">Current Status:</span>
-                        <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
-                          selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-200 text-green-900' :
-                          selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-200 text-blue-900' :
-                          selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-200 text-emerald-900' :
-                          'bg-gray-200 text-gray-900'
-                        }`}>
+                        <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-200 text-green-900' :
+                            selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-200 text-blue-900' :
+                              selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-200 text-emerald-900' :
+                                'bg-gray-200 text-gray-900'
+                          }`}>
                           {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
-                           selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
-                           selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
-                           selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                              selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
+                                selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         </span>
                       </div>
                       {selectedDeliveryItem.delivery_notes && (
@@ -13162,50 +13103,42 @@ export function PatientProfilePage() {
               <div className="flex items-center gap-2 w-full">
                 {/* Step 1 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${
-                    currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
+                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'
+                    }`}>
                     Basic Info
                   </span>
-                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${
-                    currentStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${currentStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'
+                    }`} />
                 </div>
 
                 {/* Step 2 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${
-                    currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
+                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'
+                    }`}>
                     Pictures/CBCT
                   </span>
-                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${
-                    currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
+                    }`} />
                 </div>
 
                 {/* Step 3 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${
-                    currentStep >= 3 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
+                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${currentStep >= 3 ? 'text-blue-600' : 'text-gray-400'
+                    }`}>
                     IOS / 3D Data
                   </span>
-                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${
-                    currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'
+                    }`} />
                 </div>
 
                 {/* Step 4 */}
                 <div className="flex-1 flex flex-col items-center">
-                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${
-                    currentStep >= 4 ? 'text-blue-600' : 'text-gray-400'
-                  }`}>
+                  <span className={`text-sm font-medium transition-colors duration-300 mb-2 ${currentStep >= 4 ? 'text-blue-600' : 'text-gray-400'
+                    }`}>
                     Notes and Submit
                   </span>
-                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${
-                    currentStep >= 4 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-full h-1.5 rounded-full transition-colors duration-300 ${currentStep >= 4 ? 'bg-blue-600' : 'bg-gray-300'
+                    }`} />
                 </div>
               </div>
             </div>
@@ -13302,19 +13235,17 @@ export function PatientProfilePage() {
                               type="button"
                               onClick={() => !isDisabled && handleToggleReason(reason)}
                               disabled={isDisabled}
-                              className={`flex items-center gap-2 p-2.5 rounded-lg border-2 transition-all duration-200 text-left min-h-[45px] ${
-                                isSelected
+                              className={`flex items-center gap-2 p-2.5 rounded-lg border-2 transition-all duration-200 text-left min-h-[45px] ${isSelected
                                   ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-md'
                                   : isDisabled
-                                  ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
-                                  : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 cursor-pointer hover:shadow-sm'
-                              }`}
+                                    ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+                                    : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 cursor-pointer hover:shadow-sm'
+                                }`}
                             >
-                              <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                                isSelected
+                              <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected
                                   ? 'border-indigo-500 bg-indigo-500'
                                   : 'border-gray-300'
-                              }`}>
+                                }`}>
                                 {isSelected && (
                                   <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
                                 )}
@@ -13394,11 +13325,10 @@ export function PatientProfilePage() {
                         <div className="grid grid-cols-1 gap-3">
                           {/* Pre-Surgical Pictures - Balanced sizing */}
                           {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
-                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
-                              dataCollectionFormData.dataCollected.preSurgicalPictures === null
+                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.preSurgicalPictures === null
                                 ? 'border-red-300 bg-red-50 shadow-sm'
                                 : 'border-gray-200 shadow-sm hover:shadow-md'
-                            }`}>
+                              }`}>
                               <div className="flex items-center justify-between">
                                 <h5 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                                   <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
@@ -13408,11 +13338,10 @@ export function PatientProfilePage() {
                                   <button
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('preSurgicalPictures', null, true)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                                      dataCollectionFormData.dataCollected.preSurgicalPictures === true
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${dataCollectionFormData.dataCollected.preSurgicalPictures === true
                                         ? 'bg-green-500 text-white shadow-md'
                                         : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-300 hover:border-green-400'
-                                    }`}
+                                      }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -13422,11 +13351,10 @@ export function PatientProfilePage() {
                                   <button
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('preSurgicalPictures', null, false)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                                      dataCollectionFormData.dataCollected.preSurgicalPictures === false
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${dataCollectionFormData.dataCollected.preSurgicalPictures === false
                                         ? 'bg-red-500 text-white shadow-md'
                                         : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-300 hover:border-red-400'
-                                    }`}
+                                      }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -13441,105 +13369,98 @@ export function PatientProfilePage() {
                           {/* Surgical Pictures - Only for surgical day data collection */}
                           {(dataCollectionFormData.reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") ||
                             dataCollectionFormData.reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION")) && (
-                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
-                              dataCollectionFormData.dataCollected.surgicalPictures === null
-                                ? 'border-red-300 bg-red-50 shadow-sm'
-                                : 'border-gray-200 shadow-sm hover:shadow-md'
-                            }`}>
-                              <div className="flex items-center justify-between">
-                                <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  Surgical Pictures <span className="text-red-500 text-base">*</span>
-                                </h5>
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDataCollectionToggle('surgicalPictures', null, true)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                      dataCollectionFormData.dataCollected.surgicalPictures === true
-                                        ? 'bg-blue-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-                                    }`}
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    Yes
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDataCollectionToggle('surgicalPictures', null, false)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                      dataCollectionFormData.dataCollected.surgicalPictures === false
-                                        ? 'bg-red-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-                                    }`}
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                    No
-                                  </button>
+                              <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.surgicalPictures === null
+                                  ? 'border-red-300 bg-red-50 shadow-sm'
+                                  : 'border-gray-200 shadow-sm hover:shadow-md'
+                                }`}>
+                                <div className="flex items-center justify-between">
+                                  <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    Surgical Pictures <span className="text-red-500 text-base">*</span>
+                                  </h5>
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDataCollectionToggle('surgicalPictures', null, true)}
+                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.surgicalPictures === true
+                                          ? 'bg-blue-500 text-white shadow-md'
+                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        }`}
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                      Yes
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDataCollectionToggle('surgicalPictures', null, false)}
+                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.surgicalPictures === false
+                                          ? 'bg-red-500 text-white shadow-md'
+                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        }`}
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                      No
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
                           {/* Follow-Up Pictures - For regular data collection (not pre-surgical or surgical) */}
                           {!dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") &&
-                           !dataCollectionFormData.reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") &&
-                           !dataCollectionFormData.reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION") && (
-                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
-                              dataCollectionFormData.dataCollected.followUpPictures === null
-                                ? 'border-red-300 bg-red-50 shadow-sm'
-                                : 'border-gray-200 shadow-sm hover:shadow-md'
-                            }`}>
-                              <div className="flex items-center justify-between">
-                                <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                                  Follow-Up Pictures <span className="text-red-500 text-base">*</span>
-                                </h5>
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDataCollectionToggle('followUpPictures', null, true)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                      dataCollectionFormData.dataCollected.followUpPictures === true
-                                        ? 'bg-blue-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-                                    }`}
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    Yes
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDataCollectionToggle('followUpPictures', null, false)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                      dataCollectionFormData.dataCollected.followUpPictures === false
-                                        ? 'bg-red-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-                                    }`}
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                    No
-                                  </button>
+                            !dataCollectionFormData.reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") &&
+                            !dataCollectionFormData.reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION") && (
+                              <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.followUpPictures === null
+                                  ? 'border-red-300 bg-red-50 shadow-sm'
+                                  : 'border-gray-200 shadow-sm hover:shadow-md'
+                                }`}>
+                                <div className="flex items-center justify-between">
+                                  <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                    Follow-Up Pictures <span className="text-red-500 text-base">*</span>
+                                  </h5>
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDataCollectionToggle('followUpPictures', null, true)}
+                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.followUpPictures === true
+                                          ? 'bg-blue-500 text-white shadow-md'
+                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        }`}
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                      Yes
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDataCollectionToggle('followUpPictures', null, false)}
+                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.followUpPictures === false
+                                          ? 'bg-red-500 text-white shadow-md'
+                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        }`}
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                      No
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
                           {/* Fractured Appliance Pictures - Only show if "APPLIANCE FRACTURED" is selected */}
                           {dataCollectionFormData.reasonsForCollection.includes("APPLIANCE FRACTURED") && (
-                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
-                              dataCollectionFormData.dataCollected.fracturedAppliancePictures === null
+                            <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.fracturedAppliancePictures === null
                                 ? 'border-red-300 bg-red-50 shadow-sm'
                                 : 'border-gray-200 shadow-sm hover:shadow-md'
-                            }`}>
+                              }`}>
                               <div className="flex items-center justify-between">
                                 <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
@@ -13549,11 +13470,10 @@ export function PatientProfilePage() {
                                   <button
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('fracturedAppliancePictures', null, true)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                      dataCollectionFormData.dataCollected.fracturedAppliancePictures === true
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.fracturedAppliancePictures === true
                                         ? 'bg-blue-500 text-white shadow-md'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-                                    }`}
+                                      }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -13563,11 +13483,10 @@ export function PatientProfilePage() {
                                   <button
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('fracturedAppliancePictures', null, false)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                      dataCollectionFormData.dataCollected.fracturedAppliancePictures === false
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.fracturedAppliancePictures === false
                                         ? 'bg-red-500 text-white shadow-md'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-                                    }`}
+                                      }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -13580,11 +13499,10 @@ export function PatientProfilePage() {
                           )}
 
                           {/* CBCT Section - Always show for all reason selections */}
-                          <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${
-                            dataCollectionFormData.dataCollected.cbctTaken === null
+                          <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.cbctTaken === null
                               ? 'border-red-300 bg-red-50 shadow-sm'
                               : 'border-gray-200 shadow-sm hover:shadow-md'
-                          }`}>
+                            }`}>
                             <div className="flex items-center justify-between">
                               <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
                                 <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
@@ -13594,11 +13512,10 @@ export function PatientProfilePage() {
                                 <button
                                   type="button"
                                   onClick={() => handleDataCollectionToggle('cbctTaken', null, true)}
-                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    dataCollectionFormData.dataCollected.cbctTaken === true
+                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.cbctTaken === true
                                       ? 'bg-green-500 text-white shadow-md'
                                       : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-300 hover:border-green-400'
-                                  }`}
+                                    }`}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -13608,11 +13525,10 @@ export function PatientProfilePage() {
                                 <button
                                   type="button"
                                   onClick={() => handleDataCollectionToggle('cbctTaken', null, false)}
-                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    dataCollectionFormData.dataCollected.cbctTaken === false
+                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.cbctTaken === false
                                       ? 'bg-red-500 text-white shadow-md'
                                       : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-300 hover:border-red-400'
-                                  }`}
+                                    }`}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -13647,345 +13563,319 @@ export function PatientProfilePage() {
                     <div className="flex-1 overflow-y-auto pr-1 space-y-3" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                       {dataCollectionFormData.reasonsForCollection.length > 0 && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                              {/* Pre-Surgical Jaw Records - Balanced sizing */}
-                              {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
-                                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
-                                  <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                    Pre-Surgical Jaw Records (IOS)
-                                  </h5>
-                                  <div className="flex items-center gap-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'upper', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper)}
-                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                        dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper
-                                          ? 'bg-blue-500 text-white shadow-sm'
-                                          : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
-                                      }`}
-                                    >
-                                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                                        dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper
-                                          ? 'border-white bg-white'
-                                          : 'border-gray-400 bg-transparent'
-                                      }`}>
-                                        {dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper && (
-                                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                        )}
-                                      </div>
-                                      Upper
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'lower', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower)}
-                                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                        dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower
-                                          ? 'bg-blue-500 text-white shadow-sm'
-                                          : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
-                                      }`}
-                                    >
-                                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                                        dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower
-                                          ? 'border-white bg-white'
-                                          : 'border-gray-400 bg-transparent'
-                                      }`}>
-                                        {dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower && (
-                                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                        )}
-                                      </div>
-                                      Lower
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Facial Scan - Only for pre-surgical */}
-                              {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
-                                  <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                    Facial Scan
-                                  </h5>
-                                  <div className="flex items-center">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDataCollectionToggle('facialScan', null, !dataCollectionFormData.dataCollected.facialScan)}
-                                      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                                        dataCollectionFormData.dataCollected.facialScan
-                                          ? 'bg-blue-500 text-white shadow-sm'
-                                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                                      }`}
-                                    >
-                                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                                        dataCollectionFormData.dataCollected.facialScan
-                                          ? 'border-white bg-white'
-                                          : 'border-gray-400 bg-transparent'
-                                      }`}>
-                                        {dataCollectionFormData.dataCollected.facialScan && (
-                                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                        )}
-                                      </div>
-                                      Scan Collected
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Regular Data Collection Options (for all selections except pre-surgical) */}
-                              {!dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
-                                <>
-                                  {/* Jaw Records - Balanced */}
-                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
-                                    <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                          {/* Pre-Surgical Jaw Records - Balanced sizing */}
+                          {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
+                            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
+                              <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                Pre-Surgical Jaw Records (IOS)
+                              </h5>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'upper', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper)}
+                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper
+                                      ? 'bg-blue-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
+                                    }`}
+                                >
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
+                                    }`}>
+                                    {dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper && (
                                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                      Jaw Records (IOS)
-                                    </h5>
-                                    <div className="flex items-center gap-3">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('jawRecords', 'upper', !dataCollectionFormData.dataCollected.jawRecords.upper)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.jawRecords.upper
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.jawRecords.upper
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.jawRecords.upper && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Upper
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('jawRecords', 'lower', !dataCollectionFormData.dataCollected.jawRecords.lower)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.jawRecords.lower
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.jawRecords.lower
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.jawRecords.lower && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Lower
-                                      </button>
-                                    </div>
+                                    )}
                                   </div>
-
-                                  {/* Tissue Scan */}
-                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
-                                    <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                                      Tissue Scan
-                                    </h5>
-                                    <div className="flex items-center gap-3">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('tissueScan', 'upper', !dataCollectionFormData.dataCollected.tissueScan.upper)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.tissueScan.upper
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.tissueScan.upper
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.tissueScan.upper && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Upper
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('tissueScan', 'lower', !dataCollectionFormData.dataCollected.tissueScan.lower)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.tissueScan.lower
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.tissueScan.lower
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.tissueScan.lower && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Lower
-                                      </button>
-                                    </div>
+                                  Upper
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'lower', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower)}
+                                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower
+                                      ? 'bg-blue-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
+                                    }`}
+                                >
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
+                                    }`}>
+                                    {dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower && (
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    )}
                                   </div>
-                                  {/* Photogrammetry */}
-                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
-                                    <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                                      Photogrammetry (ICAM)
-                                    </h5>
-                                    <div className="flex items-center gap-3">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('photogrammetry', 'upper', !dataCollectionFormData.dataCollected.photogrammetry.upper)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.photogrammetry.upper
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.photogrammetry.upper
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.photogrammetry.upper && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Upper
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('photogrammetry', 'lower', !dataCollectionFormData.dataCollected.photogrammetry.lower)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.photogrammetry.lower
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.photogrammetry.lower
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.photogrammetry.lower && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Lower
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* DC-REF Scan */}
-                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
-                                    <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                      DC-REF Scan
-                                    </h5>
-                                    <div className="flex items-center gap-3">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('dcRefScan', 'upper', !dataCollectionFormData.dataCollected.dcRefScan.upper)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.dcRefScan.upper
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.dcRefScan.upper
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.dcRefScan.upper && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Upper
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('dcRefScan', 'lower', !dataCollectionFormData.dataCollected.dcRefScan.lower)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.dcRefScan.lower
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.dcRefScan.lower
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.dcRefScan.lower && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Lower
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Appliance 360 */}
-                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
-                                    <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
-                                      Appliance 360
-                                    </h5>
-                                    <div className="flex items-center gap-3">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('appliance360', 'upper', !dataCollectionFormData.dataCollected.appliance360.upper)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.appliance360.upper
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.appliance360.upper
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.appliance360.upper && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Upper
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDataCollectionToggle('appliance360', 'lower', !dataCollectionFormData.dataCollected.appliance360.lower)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                                          dataCollectionFormData.dataCollected.appliance360.lower
-                                            ? 'bg-green-500 text-white shadow-sm'
-                                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
-                                        }`}
-                                      >
-                                        <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${
-                                          dataCollectionFormData.dataCollected.appliance360.lower
-                                            ? 'border-white bg-white'
-                                            : 'border-gray-400 bg-transparent'
-                                        }`}>
-                                          {dataCollectionFormData.dataCollected.appliance360.lower && (
-                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                          )}
-                                        </div>
-                                        Lower
-                                      </button>
-                                    </div>
-                                  </div>
-                                </>
-                              )}
+                                  Lower
+                                </button>
+                              </div>
                             </div>
                           )}
+
+                          {/* Facial Scan - Only for pre-surgical */}
+                          {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
+                              <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                Facial Scan
+                              </h5>
+                              <div className="flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDataCollectionToggle('facialScan', null, !dataCollectionFormData.dataCollected.facialScan)}
+                                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.facialScan
+                                      ? 'bg-blue-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                                    }`}
+                                >
+                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.facialScan
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
+                                    }`}>
+                                    {dataCollectionFormData.dataCollected.facialScan && (
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    )}
+                                  </div>
+                                  Scan Collected
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Regular Data Collection Options (for all selections except pre-surgical) */}
+                          {!dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
+                            <>
+                              {/* Jaw Records - Balanced */}
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
+                                <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  Jaw Records (IOS)
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('jawRecords', 'upper', !dataCollectionFormData.dataCollected.jawRecords.upper)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.jawRecords.upper
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.jawRecords.upper
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.jawRecords.upper && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Upper
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('jawRecords', 'lower', !dataCollectionFormData.dataCollected.jawRecords.lower)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.jawRecords.lower
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.jawRecords.lower
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.jawRecords.lower && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Lower
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Tissue Scan */}
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
+                                <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                  Tissue Scan
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('tissueScan', 'upper', !dataCollectionFormData.dataCollected.tissueScan.upper)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.tissueScan.upper
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.tissueScan.upper
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.tissueScan.upper && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Upper
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('tissueScan', 'lower', !dataCollectionFormData.dataCollected.tissueScan.lower)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.tissueScan.lower
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.tissueScan.lower
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.tissueScan.lower && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Lower
+                                  </button>
+                                </div>
+                              </div>
+                              {/* Photogrammetry */}
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
+                                <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                  Photogrammetry (ICAM)
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('photogrammetry', 'upper', !dataCollectionFormData.dataCollected.photogrammetry.upper)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.photogrammetry.upper
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.photogrammetry.upper
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.photogrammetry.upper && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Upper
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('photogrammetry', 'lower', !dataCollectionFormData.dataCollected.photogrammetry.lower)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.photogrammetry.lower
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.photogrammetry.lower
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.photogrammetry.lower && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Lower
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* DC-REF Scan */}
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
+                                <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                  DC-REF Scan
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('dcRefScan', 'upper', !dataCollectionFormData.dataCollected.dcRefScan.upper)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.dcRefScan.upper
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.dcRefScan.upper
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.dcRefScan.upper && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Upper
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('dcRefScan', 'lower', !dataCollectionFormData.dataCollected.dcRefScan.lower)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.dcRefScan.lower
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.dcRefScan.lower
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.dcRefScan.lower && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Lower
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Appliance 360 */}
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all duration-200 min-h-[100px] flex items-center justify-between">
+                                <h5 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
+                                  Appliance 360
+                                </h5>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('appliance360', 'upper', !dataCollectionFormData.dataCollected.appliance360.upper)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.appliance360.upper
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.appliance360.upper
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.appliance360.upper && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Upper
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDataCollectionToggle('appliance360', 'lower', !dataCollectionFormData.dataCollected.appliance360.lower)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.appliance360.lower
+                                        ? 'bg-green-500 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      }`}
+                                  >
+                                    <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.appliance360.lower
+                                        ? 'border-white bg-white'
+                                        : 'border-gray-400 bg-transparent'
+                                      }`}>
+                                      {dataCollectionFormData.dataCollected.appliance360.lower && (
+                                        <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                    Lower
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -14188,14 +14078,12 @@ export function PatientProfilePage() {
                           <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors duration-200">
                             <span className="text-sm font-medium text-blue-900">Pre-Surgical Pictures</span>
                             <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                selectedDataCollectionSheet.pre_surgical_pictures ? 'bg-green-500' : 'bg-red-500'
-                              }`}></div>
-                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                                selectedDataCollectionSheet.pre_surgical_pictures
+                              <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.pre_surgical_pictures ? 'bg-green-500' : 'bg-red-500'
+                                }`}></div>
+                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.pre_surgical_pictures
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-red-100 text-red-800'
-                              }`}>
+                                }`}>
                                 {selectedDataCollectionSheet.pre_surgical_pictures ? 'Collected' : 'Not Collected'}
                               </span>
                             </div>
@@ -14205,14 +14093,12 @@ export function PatientProfilePage() {
                           <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors duration-200">
                             <span className="text-sm font-medium text-blue-900">Surgical Pictures</span>
                             <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                selectedDataCollectionSheet.surgical_pictures ? 'bg-green-500' : 'bg-red-500'
-                              }`}></div>
-                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                                selectedDataCollectionSheet.surgical_pictures
+                              <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.surgical_pictures ? 'bg-green-500' : 'bg-red-500'
+                                }`}></div>
+                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.surgical_pictures
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-red-100 text-red-800'
-                              }`}>
+                                }`}>
                                 {selectedDataCollectionSheet.surgical_pictures ? 'Collected' : 'Not Collected'}
                               </span>
                             </div>
@@ -14222,14 +14108,12 @@ export function PatientProfilePage() {
                           <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors duration-200">
                             <span className="text-sm font-medium text-blue-900">Follow-Up Pictures</span>
                             <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                selectedDataCollectionSheet.follow_up_pictures ? 'bg-green-500' : 'bg-red-500'
-                              }`}></div>
-                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                                selectedDataCollectionSheet.follow_up_pictures
+                              <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.follow_up_pictures ? 'bg-green-500' : 'bg-red-500'
+                                }`}></div>
+                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.follow_up_pictures
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-red-100 text-red-800'
-                              }`}>
+                                }`}>
                                 {selectedDataCollectionSheet.follow_up_pictures ? 'Collected' : 'Not Collected'}
                               </span>
                             </div>
@@ -14239,14 +14123,12 @@ export function PatientProfilePage() {
                           <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors duration-200">
                             <span className="text-sm font-medium text-blue-900">Fractured Appliance Pictures</span>
                             <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                selectedDataCollectionSheet.fractured_appliance_pictures ? 'bg-green-500' : 'bg-red-500'
-                              }`}></div>
-                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                                selectedDataCollectionSheet.fractured_appliance_pictures
+                              <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.fractured_appliance_pictures ? 'bg-green-500' : 'bg-red-500'
+                                }`}></div>
+                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.fractured_appliance_pictures
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-red-100 text-red-800'
-                              }`}>
+                                }`}>
                                 {selectedDataCollectionSheet.fractured_appliance_pictures ? 'Collected' : 'Not Collected'}
                               </span>
                             </div>
@@ -14256,14 +14138,12 @@ export function PatientProfilePage() {
                           <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors duration-200">
                             <span className="text-sm font-medium text-purple-900">CBCT</span>
                             <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                selectedDataCollectionSheet.cbct_taken ? 'bg-green-500' : 'bg-red-500'
-                              }`}></div>
-                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
-                                selectedDataCollectionSheet.cbct_taken
+                              <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.cbct_taken ? 'bg-green-500' : 'bg-red-500'
+                                }`}></div>
+                              <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.cbct_taken
                                   ? 'bg-green-100 text-green-800'
                                   : 'bg-red-100 text-red-800'
-                              }`}>
+                                }`}>
                                 {selectedDataCollectionSheet.cbct_taken ? 'Yes' : 'No'}
                               </span>
                             </div>
@@ -14460,9 +14340,8 @@ export function PatientProfilePage() {
                     <button
                       type="button"
                       onClick={() => handleIVSedationStepNavigation(1)}
-                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
-                        ivSedationCurrentStep >= 1 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
-                      }`}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${ivSedationCurrentStep >= 1 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                        }`}
                     >
                       Basic Info
                     </button>
@@ -14474,9 +14353,8 @@ export function PatientProfilePage() {
                       </div>
                     )}
                   </div>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
-                    ivSedationCurrentStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${ivSedationCurrentStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'
+                    }`} />
                 </div>
 
                 {/* Step 2 */}
@@ -14485,9 +14363,8 @@ export function PatientProfilePage() {
                     <button
                       type="button"
                       onClick={() => handleIVSedationStepNavigation(2)}
-                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
-                        ivSedationCurrentStep >= 2 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
-                      }`}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${ivSedationCurrentStep >= 2 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                        }`}
                     >
                       Pre-Assessment
                     </button>
@@ -14499,9 +14376,8 @@ export function PatientProfilePage() {
                       </div>
                     )}
                   </div>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
-                    ivSedationCurrentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${ivSedationCurrentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'
+                    }`} />
                 </div>
 
                 {/* Step 3 */}
@@ -14510,9 +14386,8 @@ export function PatientProfilePage() {
                     <button
                       type="button"
                       onClick={() => handleIVSedationStepNavigation(3)}
-                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
-                        ivSedationCurrentStep >= 3 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
-                      }`}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${ivSedationCurrentStep >= 3 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                        }`}
                     >
                       Sedation Plan
                     </button>
@@ -14524,9 +14399,8 @@ export function PatientProfilePage() {
                       </div>
                     )}
                   </div>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
-                    ivSedationCurrentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${ivSedationCurrentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'
+                    }`} />
                 </div>
 
                 {/* Step 4 */}
@@ -14535,9 +14409,8 @@ export function PatientProfilePage() {
                     <button
                       type="button"
                       onClick={() => handleIVSedationStepNavigation(4)}
-                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
-                        ivSedationCurrentStep >= 4 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
-                      }`}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${ivSedationCurrentStep >= 4 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                        }`}
                     >
                       Flow
                     </button>
@@ -14549,9 +14422,8 @@ export function PatientProfilePage() {
                       </div>
                     )}
                   </div>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
-                    ivSedationCurrentStep >= 4 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${ivSedationCurrentStep >= 4 ? 'bg-blue-600' : 'bg-gray-300'
+                    }`} />
                 </div>
 
                 {/* Step 5 */}
@@ -14560,9 +14432,8 @@ export function PatientProfilePage() {
                     <button
                       type="button"
                       onClick={() => handleIVSedationStepNavigation(5)}
-                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${
-                        ivSedationCurrentStep >= 5 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
-                      }`}
+                      className={`text-xs font-medium transition-all duration-300 hover:scale-105 cursor-pointer ${ivSedationCurrentStep >= 5 ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400 hover:text-gray-600'
+                        }`}
                     >
                       Recovery
                     </button>
@@ -14574,9 +14445,8 @@ export function PatientProfilePage() {
                       </div>
                     )}
                   </div>
-                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${
-                    ivSedationCurrentStep >= 5 ? 'bg-blue-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-full h-1 rounded-full transition-colors duration-300 ${ivSedationCurrentStep >= 5 ? 'bg-blue-600' : 'bg-gray-300'
+                    }`} />
                 </div>
               </div>
             </div>
@@ -14654,22 +14524,20 @@ export function PatientProfilePage() {
                               <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    ivSedationFormData.upperSurgeryType === "Surgery"
+                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${ivSedationFormData.upperSurgeryType === "Surgery"
                                       ? 'bg-blue-600 text-white shadow-md'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
-                                  }`}
+                                    }`}
                                   onClick={() => updateIVSedationFormField('upperSurgeryType', 'Surgery')}
                                 >
                                   Surgery
                                 </button>
                                 <button
                                   type="button"
-                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    ivSedationFormData.upperSurgeryType === "Surgical Revision"
+                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${ivSedationFormData.upperSurgeryType === "Surgical Revision"
                                       ? 'bg-blue-600 text-white shadow-md'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
-                                  }`}
+                                    }`}
                                   onClick={() => updateIVSedationFormField('upperSurgeryType', 'Surgical Revision')}
                                 >
                                   Surgical Revision
@@ -14714,22 +14582,20 @@ export function PatientProfilePage() {
                               <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    ivSedationFormData.lowerSurgeryType === "Surgery"
+                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${ivSedationFormData.lowerSurgeryType === "Surgery"
                                       ? 'bg-blue-600 text-white shadow-md'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
-                                  }`}
+                                    }`}
                                   onClick={() => updateIVSedationFormField('lowerSurgeryType', 'Surgery')}
                                 >
                                   Surgery
                                 </button>
                                 <button
                                   type="button"
-                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    ivSedationFormData.lowerSurgeryType === "Surgical Revision"
+                                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${ivSedationFormData.lowerSurgeryType === "Surgical Revision"
                                       ? 'bg-blue-600 text-white shadow-md'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
-                                  }`}
+                                    }`}
                                   onClick={() => updateIVSedationFormField('lowerSurgeryType', 'Surgical Revision')}
                                 >
                                   Surgical Revision
@@ -14767,7 +14633,7 @@ export function PatientProfilePage() {
                                   <SelectValue placeholder="Feet" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {Array.from({length: 5}, (_, i) => i + 4).map((feet) => (
+                                  {Array.from({ length: 5 }, (_, i) => i + 4).map((feet) => (
                                     <SelectItem key={feet} value={feet.toString()}>
                                       {feet} ft
                                     </SelectItem>
@@ -14788,7 +14654,7 @@ export function PatientProfilePage() {
                                   <SelectValue placeholder="Inches" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {Array.from({length: 12}, (_, i) => i).map((inches) => (
+                                  {Array.from({ length: 12 }, (_, i) => i).map((inches) => (
                                     <SelectItem key={inches} value={inches.toString()}>
                                       {inches} in
                                     </SelectItem>
@@ -14893,16 +14759,15 @@ export function PatientProfilePage() {
                                     <div className="text-xs text-indigo-600">
                                       BMI (kg/m²)
                                     </div>
-                                    <div className={`mt-2 px-2 py-1 rounded text-xs font-medium ${
-                                      bmi < 18.5 ? 'bg-blue-100 text-blue-700' :
-                                      bmi < 25 ? 'bg-green-100 text-green-700' :
-                                      bmi < 30 ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-red-100 text-red-700'
-                                    }`}>
+                                    <div className={`mt-2 px-2 py-1 rounded text-xs font-medium ${bmi < 18.5 ? 'bg-blue-100 text-blue-700' :
+                                        bmi < 25 ? 'bg-green-100 text-green-700' :
+                                          bmi < 30 ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-red-100 text-red-700'
+                                      }`}>
                                       {bmi < 18.5 ? 'Underweight' :
-                                       bmi < 25 ? 'Normal' :
-                                       bmi < 30 ? 'Overweight' :
-                                       'Obese'}
+                                        bmi < 25 ? 'Normal' :
+                                          bmi < 30 ? 'Overweight' :
+                                            'Obese'}
                                     </div>
                                   </>
                                 );
@@ -14944,11 +14809,10 @@ export function PatientProfilePage() {
                                   const isObese = bmi >= 30;
 
                                   return (
-                                    <div className={`px-4 py-2 rounded-lg font-bold text-lg ${
-                                      isObese
+                                    <div className={`px-4 py-2 rounded-lg font-bold text-lg ${isObese
                                         ? 'bg-red-600 text-white'
                                         : 'bg-green-600 text-white'
-                                    }`}>
+                                      }`}>
                                       {isObese ? 'YES' : 'NO'}
                                     </div>
                                   );
@@ -14980,22 +14844,20 @@ export function PatientProfilePage() {
                           <div className="flex gap-3">
                             <button
                               type="button"
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                ivSedationFormData.npoStatus === 'yes'
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.npoStatus === 'yes'
                                   ? 'bg-green-600 text-white'
                                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
+                                }`}
                               onClick={() => updateIVSedationFormField('npoStatus', 'yes')}
                             >
                               YES
                             </button>
                             <button
                               type="button"
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                ivSedationFormData.npoStatus === 'no'
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.npoStatus === 'no'
                                   ? 'bg-red-600 text-white'
                                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
+                                }`}
                               onClick={() => updateIVSedationFormField('npoStatus', 'no')}
                             >
                               NO
@@ -15008,22 +14870,20 @@ export function PatientProfilePage() {
                           <div className="flex gap-3 mb-3">
                             <button
                               type="button"
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                ivSedationFormData.morningMedications && ivSedationFormData.morningMedications !== 'no'
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.morningMedications && ivSedationFormData.morningMedications !== 'no'
                                   ? 'bg-red-600 text-white'
                                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
+                                }`}
                               onClick={() => updateIVSedationFormField('morningMedications', 'yes')}
                             >
                               YES
                             </button>
                             <button
                               type="button"
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                ivSedationFormData.morningMedications === 'no'
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.morningMedications === 'no'
                                   ? 'bg-green-600 text-white'
                                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                              }`}
+                                }`}
                               onClick={() => updateIVSedationFormField('morningMedications', 'no')}
                             >
                               NO
@@ -15067,13 +14927,12 @@ export function PatientProfilePage() {
                               key={allergy}
                               type="button"
                               disabled={isDisabled}
-                              className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                                ivSedationFormData.allergies?.includes(allergy)
+                              className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.allergies?.includes(allergy)
                                   ? 'bg-red-600 text-white'
                                   : isDisabled
                                     ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                     : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
+                                }`}
                               onClick={() => {
                                 const currentAllergies = ivSedationFormData.allergies || [];
                                 let updatedAllergies;
@@ -15129,22 +14988,20 @@ export function PatientProfilePage() {
                             <div className="flex gap-3">
                               <button
                                 type="button"
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                  ivSedationFormData.pregnancyRisk === 'yes'
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.pregnancyRisk === 'yes'
                                     ? 'bg-red-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
+                                  }`}
                                 onClick={() => updateIVSedationFormField('pregnancyRisk', 'yes')}
                               >
                                 YES
                               </button>
                               <button
                                 type="button"
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                  ivSedationFormData.pregnancyRisk === 'no'
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.pregnancyRisk === 'no'
                                     ? 'bg-green-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
+                                  }`}
                                 onClick={() => updateIVSedationFormField('pregnancyRisk', 'no')}
                               >
                                 NO
@@ -15182,11 +15039,10 @@ export function PatientProfilePage() {
                             <button
                               key={option}
                               type="button"
-                              className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                                ivSedationFormData.anesthesiaHistory === option
+                              className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.anesthesiaHistory === option
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
+                                }`}
                               onClick={() => {
                                 updateIVSedationFormField('anesthesiaHistory', option);
                                 // Clear "Other" text field if a different option is selected
@@ -15232,13 +15088,12 @@ export function PatientProfilePage() {
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                                  ivSedationFormData.respiratoryProblems?.includes(problem)
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.respiratoryProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
                                       ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                                }`}
+                                  }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.respiratoryProblems || [];
                                   let updated: string[];
@@ -15298,13 +15153,12 @@ export function PatientProfilePage() {
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                                  ivSedationFormData.cardiovascularProblems?.includes(problem)
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.cardiovascularProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
                                       ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                                }`}
+                                  }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.cardiovascularProblems || [];
                                   let updated: string[];
@@ -15363,13 +15217,12 @@ export function PatientProfilePage() {
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                                  ivSedationFormData.gastrointestinalProblems?.includes(problem)
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.gastrointestinalProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
                                       ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                                }`}
+                                  }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.gastrointestinalProblems || [];
                                   let updated: string[];
@@ -15431,13 +15284,12 @@ export function PatientProfilePage() {
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                                  ivSedationFormData.neurologicProblems?.includes(problem)
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.neurologicProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
                                       ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                                }`}
+                                  }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.neurologicProblems || [];
                                   let updated: string[];
@@ -15496,13 +15348,12 @@ export function PatientProfilePage() {
                                 key={problem}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                                  ivSedationFormData.endocrineRenalProblems?.includes(problem)
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.endocrineRenalProblems?.includes(problem)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
                                       ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                                }`}
+                                  }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.endocrineRenalProblems || [];
                                   let updated: string[];
@@ -15591,13 +15442,12 @@ export function PatientProfilePage() {
                               key={condition}
                               type="button"
                               disabled={isDisabled}
-                              className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                                ivSedationFormData.miscellaneous?.includes(condition)
+                              className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.miscellaneous?.includes(condition)
                                   ? 'bg-blue-600 text-white'
                                   : isDisabled
                                     ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                     : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
+                                }`}
                               onClick={() => {
                                 const current = ivSedationFormData.miscellaneous || [];
                                 let updated: string[];
@@ -15658,13 +15508,12 @@ export function PatientProfilePage() {
                                 key={habit}
                                 type="button"
                                 disabled={isDisabled}
-                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
-                                  ivSedationFormData.socialHistory?.includes(habit)
+                                className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.socialHistory?.includes(habit)
                                     ? 'bg-blue-600 text-white'
                                     : isDisabled
                                       ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
                                       : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                                }`}
+                                  }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.socialHistory || [];
                                   let updated: string[];
@@ -15717,22 +15566,20 @@ export function PatientProfilePage() {
                             <div className="flex gap-3">
                               <button
                                 type="button"
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                  ivSedationFormData.wellDevelopedNourished === 'yes'
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.wellDevelopedNourished === 'yes'
                                     ? 'bg-green-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
+                                  }`}
                                 onClick={() => updateIVSedationFormField('wellDevelopedNourished', 'yes')}
                               >
                                 YES
                               </button>
                               <button
                                 type="button"
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                  ivSedationFormData.wellDevelopedNourished === 'no'
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.wellDevelopedNourished === 'no'
                                     ? 'bg-red-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
+                                  }`}
                                 onClick={() => updateIVSedationFormField('wellDevelopedNourished', 'no')}
                               >
                                 NO
@@ -15745,22 +15592,20 @@ export function PatientProfilePage() {
                             <div className="flex gap-3">
                               <button
                                 type="button"
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                  ivSedationFormData.patientAnxious === 'yes'
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.patientAnxious === 'yes'
                                     ? 'bg-red-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
+                                  }`}
                                 onClick={() => updateIVSedationFormField('patientAnxious', 'yes')}
                               >
                                 YES
                               </button>
                               <button
                                 type="button"
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                  ivSedationFormData.patientAnxious === 'no'
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.patientAnxious === 'no'
                                     ? 'bg-green-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                }`}
+                                  }`}
                                 onClick={() => updateIVSedationFormField('patientAnxious', 'no')}
                               >
                                 NO
@@ -15783,11 +15628,10 @@ export function PatientProfilePage() {
                               <button
                                 key={classification}
                                 type="button"
-                                className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
-                                  ivSedationFormData.asaClassification === classification
+                                className={`px-3 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.asaClassification === classification
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                                }`}
+                                  }`}
                                 onClick={() => updateIVSedationFormField('asaClassification', classification)}
                               >
                                 {classification}
@@ -15810,11 +15654,10 @@ export function PatientProfilePage() {
                             <button
                               key={evaluation}
                               type="button"
-                              className={`px-3 py-2 rounded text-xs font-medium transition-colors text-left ${
-                                ivSedationFormData.airwayEvaluation?.includes(evaluation)
+                              className={`px-3 py-2 rounded text-xs font-medium transition-colors text-left ${ivSedationFormData.airwayEvaluation?.includes(evaluation)
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
+                                }`}
                               onClick={() => {
                                 const current = ivSedationFormData.airwayEvaluation || [];
                                 const updated = current.includes(evaluation)
@@ -15860,11 +15703,10 @@ export function PatientProfilePage() {
                             <button
                               key={score}
                               type="button"
-                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
-                                ivSedationFormData.mallampatiScore === score
+                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.mallampatiScore === score
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
+                                }`}
                               onClick={() => updateIVSedationFormField('mallampatiScore', score)}
                             >
                               {score}
@@ -15886,11 +15728,10 @@ export function PatientProfilePage() {
                             <button
                               key={evaluation}
                               type="button"
-                              className={`px-3 py-2 rounded text-xs font-medium transition-colors text-left ${
-                                ivSedationFormData.heartLungEvaluation?.includes(evaluation)
+                              className={`px-3 py-2 rounded text-xs font-medium transition-colors text-left ${ivSedationFormData.heartLungEvaluation?.includes(evaluation)
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
+                                }`}
                               onClick={() => {
                                 const current = ivSedationFormData.heartLungEvaluation || [];
                                 const updated = current.includes(evaluation)
@@ -15956,11 +15797,10 @@ export function PatientProfilePage() {
                               <span className="text-sm font-medium text-blue-900">{instrument.name}</span>
                               <button
                                 type="button"
-                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                  Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key)
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key)
                                     ? 'bg-green-500 border-green-500 text-white'
                                     : 'border-gray-300 hover:border-green-400'
-                                }`}
+                                  }`}
                                 onClick={() => {
                                   const current = Array.isArray(ivSedationFormData.instrumentsChecklist) ? ivSedationFormData.instrumentsChecklist : [];
                                   const isChecked = current.includes(instrument.key);
@@ -15977,11 +15817,10 @@ export function PatientProfilePage() {
                                 )}
                               </button>
                             </div>
-                            <div className={`text-xs mt-2 transition-colors ${
-                              Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key)
+                            <div className={`text-xs mt-2 transition-colors ${Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key)
                                 ? 'text-green-600 font-medium'
                                 : 'text-gray-500'
-                            }`}>
+                              }`}>
                               {Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key) ? 'Checked' : 'Not Checked'}
                             </div>
                           </div>
@@ -16004,11 +15843,10 @@ export function PatientProfilePage() {
                             <button
                               key={type}
                               type="button"
-                              className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                                ivSedationFormData.sedationType === type
+                              className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.sedationType === type
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
+                                }`}
                               onClick={() => updateIVSedationFormField('sedationType', type)}
                             >
                               {type}
@@ -16032,11 +15870,10 @@ export function PatientProfilePage() {
                             <button
                               key={medication}
                               type="button"
-                              className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                                ivSedationFormData.medicationsPlanned?.includes(medication)
+                              className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.medicationsPlanned?.includes(medication)
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
+                                }`}
                               onClick={() => {
                                 const current = ivSedationFormData.medicationsPlanned || [];
                                 const updated = current.includes(medication)
@@ -16087,11 +15924,10 @@ export function PatientProfilePage() {
                             <button
                               key={route}
                               type="button"
-                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
-                                ivSedationFormData.administrationRoute?.includes(route)
+                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.administrationRoute?.includes(route)
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                              }`}
+                                }`}
                               onClick={() => {
                                 const current = ivSedationFormData.administrationRoute || [];
                                 const updated = current.includes(route)
@@ -16120,11 +15956,10 @@ export function PatientProfilePage() {
                               <span className="text-sm text-blue-900">{protocol}</span>
                               <button
                                 type="button"
-                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                                  Array.isArray(ivSedationFormData.emergencyProtocols) && ivSedationFormData.emergencyProtocols.includes(protocol)
+                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${Array.isArray(ivSedationFormData.emergencyProtocols) && ivSedationFormData.emergencyProtocols.includes(protocol)
                                     ? 'bg-green-500 border-green-500 text-white'
                                     : 'border-gray-300 hover:border-green-400'
-                                }`}
+                                  }`}
                                 onClick={() => {
                                   const current = Array.isArray(ivSedationFormData.emergencyProtocols) ? ivSedationFormData.emergencyProtocols : [];
                                   const isChecked = current.includes(protocol);
@@ -16640,19 +16475,17 @@ export function PatientProfilePage() {
                           <button
                             key={level.id}
                             type="button"
-                            className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
-                              ivSedationFormData.levelOfSedation === level.id
+                            className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${ivSedationFormData.levelOfSedation === level.id
                                 ? level.color + ' ring-2 ring-offset-2 ring-indigo-500'
                                 : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('levelOfSedation', level.id)}
                           >
                             <div className="flex items-center gap-2 mb-2">
-                              <div className={`w-3 h-3 rounded-full ${
-                                ivSedationFormData.levelOfSedation === level.id
+                              <div className={`w-3 h-3 rounded-full ${ivSedationFormData.levelOfSedation === level.id
                                   ? 'bg-indigo-600'
                                   : 'bg-gray-300'
-                              }`}></div>
+                                }`}></div>
                               <span className="font-semibold text-sm">{level.label}</span>
                             </div>
                             <p className="text-xs leading-relaxed">{level.description}</p>
@@ -16696,22 +16529,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.alertOriented === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.alertOriented === 'yes'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('alertOriented', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.alertOriented === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.alertOriented === 'no'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('alertOriented', 'no')}
                           >
                             NO
@@ -16725,22 +16556,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.protectiveReflexes === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.protectiveReflexes === 'yes'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('protectiveReflexes', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.protectiveReflexes === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.protectiveReflexes === 'no'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('protectiveReflexes', 'no')}
                           >
                             NO
@@ -16754,22 +16583,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.breathingSpontaneously === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.breathingSpontaneously === 'yes'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('breathingSpontaneously', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.breathingSpontaneously === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.breathingSpontaneously === 'no'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('breathingSpontaneously', 'no')}
                           >
                             NO
@@ -16783,22 +16610,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.postOpNausea === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.postOpNausea === 'yes'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('postOpNausea', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.postOpNausea === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.postOpNausea === 'no'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('postOpNausea', 'no')}
                           >
                             NO
@@ -16812,22 +16637,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.caregiverPresent === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.caregiverPresent === 'yes'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('caregiverPresent', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.caregiverPresent === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.caregiverPresent === 'no'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('caregiverPresent', 'no')}
                           >
                             NO
@@ -16841,22 +16664,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.baselineMentalStatus === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.baselineMentalStatus === 'yes'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('baselineMentalStatus', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.baselineMentalStatus === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.baselineMentalStatus === 'no'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('baselineMentalStatus', 'no')}
                           >
                             NO
@@ -16873,22 +16694,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.responsiveVerbalCommands === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.responsiveVerbalCommands === 'yes'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('responsiveVerbalCommands', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.responsiveVerbalCommands === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.responsiveVerbalCommands === 'no'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('responsiveVerbalCommands', 'no')}
                           >
                             NO
@@ -16902,22 +16721,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.saturatingRoomAir === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.saturatingRoomAir === 'yes'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('saturatingRoomAir', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.saturatingRoomAir === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.saturatingRoomAir === 'no'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('saturatingRoomAir', 'no')}
                           >
                             NO
@@ -16931,22 +16748,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.vitalSignsBaseline === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.vitalSignsBaseline === 'yes'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('vitalSignsBaseline', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.vitalSignsBaseline === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.vitalSignsBaseline === 'no'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('vitalSignsBaseline', 'no')}
                           >
                             NO
@@ -16960,22 +16775,20 @@ export function PatientProfilePage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.painDuringRecovery === 'yes'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.painDuringRecovery === 'yes'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('painDuringRecovery', 'yes')}
                           >
                             YES
                           </button>
                           <button
                             type="button"
-                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                              ivSedationFormData.painDuringRecovery === 'no'
+                            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.painDuringRecovery === 'no'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('painDuringRecovery', 'no')}
                           >
                             NO
@@ -16992,33 +16805,30 @@ export function PatientProfilePage() {
                         <div className="space-y-2">
                           <button
                             type="button"
-                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                              ivSedationFormData.postOpInstructionsGivenTo === 'Patient and Escort'
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.postOpInstructionsGivenTo === 'Patient and Escort'
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('postOpInstructionsGivenTo', 'Patient and Escort')}
                           >
                             Patient and Escort
                           </button>
                           <button
                             type="button"
-                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                              ivSedationFormData.postOpInstructionsGivenTo === 'Patient'
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.postOpInstructionsGivenTo === 'Patient'
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('postOpInstructionsGivenTo', 'Patient')}
                           >
                             Patient
                           </button>
                           <button
                             type="button"
-                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                              ivSedationFormData.postOpInstructionsGivenTo === 'Escort'
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.postOpInstructionsGivenTo === 'Escort'
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('postOpInstructionsGivenTo', 'Escort')}
                           >
                             Escort
@@ -17032,33 +16842,30 @@ export function PatientProfilePage() {
                         <div className="space-y-2">
                           <button
                             type="button"
-                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                              ivSedationFormData.followUpInstructionsGivenTo === 'Patient and Escort'
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.followUpInstructionsGivenTo === 'Patient and Escort'
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('followUpInstructionsGivenTo', 'Patient and Escort')}
                           >
                             Patient and Escort
                           </button>
                           <button
                             type="button"
-                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                              ivSedationFormData.followUpInstructionsGivenTo === 'Patient'
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.followUpInstructionsGivenTo === 'Patient'
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('followUpInstructionsGivenTo', 'Patient')}
                           >
                             Patient
                           </button>
                           <button
                             type="button"
-                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                              ivSedationFormData.followUpInstructionsGivenTo === 'Escort'
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.followUpInstructionsGivenTo === 'Escort'
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('followUpInstructionsGivenTo', 'Escort')}
                           >
                             Escort
@@ -17072,22 +16879,20 @@ export function PatientProfilePage() {
                         <div className="space-y-2">
                           <button
                             type="button"
-                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                              ivSedationFormData.dischargedTo === 'Home'
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.dischargedTo === 'Home'
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('dischargedTo', 'Home')}
                           >
                             Home
                           </button>
                           <button
                             type="button"
-                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${
-                              ivSedationFormData.dischargedTo === 'Office'
+                            className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.dischargedTo === 'Office'
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
-                            }`}
+                              }`}
                             onClick={() => updateIVSedationFormField('dischargedTo', 'Office')}
                           >
                             Office
@@ -17260,110 +17065,110 @@ export function PatientProfilePage() {
           <div className="flex-1 overflow-y-auto py-2">
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {/* Time */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">Time</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const now = new Date();
-                      const estTime = new Intl.DateTimeFormat('en-US', {
-                        timeZone: 'America/New_York',
-                        hour12: false,
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }).format(now);
-                      setNewFlowEntry({...newFlowEntry, time: estTime});
-                    }}
-                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    Current Time
-                  </button>
-                </div>
-                <input
-                  type="time"
-                  value={newFlowEntry.time}
-                  onChange={(e) => setNewFlowEntry({...newFlowEntry, time: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
-                />
-                {newFlowEntry.time && (
-                  <div className="mt-2 text-xs text-green-600 font-medium">
-                    ✓ Entry time: {newFlowEntry.time} EST
+                {/* Time */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-gray-700">Time</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date();
+                        const estTime = new Intl.DateTimeFormat('en-US', {
+                          timeZone: 'America/New_York',
+                          hour12: false,
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }).format(now);
+                        setNewFlowEntry({ ...newFlowEntry, time: estTime });
+                      }}
+                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Current Time
+                    </button>
                   </div>
-                )}
-              </div>
-
-              {/* BP */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Blood Pressure</label>
-                <div className="flex items-center gap-1">
                   <input
-                    type="number"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={newFlowEntry.systolic}
-                    onChange={(e) => setNewFlowEntry({...newFlowEntry, systolic: e.target.value})}
-                    className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm text-center"
-                    min="80"
-                    max="180"
+                    type="time"
+                    value={newFlowEntry.time}
+                    onChange={(e) => setNewFlowEntry({ ...newFlowEntry, time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm"
                   />
-                  <span className="text-blue-600 font-medium">/</span>
+                  {newFlowEntry.time && (
+                    <div className="mt-2 text-xs text-green-600 font-medium">
+                      ✓ Entry time: {newFlowEntry.time} EST
+                    </div>
+                  )}
+                </div>
+
+                {/* BP */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">Blood Pressure</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={newFlowEntry.systolic}
+                      onChange={(e) => setNewFlowEntry({ ...newFlowEntry, systolic: e.target.value })}
+                      className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm text-center"
+                      min="80"
+                      max="180"
+                    />
+                    <span className="text-blue-600 font-medium">/</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={newFlowEntry.diastolic}
+                      onChange={(e) => setNewFlowEntry({ ...newFlowEntry, diastolic: e.target.value })}
+                      className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm text-center"
+                      min="40"
+                      max="120"
+                    />
+                  </div>
+                </div>
+
+                {/* Heart Rate */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">Heart Rate (bpm)</label>
                   <input
                     type="number"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    value={newFlowEntry.diastolic}
-                    onChange={(e) => setNewFlowEntry({...newFlowEntry, diastolic: e.target.value})}
-                    className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none text-sm text-center"
-                    min="40"
-                    max="120"
+                    value={newFlowEntry.heartRate}
+                    onChange={(e) => setNewFlowEntry({ ...newFlowEntry, heartRate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
                   />
                 </div>
-              </div>
 
-              {/* Heart Rate */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Heart Rate (bpm)</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={newFlowEntry.heartRate}
-                  onChange={(e) => setNewFlowEntry({...newFlowEntry, heartRate: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
-                />
-              </div>
+                {/* RR */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">Respiratory Rate (/min)</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={newFlowEntry.rr}
+                    onChange={(e) => setNewFlowEntry({ ...newFlowEntry, rr: e.target.value })}
+                    placeholder="16"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
 
-              {/* RR */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Respiratory Rate (/min)</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={newFlowEntry.rr}
-                  onChange={(e) => setNewFlowEntry({...newFlowEntry, rr: e.target.value})}
-                  placeholder="16"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              {/* SpO2 */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">SpO2 (%)</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={newFlowEntry.spo2}
-                  onChange={(e) => setNewFlowEntry({...newFlowEntry, spo2: e.target.value})}
-                  placeholder="98"
-                  min="0"
-                  max="100"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
-                />
-              </div>
+                {/* SpO2 */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">SpO2 (%)</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={newFlowEntry.spo2}
+                    onChange={(e) => setNewFlowEntry({ ...newFlowEntry, spo2: e.target.value })}
+                    placeholder="98"
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
 
               </div>
 
@@ -17489,7 +17294,7 @@ export function PatientProfilePage() {
                           <input
                             type="text"
                             value={newMedication.dosage}
-                            onChange={(e) => setNewMedication({...newMedication, dosage: e.target.value})}
+                            onChange={(e) => setNewMedication({ ...newMedication, dosage: e.target.value })}
                             placeholder="Enter dosage"
                             className="w-full h-7 px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:outline-none pr-6"
                             disabled={!newMedication.name}
@@ -17559,14 +17364,14 @@ export function PatientProfilePage() {
                       <label className="text-xs text-gray-600 block mb-1">Unit</label>
                       <Select
                         value={newMedication.unit}
-                        onValueChange={(value) => setNewMedication({...newMedication, unit: value})}
+                        onValueChange={(value) => setNewMedication({ ...newMedication, unit: value })}
                         disabled={!newMedication.name || !newMedication.dosage}
                       >
                         <SelectTrigger className="w-full h-7 text-xs">
                           <SelectValue placeholder={
                             !newMedication.name ? "Select medication first" :
-                            !newMedication.dosage ? "Select dosage first" :
-                            "Select unit"
+                              !newMedication.dosage ? "Select dosage first" :
+                                "Select unit"
                           } />
                         </SelectTrigger>
                         <SelectContent>
@@ -17653,9 +17458,9 @@ export function PatientProfilePage() {
                           !newMedication.dosage ||
                           !newMedication.unit ||
                           (!newMedication.isCustomMedication && !newMedication.isCustomDosage &&
-                           !medicationOptionsNew[newMedication.name]?.some(
-                             option => option.dosage === newMedication.dosage && option.unit === newMedication.unit
-                           ))
+                            !medicationOptionsNew[newMedication.name]?.some(
+                              option => option.dosage === newMedication.dosage && option.unit === newMedication.unit
+                            ))
                         }
                         className="w-full px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                       >
@@ -17706,14 +17511,14 @@ export function PatientProfilePage() {
                     const updatedEntries = ivSedationFormData.flowEntries?.map(entry =>
                       entry.id === editingEntryId
                         ? {
-                            ...entry,
-                            time: newFlowEntry.time,
-                            bp: bpValue,
-                            heartRate: newFlowEntry.heartRate,
-                            rr: newFlowEntry.rr,
-                            spo2: newFlowEntry.spo2,
-                            medications: newFlowEntry.medications
-                          }
+                          ...entry,
+                          time: newFlowEntry.time,
+                          bp: bpValue,
+                          heartRate: newFlowEntry.heartRate,
+                          rr: newFlowEntry.rr,
+                          spo2: newFlowEntry.spo2,
+                          medications: newFlowEntry.medications
+                        }
                         : entry
                     ) || [];
 
@@ -17765,16 +17570,14 @@ export function PatientProfilePage() {
       {/* Toast Notification */}
       {showToast && formMessage.type && (
         <div className="fixed bottom-6 right-6 z-[9999] w-96 animate-in slide-in-from-right-full duration-300">
-          <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${
-            formMessage.type === 'error'
+          <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${formMessage.type === 'error'
               ? 'bg-red-50/80 border-red-200/60 text-red-800'
               : 'bg-green-50/80 border-green-200/60 text-green-800'
             }`}>
-            <div className={`p-2 rounded-lg flex-shrink-0 ${
-              formMessage.type === 'error'
+            <div className={`p-2 rounded-lg flex-shrink-0 ${formMessage.type === 'error'
                 ? 'bg-red-100/80 text-red-600'
                 : 'bg-green-100/80 text-green-600'
-            }`}>
+              }`}>
               {formMessage.type === 'error' ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -17790,11 +17593,10 @@ export function PatientProfilePage() {
             </div>
             <button
               onClick={() => setShowToast(false)}
-              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${
-                formMessage.type === 'error'
+              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${formMessage.type === 'error'
                   ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
                   : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
-              }`}
+                }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -17807,20 +17609,18 @@ export function PatientProfilePage() {
       {/* IV Sedation Toast Notification */}
       {showIVSedationToast && ivSedationFormMessage.type && (
         <div className="fixed bottom-6 right-6 z-[9999] w-96 animate-in slide-in-from-right-full duration-300">
-          <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${
-            ivSedationFormMessage.type === 'error'
+          <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${ivSedationFormMessage.type === 'error'
               ? 'bg-red-50/80 border-red-200/60 text-red-800'
               : ivSedationFormMessage.type === 'info'
-              ? 'bg-blue-50/80 border-blue-200/60 text-blue-800'
-              : 'bg-green-50/80 border-green-200/60 text-green-800'
+                ? 'bg-blue-50/80 border-blue-200/60 text-blue-800'
+                : 'bg-green-50/80 border-green-200/60 text-green-800'
             }`}>
-            <div className={`p-2 rounded-lg flex-shrink-0 ${
-              ivSedationFormMessage.type === 'error'
+            <div className={`p-2 rounded-lg flex-shrink-0 ${ivSedationFormMessage.type === 'error'
                 ? 'bg-red-100/80 text-red-600'
                 : ivSedationFormMessage.type === 'info'
-                ? 'bg-blue-100/80 text-blue-600'
-                : 'bg-green-100/80 text-green-600'
-            }`}>
+                  ? 'bg-blue-100/80 text-blue-600'
+                  : 'bg-green-100/80 text-green-600'
+              }`}>
               {ivSedationFormMessage.type === 'error' ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -17840,13 +17640,12 @@ export function PatientProfilePage() {
             </div>
             <button
               onClick={() => setShowIVSedationToast(false)}
-              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${
-                ivSedationFormMessage.type === 'error'
+              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${ivSedationFormMessage.type === 'error'
                   ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
                   : ivSedationFormMessage.type === 'info'
-                  ? 'text-blue-400 hover:bg-blue-100/60 hover:text-blue-600'
-                  : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
-              }`}
+                    ? 'text-blue-400 hover:bg-blue-100/60 hover:text-blue-600'
+                    : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
+                }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -18643,16 +18442,14 @@ export function PatientProfilePage() {
                         <div key={criterion.key} className="bg-white rounded-lg p-4 border border-red-200 shadow-sm">
                           <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-2">{criterion.label}</div>
                           <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${
-                              isPositive ? 'bg-green-500' :
-                              isNegative ? 'bg-red-500' :
-                              'bg-gray-300'
-                            }`}></div>
-                            <span className={`text-sm font-semibold ${
-                              isPositive ? 'text-green-600' :
-                              isNegative ? 'text-red-600' :
-                              'text-gray-500'
-                            }`}>
+                            <div className={`w-3 h-3 rounded-full ${isPositive ? 'bg-green-500' :
+                                isNegative ? 'bg-red-500' :
+                                  'bg-gray-300'
+                              }`}></div>
+                            <span className={`text-sm font-semibold ${isPositive ? 'text-green-600' :
+                                isNegative ? 'text-red-600' :
+                                  'text-gray-500'
+                              }`}>
                               {value?.toUpperCase() || 'N/A'}
                             </span>
                           </div>
@@ -18691,9 +18488,8 @@ export function PatientProfilePage() {
                               {[...Array(10)].map((_, i) => (
                                 <div
                                   key={i}
-                                  className={`w-2 h-2 rounded-full ${
-                                    i < parseInt(ivSedationFormData.painLevelDischarge) ? 'bg-red-500' : 'bg-gray-200'
-                                  }`}
+                                  className={`w-2 h-2 rounded-full ${i < parseInt(ivSedationFormData.painLevelDischarge) ? 'bg-red-500' : 'bg-gray-200'
+                                    }`}
                                 />
                               ))}
                             </div>
@@ -19513,52 +19309,50 @@ export function PatientProfilePage() {
                   </div>
 
                   {/* Recovery Criteria */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-                    Recovery Criteria
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {[
-                      { key: 'alert_oriented', label: 'Alert and Oriented' },
-                      { key: 'protective_reflexes', label: 'Protective Reflexes Intact' },
-                      { key: 'breathing_spontaneously', label: 'Breathing Spontaneously' },
-                      { key: 'post_op_nausea', label: 'Post-Op Nausea/Vomiting', reverse: true },
-                      { key: 'caregiver_present', label: 'Patient Caregiver Present' },
-                      { key: 'baseline_mental_status', label: 'Return to Baseline Mental Status' },
-                      { key: 'responsive_verbal_commands', label: 'Responsive to Verbal Commands' },
-                      { key: 'saturating_room_air', label: 'Saturating Appropriately on Room Air' },
-                      { key: 'vital_signs_baseline', label: 'Vital Signs Returned to Baseline' },
-                      { key: 'pain_during_recovery', label: 'Pain During Recovery', reverse: true }
-                    ].map((criterion) => {
-                      const value = selectedIVSedationSheet[criterion.key];
-                      const isPositive = criterion.reverse ? value === 'no' : value === 'yes';
-                      const isNegative = criterion.reverse ? value === 'yes' : value === 'no';
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                      Recovery Criteria
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {[
+                        { key: 'alert_oriented', label: 'Alert and Oriented' },
+                        { key: 'protective_reflexes', label: 'Protective Reflexes Intact' },
+                        { key: 'breathing_spontaneously', label: 'Breathing Spontaneously' },
+                        { key: 'post_op_nausea', label: 'Post-Op Nausea/Vomiting', reverse: true },
+                        { key: 'caregiver_present', label: 'Patient Caregiver Present' },
+                        { key: 'baseline_mental_status', label: 'Return to Baseline Mental Status' },
+                        { key: 'responsive_verbal_commands', label: 'Responsive to Verbal Commands' },
+                        { key: 'saturating_room_air', label: 'Saturating Appropriately on Room Air' },
+                        { key: 'vital_signs_baseline', label: 'Vital Signs Returned to Baseline' },
+                        { key: 'pain_during_recovery', label: 'Pain During Recovery', reverse: true }
+                      ].map((criterion) => {
+                        const value = selectedIVSedationSheet[criterion.key];
+                        const isPositive = criterion.reverse ? value === 'no' : value === 'yes';
+                        const isNegative = criterion.reverse ? value === 'yes' : value === 'no';
 
-                      return (
-                        <div key={criterion.key} className="bg-white rounded-lg p-4 border border-red-200 shadow-sm">
-                          <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-2">{criterion.label}</div>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${
-                              isPositive ? 'bg-green-500' :
-                              isNegative ? 'bg-red-500' :
-                              'bg-gray-300'
-                            }`}></div>
-                            <span className={`text-sm font-semibold ${
-                              isPositive ? 'text-green-600' :
-                              isNegative ? 'text-red-600' :
-                              'text-gray-500'
-                            }`}>
-                              {value?.toUpperCase() || 'N/A'}
-                            </span>
+                        return (
+                          <div key={criterion.key} className="bg-white rounded-lg p-4 border border-red-200 shadow-sm">
+                            <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-2">{criterion.label}</div>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${isPositive ? 'bg-green-500' :
+                                  isNegative ? 'bg-red-500' :
+                                    'bg-gray-300'
+                                }`}></div>
+                              <span className={`text-sm font-semibold ${isPositive ? 'text-green-600' :
+                                  isNegative ? 'text-red-600' :
+                                    'text-gray-500'
+                                }`}>
+                                {value?.toUpperCase() || 'N/A'}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
 
-                {/* Discharge Information */}
+                  {/* Discharge Information */}
                   <div className="mb-6">
                     <h4 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -19587,9 +19381,8 @@ export function PatientProfilePage() {
                                 {[...Array(10)].map((_, i) => (
                                   <div
                                     key={i}
-                                    className={`w-2 h-2 rounded-full ${
-                                      i < parseInt(selectedIVSedationSheet.pain_level_discharge) ? 'bg-red-500' : 'bg-gray-200'
-                                    }`}
+                                    className={`w-2 h-2 rounded-full ${i < parseInt(selectedIVSedationSheet.pain_level_discharge) ? 'bg-red-500' : 'bg-gray-200'
+                                      }`}
                                   />
                                 ))}
                               </div>
@@ -20883,24 +20676,22 @@ export function PatientProfilePage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* Current Status Display */}
-            <div className={`rounded-lg p-3 border ${
-              patient?.status === 'ACTIVE'
+            <div className={`rounded-lg p-3 border ${patient?.status === 'ACTIVE'
                 ? 'bg-green-50 border-green-200'
                 : patient?.status === 'INACTIVE'
-                ? 'bg-red-50 border-red-200'
-                : 'bg-blue-50 border-blue-200'
-            }`}>
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-blue-50 border-blue-200'
+              }`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">Current Status:</span>
                 <Badge
                   variant="outline"
-                  className={`bg-white font-semibold ${
-                    patient?.status === 'ACTIVE'
+                  className={`bg-white font-semibold ${patient?.status === 'ACTIVE'
                       ? 'border-green-300 text-green-700'
                       : patient?.status === 'INACTIVE'
-                      ? 'border-red-300 text-red-700'
-                      : 'border-blue-300 text-blue-700'
-                  }`}
+                        ? 'border-red-300 text-red-700'
+                        : 'border-blue-300 text-blue-700'
+                    }`}
                 >
                   {patient?.status || 'Not Set'}
                 </Badge>
@@ -20948,36 +20739,34 @@ export function PatientProfilePage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* Current Treatment Status Display */}
-            <div className={`rounded-lg p-3 border ${
-              patient?.treatment_status === 'Treatment Not Started'
+            <div className={`rounded-lg p-3 border ${patient?.treatment_status === 'Treatment Not Started'
                 ? 'bg-gray-50 border-gray-200'
                 : patient?.treatment_status === 'Treatment In Progress'
-                ? 'bg-blue-50 border-blue-200'
-                : patient?.treatment_status === 'Treatment Completed'
-                ? 'bg-green-50 border-green-200'
-                : patient?.treatment_status === 'Patient Deceased'
-                ? 'bg-gray-900 border-gray-800'
-                : patient?.treatment_status === 'Dismissed DNC'
-                ? 'bg-red-50 border-red-200'
-                : 'bg-gray-50 border-gray-200'
-            }`}>
+                  ? 'bg-blue-50 border-blue-200'
+                  : patient?.treatment_status === 'Treatment Completed'
+                    ? 'bg-green-50 border-green-200'
+                    : patient?.treatment_status === 'Patient Deceased'
+                      ? 'bg-gray-900 border-gray-800'
+                      : patient?.treatment_status === 'Dismissed DNC'
+                        ? 'bg-red-50 border-red-200'
+                        : 'bg-gray-50 border-gray-200'
+              }`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">Current Treatment Status:</span>
                 <Badge
                   variant="outline"
-                  className={`bg-white font-semibold ${
-                    patient?.treatment_status === 'Treatment Not Started'
+                  className={`bg-white font-semibold ${patient?.treatment_status === 'Treatment Not Started'
                       ? 'border-gray-300 text-gray-700'
                       : patient?.treatment_status === 'Treatment In Progress'
-                      ? 'border-blue-300 text-blue-700'
-                      : patient?.treatment_status === 'Treatment Completed'
-                      ? 'border-green-300 text-green-700'
-                      : patient?.treatment_status === 'Patient Deceased'
-                      ? 'border-gray-800 text-gray-900'
-                      : patient?.treatment_status === 'Dismissed DNC'
-                      ? 'border-red-300 text-red-700'
-                      : 'border-gray-300 text-gray-700'
-                  }`}
+                        ? 'border-blue-300 text-blue-700'
+                        : patient?.treatment_status === 'Treatment Completed'
+                          ? 'border-green-300 text-green-700'
+                          : patient?.treatment_status === 'Patient Deceased'
+                            ? 'border-gray-800 text-gray-900'
+                            : patient?.treatment_status === 'Dismissed DNC'
+                              ? 'border-red-300 text-red-700'
+                              : 'border-gray-300 text-gray-700'
+                    }`}
                 >
                   {patient?.treatment_status || 'Not Set'}
                 </Badge>
@@ -21098,7 +20887,7 @@ export function PatientProfilePage() {
       </AlertDialog>
 
       {/* Deletion Progress Dialog */}
-      <Dialog open={deletingPatient} onOpenChange={() => {}}>
+      <Dialog open={deletingPatient} onOpenChange={() => { }}>
         <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -21110,17 +20899,16 @@ export function PatientProfilePage() {
             {deletionProgress.map((message, index) => (
               <div
                 key={index}
-                className={`text-sm p-2 rounded ${
-                  message.startsWith('✓')
+                className={`text-sm p-2 rounded ${message.startsWith('✓')
                     ? 'bg-green-50 text-green-700'
                     : message.startsWith('⚠️')
-                    ? 'bg-yellow-50 text-yellow-700'
-                    : message.startsWith('❌')
-                    ? 'bg-red-50 text-red-700'
-                    : message.startsWith('✅')
-                    ? 'bg-green-100 text-green-800 font-semibold'
-                    : 'bg-gray-50 text-gray-700'
-                }`}
+                      ? 'bg-yellow-50 text-yellow-700'
+                      : message.startsWith('❌')
+                        ? 'bg-red-50 text-red-700'
+                        : message.startsWith('✅')
+                          ? 'bg-green-100 text-green-800 font-semibold'
+                          : 'bg-gray-50 text-gray-700'
+                  }`}
               >
                 {message}
               </div>

@@ -499,116 +499,116 @@ export function DashboardPage() {
               </div>
 
               <div className="grid grid-cols-5 gap-2">
-              {/* Pending Lab Scripts */}
-              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/70 :border-blue-600/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-xl border border-blue-300/50 ">
-                      <FileText className="h-5 w-5 text-blue-600 " />
+                {/* Pending Lab Scripts */}
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-300/70 :border-blue-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-gradient-to-br from-blue-500/10 to-indigo-500/10   rounded-xl border border-blue-300/50 ">
+                        <FileText className="h-5 w-5 text-blue-600 " />
+                      </div>
+                      <div className="flex items-center space-x-1 px-2 py-1 bg-blue-50  rounded-full border border-blue-200/30 ">
+                        <Clock className="h-3 w-3 text-blue-600 " />
+                        <span className="text-xs font-semibold text-blue-600 ">Pending</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-blue-50  rounded-full border border-blue-200/30 ">
-                      <Clock className="h-3 w-3 text-blue-600 " />
-                      <span className="text-xs font-semibold text-blue-600 ">Pending</span>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-600  mb-1">Pending Scripts</h3>
+                      <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
+                        {labScriptsPending}
+                      </p>
                     </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-slate-600  mb-1">Pending Scripts</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
-                      {labScriptsPending}
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* In Progress Lab Scripts */}
-              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-blue-300/70 :border-emerald-600/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/10   rounded-xl border border-blue-300/50 ">
-                      <PlayCircle className="h-5 w-5 text-emerald-600 " />
+                {/* In Progress Lab Scripts */}
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-blue-300/70 :border-emerald-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/10   rounded-xl border border-blue-300/50 ">
+                        <PlayCircle className="h-5 w-5 text-emerald-600 " />
+                      </div>
+                      <div className="flex items-center space-x-1 px-2 py-1 bg-emerald-50  rounded-full border border-blue-200/30 ">
+                        <Activity className="h-3 w-3 text-emerald-600 " />
+                        <span className="text-xs font-semibold text-emerald-600 ">Active</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-emerald-50  rounded-full border border-blue-200/30 ">
-                      <Activity className="h-3 w-3 text-emerald-600 " />
-                      <span className="text-xs font-semibold text-emerald-600 ">Active</span>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-600  mb-1">In Progress</h3>
+                      <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
+                        {labScriptsInProgress}
+                      </p>
                     </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-slate-600  mb-1">In Progress</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
-                      {labScriptsInProgress}
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* On Hold Lab Scripts */}
-              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 hover:border-blue-300/70 :border-amber-600/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-amber-500/10 to-orange-500/10   rounded-xl border border-blue-300/50 ">
-                      <PauseCircle className="h-5 w-5 text-amber-600 " />
+                {/* On Hold Lab Scripts */}
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/10 hover:border-blue-300/70 :border-amber-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-gradient-to-br from-amber-500/10 to-orange-500/10   rounded-xl border border-blue-300/50 ">
+                        <PauseCircle className="h-5 w-5 text-amber-600 " />
+                      </div>
+                      <div className="flex items-center space-x-1 px-2 py-1 bg-amber-50  rounded-full border border-blue-200/30 ">
+                        <PauseCircle className="h-3 w-3 text-amber-600 " />
+                        <span className="text-xs font-semibold text-amber-600 ">Hold</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-amber-50  rounded-full border border-blue-200/30 ">
-                      <PauseCircle className="h-3 w-3 text-amber-600 " />
-                      <span className="text-xs font-semibold text-amber-600 ">Hold</span>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-600  mb-1">On Hold</h3>
+                      <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
+                        {labScriptsOnHold}
+                      </p>
                     </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-slate-600  mb-1">On Hold</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
-                      {labScriptsOnHold}
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Delayed Lab Scripts */}
-              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-red-500/10 hover:border-blue-300/70 :border-red-600/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-red-500/10 to-pink-500/10   rounded-xl border border-blue-300/50 ">
-                      <HourglassIcon className="h-5 w-5 text-red-600 " />
+                {/* Delayed Lab Scripts */}
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-red-500/10 hover:border-blue-300/70 :border-red-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-pink-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-gradient-to-br from-red-500/10 to-pink-500/10   rounded-xl border border-blue-300/50 ">
+                        <HourglassIcon className="h-5 w-5 text-red-600 " />
+                      </div>
+                      <div className="flex items-center space-x-1 px-2 py-1 bg-red-50  rounded-full border border-blue-200/30 ">
+                        <AlertTriangle className="h-3 w-3 text-red-600 " />
+                        <span className="text-xs font-semibold text-red-600 ">Delayed</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-red-50  rounded-full border border-blue-200/30 ">
-                      <AlertTriangle className="h-3 w-3 text-red-600 " />
-                      <span className="text-xs font-semibold text-red-600 ">Delayed</span>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-600  mb-1">Delayed</h3>
+                      <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
+                        {labScriptsDelayed}
+                      </p>
                     </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-slate-600  mb-1">Delayed</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
-                      {labScriptsDelayed}
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Completed Lab Scripts */}
-              <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-green-500/10 hover:border-blue-300/70 :border-green-600/70">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="p-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10   rounded-xl border border-blue-300/50 ">
-                      <CheckCircle className="h-5 w-5 text-green-600 " />
+                {/* Completed Lab Scripts */}
+                <div className="group relative bg-white/80  backdrop-blur-sm rounded-2xl border border-blue-200/50  p-4 hover:bg-white/90 :bg-gray-800/90 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-green-500/10 hover:border-blue-300/70 :border-green-600/70">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5   rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2 bg-gradient-to-br from-green-500/10 to-emerald-500/10   rounded-xl border border-blue-300/50 ">
+                        <CheckCircle className="h-5 w-5 text-green-600 " />
+                      </div>
+                      <div className="flex items-center space-x-1 px-2 py-1 bg-green-50  rounded-full border border-blue-200/30 ">
+                        <CheckCircle className="h-3 w-3 text-green-600 " />
+                        <span className="text-xs font-semibold text-green-600 ">Done</span>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1 px-2 py-1 bg-green-50  rounded-full border border-blue-200/30 ">
-                      <CheckCircle className="h-3 w-3 text-green-600 " />
-                      <span className="text-xs font-semibold text-green-600 ">Done</span>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-600  mb-1">Completed</h3>
+                      <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
+                        {labScriptsCompleted}
+                      </p>
                     </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-slate-600  mb-1">Completed</h3>
-                    <p className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700   bg-clip-text text-transparent">
-                      {labScriptsCompleted}
-                    </p>
                   </div>
                 </div>
               </div>
-            </div>
             </div>
 
             {/* Manufacturing Overview Section */}

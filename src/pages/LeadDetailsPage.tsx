@@ -738,22 +738,19 @@ const LeadDetailsPage: React.FC = () => {
 
                   {/* Urgency Level - High Priority Display */}
                   {lead.urgency && (
-                    <div className={`p-3 rounded-lg border ${
-                      lead.urgency === 'high' ? 'bg-red-50 border-red-200' :
-                      lead.urgency === 'medium' ? 'bg-yellow-50 border-yellow-200' :
-                      'bg-green-50 border-green-200'
-                    }`}>
+                    <div className={`p-3 rounded-lg border ${lead.urgency === 'high' ? 'bg-red-50 border-red-200' :
+                        lead.urgency === 'medium' ? 'bg-yellow-50 border-yellow-200' :
+                          'bg-green-50 border-green-200'
+                      }`}>
                       <div className="flex items-center gap-2">
-                        <AlertCircle className={`h-4 w-4 ${
-                          lead.urgency === 'high' ? 'text-red-600' :
-                          lead.urgency === 'medium' ? 'text-yellow-600' :
-                          'text-green-600'
-                        }`} />
-                        <Badge className={`${
-                          lead.urgency === 'high' ? 'bg-red-100 text-red-800' :
-                          lead.urgency === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        } text-sm font-medium`}>
+                        <AlertCircle className={`h-4 w-4 ${lead.urgency === 'high' ? 'text-red-600' :
+                            lead.urgency === 'medium' ? 'text-yellow-600' :
+                              'text-green-600'
+                          }`} />
+                        <Badge className={`${lead.urgency === 'high' ? 'bg-red-100 text-red-800' :
+                            lead.urgency === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                          } text-sm font-medium`}>
                           {lead.urgency.toUpperCase()} URGENCY
                         </Badge>
                       </div>
@@ -844,12 +841,10 @@ const LeadDetailsPage: React.FC = () => {
 
                       {lead.has_medical_insurance && (
                         <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            lead.has_medical_insurance === 'yes' ? 'bg-green-100' : 'bg-red-100'
-                          }`}>
-                            <Shield className={`h-3 w-3 ${
-                              lead.has_medical_insurance === 'yes' ? 'text-green-600' : 'text-red-600'
-                            }`} />
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${lead.has_medical_insurance === 'yes' ? 'bg-green-100' : 'bg-red-100'
+                            }`}>
+                            <Shield className={`h-3 w-3 ${lead.has_medical_insurance === 'yes' ? 'text-green-600' : 'text-red-600'
+                              }`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900">
@@ -864,16 +859,16 @@ const LeadDetailsPage: React.FC = () => {
 
                   {/* Empty State */}
                   {!lead.reason_for_visit && !lead.urgency && (!lead.dental_problems || lead.dental_problems.length === 0) &&
-                   (!lead.immediate_needs || lead.immediate_needs.length === 0) && !lead.implant_type &&
-                   (!lead.medical_conditions || lead.medical_conditions.length === 0) && !lead.has_medical_insurance && (
-                    <div className="flex items-center justify-center h-full min-h-[200px]">
-                      <div className="text-center">
-                        <Heart className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-sm text-gray-500 font-medium">No medical information</p>
-                        <p className="text-xs text-gray-400">Medical details will appear here</p>
+                    (!lead.immediate_needs || lead.immediate_needs.length === 0) && !lead.implant_type &&
+                    (!lead.medical_conditions || lead.medical_conditions.length === 0) && !lead.has_medical_insurance && (
+                      <div className="flex items-center justify-center h-full min-h-[200px]">
+                        <div className="text-center">
+                          <Heart className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm text-gray-500 font-medium">No medical information</p>
+                          <p className="text-xs text-gray-400">Medical details will appear here</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Patient Packet Section */}
                   <Separator className="my-4" />
