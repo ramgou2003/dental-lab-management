@@ -447,7 +447,7 @@ export function AppointmentDetailsDialog({
               </Button>
             )}
 
-            {canUpdateAppointments && (
+            {canUpdateAppointments && appointment.statusCode !== 'CMPLT' && (
               <Button
                 onClick={handleEdit}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"

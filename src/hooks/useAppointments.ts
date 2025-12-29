@@ -14,7 +14,7 @@ export interface Appointment {
   type: string;
   subtype?: string; // Appointment subtype (e.g., '7-day-followup', '82-day-appliance-delivery')
   status: string; // Full status name (e.g., "Ready for Operatory")
-  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk' | 'NSHOW' | 'RESCH' | 'CANCL'; // Status code
+  statusCode: '?????' | 'FIRM' | 'EFIRM' | 'EMER' | 'HERE' | 'READY' | 'LM1' | 'LM2' | 'MULTI' | '2wk' | 'NSHOW' | 'RESCH' | 'CANCL' | 'CMPLT'; // Status code
   date: string; // YYYY-MM-DD format
   notes?: string;
   encounterCompleted?: boolean; // Whether encounter form has been completed
@@ -27,6 +27,7 @@ export interface Appointment {
   nextAppointmentTime?: string;
   nextAppointmentType?: string;
   nextAppointmentSubtype?: string;
+  isEmergency?: boolean;
 }
 
 // Helper function to map status code to full status name
@@ -114,7 +115,8 @@ export function useAppointments() {
         nextAppointmentDate: appointment.next_appointment_date || undefined,
         nextAppointmentTime: appointment.next_appointment_time || undefined,
         nextAppointmentType: appointment.next_appointment_type || undefined,
-        nextAppointmentSubtype: appointment.next_appointment_subtype || undefined
+        nextAppointmentSubtype: appointment.next_appointment_subtype || undefined,
+        isEmergency: appointment.is_emergency || false
       }));
 
       console.log(`📅 Fetched ${transformedAppointments.length} appointments from database`);
@@ -192,7 +194,8 @@ export function useAppointments() {
                 encounterCompletedAt: payload.new.encounter_completed_at || undefined,
                 encounterCompletedBy: payload.new.encounter_completed_by || undefined,
                 createdAt: payload.new.created_at,
-                updatedAt: payload.new.updated_at
+                updatedAt: payload.new.updated_at,
+                isEmergency: payload.new.is_emergency || false
               };
 
               // Add new appointment to existing list
@@ -250,7 +253,8 @@ export function useAppointments() {
                 encounterCompletedAt: payload.new.encounter_completed_at || undefined,
                 encounterCompletedBy: payload.new.encounter_completed_by || undefined,
                 createdAt: payload.new.created_at,
-                updatedAt: payload.new.updated_at
+                updatedAt: payload.new.updated_at,
+                isEmergency: payload.new.is_emergency || false
               };
 
               // Update specific appointment in the list
@@ -308,6 +312,7 @@ export function useAppointments() {
       statusCode: appointmentData.statusCode,
       date: appointmentData.date,
       notes: appointmentData.notes || undefined,
+      isEmergency: appointmentData.isEmergency || false,
       createdAt: now,
       updatedAt: now
     };
@@ -341,10 +346,13 @@ export function useAppointments() {
           status: appointmentData.status,
           status_code: appointmentData.statusCode,
           date: appointmentData.date,
-          notes: appointmentData.notes || null
+          notes: appointmentData.notes || null,
+          is_emergency: appointmentData.isEmergency || false
         }])
         .select()
         .single();
+
+      const responseData = data as any; // Cast to any to handle Supabase type mismatches
 
       if (error) {
         throw error;
@@ -352,12 +360,12 @@ export function useAppointments() {
 
       // Fetch assigned user name if assigned_user_id exists
       let assignedUserName: string | undefined = undefined;
-      if (data.assigned_user_id) {
+      if (responseData.assigned_user_id) {
         try {
           const { data: userData } = await supabase
             .from('user_profiles')
             .select('full_name')
-            .eq('id', data.assigned_user_id)
+            .eq('id', responseData.assigned_user_id)
             .single();
           assignedUserName = userData?.full_name || undefined;
         } catch (err) {
@@ -367,22 +375,23 @@ export function useAppointments() {
 
       // Transform the returned data to match our interface
       const newAppointment: Appointment = {
-        id: data.id,
-        title: data.title,
-        patient: data.patient_name,
-        patientId: data.patient_id || undefined,
-        assignedUserId: data.assigned_user_id || undefined,
+        id: responseData.id,
+        title: responseData.title,
+        patient: responseData.patient_name,
+        patientId: responseData.patient_id || undefined,
+        assignedUserId: responseData.assigned_user_id || undefined,
         assignedUserName: assignedUserName,
-        startTime: data.start_time,
-        endTime: data.end_time,
-        type: data.appointment_type,
-        subtype: data.subtype || undefined,
-        status: data.status || 'Not Confirmed',
-        statusCode: data.status_code as Appointment['statusCode'],
-        date: data.date,
-        notes: data.notes || undefined,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at
+        startTime: responseData.start_time,
+        endTime: responseData.end_time,
+        type: responseData.appointment_type,
+        subtype: responseData.subtype || undefined,
+        status: responseData.status || 'Not Confirmed',
+        statusCode: responseData.status_code as Appointment['statusCode'],
+        date: responseData.date,
+        notes: responseData.notes || undefined,
+        createdAt: responseData.created_at,
+        updatedAt: responseData.updated_at,
+        isEmergency: responseData.is_emergency || false
       };
 
       // Replace the optimistic appointment with the real one
@@ -443,6 +452,7 @@ export function useAppointments() {
       }
       if (updates.date) updateData.date = updates.date;
       if (updates.notes !== undefined) updateData.notes = updates.notes || null;
+      if (updates.isEmergency !== undefined) updateData.is_emergency = updates.isEmergency;
 
       console.log('📤 Sending update to database:', updateData);
 
@@ -457,14 +467,17 @@ export function useAppointments() {
         throw error;
       }
 
+
+      const responseData = data as any;
+
       // Fetch assigned user name if assigned_user_id exists
       let assignedUserName: string | undefined = undefined;
-      if (data.assigned_user_id) {
+      if (responseData.assigned_user_id) {
         try {
           const { data: userData } = await supabase
             .from('user_profiles')
             .select('full_name')
-            .eq('id', data.assigned_user_id)
+            .eq('id', responseData.assigned_user_id)
             .single();
           assignedUserName = userData?.full_name || undefined;
         } catch (err) {
@@ -474,22 +487,23 @@ export function useAppointments() {
 
       // Transform the returned data to match our interface
       const updatedAppointment: Appointment = {
-        id: data.id,
-        title: data.title,
-        patient: data.patient_name,
-        patientId: data.patient_id || undefined,
-        assignedUserId: data.assigned_user_id || undefined,
+        id: responseData.id,
+        title: responseData.title,
+        patient: responseData.patient_name,
+        patientId: responseData.patient_id || undefined,
+        assignedUserId: responseData.assigned_user_id || undefined,
         assignedUserName: assignedUserName,
-        startTime: data.start_time,
-        endTime: data.end_time,
-        type: data.appointment_type,
-        subtype: data.subtype || undefined,
-        status: data.status || 'Not Confirmed',
-        statusCode: data.status_code as Appointment['statusCode'],
-        date: data.date,
-        notes: data.notes || undefined,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at
+        startTime: responseData.start_time,
+        endTime: responseData.end_time,
+        type: responseData.appointment_type,
+        subtype: responseData.subtype || undefined,
+        status: responseData.status || 'Not Confirmed',
+        statusCode: responseData.status_code as Appointment['statusCode'],
+        date: responseData.date,
+        notes: responseData.notes || undefined,
+        createdAt: responseData.created_at,
+        updatedAt: responseData.updated_at,
+        isEmergency: responseData.is_emergency || false
       };
 
       // Immediately update local state for the user who updated it

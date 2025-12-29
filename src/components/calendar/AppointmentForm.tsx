@@ -92,6 +92,11 @@ export function AppointmentForm({
     ]
   };
 
+  const [emergencyProcedureType, setEmergencyProcedureType] = useState('');
+
+  // Determine active type for subtypes (Emergency uses the inner procedure type)
+  const activeTypeForSubtypes = selectedAppointmentType === 'emergency' ? emergencyProcedureType : selectedAppointmentType;
+
   // Helper function to format date for input (YYYY-MM-DD) using EST timezone
   const formatDateForInput = (date: Date) => {
     // Convert to EST timezone
@@ -216,6 +221,8 @@ export function AppointmentForm({
     }
   };
 
+  const [isEmergency, setIsEmergency] = useState(false);
+
   // Appointment types matching calendar columns
   const appointmentTypes = [
     { id: 'consultation', name: 'Consult' },
@@ -224,7 +231,7 @@ export function AppointmentForm({
     { id: 'printed-try-in', name: 'Appliance Delivery' },
     { id: 'surgery', name: 'Surgery' },
     { id: 'surgical-revision', name: 'Surgical Revision' },
-    { id: 'emergency', name: 'Emergency' }
+    // Emergency is now a flag/column, not a type
   ];
 
 
@@ -248,7 +255,7 @@ export function AppointmentForm({
   useEffect(() => {
     if (isOpen && selectedAppointmentType) {
       // Check if the new appointment type has subtypes
-      const hasSubtypes = subtypeOptions[selectedAppointmentType];
+      const hasSubtypes = subtypeOptions[activeTypeForSubtypes];
 
       // If the new type doesn't have subtypes, clear the subtype
       if (!hasSubtypes && selectedSubtype) {
@@ -257,13 +264,13 @@ export function AppointmentForm({
 
       // If the new type has subtypes, check if the current subtype is valid for this type
       if (hasSubtypes && selectedSubtype) {
-        const validSubtypes = subtypeOptions[selectedAppointmentType].map(s => s.value);
+        const validSubtypes = subtypeOptions[activeTypeForSubtypes].map(s => s.value);
         if (!validSubtypes.includes(selectedSubtype)) {
           setSelectedSubtype('');
         }
       }
     }
-  }, [selectedAppointmentType, isOpen]);
+  }, [selectedAppointmentType, emergencyProcedureType, isOpen]);
 
   // Initialize form when dialog opens (only run once when dialog opens)
   useEffect(() => {
@@ -282,8 +289,36 @@ export function AppointmentForm({
         setSelectedPatient(initialValues.patient || '');
         setSelectedPatientId(initialValues.patientId || '');
         setSelectedUserId(initialValues.assignedUserId || '');
-        setSelectedAppointmentType(initialValues.type || '');
-        setSelectedSubtype(initialValues.subtype || '');
+
+        // Handle Emergency type parsing
+        if (initialValues.type === 'emergency' && initialValues.subtype) {
+          // Check if subtype contains procedure info
+          const parts = initialValues.subtype.split(':');
+
+          // Case 1: type:subtype (e.g. follow-up:7-day)
+          if (parts.length === 2 && appointmentTypes.some(t => t.id === parts[0])) {
+            setSelectedAppointmentType('emergency'); // Should happen anyway
+            setEmergencyProcedureType(parts[0]);
+            setSelectedSubtype(parts[1]);
+          }
+          // Case 2: Just type (e.g. consultation)
+          else if (appointmentTypes.some(t => t.id === initialValues.subtype)) {
+            setSelectedAppointmentType('emergency');
+            setEmergencyProcedureType(initialValues.subtype);
+            setSelectedSubtype(''); // No inner subtype
+          }
+          // Case 3: Just normal subtype (legacy or direct match)
+          else {
+            setSelectedAppointmentType(initialValues.type || '');
+            setSelectedSubtype(initialValues.subtype || '');
+            setEmergencyProcedureType('');
+          }
+        } else {
+          setSelectedAppointmentType(initialValues.type || '');
+          setSelectedSubtype(initialValues.subtype || '');
+          setEmergencyProcedureType('');
+        }
+
         setNotes(initialValues.notes || '');
 
         if (initialDate) {
@@ -310,6 +345,13 @@ export function AppointmentForm({
         setSelectedPatient(editingAppointment.patient || '');
         setSelectedPatientId(editingAppointment.patientId || '');
         setSelectedUserId(editingAppointment.assignedUserId || '');
+
+        // Handle emergency logic for editing
+        if (editingAppointment.is_emergency) {
+          setIsEmergency(true);
+        } else {
+          setIsEmergency(false);
+        }
 
         // If we don't have a patient ID but have a patient name, try to find the ID
         if (!editingAppointment.patientId && editingAppointment.patient && patients.length > 0) {
@@ -357,19 +399,31 @@ export function AppointmentForm({
         setSelectedUserId('');
         setNotes('');
 
-        // Set initial subtype if provided
-        if (appointmentSubtype && appointmentSubtype.trim() !== '') {
+
+
+        // Set initial subtype if provided (and not already set by initialValues)
+        if (!initialValues?.subtype && appointmentSubtype && appointmentSubtype.trim() !== '') {
           setSelectedSubtype(appointmentSubtype);
-        } else {
+        } else if (!initialValues?.subtype) {
           setSelectedSubtype('');
         }
 
-        // Only set appointment type if it's valid
-        if (appointmentType && appointmentType.trim() !== '') {
-          setSelectedAppointmentType(appointmentType);
-        } else {
-          setSelectedAppointmentType('');
+        // Handle Emergency Column Click (only if not restored from draft)
+        if (!initialValues?.type && appointmentType === 'emergency') {
+          setIsEmergency(true);
+          setSelectedAppointmentType(''); // User must select the actual procedure
+        } else if (!initialValues?.type) {
+          // Only set appointment type if it's valid and NOT emergency
+          if (appointmentType && appointmentType.trim() !== '') {
+            setIsEmergency(false);
+            setSelectedAppointmentType(appointmentType);
+          } else {
+            // If we didn't restore from draft, ensure we respect the current state or default
+            // But don't overwrite if we just set it via initialValues
+            if (!isEmergency) setSelectedAppointmentType('');
+          }
         }
+
 
         // Set date
         if (initialDate) {
@@ -390,6 +444,23 @@ export function AppointmentForm({
         } else {
           setEndTime('');
         }
+      }
+
+      // Restore from draft (initialValues) if available - overrides everything
+      // This applies to BOTH new appointments and editing (when returning from scheduler)
+      if (initialValues) {
+        if (initialValues.isEmergency !== undefined) setIsEmergency(initialValues.isEmergency);
+        if (initialValues.type) setSelectedAppointmentType(initialValues.type);
+        if (initialValues.subtype) setSelectedSubtype(initialValues.subtype);
+        if (initialValues.notes) setNotes(initialValues.notes);
+        if (initialValues.patient) setSelectedPatient(initialValues.patient);
+        if (initialValues.patientId) setSelectedPatientId(initialValues.patientId);
+        if (initialValues.assignedUserId) setSelectedUserId(initialValues.assignedUserId);
+
+        // Also restore Date and Time from scheduler selection
+        if (initialValues.date) setSelectedDate(initialValues.date);
+        if (initialValues.startTime) setStartTime(initialValues.startTime);
+        if (initialValues.endTime) setEndTime(initialValues.endTime);
       }
     }
   }, [isOpen]);
@@ -413,10 +484,11 @@ export function AppointmentForm({
 
   // Clear subtype when appointment type changes (unless editing)
   useEffect(() => {
-    if (!editingAppointment) {
-      setSelectedSubtype('');
+    // Only clear if we're not initializing an existing appointment
+    if (isOpen && !editingAppointment && selectedAppointmentType && selectedAppointmentType !== appointmentType) {
+      // Don't clear if we just set it
     }
-  }, [selectedAppointmentType, editingAppointment]);
+  }, [selectedAppointmentType]);
 
   // Watch for prop changes and update form accordingly (but not appointment type - that's set on open)
   useEffect(() => {
@@ -440,7 +512,8 @@ export function AppointmentForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedPatientId || !selectedAppointmentType) {
+    if (!selectedPatientId || !selectedAppointmentType || !selectedDate || !startTime || !endTime) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
@@ -453,25 +526,37 @@ export function AppointmentForm({
     }
 
     const appointmentData = {
-      id: editingAppointment?.id || `apt_${Date.now()}`,
-      title: selectedAppointmentType, // Use appointment type as title
-      patient: selectedPatient, // Patient name for display
-      patientId: selectedPatientId, // Patient ID for database
-      assignedUserId: selectedUserId || undefined, // Assigned user ID
+      patient: selectedPatient,
+      patientId: selectedPatientId,
+      assignedUserId: selectedUserId || undefined,
+      type: selectedAppointmentType,
+      subtype: selectedSubtype || undefined,
       date: formatDateForDatabase(selectedDate),
       startTime: startTime,
       endTime: endTime,
-      type: selectedAppointmentType,
-      subtype: selectedSubtype || undefined, // Appointment subtype
-      status: editingAppointment?.status || 'Not Confirmed', // Preserve existing status or use default
-      statusCode: editingAppointment?.statusCode || '?????' as const, // Preserve existing status code or use default
-      notes: notes.trim() || undefined
+      title: `${selectedPatient} - ${appointmentTypes.find(t => t.id === selectedAppointmentType)?.name}`,
+      notes: notes,
+      status: editingAppointment?.status || 'Not Confirmed',
+      statusCode: editingAppointment?.statusCode || '?????',
+      isEmergency: isEmergency
     };
 
-    console.log('📝 Saving appointment with data:', appointmentData);
-    console.log('👤 Selected User ID:', selectedUserId);
     onSave(appointmentData);
     onClose();
+  };
+
+  // Function to prepare data for calendar (so we don't repeat logic)
+  const getCurrentFormData = () => {
+    return {
+      patient: selectedPatient,
+      patientId: selectedPatientId,
+      assignedUserId: selectedUserId,
+      type: selectedAppointmentType,
+      subtype: selectedSubtype,
+      notes: notes,
+      date: selectedDate,
+      isEmergency: isEmergency
+    };
   };
 
   const handleCancel = () => {
@@ -488,14 +573,18 @@ export function AppointmentForm({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        onClose();
+      }
+    }}>
+      <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold text-blue-900">
-            New Appointment
+          <DialogTitle className="text-xl font-semibold text-blue-900">
+            {editingAppointment ? 'Edit Appointment' : 'New Appointment'}
           </DialogTitle>
-          <DialogDescription className="sr-only">
-            Create a new appointment by selecting patient, date, time, and appointment type
+          <DialogDescription>
+            {editingAppointment ? 'Update appointment details below.' : 'Fill in the details for the new appointment.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -602,9 +691,9 @@ export function AppointmentForm({
                     <SelectValue placeholder="Select subtype" />
                   </SelectTrigger>
                   <SelectContent>
-                    {subtypeOptions[selectedAppointmentType].map((subtype) => (
-                      <SelectItem key={subtype.value} value={subtype.value}>
-                        {subtype.label}
+                    {subtypeOptions[selectedAppointmentType].map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -633,13 +722,13 @@ export function AppointmentForm({
                     {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0 z-50 bg-white" align="start">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
+                    onSelect={setSelectedDate}
                     initialFocus
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    className="p-3 pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -674,16 +763,7 @@ export function AppointmentForm({
                     className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
                     onClick={() => {
                       if (onOpenCalendar) {
-                        const currentData = {
-                          patient: selectedPatient,
-                          patientId: selectedPatientId,
-                          assignedUserId: selectedUserId,
-                          type: selectedAppointmentType,
-                          subtype: selectedSubtype,
-                          notes: notes,
-                          date: selectedDate,
-                        };
-                        onOpenCalendar(currentData);
+                        onOpenCalendar(getCurrentFormData());
                       }
                     }}
                   >
@@ -696,17 +776,7 @@ export function AppointmentForm({
                   type="button"
                   onClick={() => {
                     if (onOpenCalendar) {
-                      const currentData = {
-                        patient: selectedPatient,
-                        patientId: selectedPatientId,
-                        assignedUserId: selectedUserId,
-                        type: selectedAppointmentType,
-                        subtype: selectedSubtype,
-                        notes: notes,
-                        date: selectedDate,
-                        // Don't pass time as we are picking it
-                      };
-                      onOpenCalendar(currentData);
+                      onOpenCalendar(getCurrentFormData());
                     }
                   }}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"

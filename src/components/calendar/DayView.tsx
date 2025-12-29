@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
+import { isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Clock, User, MapPin, MoreHorizontal, MoreVertical, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit, Trash2, ClipboardList, Calendar, FileEdit, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +72,7 @@ export interface Appointment {
   nextAppointmentType?: string;
   nextAppointmentSubtype?: string;
   created_at?: string; // Added for sorting stability
+  isEmergency?: boolean;
 }
 
 interface User {
@@ -91,6 +93,7 @@ interface DayViewProps {
   onEdit?: (appointment: Appointment) => void;
   onDelete?: (appointmentId: string) => void;
   isSchedulerMode?: boolean; // When true, only shows calendar grid without navigation/toolbar
+  allowedAppointmentTypes?: string[]; // Optional: restrict which columns are enabled
 }
 
 export interface DayViewHandle {
@@ -99,25 +102,48 @@ export interface DayViewHandle {
   openEncounterForm: (appointment: Appointment) => void;
 }
 
-export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange, onEdit, onDelete, isSchedulerMode = false }, ref) => {
+export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointments, onAppointmentClick, onTimeSlotClick, isDialogOpen, onClearSelection, clearSelectionTrigger, onStatusChange, onEdit, onDelete, isSchedulerMode = false, allowedAppointmentTypes }, ref) => {
   const navigate = useNavigate();
 
+  // State for current EST time
+  const [currentEstDate, setCurrentEstDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    // Function to get current time in EST
+    const updateEstTime = () => {
+      const now = new Date();
+      const estString = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+      setCurrentEstDate(new Date(estString));
+    };
+
+    // Initial update
+    updateEstTime();
+
+    // Update every minute (or 30 seconds for smoother updates if needed)
+    const interval = setInterval(updateEstTime, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleOpenHealthHistory = (patientId: string, patientName: string) => {
+    setSelectedPatientId(patientId);
+    setSelectedPatientName(patientName);
+    setHealthHistoryDialogOpen(true);
+  };
+
+  const handleOpenComfortPreference = (patientId: string, patientName: string) => {
+    setSelectedPatientId(patientId);
+    setSelectedPatientName(patientName);
+    setComfortPreferenceDialogOpen(true);
+  };
+
   useImperativeHandle(ref, () => ({
-    openHealthHistory: (patientId: string, patientName: string) => {
-      setSelectedPatientId(patientId);
-      setSelectedPatientName(patientName);
-      setHealthHistoryDialogOpen(true);
-    },
-    openComfortPreference: (patientId: string, patientName: string) => {
-      setSelectedPatientId(patientId);
-      setSelectedPatientName(patientName);
-      setComfortPreferenceDialogOpen(true);
-    },
+    openHealthHistory: handleOpenHealthHistory,
+    openComfortPreference: handleOpenComfortPreference,
     openEncounterForm: (appointment: Appointment) => {
       setEncounterAppointmentId(appointment.id);
       setEncounterPatientName(appointment.patient);
       setEncounterFormDialogOpen(true);
-      // We might need to check status too, but for opening the form this is enough
     }
   }));
 
@@ -267,6 +293,17 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
   const getSubtypeLabel = (subtype: string | undefined): string | null => {
     if (!subtype) return null;
 
+    // Handle Emergency composite subtype (e.g. "follow-up:7-day-followup" or "consultation")
+    let actualSubtype = subtype;
+    let labelPrefix = '';
+
+    if (subtype.includes(':')) {
+      const parts = subtype.split(':');
+      // parts[0] is the procedure type (e.g. follow-up), parts[1] is the subtype
+      actualSubtype = parts[1];
+      // optional: we could add a prefix like "Follow-up - " but usually the subtype label is unique enough
+    }
+
     const subtypeLabels: Record<string, string> = {
       '7-day-followup': '7 Day',
       '30-day-followup': '30 Day',
@@ -282,7 +319,29 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       'data-collection-printed-try-in': 'DC PTI'
     };
 
-    return subtypeLabels[subtype] || null;
+    // If it's in the standard map, return it
+    if (subtypeLabels[actualSubtype]) {
+      return subtypeLabels[actualSubtype];
+    }
+
+    // Fallback: Check if it's a main type ID (e.g. "consultation" stored as subtype)
+    const typeLabels: Record<string, string> = {
+      'consultation': 'Consult',
+      'follow-up': 'Follow Up',
+      'data-collection': 'Data Collection',
+      'printed-try-in': 'Appliance Delivery',
+      'surgery': 'Surgery',
+      'surgical-revision': 'Revision',
+      'emergency': 'Emergency'
+    };
+
+    if (typeLabels[actualSubtype]) {
+      return typeLabels[actualSubtype];
+    }
+
+    // If we split it but didn't find a map, maybe the suffix is just a raw string?
+    // Or return null if no match found (standard behavior)
+    return null;
   };
 
   // Function to find patient ID by name and navigate to profile or consultation page
@@ -1814,6 +1873,16 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
               // Get all appointments for this type
               // Map both 'surgery' and 'surgical-revision' to the surgery column
               const typeAppointments = appointments.filter(apt => {
+                // If this is the emergency column, capture all emergency appointments
+                if (type.key === 'emergency') {
+                  return apt.isEmergency === true;
+                }
+
+                // If appointment is marked as emergency, it belongs ONLY in the emergency column
+                if (apt.isEmergency === true) {
+                  return false;
+                }
+
                 if (type.key === 'surgery') {
                   return apt.type === 'surgery' || apt.type === 'surgical-revision';
                 }
@@ -2072,15 +2141,11 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
 
                     <ContextMenu
                       key={appointment.id}
-                      open={openContextMenuId === appointment.id}
-                      onOpenChange={(open) => {
-                        setOpenContextMenuId(open ? appointment.id : null);
-                      }}
                       modal={true}
                     >
                       <ContextMenuTrigger asChild>
                         <div
-                          className={`absolute ${typeColors.color} rounded-lg border-2 shadow-sm cursor-pointer hover:shadow-lg transition-all z-10 select-none ${isDragging ? 'pointer-events-none' : 'pointer-events-auto'}`}
+                          className={`absolute ${typeColors.color} rounded-lg border-2 ${appointment.isEmergency ? '!border-red-600' : ''} shadow-sm cursor-pointer hover:shadow-lg transition-all z-10 select-none ${isDragging ? 'pointer-events-none' : 'pointer-events-auto'}`}
                           style={{
                             // Formula: HeaderWidth + (TypeIndex * ColWidth) + LaneOffset + PaddingLeft
                             left: `calc(60px + ${typeIndex} * ${columnWidthVal} + ${laneOffsetVal} + ${paddingLeft}px)`,
@@ -2093,40 +2158,80 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                             userSelect: 'none',
                             WebkitTouchCallout: 'none', // Critical for iOS to prevent magnifier/menu
                           }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            onAppointmentClick(appointment);
-                          }}
                           onMouseDown={(e) => {
                             e.preventDefault();
                             e.stopPropagation(); // Stop propagation to container generally
 
-                            // Mark this as starting on an appointment so single clicks don't create new ones
-                            ignoreSingleClickRef.current = true;
+                            // Store event data for use in timer
+                            const clientX = e.clientX;
+                            const clientY = e.clientY;
+                            const currentTarget = e.currentTarget; // Not strict needed but good for refs
 
-                            // Manually find the underlying time slot to trigger drag start
-                            // We need to look through the layers to find the data-hour/minute slot
-                            const elements = document.elementsFromPoint(e.clientX, e.clientY);
-                            const slotElement = elements.find(el => el.hasAttribute('data-hour') && el.hasAttribute('data-minute'));
+                            // Start a timer to delay drag initiation
+                            // This allows short clicks to register as 'Open Details' without starting a drag
+                            holdTimerRef.current = setTimeout(() => {
+                              console.log('Mouse Drag Timer Fired - Starting Selection');
 
-                            if (slotElement) {
-                              const hour = parseInt(slotElement.getAttribute('data-hour') || '0');
-                              const minute = parseInt(slotElement.getAttribute('data-minute') || '0');
-                              const column = slotElement.getAttribute('data-column') || '';
+                              // Mark this as starting on an appointment so single clicks don't create new ones
+                              ignoreSingleClickRef.current = true;
+                              setIsDragging(true); // Explicitly set dragging
 
-                              console.log('Manual drag start on appointment:', { hour, minute, column });
+                              // Manually find the underlying time slot to trigger drag start
+                              // We need to look through the layers to find the data-hour/minute slot
+                              const elements = document.elementsFromPoint(clientX, clientY);
+                              const slotElement = elements.find(el => el.hasAttribute('data-hour') && el.hasAttribute('data-minute'));
 
-                              // Manually trigger handleMouseDown with the found slot's data
-                              handleMouseDown(hour, minute, column, e);
-                            }
+                              if (slotElement) {
+                                const hour = parseInt(slotElement.getAttribute('data-hour') || '0');
+                                const minute = parseInt(slotElement.getAttribute('data-minute') || '0');
+                                const column = slotElement.getAttribute('data-column') || '';
+
+                                console.log('Manual drag start on appointment (delayed):', { hour, minute, column });
+
+                                // We need to mock the event or ensure handleMouseDown can handle the disconnect?
+                                // handleMouseDown mainly uses it for e.buttons check (which isn't async-safe usually, but we assume left button)
+                                // and preventDefault.
+                                // We'll reconstruct a minimal object if needed, or pass the original 'e' if React event persists (it doesn't async).
+                                // But handleMouseDown lines 2700+ mainly uses args.
+
+                                handleMouseDown(hour, minute, column, {
+                                  preventDefault: () => { },
+                                  stopPropagation: () => { },
+                                  button: 0,
+                                  buttons: 1 // Simulate held button
+                                } as any);
+                              }
+
+                              holdTimerRef.current = null; // Clear ref so MouseUp knows it fired
+                            }, 200); // 200ms delay
                           }}
                           onMouseMove={(e) => {
                             e.stopPropagation();
+                            // Optional: If moved significantly before timer, maybe cancel timer?
+                            // But 'Hold to drag' usually implies keeping still-ish.
+                            // For now, let's keep it simple: Time based.
                           }}
                           onMouseUp={(e) => {
-                            // Allow bubbling to container to end drag selection
-                            // do NOT stop propagation
+                            // If timer is still running, it means it was a CLICK
+                            if (holdTimerRef.current) {
+                              clearTimeout(holdTimerRef.current);
+                              holdTimerRef.current = null;
+
+                              // Trigger Click Logic
+                              e.stopPropagation();
+                              // e.preventDefault(); // Might not need this if we handled MouseDown
+                              console.log('Quick Click detected - Opening Appointment');
+                              onAppointmentClick(appointment);
+                            } else {
+                              // Timer fired, so we were dragging.
+                              // Drag end logic is handled by global Window MouseUp usually, 
+                              // but we should ensure we don't trigger click.
+                            }
+                          }}
+                          onClick={(e) => {
+                            // Clean up just in case, though MouseUp should handle it
+                            e.stopPropagation();
+                            e.preventDefault();
                           }}
                           onTouchStart={(e) => {
                             isTouchRef.current = true;
@@ -2330,9 +2435,9 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                     <DropdownMenuItem {...handleMenuItemAction(() => {
                                       // Health History
                                       if (appointment.patientId) {
-                                        openHealthHistory(appointment.patientId, appointment.patient);
+                                        handleOpenHealthHistory(appointment.patientId, appointment.patient);
                                       } else {
-                                        toast.error("No patient ID associated with this appointment");
+                                        toast("No patient ID associated with this appointment");
                                       }
                                     })}>
                                       <Heart className="mr-2 h-4 w-4 text-red-500" />
@@ -2341,19 +2446,21 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                     <DropdownMenuItem {...handleMenuItemAction(() => {
                                       // Comfort Preference
                                       if (appointment.patientId) {
-                                        openComfortPreference(appointment.patientId, appointment.patient);
+                                        handleOpenComfortPreference(appointment.patientId, appointment.patient);
                                       } else {
-                                        toast.error("No patient ID associated with this appointment");
+                                        toast("No patient ID associated with this appointment");
                                       }
                                     })}>
                                       <Smile className="mr-2 h-4 w-4 text-orange-500" />
                                       Comfort Preference
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem {...handleMenuItemAction(() => onEdit && onEdit(appointment))}>
-                                      <Edit className="mr-2 h-4 w-4" />
-                                      Edit Appointment
-                                    </DropdownMenuItem>
+                                    {appointment.statusCode !== 'CMPLT' && (
+                                      <DropdownMenuItem {...handleMenuItemAction(() => onEdit && onEdit(appointment))}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Appointment
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem
                                       className="text-red-600 focus:text-red-600"
                                       {...handleMenuItemAction(() => onDelete && onDelete(appointment.id))}
@@ -2429,9 +2536,16 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                           {formatAppointmentTime(appointment.endTime)}
                                         </span>
                                       </div>
-                                      <span className={`inline-flex items-center justify-center w-3 h-3 text-[8px] font-bold text-white rounded-full uppercase ${actualTypeColors.badgeColor || 'bg-gray-500'}`}>
-                                        {firstLetter}
-                                      </span>
+                                      <div className="flex items-center gap-1">
+                                        {appointment.isEmergency && (
+                                          <span className="inline-flex items-center justify-center w-3 h-3 text-[8px] font-bold text-white bg-red-600 rounded-full" title="Emergency">
+                                            E
+                                          </span>
+                                        )}
+                                        <span className={`inline-flex items-center justify-center w-3 h-3 text-[8px] font-bold text-white rounded-full uppercase ${actualTypeColors.badgeColor || 'bg-gray-500'}`}>
+                                          {firstLetter}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 );
@@ -2517,6 +2631,11 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                         return (
                                           <>
                                             <div className="flex gap-1 items-center overflow-hidden">
+                                              {appointment.isEmergency && (
+                                                <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase bg-red-600 text-white ${badgeSize} ${badgePadding}`}>
+                                                  Emergency
+                                                </span>
+                                              )}
                                               <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase ${actualTypeColors.badgeColor || 'bg-gray-100 text-gray-800'} ${badgeSize} ${badgePadding}`}>
                                                 {label === 'Data Collection' ? 'Data' : displayText}
                                               </span>
@@ -2651,10 +2770,12 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                           View Comfort Preference
                         </ContextMenuItem>
                         <ContextMenuSeparator />
-                        <ContextMenuItem {...handleMenuItemAction(() => handleEditAppointment(appointment))}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Appointment
-                        </ContextMenuItem>
+                        {appointment.statusCode !== 'CMPLT' && (
+                          <ContextMenuItem {...handleMenuItemAction(() => handleEditAppointment(appointment))}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Appointment
+                          </ContextMenuItem>
+                        )}
                         <ContextMenuItem {...handleMenuItemAction(() => handleDeleteFromMenu(appointment.id))} className="text-red-600 focus:text-red-600">
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete Appointment
@@ -2668,7 +2789,48 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
           </div>
 
           {/* Hour grid */}
-          <div className="grid grid-cols-1">
+          <div className="grid grid-cols-1 relative">
+            {/* Current Time Line (EST) */}
+            {(() => {
+              if (!currentEstDate) return null;
+
+              // Only show if the view date matches current EST date
+              if (!isSameDay(date, currentEstDate)) return null;
+
+              const currentHour = currentEstDate.getHours();
+              const currentMinute = currentEstDate.getMinutes();
+
+              // Check if current time is within view range (7 AM - 7 PM)
+              if (currentHour >= 7 && currentHour < 19) { // 19 is 7PM, so up to 18:59 is inside the 7-7 range block roughly?
+                // Wait, if grid goes TO 7 PM, usually it means 7PM is the start of the last slot?
+                // If hours include 19 (7 PM), does the last block go from 7 PM to 8 PM?
+                // Users usually say "7 to 7", implying 12 hours view.
+                // Array [7...19] has 13 items. 7AM start -> 8PM end (19:00 start).
+                // If user meant 7AM to 7PM *Visual Range*, maybe just [7...18]?
+                // Detailed verification: If user says "Starts at 7 AM and till 7 PM", usually means the last hour shown is 6 PM - 7 PM, or sometimes 7 PM line is the bottom.
+                // Given the array I defined [7...19], let's stick to it.
+                // 19:00 is displayed as a row.
+
+                const startHour = 7;
+                const hourHeight = 200;
+
+                const minutesFromStart = ((currentHour - startHour) * 60) + currentMinute;
+                const topPosition = (minutesFromStart / 60) * hourHeight;
+
+                return (
+                  <div
+                    className="absolute left-[60px] right-0 z-40 flex items-center pointer-events-none"
+                    style={{ top: `${topPosition}px` }}
+                  >
+                    <div className="w-full border-b-2 border-blue-500 border-dashed opacity-50 shadow-sm"></div>
+                    <div className="absolute right-0 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-l-md transform -translate-y-1/2">
+                      {currentHour.toString().padStart(2, '0')}:{currentMinute.toString().padStart(2, '0')}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
             {hours.map((hour) => {
               return (
                 <div key={hour} className="border-b border-gray-200 h-[200px]">
@@ -2689,6 +2851,9 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                       // Check if this hour has appointments for subtle visual feedback
                       const hourHasAppointment = hasAppointmentInHour(hour, type.key);
 
+
+                      const isColumnDisabled = allowedAppointmentTypes && !allowedAppointmentTypes.includes(type.key);
+
                       return (
                         <div
                           key={type.key}
@@ -2696,8 +2861,9 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                             } ${hasActiveSelection
                               ? ``
                               : `cursor-pointer`
-                            }`}
+                            } ${isColumnDisabled ? 'bg-gray-50 opacity-50 cursor-not-allowed' : ''}`}
                           onMouseDown={(e) => {
+                            if (isColumnDisabled) return; // Block interaction if disabled
                             // Calculate which 15-minute slot was clicked based on position
                             const rect = e.currentTarget.getBoundingClientRect();
                             const relativeY = e.clientY - rect.top;
@@ -2709,6 +2875,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                             handleMouseDown(hour, minute, type.key, e);
                           }}
                           onTouchStart={(e) => {
+                            if (isColumnDisabled) return; // Block interaction if disabled
                             // DO NOT Prevent Default here. Allow scrolling to start.
 
                             // Mark touch active to block ghost mouse events
@@ -3172,6 +3339,14 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                               toast.error('Please select appointment subtype');
                               return;
                             }
+                            // Create the date object correctly with noon time to avoid timezone shifts
+                            const [year, month, day] = nextAppointmentDate.split('-').map(Number);
+                            const dateObj = new Date(year, month - 1, day, 12, 0, 0);
+
+                            // It seems we rely on nextAppointmentDate string in the dialog logic?
+                            // No, the dialog uses initialDate prop.
+                            // But we also need to ensure the dialog opens.
+
                             setShowSchedulerDialog(true);
                           }}
                           disabled={!nextAppointmentType || !nextAppointmentDate || (nextAppointmentSubtypes[nextAppointmentType] && !nextAppointmentSubtype)}
@@ -3271,7 +3446,11 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
               }}
               patientName={nextAppointmentDialog?.patientName || ''}
               patientId={nextAppointmentDialog?.patientId || ''}
-              initialDate={nextAppointmentDate}
+              initialDate={nextAppointmentDate ? (() => {
+                const [year, month, day] = nextAppointmentDate.split('-').map(Number);
+                const date = new Date(year, month - 1, day, 12, 0, 0); // Noon to avoid timezone shifts
+                return date;
+              })() : undefined}
               appointmentType={nextAppointmentType}
               appointmentSubtype={nextAppointmentSubtype}
               onSchedule={handleTimeSelected}

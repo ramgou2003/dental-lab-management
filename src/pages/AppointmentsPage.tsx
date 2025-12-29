@@ -96,10 +96,11 @@ export function AppointmentsPage() {
     console.log('handleTimeSlotClick called with:', { startTime, endTime, appointmentType, isPickingTime });
 
     // Day view: startTime and endTime from drag selection
-    // Default to empty values (user must pick from calendar)
-    setInitialFormDate(undefined);
-    setInitialFormTime('');
-    setInitialFormEndTime('');
+    // Day view: startTime and endTime from drag selection
+    // Use the values from drag selection
+    setInitialFormDate(currentDate);
+    setInitialFormTime(startTime);
+    setInitialFormEndTime(endTime);
 
     if (appointmentType) {
       setSelectedAppointmentType(appointmentType);
@@ -253,14 +254,40 @@ export function AppointmentsPage() {
         patientName={draftAppointmentData?.patient || "New Patient"}
         patientId={draftAppointmentData?.patientId || ""}
         initialDate={initialFormDate}
-        appointmentType={draftAppointmentData?.selectedAppointmentType}
-        appointmentSubtype={draftAppointmentData?.selectedSubtype}
+        appointmentType={draftAppointmentData?.type}
+        appointmentSubtype={draftAppointmentData?.subtype}
         onSchedule={(scheduleData) => {
           console.log('Scheduled from dialog:', scheduleData);
           setShowSchedulerDialog(false);
           setInitialFormDate(new Date(scheduleData.date + 'T00:00:00'));
           setInitialFormTime(scheduleData.startTime);
           setInitialFormEndTime(scheduleData.endTime);
+
+          // Handle type updating from scheduler selection
+          if (scheduleData.type) {
+            setDraftAppointmentData(prev => {
+              const newData = { ...prev };
+
+              if (scheduleData.type === 'emergency') {
+                // If "Emergency" column was clicked, mark as emergency but don't set type to 'emergency' string
+                // (keep previous type or require user to select one)
+                newData.isEmergency = true;
+                // Don't overwrite type with 'emergency' as it's not a valid procedure type
+              } else {
+                // If a specific type column was clicked (e.g., "New Patient"), set that type
+                // AND explicitly turn off emergency flag (since they clicked a non-emergency column)
+                newData.type = scheduleData.type;
+                newData.isEmergency = false;
+              }
+
+              // Also update date/time in the draft data itself so it persists
+              newData.date = new Date(scheduleData.date + 'T00:00:00');
+              newData.startTime = scheduleData.startTime;
+              newData.endTime = scheduleData.endTime;
+
+              return newData;
+            });
+          }
         }}
       />
 

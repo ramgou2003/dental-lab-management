@@ -37,6 +37,7 @@ export function AppointmentSchedulerDialog({
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{
     startTime: string;
     endTime: string;
+    type?: string;
   } | null>(null);
   const [clearSelectionTrigger, setClearSelectionTrigger] = useState(0);
 
@@ -83,6 +84,7 @@ export function AppointmentSchedulerDialog({
         notes: apt.notes || undefined,
         assignedUserId: apt.assigned_user_id || undefined,
         assignedUserName: apt.assigned_user_name || undefined,
+        isEmergency: apt.is_emergency || false,
       }));
       setAppointments(transformedAppointments);
     }
@@ -91,7 +93,7 @@ export function AppointmentSchedulerDialog({
   // Handle time slot selection from DayView
   const handleTimeSlotClick = (startTime: string, endTime: string, appointmentType?: string) => {
     console.log('handleTimeSlotClick called:', { startTime, endTime, appointmentType });
-    setSelectedTimeSlot({ startTime, endTime });
+    setSelectedTimeSlot({ startTime, endTime, type: appointmentType });
   };
 
   // Handle clear selection
@@ -119,7 +121,7 @@ export function AppointmentSchedulerDialog({
     });
 
     onSchedule({
-      type: appointmentType || '',
+      type: selectedTimeSlot.type || appointmentType || '',
       subtype: appointmentSubtype || null,
       date: dateString,
       startTime: selectedTimeSlot.startTime,
@@ -151,6 +153,7 @@ export function AppointmentSchedulerDialog({
             onEdit={() => { }}
             onDelete={() => { }}
             isSchedulerMode={true}
+            allowedAppointmentTypes={appointmentType ? [appointmentType, 'emergency'] : undefined}
           />
         </div>
 
