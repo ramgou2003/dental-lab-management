@@ -386,15 +386,15 @@ export function Sidebar({
           <button
             onClick={() => handleMenuClick(item)}
             className={cn(
-              "flex items-center justify-between w-full text-left px-3 py-3.5 rounded-lg transition-colors duration-200 relative h-12",
+              "flex items-center justify-between w-full text-left px-3 py-3.5 rounded-lg transition-colors duration-200 relative h-12 border",
               isActive || isSubmenuActive
-                ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                ? "bg-blue-50 text-blue-700 border-blue-400 shadow-sm"
+                : "text-gray-600 border-blue-200/60 hover:bg-gray-50 hover:text-gray-900 hover:border-blue-400"
             )}
             title={collapsed ? item.name : undefined}
           >
             <div className="flex items-center">
-              {(isActive || isSubmenuActive) && <div className="absolute left-0 top-2 bottom-2 w-1 bg-indigo-600 rounded-r-full" />}
+              {(isActive || isSubmenuActive) && <div className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 rounded-r-full" />}
               <item.icon className="h-5 w-5 flex-shrink-0" />
               <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
                 {item.name}
@@ -434,8 +434,8 @@ export function Sidebar({
                           ? "w-10 h-10 justify-center"
                           : "w-full px-3 py-2.5 text-sm",
                         isSubActive
-                          ? "bg-indigo-50 text-indigo-700 border-indigo-500 font-medium"
-                          : "text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-indigo-300"
+                          ? "bg-blue-50 text-blue-700 border-blue-500 font-medium shadow-sm"
+                          : "text-gray-600 border-blue-200/50 hover:bg-gray-50 hover:border-blue-400"
                       )}
                       title={collapsed ? subItem.name : undefined}
                     >

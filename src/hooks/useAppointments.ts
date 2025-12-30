@@ -28,6 +28,9 @@ export interface Appointment {
   nextAppointmentType?: string;
   nextAppointmentSubtype?: string;
   isEmergency?: boolean;
+  archType?: string;
+  upperArchSubtype?: string; // e.g. 'full-arch-fixed'
+  lowerArchSubtype?: string; // e.g. 'denture'
 }
 
 // Helper function to map status code to full status name
@@ -116,7 +119,10 @@ export function useAppointments() {
         nextAppointmentTime: appointment.next_appointment_time || undefined,
         nextAppointmentType: appointment.next_appointment_type || undefined,
         nextAppointmentSubtype: appointment.next_appointment_subtype || undefined,
-        isEmergency: appointment.is_emergency || false
+        isEmergency: appointment.is_emergency || false,
+        archType: appointment.arch_type || undefined,
+        upperArchSubtype: appointment.upper_arch_subtype || undefined,
+        lowerArchSubtype: appointment.lower_arch_subtype || undefined
       }));
 
       console.log(`📅 Fetched ${transformedAppointments.length} appointments from database`);
@@ -313,6 +319,9 @@ export function useAppointments() {
       date: appointmentData.date,
       notes: appointmentData.notes || undefined,
       isEmergency: appointmentData.isEmergency || false,
+      archType: appointmentData.archType,
+      upperArchSubtype: appointmentData.upperArchSubtype,
+      lowerArchSubtype: appointmentData.lowerArchSubtype,
       createdAt: now,
       updatedAt: now
     };
@@ -343,6 +352,9 @@ export function useAppointments() {
           end_time: appointmentData.endTime,
           appointment_type: appointmentData.type,
           subtype: appointmentData.subtype || null,
+          arch_type: appointmentData.archType || null,
+          upper_arch_subtype: appointmentData.upperArchSubtype || null,
+          lower_arch_subtype: appointmentData.lowerArchSubtype || null,
           status: appointmentData.status,
           status_code: appointmentData.statusCode,
           date: appointmentData.date,
@@ -385,6 +397,9 @@ export function useAppointments() {
         endTime: responseData.end_time,
         type: responseData.appointment_type,
         subtype: responseData.subtype || undefined,
+        archType: responseData.arch_type || undefined,
+        upperArchSubtype: responseData.upper_arch_subtype || undefined,
+        lowerArchSubtype: responseData.lower_arch_subtype || undefined,
         status: responseData.status || 'Not Confirmed',
         statusCode: responseData.status_code as Appointment['statusCode'],
         date: responseData.date,
@@ -445,6 +460,9 @@ export function useAppointments() {
       if (updates.endTime) updateData.end_time = updates.endTime;
       if (updates.type) updateData.appointment_type = updates.type;
       if (updates.subtype !== undefined) updateData.subtype = updates.subtype || null;
+      if (updates.archType !== undefined) updateData.arch_type = updates.archType || null;
+      if (updates.upperArchSubtype !== undefined) updateData.upper_arch_subtype = updates.upperArchSubtype || null;
+      if (updates.lowerArchSubtype !== undefined) updateData.lower_arch_subtype = updates.lowerArchSubtype || null;
       if (updates.status) updateData.status = updates.status;
       if (updates.statusCode) {
         updateData.status_code = updates.statusCode;
@@ -497,6 +515,9 @@ export function useAppointments() {
         endTime: responseData.end_time,
         type: responseData.appointment_type,
         subtype: responseData.subtype || undefined,
+        archType: responseData.arch_type || undefined,
+        upperArchSubtype: responseData.upper_arch_subtype || undefined,
+        lowerArchSubtype: responseData.lower_arch_subtype || undefined,
         status: responseData.status || 'Not Confirmed',
         statusCode: responseData.status_code as Appointment['statusCode'],
         date: responseData.date,

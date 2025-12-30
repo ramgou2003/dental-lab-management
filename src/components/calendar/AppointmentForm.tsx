@@ -70,6 +70,11 @@ export function AppointmentForm({
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
+  // Surgery Arch Type State
+  const [archType, setArchType] = useState<string>('');
+  const [upperArchSubtype, setUpperArchSubtype] = useState<string>('');
+  const [lowerArchSubtype, setLowerArchSubtype] = useState<string>('');
+
   // Subtype options based on appointment type
   const subtypeOptions: Record<string, { value: string; label: string }[]> = {
     'follow-up': [
@@ -89,6 +94,24 @@ export function AppointmentForm({
       { value: '75-day-data-collection', label: '75 Days Data Collection for PTI' },
       { value: 'final-data-collection', label: 'Final Data Collection' },
       { value: 'data-collection-printed-try-in', label: 'Data collection for Printed-try-in' }
+    ],
+    'surgery': [
+      { value: 'full-arch-fixed', label: 'Full Arch Fixed' },
+      { value: 'denture', label: 'Denture' },
+      { value: 'implant-removable-denture', label: 'Implant Removable Denture' },
+      { value: 'single-implant', label: 'Single Implant' },
+      { value: 'multiple-implants', label: 'Multiple Implants' },
+      { value: 'extraction', label: 'Extraction' },
+      { value: 'extraction-and-graft', label: 'Extraction and Graft' }
+    ],
+    'surgical-revision': [
+      { value: 'full-arch-fixed', label: 'Full Arch Fixed' },
+      { value: 'denture', label: 'Denture' },
+      { value: 'implant-removable-denture', label: 'Implant Removable Denture' },
+      { value: 'single-implant', label: 'Single Implant' },
+      { value: 'multiple-implants', label: 'Multiple Implants' },
+      { value: 'extraction', label: 'Extraction' },
+      { value: 'extraction-and-graft', label: 'Extraction and Graft' }
     ]
   };
 
@@ -289,6 +312,9 @@ export function AppointmentForm({
         setSelectedPatient(initialValues.patient || '');
         setSelectedPatientId(initialValues.patientId || '');
         setSelectedUserId(initialValues.assignedUserId || '');
+        if (initialValues.archType) setArchType(initialValues.archType);
+        if (initialValues.upperArchSubtype) setUpperArchSubtype(initialValues.upperArchSubtype);
+        if (initialValues.lowerArchSubtype) setLowerArchSubtype(initialValues.lowerArchSubtype);
 
         // Handle Emergency type parsing
         if (initialValues.type === 'emergency' && initialValues.subtype) {
@@ -346,6 +372,11 @@ export function AppointmentForm({
         setSelectedPatientId(editingAppointment.patientId || '');
         setSelectedUserId(editingAppointment.assignedUserId || '');
 
+        // Load Arch Type info
+        setArchType(editingAppointment.arch_type || '');
+        setUpperArchSubtype(editingAppointment.upper_arch_subtype || '');
+        setLowerArchSubtype(editingAppointment.lower_arch_subtype || '');
+
         // Handle emergency logic for editing
         if (editingAppointment.is_emergency) {
           setIsEmergency(true);
@@ -363,6 +394,9 @@ export function AppointmentForm({
 
         setSelectedAppointmentType(editingAppointment.type || '');
         setSelectedSubtype(editingAppointment.subtype || '');
+        setArchType(editingAppointment.archType || '');
+        setUpperArchSubtype(editingAppointment.upperArchSubtype || '');
+        setLowerArchSubtype(editingAppointment.lowerArchSubtype || '');
 
         // Handle date properly in EST timezone
         if (editingAppointment.date) {
@@ -397,6 +431,9 @@ export function AppointmentForm({
         }
 
         setSelectedUserId('');
+        setArchType('');
+        setUpperArchSubtype('');
+        setLowerArchSubtype('');
         setNotes('');
 
 
@@ -452,6 +489,9 @@ export function AppointmentForm({
         if (initialValues.isEmergency !== undefined) setIsEmergency(initialValues.isEmergency);
         if (initialValues.type) setSelectedAppointmentType(initialValues.type);
         if (initialValues.subtype) setSelectedSubtype(initialValues.subtype);
+        if (initialValues.archType) setArchType(initialValues.archType);
+        if (initialValues.upperArchSubtype) setUpperArchSubtype(initialValues.upperArchSubtype);
+        if (initialValues.lowerArchSubtype) setLowerArchSubtype(initialValues.lowerArchSubtype);
         if (initialValues.notes) setNotes(initialValues.notes);
         if (initialValues.patient) setSelectedPatient(initialValues.patient);
         if (initialValues.patientId) setSelectedPatientId(initialValues.patientId);
@@ -509,6 +549,26 @@ export function AppointmentForm({
     }
   }, [initialTime, initialEndTime, initialDate, isOpen, editingAppointment]);
 
+
+
+  const getCurrentFormData = () => {
+    return {
+      patient: selectedPatient,
+      patientId: selectedPatientId,
+      assignedUserId: selectedUserId || undefined,
+      type: selectedAppointmentType,
+      subtype: selectedSubtype || undefined,
+      archType: archType || undefined,
+      upperArchSubtype: upperArchSubtype || undefined,
+      lowerArchSubtype: lowerArchSubtype || undefined,
+      date: selectedDate,
+      startTime: startTime,
+      endTime: endTime,
+      notes: notes,
+      isEmergency: isEmergency
+    };
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -517,12 +577,30 @@ export function AppointmentForm({
       return;
     }
 
-    // Validate subtype is required for appointment types that have subtypes
-    if (selectedAppointmentType && subtypeOptions[selectedAppointmentType] && !selectedSubtype) {
+    // Validate subtype is required for appointment types that have subtypes (non-surgery)
+    if (selectedAppointmentType &&
+      ['surgery', 'surgical-revision'].indexOf(selectedAppointmentType) === -1 &&
+      subtypeOptions[selectedAppointmentType] && !selectedSubtype) {
       toast.error("Validation Error", {
         description: "Please select an appointment subtype",
       });
       return;
+    }
+
+    // Validate Surgery Arch Type fields
+    if (selectedAppointmentType && ['surgery', 'surgical-revision'].includes(selectedAppointmentType)) {
+      if (!archType) {
+        toast.error("Validation Error", { description: "Please select an Arch Type" });
+        return;
+      }
+      if ((archType === 'Upper' || archType === 'Dual') && !upperArchSubtype) {
+        toast.error("Validation Error", { description: "Please select an Upper Arch Subtype" });
+        return;
+      }
+      if ((archType === 'Lower' || archType === 'Dual') && !lowerArchSubtype) {
+        toast.error("Validation Error", { description: "Please select a Lower Arch Subtype" });
+        return;
+      }
     }
 
     const appointmentData = {
@@ -531,6 +609,9 @@ export function AppointmentForm({
       assignedUserId: selectedUserId || undefined,
       type: selectedAppointmentType,
       subtype: selectedSubtype || undefined,
+      archType: archType || undefined,
+      upperArchSubtype: upperArchSubtype || undefined,
+      lowerArchSubtype: lowerArchSubtype || undefined,
       date: formatDateForDatabase(selectedDate),
       startTime: startTime,
       endTime: endTime,
@@ -545,19 +626,7 @@ export function AppointmentForm({
     onClose();
   };
 
-  // Function to prepare data for calendar (so we don't repeat logic)
-  const getCurrentFormData = () => {
-    return {
-      patient: selectedPatient,
-      patientId: selectedPatientId,
-      assignedUserId: selectedUserId,
-      type: selectedAppointmentType,
-      subtype: selectedSubtype,
-      notes: notes,
-      date: selectedDate,
-      isEmergency: isEmergency
-    };
-  };
+
 
   const handleCancel = () => {
     setSelectedPatient('');
@@ -680,26 +749,98 @@ export function AppointmentForm({
               </Select>
             </div>
 
-            {/* Appointment Subtype Selection - Conditional */}
-            {selectedAppointmentType && subtypeOptions[selectedAppointmentType] && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-blue-700">
-                  Appointment Subtype *
-                </label>
-                <Select value={selectedSubtype || undefined} onValueChange={setSelectedSubtype}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select subtype" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subtypeOptions[selectedAppointmentType].map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Standard Subtype Selection (Non-Surgery) */}
+            {selectedAppointmentType &&
+              ['surgery', 'surgical-revision'].indexOf(selectedAppointmentType) === -1 &&
+              subtypeOptions[selectedAppointmentType] && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-blue-700">
+                    Appointment Subtype *
+                  </label>
+                  <Select value={selectedSubtype || undefined} onValueChange={setSelectedSubtype}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select subtype" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subtypeOptions[selectedAppointmentType].map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+            {/* Surgery Arch Type Logic */}
+            {selectedAppointmentType &&
+              ['surgery', 'surgical-revision'].includes(selectedAppointmentType) && (
+                <>
+                  <div className="col-span-2 space-y-2">
+                    <label className="text-sm font-medium text-blue-700">
+                      Arch Type *
+                    </label>
+                    <div className="flex space-x-2">
+                      {['Upper', 'Lower', 'Dual'].map((type) => (
+                        <Button
+                          key={type}
+                          type="button"
+                          variant={archType === type ? "default" : "outline"}
+                          className={`flex-1 ${archType === type
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                            }`}
+                          onClick={() => setArchType(type)}
+                        >
+                          {type}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Upper Arch Subtype */}
+                  {(archType === 'Upper' || archType === 'Dual') && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-blue-700">
+                        Upper Arch Subtype *
+                      </label>
+                      <Select value={upperArchSubtype || undefined} onValueChange={setUpperArchSubtype}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Upper Subtype" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subtypeOptions['surgery'].map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Lower Arch Subtype */}
+                  {(archType === 'Lower' || archType === 'Dual') && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-blue-700">
+                        Lower Arch Subtype *
+                      </label>
+                      <Select value={lowerArchSubtype || undefined} onValueChange={setLowerArchSubtype}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Lower Subtype" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subtypeOptions['surgery'].map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
+              )}
           </div>
 
           {/* Row 2: Date and Time */}

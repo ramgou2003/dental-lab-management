@@ -302,6 +302,23 @@ export function AppointmentsPage() {
         onEdit={handleEditAppointment}
         onDelete={handleDeleteAppointment}
         onStatusChange={handleStatusChange}
+        onViewProfile={(patientId) => {
+          // Navigate to patient profile
+          window.location.href = `/patients/${patientId}`;
+        }}
+        onOpenHealthHistory={(patientId, patientName) => {
+          dayViewRef.current?.openHealthHistory(patientId, patientName);
+        }}
+        onOpenComfortPreference={(patientId, patientName) => {
+          dayViewRef.current?.openComfortPreference(patientId, patientName);
+        }}
+        onOpenEncounter={(apt) => {
+          dayViewRef.current?.openEncounterForm(apt as any);
+        }}
+        onAddLabScript={(apt) => {
+          // Navigate to lab scripts page or open lab script form
+          window.location.href = `/lab-scripts/new?appointment_id=${apt.id}&patient_name=${encodeURIComponent(apt.patient)}`;
+        }}
       />
     </div>
   );

@@ -227,7 +227,15 @@ export function NextAppointmentsPage() {
       '120-day-final-delivery': '120 Days Final Delivery',
       '75-day-data-collection': '75 Days Data Collection for PTI',
       'final-data-collection': 'Final Data Collection',
-      'data-collection-printed-try-in': 'Data collection for Printed-try-in'
+      'data-collection-printed-try-in': 'Data collection for Printed-try-in',
+      // Surgery subtypes
+      'full-arch-fixed': 'Full Arch Fixed',
+      'denture': 'Denture',
+      'implant-removable-denture': 'Implant Removable Denture',
+      'single-implant': 'Single Implant',
+      'multiple-implants': 'Multiple Implants',
+      'extraction': 'Extraction',
+      'extraction-and-graft': 'Extraction and Graft'
     };
     return labels[subtype] || subtype;
   };

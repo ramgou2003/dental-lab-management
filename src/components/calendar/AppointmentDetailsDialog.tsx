@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, Edit, Trash2, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, ClipboardList, CalendarCheck, Heart, Smile } from "lucide-react";
+import { Calendar, Clock, User, Edit, Trash2, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, ClipboardList, CalendarCheck, Heart, Smile, UserCircle, FlaskConical } from "lucide-react";
 
 interface Appointment {
   id: string;
@@ -26,6 +26,9 @@ interface Appointment {
   nextAppointmentTime?: string;
   nextAppointmentType?: string;
   nextAppointmentSubtype?: string;
+  archType?: string;
+  upperArchSubtype?: string;
+  lowerArchSubtype?: string;
 }
 
 interface AppointmentDetailsDialogProps {
@@ -40,6 +43,8 @@ interface AppointmentDetailsDialogProps {
   onOpenHealthHistory?: (patientId: string, patientName: string) => void;
   onOpenComfortPreference?: (patientId: string, patientName: string) => void;
   onOpenEncounter?: (appointment: Appointment) => void;
+  onViewProfile?: (patientId: string) => void;
+  onAddLabScript?: (appointment: Appointment) => void;
 }
 
 export function AppointmentDetailsDialog({
@@ -53,7 +58,9 @@ export function AppointmentDetailsDialog({
   canDeleteAppointments = true,
   onOpenHealthHistory,
   onOpenComfortPreference,
-  onOpenEncounter
+  onOpenEncounter,
+  onViewProfile,
+  onAddLabScript
 }: AppointmentDetailsDialogProps) {
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -219,7 +226,15 @@ export function AppointmentDetailsDialog({
       '120-day-final-delivery': '120 Days Final Delivery',
       '75-day-data-collection': '75 Days Data Collection for PTI',
       'final-data-collection': 'Final Data Collection',
-      'data-collection-printed-try-in': 'Data collection for Printed-try-in'
+      'data-collection-printed-try-in': 'Data collection for Printed-try-in',
+      // Surgery subtypes
+      'full-arch-fixed': 'Full Arch Fixed',
+      'denture': 'Denture',
+      'implant-removable-denture': 'Implant Removable Denture',
+      'single-implant': 'Single Implant',
+      'multiple-implants': 'Multiple Implants',
+      'extraction': 'Extraction',
+      'extraction-and-graft': 'Extraction and Graft'
     };
 
     return subtypeLabels[subtype] || null;
@@ -289,8 +304,35 @@ export function AppointmentDetailsDialog({
               <div>
                 <p className="text-sm text-blue-600">Appointment Type</p>
                 <p className="font-semibold text-gray-900">{getAppointmentTypeLabel(appointment.type)}</p>
-                {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
-                  <p className="text-sm text-blue-600 mt-1">📋 {getSubtypeLabel(appointment.subtype)}</p>
+                {appointment.archType ? (
+                  <div className="mt-2 space-y-1 bg-blue-50/50 p-2 rounded-md border border-blue-100">
+                    <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">{appointment.archType} Arch</p>
+                    {appointment.archType === 'Dual' ? (
+                      <div className="grid grid-cols-1 gap-1 ml-1">
+                        <div className="text-sm text-blue-700 flex items-center gap-2">
+                          <span className="w-4 h-4 rounded-full bg-blue-100 text-[10px] flex items-center justify-center font-bold text-blue-600">U</span>
+                          {getSubtypeLabel(appointment.upperArchSubtype) || appointment.upperArchSubtype || 'Not selected'}
+                        </div>
+                        <div className="text-sm text-blue-700 flex items-center gap-2">
+                          <span className="w-4 h-4 rounded-full bg-blue-100 text-[10px] flex items-center justify-center font-bold text-blue-600">L</span>
+                          {getSubtypeLabel(appointment.lowerArchSubtype) || appointment.lowerArchSubtype || 'Not selected'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-blue-700 flex items-center gap-2 ml-1">
+                        <span className="w-4 h-4 rounded-full bg-blue-100 text-[10px] flex items-center justify-center font-bold text-blue-600">
+                          {appointment.archType === 'Upper' ? 'U' : 'L'}
+                        </span>
+                        {getSubtypeLabel(appointment.archType === 'Upper' ? appointment.upperArchSubtype : appointment.lowerArchSubtype) ||
+                          (appointment.archType === 'Upper' ? appointment.upperArchSubtype : appointment.lowerArchSubtype) ||
+                          'Not selected'}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  appointment.subtype && getSubtypeLabel(appointment.subtype) && (
+                    <p className="text-sm text-blue-600 mt-1 italic">📋 {getSubtypeLabel(appointment.subtype)}</p>
+                  )
                 )}
               </div>
             </div>
@@ -317,6 +359,85 @@ export function AppointmentDetailsDialog({
                   <p className="text-sm text-green-600">Assigned To</p>
                   <p className="font-semibold text-gray-900">{appointment.assignedUserName}</p>
                 </div>
+              </div>
+            )}
+
+            {/* Action Buttons - Below Assigned To */}
+            {(onViewProfile || onOpenHealthHistory || onOpenComfortPreference || onOpenEncounter || onAddLabScript) && (
+              <div className="flex gap-2 pt-3 justify-start">
+                {onViewProfile && appointment.patientId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-col h-auto py-2 gap-1 text-xs hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+                    onClick={() => {
+                      onViewProfile(appointment.patientId!);
+                      onClose();
+                    }}
+                  >
+                    <UserCircle className="h-4 w-4" />
+                    Profile
+                  </Button>
+                )}
+                {onOpenHealthHistory && appointment.patientId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-col h-auto py-2 gap-1 text-xs hover:bg-pink-50 hover:text-pink-600 hover:border-pink-200"
+                    onClick={() => {
+                      onOpenHealthHistory(appointment.patientId!, appointment.patient);
+                      onClose();
+                    }}
+                  >
+                    <Heart className="h-4 w-4" />
+                    History
+                  </Button>
+                )}
+                {onOpenComfortPreference && appointment.patientId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-col h-auto py-2 gap-1 text-xs hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200"
+                    onClick={() => {
+                      onOpenComfortPreference(appointment.patientId!, appointment.patient);
+                      onClose();
+                    }}
+                  >
+                    <Smile className="h-4 w-4" />
+                    Comfort
+                  </Button>
+                )}
+                {onOpenEncounter && (
+                  <Button
+                    variant={appointment.encounterCompleted ? "outline" : "default"}
+                    size="sm"
+                    className={`flex flex-col h-auto py-2 gap-1 text-xs ${appointment.encounterCompleted
+                      ? "hover:bg-green-50 hover:text-green-600 hover:border-green-200"
+                      : "bg-green-600 hover:bg-green-700 text-white border-transparent shadow-sm"
+                      }`}
+                    onClick={() => {
+                      onOpenEncounter(appointment);
+                      onClose();
+                    }}
+                  >
+                    {appointment.encounterCompleted ? <ClipboardList className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                    Encounter
+                  </Button>
+                )}
+                {onAddLabScript && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-col h-auto py-2 gap-1 text-xs hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200"
+                    onClick={() => {
+                      onAddLabScript(appointment);
+                      onClose();
+                    }}
+                  >
+                    <FlaskConical className="h-4 w-4" />
+                    Lab Script
+                  </Button>
+                )}
               </div>
             )}
 
@@ -380,56 +501,7 @@ export function AppointmentDetailsDialog({
               </div>
             )}
 
-            {/* Action Buttons */}
-            {(onOpenEncounter || onOpenHealthHistory || onOpenComfortPreference) && (
-              <div className="grid grid-cols-3 gap-2 pt-2">
-                {onOpenEncounter && (
-                  <Button
-                    variant={appointment.encounterCompleted ? "outline" : "default"}
-                    size="sm"
-                    className={`flex flex-col h-auto py-2 gap-1 text-xs ${appointment.encounterCompleted
-                      ? "hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-                      : "bg-blue-600 hover:bg-blue-700 text-white border-transparent shadow-sm"
-                      }`}
-                    onClick={() => {
-                      onOpenEncounter(appointment);
-                      onClose();
-                    }}
-                  >
-                    {appointment.encounterCompleted ? <ClipboardList className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-                    {appointment.encounterCompleted ? "View Encounter" : "Fill Encounter"}
-                  </Button>
-                )}
-                {onOpenHealthHistory && appointment.patientId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex flex-col h-auto py-2 gap-1 text-xs hover:bg-pink-50 hover:text-pink-600 hover:border-pink-200"
-                    onClick={() => {
-                      onOpenHealthHistory(appointment.patientId!, appointment.patient);
-                      onClose();
-                    }}
-                  >
-                    <Heart className="h-4 w-4" />
-                    History
-                  </Button>
-                )}
-                {onOpenComfortPreference && appointment.patientId && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex flex-col h-auto py-2 gap-1 text-xs hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200"
-                    onClick={() => {
-                      onOpenComfortPreference(appointment.patientId!, appointment.patient);
-                      onClose();
-                    }}
-                  >
-                    <Smile className="h-4 w-4" />
-                    Comfort
-                  </Button>
-                )}
-              </div>
-            )}
+
           </div>
         </div>
 

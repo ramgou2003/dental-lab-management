@@ -73,6 +73,9 @@ export interface Appointment {
   nextAppointmentSubtype?: string;
   created_at?: string; // Added for sorting stability
   isEmergency?: boolean;
+  archType?: string;
+  upperArchSubtype?: string;
+  lowerArchSubtype?: string;
 }
 
 interface User {
@@ -252,6 +255,24 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       { value: 'printed-try-in-delivery', label: 'Printed Try-in Delivery' },
       { value: '82-day-appliance-delivery', label: '82 Days PTI Delivery' },
       { value: '120-day-final-delivery', label: '120 Days Final Delivery' }
+    ],
+    'surgery': [
+      { value: 'full-arch-fixed', label: 'Full Arch Fixed' },
+      { value: 'denture', label: 'Denture' },
+      { value: 'implant-removable-denture', label: 'Implant Removable Denture' },
+      { value: 'single-implant', label: 'Single Implant' },
+      { value: 'multiple-implants', label: 'Multiple Implants' },
+      { value: 'extraction', label: 'Extraction' },
+      { value: 'extraction-and-graft', label: 'Extraction and Graft' }
+    ],
+    'surgical-revision': [
+      { value: 'full-arch-fixed', label: 'Full Arch Fixed' },
+      { value: 'denture', label: 'Denture' },
+      { value: 'implant-removable-denture', label: 'Implant Removable Denture' },
+      { value: 'single-implant', label: 'Single Implant' },
+      { value: 'multiple-implants', label: 'Multiple Implants' },
+      { value: 'extraction', label: 'Extraction' },
+      { value: 'extraction-and-graft', label: 'Extraction and Graft' }
     ]
   };
 
@@ -316,7 +337,15 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       '120-day-final-delivery': '120 Day Final',
       '75-day-data-collection': '75 Day PTI',
       'final-data-collection': 'Final',
-      'data-collection-printed-try-in': 'DC PTI'
+      'data-collection-printed-try-in': 'DC PTI',
+      // Surgery subtypes
+      'full-arch-fixed': 'Full Arch Fixed',
+      'denture': 'Denture',
+      'implant-removable-denture': 'Implant Removable Denture',
+      'single-implant': 'Single Implant',
+      'multiple-implants': 'Multiple Implants',
+      'extraction': 'Extraction',
+      'extraction-and-graft': 'Extraction and Graft'
     };
 
     // If it's in the standard map, return it
@@ -2159,6 +2188,11 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                             WebkitTouchCallout: 'none', // Critical for iOS to prevent magnifier/menu
                           }}
                           onMouseDown={(e) => {
+                            // Allow right-click to propagate for ContextMenu
+                            if (e.button === 2) {
+                              return; // Let ContextMenuTrigger handle this
+                            }
+
                             e.preventDefault();
                             e.stopPropagation(); // Stop propagation to container generally
 
@@ -2520,10 +2554,31 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                           👤 {appointment.assignedUserName}
                                         </div>
                                       )}
-                                      {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
-                                        <div className="text-[8px] font-medium text-blue-600 truncate leading-tight">
-                                          {getSubtypeLabel(appointment.subtype)}
+                                      {appointment.archType ? (
+                                        <div className="flex flex-col gap-0.5 mt-0.5">
+                                          {appointment.archType === 'Dual' ? (
+                                            <>
+                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate">
+                                                U: {getSubtypeLabel(appointment.upperArchSubtype || '')}
+                                              </span>
+                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate mt-0.5">
+                                                L: {getSubtypeLabel(appointment.lowerArchSubtype || '')}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate">
+                                              {appointment.archType === 'Upper' ? 'U' : 'L'}: {getSubtypeLabel(appointment.archType === 'Upper' ? appointment.upperArchSubtype || '' : appointment.lowerArchSubtype || '')}
+                                            </span>
+                                          )}
                                         </div>
+                                      ) : (
+                                        appointment.subtype && getSubtypeLabel(appointment.subtype) && (
+                                          <div className="mt-0.5">
+                                            <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate">
+                                              {getSubtypeLabel(appointment.subtype)}
+                                            </span>
+                                          </div>
+                                        )
                                       )}
                                     </div>
                                     {/* Bottom row - Time and badge */}
@@ -2574,10 +2629,31 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                             👤 {appointment.assignedUserName}
                                           </div>
                                         )}
-                                        {appointment.subtype && getSubtypeLabel(appointment.subtype) && (
-                                          <div className="text-[9px] font-medium text-blue-600 truncate leading-tight">
-                                            📋 {getSubtypeLabel(appointment.subtype)}
+                                        {appointment.archType ? (
+                                          <div className="flex flex-col gap-1 mt-1">
+                                            {appointment.archType === 'Dual' ? (
+                                              <>
+                                                <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
+                                                  Upper: {getSubtypeLabel(appointment.upperArchSubtype || '')}
+                                                </span>
+                                                <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
+                                                  Lower: {getSubtypeLabel(appointment.lowerArchSubtype || '')}
+                                                </span>
+                                              </>
+                                            ) : (
+                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
+                                                {appointment.archType}: {getSubtypeLabel(appointment.archType === 'Upper' ? appointment.upperArchSubtype || '' : appointment.lowerArchSubtype || '')}
+                                              </span>
+                                            )}
                                           </div>
+                                        ) : (
+                                          appointment.subtype && getSubtypeLabel(appointment.subtype) && (
+                                            <div className="mt-1">
+                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
+                                                📋 {getSubtypeLabel(appointment.subtype)}
+                                              </span>
+                                            </div>
+                                          )
                                         )}
                                       </div>
                                     </div>
