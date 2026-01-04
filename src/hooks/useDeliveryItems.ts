@@ -24,8 +24,13 @@ export interface DeliveryItem {
   scheduled_delivery_time: string | null;
   actual_delivery_date: string | null;
   tracking_number: string | null;
+  appointment_id?: string | null;
   created_at: string;
   updated_at: string;
+  appointments?: {
+    date: string;
+    start_time: string;
+  }
 }
 
 export function useDeliveryItems() {
@@ -38,7 +43,13 @@ export function useDeliveryItems() {
       setLoading(true);
       const { data, error } = await supabase
         .from('delivery_items')
-        .select('*')
+        .select(`
+          *,
+          appointments:appointment_id (
+            date,
+            start_time
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -133,6 +144,7 @@ export function useDeliveryItems() {
       scheduled_delivery_date?: string;
       scheduled_delivery_time?: string;
       tracking_number?: string;
+      appointment_id?: string;
     }
   ) => {
     try {
@@ -140,6 +152,10 @@ export function useDeliveryItems() {
         delivery_status: newStatus,
         updated_at: new Date().toISOString(),
       };
+
+      if (deliveryData?.appointment_id) {
+        updateData.appointment_id = deliveryData.appointment_id;
+      }
 
       // Add delivery data if provided
       if (deliveryData) {

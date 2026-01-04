@@ -136,13 +136,13 @@ export async function getConsultationsByProvider(providerId: string): Promise<Co
  * Update consultation status
  */
 export async function updateConsultationStatus(
-  consultationId: string, 
+  consultationId: string,
   status: ConsultationData['consultation_status']
 ): Promise<boolean> {
   try {
     const { error } = await supabase
       .from('consultations')
-      .update({ 
+      .update({
         consultation_status: status,
         updated_at: new Date().toISOString()
       })
@@ -375,9 +375,8 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
         zip_code: packetData.address_zip || null,
         status: 'ACTIVE', // Always set status to ACTIVE
         treatment_status: 'Treatment Not Started', // Set initial treatment status
-        patient_source: 'Consult' // Patient created from consultation
-        // Note: full_name is a generated column and will be automatically created
-        // created_at and updated_at have default values, so we don't need to specify them
+        patient_source: 'Consult', // Patient created from consultation
+        consultation_patient_id: consultation?.consultation_patient_id || null
       };
 
       console.log('📝 Patient data to insert:', patientData);
@@ -388,11 +387,11 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
       }
 
       // Create new patient in main patients table
-      const { data: newPatient, error: createError } = await supabase
+      const { data: newPatient, error: createError } = await (supabase
         .from('patients')
-        .insert(patientData)
+        .insert(patientData as any)
         .select()
-        .single();
+        .single() as any);
 
       if (createError) {
         console.error('❌ Error creating patient:', createError);
@@ -661,7 +660,9 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
         zip_code: null,
         status: 'ACTIVE', // Always set status to ACTIVE
         treatment_status: 'Treatment Not Started', // Set initial treatment status
-        patient_source: 'Consult' // Patient created from consultation
+        patient_source: 'Consult', // Patient created from consultation
+
+        consultation_patient_id: consultationPatientId || consultation.consultation_patient_id || null
       };
 
       console.log('📝 Patient data to insert:', patientData);
@@ -672,11 +673,11 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
       }
 
       // Create new patient in main patients table
-      const { data: newPatient, error: createError } = await supabase
+      const { data: newPatient, error: createError } = await (supabase
         .from('patients')
-        .insert(patientData)
+        .insert(patientData as any)
         .select()
-        .single();
+        .single() as any);
 
       if (createError) {
         console.error('❌ Error creating patient:', createError);

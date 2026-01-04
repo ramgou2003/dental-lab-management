@@ -8,6 +8,7 @@ import { AddConsultationDialog } from "@/components/AddConsultationDialog";
 import { Calendar, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { AppointmentSchedulerDialog } from "@/components/calendar/AppointmentSchedulerDialog";
 
 const ConsultationPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -17,6 +18,11 @@ const ConsultationPage: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [treatmentStatusFilter, setTreatmentStatusFilter] = useState<string>("all");
+  const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
+  const [draftConsultationData, setDraftConsultationData] = useState<any>(null);
+  const [initialFormDate, setInitialFormDate] = useState<Date | undefined>(undefined);
+  const [initialFormTime, setInitialFormTime] = useState<string | undefined>(undefined);
+  const [initialFormEndTime, setInitialFormEndTime] = useState<string | undefined>(undefined);
 
   const handleAddConsultation = () => {
     setIsAddDialogOpen(true);
@@ -192,9 +198,48 @@ const ConsultationPage: React.FC = () => {
 
       {/* Add Consultation Dialog */}
       <AddConsultationDialog
-        isOpen={isAddDialogOpen}
-        onClose={() => setIsAddDialogOpen(false)}
+        isOpen={isAddDialogOpen && !showSchedulerDialog}
+        onClose={() => {
+          setIsAddDialogOpen(false);
+          setDraftConsultationData(null);
+        }}
         onSuccess={handleConsultationSuccess}
+        initialDate={initialFormDate}
+        initialTime={initialFormTime}
+        initialEndTime={initialFormEndTime}
+        initialValues={draftConsultationData}
+        onOpenCalendar={(data) => {
+          console.log('📅 Opening calendar from consultation dialog:', data);
+          setDraftConsultationData(data);
+          if (data.consultationDate) {
+            setInitialFormDate(data.consultationDate);
+          }
+          setShowSchedulerDialog(true);
+        }}
+      />
+
+      {/* Appointment Scheduler Dialog */}
+      <AppointmentSchedulerDialog
+        open={showSchedulerDialog}
+        onOpenChange={setShowSchedulerDialog}
+        patientName={draftConsultationData?.firstName ? `${draftConsultationData.firstName} ${draftConsultationData.lastName}` : "New Patient"}
+        patientId={draftConsultationData?.selectedPatient?.id || ""}
+        initialDate={initialFormDate}
+        appointmentType="consultation"
+        onSchedule={(scheduleData) => {
+          console.log('Scheduled from consultation scheduler:', scheduleData);
+          setShowSchedulerDialog(false);
+          setInitialFormDate(new Date(scheduleData.date + 'T00:00:00'));
+          setInitialFormTime(scheduleData.startTime);
+          setInitialFormEndTime(scheduleData.endTime);
+
+          // Update draft data with new time and date
+          setDraftConsultationData(prev => ({
+            ...prev,
+            consultationDate: new Date(scheduleData.date + 'T00:00:00'),
+            consultationTime: scheduleData.startTime
+          }));
+        }}
       />
     </div>
   );

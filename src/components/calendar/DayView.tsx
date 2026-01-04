@@ -35,6 +35,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -67,6 +74,7 @@ export interface Appointment {
   notes?: string;
   encounterCompleted?: boolean;
   nextAppointmentScheduled?: boolean;
+  nextAppointmentStatus?: 'scheduled' | 'not_scheduled' | 'not_required';
   nextAppointmentDate?: string;
   nextAppointmentTime?: string;
   nextAppointmentType?: string;
@@ -170,6 +178,12 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     appointmentDetails: string;
   } | null>(null);
 
+  // State for No Show dialog
+  const [showNoShowDialog, setShowNoShowDialog] = useState<{
+    appointmentId: string;
+    appointmentDetails: string;
+  } | null>(null);
+
   // State for time slot long-press handling
   const [timeSlotLongPressTimer, setTimeSlotLongPressTimer] = useState<NodeJS.Timeout | null>(null);
 
@@ -216,6 +230,12 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
   const [nextAppointmentEndTime, setNextAppointmentEndTime] = useState<string>('');
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
   const [schedulingNextAppointment, setSchedulingNextAppointment] = useState(false);
+
+  // State for reschedule dialog
+  const [rescheduleDialog, setRescheduleDialog] = useState<{
+    appointment: Appointment;
+    open: boolean;
+  } | null>(null);
 
   // Use a REF to store patient info - refs are NOT affected by React state updates or dialog handlers
   // This guarantees the patient info persists throughout the entire scheduling flow
@@ -427,12 +447,55 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     const appointment = appointments.find(apt => apt.id === appointmentId);
     if (!appointment) return;
 
+    // Check if new status is No Show
+    if (newStatus === 'NSHOW') {
+      setShowNoShowDialog({
+        appointmentId,
+        appointmentDetails: `${appointment.patient} - ${appointment.type} at ${appointment.startTime}`
+      });
+      return;
+    }
+
     // Show confirmation dialog
     setStatusChangeConfirmation({
       appointmentId,
       newStatus,
       appointmentDetails: `${appointment.patient} - ${appointment.type} at ${appointment.startTime}`
     });
+  };
+
+  // Handler for No Show dialog options
+  const handleNoShowOption = async (option: 'unscheduled' | 'not_required') => {
+    if (!showNoShowDialog) return;
+    const { appointmentId } = showNoShowDialog;
+
+    if (option === 'unscheduled') {
+      // Option 1: Add to Unscheduled List (just set status to NSHOW)
+      if (onStatusChange) {
+        onStatusChange(appointmentId, 'NSHOW');
+      }
+    } else {
+      // Option 2: No Next Appointment Required
+      // Set status to NSHOW AND next_appointment_status to 'not_required'
+      try {
+        const { error } = await supabaseClient
+          .from('appointments')
+          .update({
+            status_code: 'NSHOW',
+            status: 'No Show',
+            next_appointment_status: 'not_required'
+          })
+          .eq('id', appointmentId);
+
+        if (error) throw error;
+        toast.success("Appointment marked as No Show (No next appointment required)");
+      } catch (err) {
+        console.error("Error updating appointment to No Show/Not Required:", err);
+        toast.error("Failed to update appointment");
+      }
+    }
+
+    setShowNoShowDialog(null);
   };
 
   const confirmStatusChange = () => {
@@ -841,6 +904,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     try {
       const { data: { user } } = await supabaseClient.auth.getUser();
 
+
       // 1. Mark appointment as complete
       const { error } = await (supabaseClient as any)
         .from('appointments')
@@ -850,7 +914,8 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
           encounter_completed_by: user?.id || null,
           status: 'Appointment Completed',
           status_code: 'CMPLT',
-          next_appointment_scheduled: false
+          next_appointment_scheduled: false,
+          next_appointment_status: 'not_scheduled'
         })
         .eq('id', nextAppointmentDialog.appointmentId);
 
@@ -870,7 +935,8 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
 
       if (existingEncounter) {
         const updates: any = {
-          next_appointment_scheduled: false
+          next_appointment_scheduled: false,
+          next_appointment_status: 'not_scheduled'
         };
 
         // Default to 'follow-up' and Today if not specified in form
@@ -893,6 +959,64 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       }
 
       toast.success('Appointment marked as complete');
+
+      // Close dialog
+      setNextAppointmentDialog(null);
+
+      // Verify immediate local state update via parent callback
+      if (onStatusChange) {
+        onStatusChange(nextAppointmentDialog.appointmentId, 'CMPLT');
+      }
+
+      // Refresh encounter status
+      checkEncounterStatus([nextAppointmentDialog.appointmentId]);
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to complete appointment');
+    }
+  };
+
+  // Handler for completing appointment with NO next appointment required
+  const handleCompleteNoNextAppointmentRequired = async () => {
+    if (!nextAppointmentDialog) return;
+
+    try {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+
+      // 1. Mark appointment as complete, AND scheduled=true (so it doesn't show in unscheduled)
+      const { error } = await (supabaseClient as any)
+        .from('appointments')
+        .update({
+          encounter_completed: true,
+          encounter_completed_at: new Date().toISOString(),
+          encounter_completed_by: user?.id || null,
+          status: 'Appointment Completed',
+          status_code: 'CMPLT',
+          next_appointment_scheduled: true, // Mark as scheduled/handled (legacy)
+          next_appointment_status: 'not_required' // New status
+        })
+        .eq('id', nextAppointmentDialog.appointmentId);
+
+      if (error) {
+        console.error('Error completing appointment:', error);
+        toast.error('Failed to complete appointment');
+        return;
+      }
+
+      // 2. Update existing encounter
+      const { error: encounterError } = await (supabaseClient as any)
+        .from('encounters')
+        .update({
+          next_appointment_scheduled: true,
+          next_appointment_status: 'not_required'
+        })
+        .eq('appointment_id', nextAppointmentDialog.appointmentId);
+
+      if (encounterError) {
+        console.error('Error updating encounter:', encounterError);
+      }
+
+      toast.success('Appointment completed (No next appointment)');
 
       // Close dialog
       setNextAppointmentDialog(null);
@@ -968,6 +1092,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
           status: 'Appointment Completed',
           status_code: 'CMPLT',
           next_appointment_scheduled: true,
+          next_appointment_status: 'scheduled',
           next_appointment_date: nextAppointmentDate,
           next_appointment_time: nextAppointmentStartTime,
           next_appointment_type: nextAppointmentType,
@@ -988,7 +1113,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
         : nextAppointmentTypes.find(t => t.value === nextAppointmentType)?.label || nextAppointmentType;
 
       // Create the next appointment using ref values
-      const { error: createError } = await supabaseClient
+      const { data: newAppointment, error: createError } = await (supabaseClient as any)
         .from('appointments')
         .insert({
           patient_id: patientId,
@@ -1002,7 +1127,9 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
           status: 'Not Confirmed',
           status_code: '?????',
           assigned_user_id: nextAppointmentAssignedUserId || null
-        });
+        })
+        .select()
+        .single();
 
       if (createError) {
         console.error('Error creating next appointment:', createError);
@@ -1010,6 +1137,26 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
         setSchedulingNextAppointment(false);
         checkEncounterStatus([currentApptId]);
         return;
+      }
+
+      // If next appointment type is 'consultation', create a consultation record
+      if (nextAppointmentType === 'consultation') {
+        console.log('Creating linked consultation record for:', newAppointment.id);
+        const { error: consultationError } = await (supabaseClient as any)
+          .from('consultations')
+          .insert({
+            appointment_id: newAppointment.id,
+            patient_id: patientId,
+            patient_name: patientName,
+            consultation_status: 'scheduled',
+            consultation_date: nextAppointmentDate
+          });
+
+        if (consultationError) {
+          console.error('Error creating consultation record:', consultationError);
+          // Don't fail the whole operation, just log/toast
+          toast.error('Appointment created but failed to initialize consultation record');
+        }
       }
 
       toast.success('Appointment completed and next appointment scheduled');
@@ -1098,15 +1245,83 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating lab script:', error);
+        toast.error('Failed to create lab script');
+        return;
+      }
 
-      toast.success("Lab script created successfully!");
+      toast.success('Lab script created successfully');
       setLabScriptFormOpen(false);
-      return newLabScript;
     } catch (error) {
-      console.error("Error creating lab script:", error);
-      toast.error("Failed to create lab script. Please try again.");
-      throw error;
+      console.error('Error in handleLabScriptSubmit:', error);
+      toast.error('An error occurred');
+    }
+  };
+
+  const handleReschedule = (appointment: Appointment) => {
+    setOpenContextMenuId(null);
+    if (!appointment.patientId) {
+      toast.error("Cannot reschedule: Patient ID missing");
+      return;
+    }
+    setRescheduleDialog({
+      appointment,
+      open: true
+    });
+  };
+
+  const handleRescheduleConfirm = async (appointmentData: {
+    type: string;
+    subtype: string | null;
+    date: string;
+    startTime: string;
+    endTime: string;
+  }) => {
+    if (!rescheduleDialog) return;
+
+    try {
+      // 1. Update old appointment status
+      const { error: updateError } = await (supabaseClient as any)
+        .from('appointments')
+        .update({ status_code: 'RESCH' })
+        .eq('id', rescheduleDialog.appointment.id);
+
+      if (updateError) {
+        console.error('Error rescheduling:', updateError);
+        toast.error('Failed to update status');
+        return;
+      }
+
+      // 2. Create new appointment
+      const { error: createError } = await (supabaseClient as any)
+        .from('appointments')
+        .insert({
+          patient_id: rescheduleDialog.appointment.patientId,
+          patient_name: rescheduleDialog.appointment.patient,
+          title: rescheduleDialog.appointment.title,
+          appointment_type: appointmentData.type,
+          subtype: appointmentData.subtype,
+          date: appointmentData.date,
+          start_time: appointmentData.startTime,
+          end_time: appointmentData.endTime,
+          notes: rescheduleDialog.appointment.notes,
+          status: 'Not Confirmed',
+          status_code: '?????',
+          assigned_user_id: rescheduleDialog.appointment.assignedUserId
+        });
+
+      if (createError) {
+        console.error('Error creating new appointment:', createError);
+        toast.error('Failed to create new appointment');
+      } else {
+        toast.success('Appointment rescheduled successfully');
+        setRescheduleDialog(null);
+        window.location.reload(); // Force refresh to show changes
+      }
+    } catch (error) {
+      console.error('Error in handleRescheduleConfirm:', error);
+      toast.error('An error occurred during rescheduling');
     }
   };
 
@@ -1300,7 +1515,21 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     persistentSelectionRef.current = { start: null, end: null, column: null, isVisible: false };
   }, []);
 
-  const getTypeColors = (typeKey: string, encounterCompleted?: boolean, statusCode?: string) => {
+  const getTypeColors = (typeKey: string, encounterCompleted = false, statusCode?: string, status: string = '') => {
+    // If appointment is Rescheduled, OVERRIDE all colors to Gray
+    if (status === 'RESCH') {
+      return {
+        key: typeKey,
+        label: 'Rescheduled',
+        shortLabel: 'Rescheduled',
+        color: 'bg-gray-100 border-gray-300 text-gray-500',
+        hoverColor: 'hover:bg-gray-200',
+        selectedColor: 'bg-gray-200 border-gray-400',
+        dragColor: 'bg-gray-200 border-gray-400',
+        badgeColor: 'bg-gray-500 text-white'
+      };
+    }
+
     // If status is completed (gray), it takes precedence over everything
     if (statusCode === 'CMPLT') {
       return {
@@ -1354,6 +1583,20 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
         selectedColor: 'bg-blue-100 border-blue-400',
         dragColor: 'bg-blue-200 border-blue-500',
         badgeColor: 'bg-purple-500 text-white'
+      };
+    }
+
+    // Special handling for Appliance-delivery/appliance-insertion - match printed-try-in styling
+    if (typeKey === 'Appliance-delivery' || typeKey === 'appliance-insertion') {
+      return {
+        key: typeKey,
+        label: 'Appliance Delivery',
+        shortLabel: 'Delivery',
+        color: 'bg-blue-100 border-blue-300 text-blue-800',
+        hoverColor: 'hover:bg-blue-25',
+        selectedColor: 'bg-blue-100 border-blue-400',
+        dragColor: 'bg-blue-200 border-blue-500',
+        badgeColor: 'bg-blue-500 text-white'
       };
     }
 
@@ -1903,6 +2146,18 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
               // Map both 'surgery' and 'surgical-revision' to the surgery column
               const typeAppointments = appointments.filter(apt => {
                 // If this is the emergency column, capture all emergency appointments
+                // If appointment is Rescheduled, OVERRIDE all colors to Gray
+                if (apt.statusCode === 'RESCH') {
+                  // This is a placeholder for where the color/style override would happen
+                  // The actual styling logic for individual appointments is further down
+                  // This filter is only for determining which appointments belong to which column
+                  // and does not directly apply styles here.
+                  // The instruction's provided code snippet for `return { label: 'Rescheduled', ... }`
+                  // seems to be intended for a `getTypeColors` or similar function, not directly here.
+                  // For now, we'll just ensure rescheduled appointments are included in their original type column
+                  // but their styling will be handled by `getStatusColor` or a similar mechanism later.
+                }
+
                 if (type.key === 'emergency') {
                   return apt.isEmergency === true;
                 }
@@ -1914,6 +2169,9 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
 
                 if (type.key === 'surgery') {
                   return apt.type === 'surgery' || apt.type === 'surgical-revision';
+                }
+                if (type.key === 'printed-try-in') {
+                  return apt.type === 'printed-try-in' || apt.type === 'Appliance-delivery' || apt.type === 'appliance-insertion';
                 }
                 return apt.type === type.key;
               });
@@ -2128,7 +2386,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                 }
 
                 // Get type colors based on appointment type and encounter completion status
-                const typeColors = getTypeColors(appointment.type, appointment.encounterCompleted, appointment.statusCode);
+                const typeColors = getTypeColors(appointment.type, appointment.encounterCompleted, appointment.statusCode, appointment.statusCode);
                 const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
                 const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
 
@@ -2387,14 +2645,18 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent className="w-56 touch-manipulation select-none" align="start" side="right">
-                                    <DropdownMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
-                                      <ClipboardList className="mr-2 h-4 w-4" />
-                                      {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
-                                      <FileEdit className="mr-2 h-4 w-4" />
-                                      Add New Lab Script
-                                    </DropdownMenuItem>
+                                    {appointment.statusCode !== 'RESCH' && (
+                                      <>
+                                        <DropdownMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
+                                          <ClipboardList className="mr-2 h-4 w-4" />
+                                          {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
+                                          <FileEdit className="mr-2 h-4 w-4" />
+                                          Add New Lab Script
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
                                     {appointment.statusCode !== 'CMPLT' && (
                                       <>
                                         <DropdownMenuSeparator />
@@ -2453,9 +2715,9 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                               <XCircle className="mr-2 h-4 w-4 text-red-500" />
                                               No Show
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'RESCH'))}>
-                                              <Clock className="mr-2 h-4 w-4 text-yellow-600" />
-                                              Rescheduled
+                                            <DropdownMenuItem {...handleMenuItemAction(() => handleReschedule(appointment))}>
+                                              <Clock className="mr-2 h-4 w-4 text-amber-600" />
+                                              Reschedule Appointment
                                             </DropdownMenuItem>
                                             <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
                                               <XCircle className="mr-2 h-4 w-4 text-red-600" />
@@ -2665,6 +2927,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                         const actualTypeColors = getTypeColors(
                                           appointment.type,
                                           appointmentEncounterStatus[appointment.id] || appointment.encounterCompleted,
+                                          appointment.statusCode,
                                           appointment.statusCode
                                         );
                                         const label = actualTypeColors.shortLabel || actualTypeColors.label;
@@ -2745,14 +3008,18 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                         </div>
                       </ContextMenuTrigger>
                       <ContextMenuContent className="w-56 touch-manipulation select-none">
-                        <ContextMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
-                          <ClipboardList className="mr-2 h-4 w-4" />
-                          {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
-                        </ContextMenuItem>
-                        <ContextMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
-                          <FileEdit className="mr-2 h-4 w-4" />
-                          Add New Lab Script
-                        </ContextMenuItem>
+                        {appointment.statusCode !== 'RESCH' && (
+                          <>
+                            <ContextMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
+                              <ClipboardList className="mr-2 h-4 w-4" />
+                              {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
+                            </ContextMenuItem>
+                            <ContextMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
+                              <FileEdit className="mr-2 h-4 w-4" />
+                              Add New Lab Script
+                            </ContextMenuItem>
+                          </>
+                        )}
                         {appointment.statusCode !== 'CMPLT' && (
                           <>
                             <ContextMenuSeparator />
@@ -2812,8 +3079,8 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                   <XCircle className="mr-2 h-4 w-4 text-red-700" />
                                   No Show
                                 </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'RESCH'))}>
-                                  <Calendar className="mr-2 h-4 w-4 text-amber-600" />
+                                <ContextMenuItem {...handleMenuItemAction(() => handleReschedule(appointment))}>
+                                  <Clock className="mr-2 h-4 w-4 text-amber-600" />
                                   Reschedule Appointment
                                 </ContextMenuItem>
                                 <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
@@ -3124,6 +3391,49 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
               patientName={selectedPatientName}
             />
 
+            {/* No Show Options Dialog */}
+            <Dialog open={!!showNoShowDialog} onOpenChange={(open) => {
+              if (!open) setShowNoShowDialog(null);
+            }}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>No Show Options</DialogTitle>
+                  <DialogDescription>
+                    How would you like to handle this no-show?
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col gap-4 mt-4">
+                  <Button
+                    variant="outline"
+                    className="flex flex-col items-start h-auto p-4 border-blue-200 bg-blue-50 hover:bg-blue-100"
+                    onClick={() => handleNoShowOption('unscheduled')}
+                  >
+                    <div className="flex items-center gap-2 font-semibold text-blue-900">
+                      <ClipboardList className="h-4 w-4" />
+                      Add to Unscheduled List
+                    </div>
+                    <span className="text-sm text-blue-700 mt-1">
+                      Schedule later via Next Appointments
+                    </span>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="flex flex-col items-start h-auto p-4 border-red-200 bg-red-50 hover:bg-red-100"
+                    onClick={() => handleNoShowOption('not_required')}
+                  >
+                    <div className="flex items-center gap-2 font-semibold text-red-900">
+                      <XCircle className="h-4 w-4" />
+                      No Next Appointment Required
+                    </div>
+                    <span className="text-sm text-red-700 mt-1">
+                      Mark as complete and finish
+                    </span>
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             {/* Status Change Confirmation Dialog */}
             <AlertDialog open={!!statusChangeConfirmation} onOpenChange={(open) => {
               if (!open) {
@@ -3224,53 +3534,102 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                 setNextAppointmentDialog(null);
               }
             }}>
-              <AlertDialogContent className="touch-manipulation">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Complete Appointment</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Would you like to schedule the next appointment for this patient?
-                    <br />
-                    <span className="text-sm text-gray-600">
-                      Patient: {nextAppointmentDialog?.patientName}
-                    </span>
-                  </AlertDialogDescription>
+              <AlertDialogContent className="touch-manipulation max-w-md gap-6">
+                <AlertDialogHeader className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded-full">
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <AlertDialogTitle className="text-xl">Appointment Completed</AlertDialogTitle>
+                      <AlertDialogDescription className="mt-1">
+                        What would you like to do next?
+                      </AlertDialogDescription>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 flex items-center gap-3">
+                    <div className="bg-white p-2 rounded-full border border-slate-200">
+                      <User className="h-4 w-4 text-slate-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Patient</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">
+                        {nextAppointmentDialog?.patientName}
+                      </p>
+                    </div>
+                  </div>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={handleCompleteWithoutNextAppointment}
-                    disabled={schedulingNextAppointment}
-                    className="touch-manipulation"
-                  >
-                    Complete Without Scheduling
-                  </Button>
+
+                <div className="flex flex-col gap-3">
                   <Button
                     onClick={() => {
-                      // Store patient info in REF - refs are NOT affected by React state updates
-                      // This guarantees we have the data when creating the appointment
                       if (nextAppointmentDialog) {
-                        console.log('Storing patient info in ref:', nextAppointmentDialog);
                         nextAppointmentPatientRef.current = {
                           patientId: nextAppointmentDialog.patientId,
                           patientName: nextAppointmentDialog.patientName,
                           currentApptId: nextAppointmentDialog.appointmentId
                         };
                       }
-                      // Reset form fields
                       setNextAppointmentType('');
                       setNextAppointmentSubtype('');
                       setNextAppointmentDate('');
                       setNextAppointmentStartTime('');
                       setNextAppointmentEndTime('');
-                      // Show the form
                       setShowNextAppointmentForm(true);
                     }}
                     disabled={schedulingNextAppointment}
-                    className="bg-blue-600 hover:bg-blue-700 text-white touch-manipulation"
+                    variant="ghost"
+                    className="w-full justify-between items-center h-auto py-4 px-4 bg-blue-50/80 hover:bg-blue-100 text-blue-900 border border-blue-200 shadow-sm group transition-all duration-200"
                   >
-                    Schedule Next Appointment
+                    <div className="flex items-center gap-4">
+                      <div className="bg-white p-2 rounded-lg shadow-sm border border-blue-100 group-hover:scale-110 transition-transform duration-200">
+                        <Calendar className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-base">Schedule Next Appointment</p>
+                        <p className="text-xs text-blue-600/80 font-medium">Book a follow-up visit now</p>
+                      </div>
+                    </div>
                   </Button>
-                </AlertDialogFooter>
+
+                  <Button
+                    onClick={handleCompleteWithoutNextAppointment}
+                    disabled={schedulingNextAppointment}
+                    variant="ghost"
+                    className="w-full justify-between items-center h-auto py-4 px-4 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 shadow-sm group transition-all duration-200"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="bg-white p-2 rounded-lg shadow-sm border border-indigo-100 group-hover:scale-110 transition-transform duration-200">
+                        <ClipboardList className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-base">Add to Unscheduled List</p>
+                        <p className="text-xs text-indigo-600/80 font-medium">Schedule later via Next Appointments</p>
+                      </div>
+                    </div>
+                  </Button>
+
+                  <Button
+                    onClick={handleCompleteNoNextAppointmentRequired}
+                    disabled={schedulingNextAppointment}
+                    variant="ghost"
+                    className="w-full justify-between items-center h-auto py-4 px-4 bg-red-50/80 hover:bg-red-100 text-red-900 border border-red-200 shadow-sm group transition-all duration-200"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="bg-white p-2 rounded-lg shadow-sm border border-red-100 group-hover:scale-110 transition-transform duration-200">
+                        <XCircle className="h-5 w-5 text-red-500" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-base">No Next Appointment Required</p>
+                        <p className="text-xs text-red-600/80 font-medium">Mark as complete and finish</p>
+                      </div>
+                    </div>
+                  </Button>
+                </div>
+
+                {/* Hidden empty footer to satisfy accessibility if needed, or remove if not strictly required by component */}
+                <AlertDialogFooter className="hidden" />
               </AlertDialogContent>
             </AlertDialog>
 
@@ -3531,6 +3890,22 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
               appointmentSubtype={nextAppointmentSubtype}
               onSchedule={handleTimeSelected}
             />
+
+            {/* Reschedule Dialog */}
+            {rescheduleDialog && (
+              <AppointmentSchedulerDialog
+                open={rescheduleDialog.open}
+                onOpenChange={(open) => {
+                  if (!open) setRescheduleDialog(null);
+                }}
+                patientName={rescheduleDialog.appointment.patient}
+                patientId={rescheduleDialog.appointment.patientId || ''}
+                initialDate={new Date(date)} // Default to current view date
+                appointmentType={rescheduleDialog.appointment.type}
+                appointmentSubtype={rescheduleDialog.appointment.subtype}
+                onSchedule={handleRescheduleConfirm}
+              />
+            )}
 
             {/* Encounter Form Dialog */}
             <EncounterFormDialog

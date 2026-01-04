@@ -33,7 +33,7 @@ export function ApplianceDeliveryPage() {
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [selectedDeliveryItem, setSelectedDeliveryItem] = useState<DeliveryItem | null>(null);
   const [selectedReportCard, setSelectedReportCard] = useState<ReportCard | null>(null);
-  const [insertionStatus, setInsertionStatus] = useState<{canSubmit: boolean; reason: string; message: string} | null>(null);
+  const [insertionStatus, setInsertionStatus] = useState<{ canSubmit: boolean; reason: string; message: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<'patient' | 'createdDate' | 'scheduledDate' | null>('createdDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -60,8 +60,8 @@ export function ApplianceDeliveryPage() {
     try {
       await updateDeliveryStatus(deliveryItem.id, newStatus);
       const statusText = newStatus === 'patient-scheduled' ? 'scheduled' :
-                        newStatus === 'inserted' ? 'inserted' :
-                        newStatus.replace('-', ' ');
+        newStatus === 'inserted' ? 'inserted' :
+          newStatus.replace('-', ' ');
       toast.success(`Appointment status updated to ${statusText}`);
     } catch (error) {
       toast.error('Failed to update appointment status');
@@ -73,24 +73,91 @@ export function ApplianceDeliveryPage() {
     setShowAppointmentScheduler(true);
   };
 
-  const handleAppointmentScheduled = async (appointmentData: {
-    date: string;
-    time: string;
-    notes?: string;
-  }) => {
+  const handleAppointmentScheduled = async (appointmentData: any) => {
     if (!selectedDeliveryItem) return;
 
     try {
+      const appointmentId = appointmentData.existingAppointmentId;
+      let newAptId = null;
+
+      if (appointmentId) {
+        // Update existing appointment
+        const updatePayload: any = {
+          appointment_type: 'Appliance-delivery',
+          status: 'Not Confirmed',
+          status_code: '?????',
+          title: `Appliance Insertion: ${selectedDeliveryItem.patient_name}`,
+          notes: appointmentData.notes || selectedDeliveryItem.delivery_notes,
+          updated_at: new Date().toISOString()
+        };
+
+        if (appointmentData.assignedUserId) {
+          updatePayload.assigned_user_id = appointmentData.assignedUserId;
+        }
+        if (appointmentData.subtype) {
+          updatePayload.subtype = appointmentData.subtype;
+        }
+
+        const { error: updateError } = await (supabase
+          .from('appointments')
+          .update(updatePayload)
+          .eq('id', appointmentId) as any);
+
+        if (updateError) {
+          console.error('Error updating appointment:', updateError);
+          throw updateError;
+        }
+        newAptId = appointmentId;
+      } else {
+        // Create actual appointment record so it appears on the calendar
+        const insertPayload: any = {
+          patient_id: selectedDeliveryItem.patient_id,
+          patient_name: selectedDeliveryItem.patient_name,
+          date: appointmentData.date,
+          start_time: appointmentData.startTime,
+          end_time: appointmentData.endTime,
+          appointment_type: 'Appliance-delivery',
+          status: 'Not Confirmed',
+          status_code: '?????',
+          title: `Appliance Insertion: ${selectedDeliveryItem.patient_name}`,
+          notes: appointmentData.notes,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        if (appointmentData.assignedUserId) {
+          insertPayload.assigned_user_id = appointmentData.assignedUserId;
+        }
+        if (appointmentData.subtype) {
+          insertPayload.subtype = appointmentData.subtype;
+        }
+
+        const { data: newApt, error: aptError } = await (supabase
+          .from('appointments')
+          .insert([insertPayload]) as any)
+          .select()
+          .single();
+
+        if (aptError) {
+          console.error('Error creating appointment:', aptError);
+          throw aptError;
+        }
+        newAptId = newApt.id;
+      }
+
+      // Update delivery item status with appointment ID
       await updateDeliveryStatus(selectedDeliveryItem.id, 'patient-scheduled', {
         scheduled_delivery_date: appointmentData.date,
-        scheduled_delivery_time: appointmentData.time,
-        delivery_notes: appointmentData.notes || 'Appointment scheduled for appliance insertion.'
+        scheduled_delivery_time: appointmentData.startTime,
+        delivery_notes: appointmentData.notes || 'Appointment scheduled for appliance insertion.',
+        appointment_id: newAptId
       });
 
-      toast.success(`Appointment scheduled for ${new Date(appointmentData.date).toLocaleDateString()} at ${formatTime(appointmentData.time)}`);
+      toast.success(`Appointment ${appointmentId ? 'linked' : 'scheduled'} for ${new Date(appointmentData.date).toLocaleDateString()} at ${formatTime(appointmentData.startTime)}`);
       setShowAppointmentScheduler(false);
       setSelectedDeliveryItem(null);
     } catch (error) {
+      console.error('Error scheduling delivery appointment:', error);
       toast.error('Failed to schedule appointment');
     }
   };
@@ -146,23 +213,23 @@ export function ApplianceDeliveryPage() {
         if (latestManufacturingItem.status !== 'completed') {
           // Format the manufacturing status for better user experience
           const statusDisplay = latestManufacturingItem.status === 'pending-printing' ? 'Pending Printing' :
-                                latestManufacturingItem.status === 'pending-milling' ? 'Pending Milling' :
-                                latestManufacturingItem.status === 'in-production' ? 'Printing' :
-                                latestManufacturingItem.status === 'milling' ? 'Milling' :
-                                latestManufacturingItem.status === 'in-transit' ? 'In Transit' :
-                                latestManufacturingItem.status === 'quality-check' ? 'Quality Check' :
-                                latestManufacturingItem.status === 'inspection' ? 'Inspection' :
-                                latestManufacturingItem.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            latestManufacturingItem.status === 'pending-milling' ? 'Pending Milling' :
+              latestManufacturingItem.status === 'in-production' ? 'Printing' :
+                latestManufacturingItem.status === 'milling' ? 'Milling' :
+                  latestManufacturingItem.status === 'in-transit' ? 'In Transit' :
+                    latestManufacturingItem.status === 'quality-check' ? 'Quality Check' :
+                      latestManufacturingItem.status === 'inspection' ? 'Inspection' :
+                        latestManufacturingItem.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
 
           // Add helpful context based on the manufacturing stage
           const contextMessage = latestManufacturingItem.status === 'pending-printing' ? 'The appliance is waiting to start printing.' :
-                                 latestManufacturingItem.status === 'pending-milling' ? 'The appliance is waiting to start milling.' :
-                                 latestManufacturingItem.status === 'in-production' ? 'The appliance is currently being printed.' :
-                                 latestManufacturingItem.status === 'milling' ? 'The appliance is currently being milled.' :
-                                 latestManufacturingItem.status === 'in-transit' ? 'The appliance is in transit from external lab.' :
-                                 latestManufacturingItem.status === 'quality-check' ? 'The appliance is undergoing quality inspection.' :
-                                 latestManufacturingItem.status === 'inspection' ? 'The appliance is undergoing quality inspection.' :
-                                 'The appliance is still being processed.';
+            latestManufacturingItem.status === 'pending-milling' ? 'The appliance is waiting to start milling.' :
+              latestManufacturingItem.status === 'in-production' ? 'The appliance is currently being printed.' :
+                latestManufacturingItem.status === 'milling' ? 'The appliance is currently being milled.' :
+                  latestManufacturingItem.status === 'in-transit' ? 'The appliance is in transit from external lab.' :
+                    latestManufacturingItem.status === 'quality-check' ? 'The appliance is undergoing quality inspection.' :
+                      latestManufacturingItem.status === 'inspection' ? 'The appliance is undergoing quality inspection.' :
+                        'The appliance is still being processed.';
 
           return { canSubmit: false, reason: 'not_completed', message: `Appliance is still in manufacturing (Status: ${statusDisplay}). ${contextMessage} Please complete manufacturing first.` };
         }
@@ -398,7 +465,7 @@ export function ApplianceDeliveryPage() {
       statusMatch = item.delivery_status === 'inserted';
     } else if (activeFilter === "pending") {
       statusMatch = item.delivery_status === 'ready-to-insert' ||
-                   (item.delivery_status === 'patient-scheduled' && !item.scheduled_delivery_date);
+        (item.delivery_status === 'patient-scheduled' && !item.scheduled_delivery_date);
     }
     // "all-deliveries" shows everything
 
@@ -473,18 +540,16 @@ export function ApplianceDeliveryPage() {
             <button
               key={index}
               onClick={() => setActiveFilter(stat.filter)}
-              className={`h-20 sm:h-22 lg:h-24 p-2 sm:p-3 lg:p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${
-                activeFilter === stat.filter
-                  ? 'border-indigo-300 bg-indigo-50 shadow-md border-b-4 border-b-indigo-500'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
+              className={`h-20 sm:h-22 lg:h-24 p-2 sm:p-3 lg:p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${activeFilter === stat.filter
+                ? 'border-indigo-300 bg-indigo-50 shadow-md border-b-4 border-b-indigo-500'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
             >
               <div className="flex flex-col h-full justify-between">
                 {/* Icon and Number at the top */}
                 <div className="flex items-center justify-between">
-                  <p className={`text-base sm:text-lg lg:text-xl font-bold leading-none ${
-                    activeFilter === stat.filter ? 'text-indigo-900' : 'text-gray-900'
-                  }`}>
+                  <p className={`text-base sm:text-lg lg:text-xl font-bold leading-none ${activeFilter === stat.filter ? 'text-indigo-900' : 'text-gray-900'
+                    }`}>
                     {stat.value}
                   </p>
                   <div className={`p-1 sm:p-1 lg:p-2 rounded-lg flex-shrink-0 ${stat.color}`}>
@@ -494,11 +559,10 @@ export function ApplianceDeliveryPage() {
 
                 {/* Title at the bottom */}
                 <div className="w-full text-center">
-                  <p className={`text-xs sm:text-sm lg:text-sm font-semibold leading-tight ${
-                    activeFilter === stat.filter
-                      ? 'text-indigo-700'
-                      : 'text-gray-600'
-                  }`}>
+                  <p className={`text-xs sm:text-sm lg:text-sm font-semibold leading-tight ${activeFilter === stat.filter
+                    ? 'text-indigo-700'
+                    : 'text-gray-600'
+                    }`}>
                     {stat.title}
                   </p>
                 </div>
@@ -517,135 +581,135 @@ export function ApplianceDeliveryPage() {
             </div>
           ) : sortedDeliveries.length > 0 ? (
             <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
-                <div className="space-y-4">
-                  {sortedDeliveries.map((item) => {
-                    // Format appliance types for display
-                    const formatApplianceType = (type: string | null) => {
-                      if (!type) return 'N/A';
-                      return type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    };
+              <div className="space-y-4">
+                {sortedDeliveries.map((item) => {
+                  // Format appliance types for display
+                  const formatApplianceType = (type: string | null) => {
+                    if (!type) return 'N/A';
+                    return type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  };
 
-                    const upperAppliance = formatApplianceType(item.upper_appliance_type);
-                    const lowerAppliance = formatApplianceType(item.lower_appliance_type);
+                  const upperAppliance = formatApplianceType(item.upper_appliance_type);
+                  const lowerAppliance = formatApplianceType(item.lower_appliance_type);
 
-                    // Get status-specific button configuration for insertion appointments
-                    const getStatusButton = () => {
-                      switch (item.delivery_status) {
-                        case 'ready-to-insert':
-                          return {
-                            text: 'Schedule Appointment',
-                            icon: CalendarIcon,
-                            color: 'border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50',
-                            onClick: () => handleStartDelivery(item)
-                          };
-                        case 'patient-scheduled':
-                          return {
-                            text: 'Mark Inserted',
-                            icon: CheckCircle,
-                            color: 'border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50',
-                            onClick: () => handleCompleteDelivery(item)
-                          };
-                        case 'inserted':
-                          return {
-                            text: 'Inserted',
-                            icon: CheckCircle,
-                            color: 'border-emerald-600 text-emerald-600 bg-emerald-50',
-                            onClick: () => handleViewDeliveryDetails(item)
-                          };
-                        default:
-                          return {
-                            text: 'View Details',
-                            icon: Eye,
-                            color: 'border-gray-600 text-gray-600 hover:border-gray-700 hover:text-gray-700 hover:bg-gray-50',
-                            onClick: () => handleViewDeliveryDetails(item)
-                          };
-                      }
-                    };
+                  // Get status-specific button configuration for insertion appointments
+                  const getStatusButton = () => {
+                    switch (item.delivery_status) {
+                      case 'ready-to-insert':
+                        return {
+                          text: 'Schedule Appointment',
+                          icon: CalendarIcon,
+                          color: 'border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50',
+                          onClick: () => handleStartDelivery(item)
+                        };
+                      case 'patient-scheduled':
+                        return {
+                          text: 'Mark Inserted',
+                          icon: CheckCircle,
+                          color: 'border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50',
+                          onClick: () => handleCompleteDelivery(item)
+                        };
+                      case 'inserted':
+                        return {
+                          text: 'Inserted',
+                          icon: CheckCircle,
+                          color: 'border-emerald-600 text-emerald-600 bg-emerald-50',
+                          onClick: () => handleViewDeliveryDetails(item)
+                        };
+                      default:
+                        return {
+                          text: 'View Details',
+                          icon: Eye,
+                          color: 'border-gray-600 text-gray-600 hover:border-gray-700 hover:text-gray-700 hover:bg-gray-50',
+                          onClick: () => handleViewDeliveryDetails(item)
+                        };
+                    }
+                  };
 
-                    const statusButton = getStatusButton();
+                  const statusButton = getStatusButton();
 
-                    return (
-                      <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
-                        <div className="flex items-center justify-between">
-                          {/* Left side - Patient info and appliance types */}
-                          <div className="flex items-center space-x-4 flex-1">
-                            {/* Delivery Avatar */}
-                            <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <Package className="h-4 w-4 text-white" />
-                            </div>
+                  return (
+                    <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
+                      <div className="flex items-center justify-between">
+                        {/* Left side - Patient info and appliance types */}
+                        <div className="flex items-center space-x-4 flex-1">
+                          {/* Delivery Avatar */}
+                          <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Package className="h-4 w-4 text-white" />
+                          </div>
 
-                            {/* Patient Name and Details */}
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-sm font-semibold text-gray-900 truncate">{item.patient_name}</h3>
+                          {/* Patient Name and Details */}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-sm font-semibold text-gray-900 truncate">{item.patient_name}</h3>
 
-                              {/* Scheduled Appointment Info */}
-                              {item.delivery_status === 'patient-scheduled' && item.scheduled_delivery_date && (
-                                <div className="flex items-center space-x-2 mt-1">
-                                  <CalendarIcon className="h-3 w-3 text-blue-600" />
-                                  <span className="text-xs font-medium text-blue-700">
-                                    {new Date(item.scheduled_delivery_date).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric'
-                                    })}
-                                    {item.scheduled_delivery_time && (
-                                      <span className="ml-2">
-                                        at {formatTime(item.scheduled_delivery_time)}
-                                      </span>
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-
-                              <div className="flex items-center space-x-4 mt-1">
-                                {/* Upper Appliance */}
-                                {item.upper_appliance_type && (
-                                  <span className="text-xs text-gray-600">
-                                    <span className="font-medium">Upper:</span> {upperAppliance}
-                                    {item.upper_appliance_number && <span className="ml-1 text-gray-500">({item.upper_appliance_number})</span>}
-                                  </span>
-                                )}
-                                {/* Lower Appliance */}
-                                {item.lower_appliance_type && (
-                                  <span className="text-xs text-gray-600">
-                                    <span className="font-medium">Lower:</span> {lowerAppliance}
-                                    {item.lower_appliance_number && <span className="ml-1 text-gray-500">({item.lower_appliance_number})</span>}
-                                  </span>
-                                )}
-                                {/* Shade */}
-                                <span className="text-xs text-gray-600">
-                                  <span className="font-medium">Shade:</span> {item.shade}
+                            {/* Scheduled Appointment Info */}
+                            {item.delivery_status === 'patient-scheduled' && item.scheduled_delivery_date && (
+                              <div className="flex items-center space-x-2 mt-1">
+                                <CalendarIcon className="h-3 w-3 text-blue-600" />
+                                <span className="text-xs font-medium text-blue-700">
+                                  {new Date(item.appointments?.date || item.scheduled_delivery_date || '').toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                  {(item.appointments?.start_time || item.scheduled_delivery_time) && (
+                                    <span className="ml-2">
+                                      at {formatTime(item.appointments?.start_time || item.scheduled_delivery_time || '')}
+                                    </span>
+                                  )}
                                 </span>
                               </div>
+                            )}
+
+                            <div className="flex items-center space-x-4 mt-1">
+                              {/* Upper Appliance */}
+                              {item.upper_appliance_type && (
+                                <span className="text-xs text-gray-600">
+                                  <span className="font-medium">Upper:</span> {upperAppliance}
+                                  {item.upper_appliance_number && <span className="ml-1 text-gray-500">({item.upper_appliance_number})</span>}
+                                </span>
+                              )}
+                              {/* Lower Appliance */}
+                              {item.lower_appliance_type && (
+                                <span className="text-xs text-gray-600">
+                                  <span className="font-medium">Lower:</span> {lowerAppliance}
+                                  {item.lower_appliance_number && <span className="ml-1 text-gray-500">({item.lower_appliance_number})</span>}
+                                </span>
+                              )}
+                              {/* Shade */}
+                              <span className="text-xs text-gray-600">
+                                <span className="font-medium">Shade:</span> {item.shade}
+                              </span>
                             </div>
                           </div>
+                        </div>
 
-                          {/* Right side - Action Buttons */}
-                          <div className="ml-4 flex items-center space-x-2">
-                            {/* View Details Button */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewDeliveryDetails(item)}
-                              className="border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-700"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                        {/* Right side - Action Buttons */}
+                        <div className="ml-4 flex items-center space-x-2">
+                          {/* View Details Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDeliveryDetails(item)}
+                            className="border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-700"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
 
-                            {/* Status Action Button */}
-                            <Button
-                              className={`border-2 bg-white px-4 py-2 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 ${statusButton.color}`}
-                              onClick={statusButton.onClick}
-                            >
-                              <statusButton.icon className="h-4 w-4 mr-2" />
-                              {statusButton.text}
-                            </Button>
-                          </div>
+                          {/* Status Action Button */}
+                          <Button
+                            className={`border-2 bg-white px-4 py-2 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200 ${statusButton.color}`}
+                            onClick={statusButton.onClick}
+                          >
+                            <statusButton.icon className="h-4 w-4 mr-2" />
+                            {statusButton.text}
+                          </Button>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="text-center py-12">
@@ -655,11 +719,11 @@ export function ApplianceDeliveryPage() {
               </h3>
               <p className="text-gray-500 mb-4">
                 {activeFilter === "ready-to-insert" ? "No appliances ready for insertion. Complete printing in Manufacturing to add items here." :
-                 activeFilter === "scheduled" ? "No scheduled insertion appointments." :
-                 activeFilter === "unscheduled" ? "No unscheduled appliances found." :
-                 activeFilter === "inserted" ? "No inserted appliances found." :
-                 activeFilter === "pending" ? "No pending insertion appointments." :
-                 "No insertion appointments found. Complete printing in Manufacturing to create insertion items."}
+                  activeFilter === "scheduled" ? "No scheduled insertion appointments." :
+                    activeFilter === "unscheduled" ? "No unscheduled appliances found." :
+                      activeFilter === "inserted" ? "No inserted appliances found." :
+                        activeFilter === "pending" ? "No pending insertion appointments." :
+                          "No insertion appointments found. Complete printing in Manufacturing to create insertion items."}
               </p>
               <Button
                 onClick={() => window.location.href = '/manufacturing'}
@@ -709,16 +773,15 @@ export function ApplianceDeliveryPage() {
                   <p className="text-lg text-gray-600">{selectedDeliveryItem.patient_name}</p>
                 </div>
                 <div className="ml-auto">
-                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                    selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
+                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
                     selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
-                    selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                      selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
+                        'bg-gray-100 text-gray-800'
+                    }`}>
                     {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
-                     selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
-                     selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
-                     selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                        selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
+                          selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
                 </div>
               </div>
@@ -805,16 +868,15 @@ export function ApplianceDeliveryPage() {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="font-medium text-green-800">Current Status:</span>
-                        <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
-                          selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-200 text-green-900' :
+                        <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-200 text-green-900' :
                           selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-200 text-blue-900' :
-                          selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-200 text-emerald-900' :
-                          'bg-gray-200 text-gray-900'
-                        }`}>
+                            selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-200 text-emerald-900' :
+                              'bg-gray-200 text-gray-900'
+                          }`}>
                           {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
-                           selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
-                           selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
-                           selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                              selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
+                                selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         </span>
                       </div>
                       {selectedDeliveryItem.delivery_notes && (
@@ -845,12 +907,12 @@ export function ApplianceDeliveryPage() {
                         </span>
                       </div>
 
-                      {selectedDeliveryItem.scheduled_delivery_date && (
+                      {(selectedDeliveryItem.scheduled_delivery_date || selectedDeliveryItem.appointments?.date) && (
                         <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                           <div className="flex justify-between items-center mb-2">
                             <span className="font-medium text-amber-800">Appointment Date:</span>
                             <span className="text-amber-900 font-semibold">
-                              {new Date(selectedDeliveryItem.scheduled_delivery_date).toLocaleDateString('en-US', {
+                              {new Date(selectedDeliveryItem.appointments?.date || selectedDeliveryItem.scheduled_delivery_date || '').toLocaleDateString('en-US', {
                                 weekday: 'long',
                                 year: 'numeric',
                                 month: 'long',
@@ -858,11 +920,11 @@ export function ApplianceDeliveryPage() {
                               })}
                             </span>
                           </div>
-                          {selectedDeliveryItem.scheduled_delivery_time && (
+                          {(selectedDeliveryItem.scheduled_delivery_time || selectedDeliveryItem.appointments?.start_time) && (
                             <div className="flex justify-between items-center">
                               <span className="font-medium text-amber-800">Appointment Time:</span>
                               <span className="text-amber-900 font-medium">
-                                {formatTime(selectedDeliveryItem.scheduled_delivery_time)}
+                                {formatTime(selectedDeliveryItem.appointments?.start_time || selectedDeliveryItem.scheduled_delivery_time || '')}
                               </span>
                             </div>
                           )}

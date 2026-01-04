@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Clock, User, Users, UserCheck, Search, UserPlus } from "lucide-react";
+import { CalendarIcon, Clock, User, Users, UserCheck, Search, UserPlus, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -24,6 +24,11 @@ interface AddConsultationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialDate?: Date;
+  initialTime?: string;
+  initialEndTime?: string;
+  initialValues?: any;
+  onOpenCalendar?: (data: any) => void;
 }
 
 type PatientType = 'new' | 'consultation' | 'active';
@@ -35,6 +40,7 @@ interface ConsultationFormData {
   gender: 'male' | 'female' | 'prefer-not-to-answer';
   consultationDate: Date;
   consultationTime: string;
+  consultationEndTime: string;
   assignedUserId?: string;
 }
 
@@ -66,7 +72,16 @@ interface ActivePatient {
   status: string | null;
 }
 
-export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsultationDialogProps) {
+export function AddConsultationDialog({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialDate,
+  initialTime,
+  initialEndTime,
+  initialValues,
+  onOpenCalendar
+}: AddConsultationDialogProps) {
   const [patientType, setPatientType] = useState<PatientType>('new');
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<(ConsultationPatient | ActivePatient)[]>([]);
@@ -79,9 +94,56 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
     dateOfBirth: '',
     gender: 'prefer-not-to-answer',
     consultationDate: new Date(),
-    consultationTime: '09:00',
+    consultationTime: '',
+    consultationEndTime: '',
     assignedUserId: undefined
   });
+
+  // getCurrentFormData helper
+  const getCurrentFormData = () => {
+    return {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      dateOfBirth: formData.dateOfBirth,
+      gender: formData.gender,
+      consultationDate: formData.consultationDate,
+      consultationTime: formData.consultationTime,
+      consultationEndTime: formData.consultationEndTime,
+      assignedUserId: formData.assignedUserId,
+      patientType: patientType,
+      selectedPatient: selectedPatient,
+      searchTerm: searchTerm
+    };
+  };
+
+  // Initialize from initialValues (draft) or individual props
+  useEffect(() => {
+    if (isOpen) {
+      if (initialValues) {
+        setFormData({
+          firstName: initialValues.firstName || '',
+          lastName: initialValues.lastName || '',
+          dateOfBirth: initialValues.dateOfBirth || '',
+          gender: initialValues.gender || 'prefer-not-to-answer',
+          consultationDate: initialValues.consultationDate || new Date(),
+          consultationTime: initialValues.consultationTime || '',
+          consultationEndTime: initialValues.consultationEndTime || '',
+          assignedUserId: initialValues.assignedUserId
+        });
+        if (initialValues.patientType) setPatientType(initialValues.patientType);
+        if (initialValues.selectedPatient) setSelectedPatient(initialValues.selectedPatient);
+        if (initialValues.searchTerm) setSearchTerm(initialValues.searchTerm);
+      } else {
+        // Individual props fallback
+        setFormData(prev => ({
+          ...prev,
+          consultationDate: initialDate || prev.consultationDate,
+          consultationTime: initialTime || prev.consultationTime,
+          consultationEndTime: initialEndTime || prev.consultationEndTime
+        }));
+      }
+    }
+  }, [isOpen, initialValues, initialDate, initialTime]);
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,21 +155,22 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, full_name, email')
-        .eq('status', 'active')
-        .order('full_name', { ascending: true });
+      const { data, error } = await (supabase
+        .from('user_profiles' as any)
+        .select('id, full_name, email') as any);
 
-      if (error) throw error;
-      if (data) {
-        setUsers(data);
+      if (error) {
+        console.error('Error fetching users:', error);
+        toast.error('Failed to load users');
+        return;
+      }
 
-        // Set DC as default assigned user for consultation appointments
-        const dcUser = data.find(user => user.full_name.trim().toLowerCase() === 'dc');
-        if (dcUser && !formData.assignedUserId) {
-          setFormData(prev => ({ ...prev, assignedUserId: dcUser.id }));
-        }
+      setUsers(data as UserProfile[]);
+
+      // Set DC as default assigned user for consultation appointments
+      const dcUser = (data as UserProfile[]).find(user => user.full_name.trim().toLowerCase() === 'dc');
+      if (dcUser && !formData.assignedUserId) {
+        setFormData(prev => ({ ...prev, assignedUserId: dcUser.id }));
       }
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -133,18 +196,19 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
 
     setIsSearching(true);
     try {
-      const { data, error } = await supabase
-        .from('consultation_patients')
+      const { data, error } = await (supabase
+        .from('consultation_patients' as any)
         .select('*')
         .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(10) as any);
 
-      if (error) throw error;
-      setSearchResults(data || []);
-    } catch (error) {
-      console.error('Error searching consultation patients:', error);
-      setSearchResults([]);
+      if (error) {
+        console.error('Error searching consultation patients:', error);
+        setSearchResults([]);
+      } else {
+        setSearchResults(data as (ConsultationPatient | ActivePatient)[]);
+      }
     } finally {
       setIsSearching(false);
     }
@@ -207,7 +271,8 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
       dateOfBirth: '',
       gender: 'prefer-not-to-answer',
       consultationDate: new Date(),
-      consultationTime: '09:00'
+      consultationTime: '',
+      consultationEndTime: ''
     });
   };
 
@@ -219,12 +284,13 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
 
     // Pre-fill form data with selected patient info
     setFormData({
-      firstName: patient.first_name,
-      lastName: patient.last_name,
-      dateOfBirth: patient.date_of_birth,
-      gender: (patient.gender as 'male' | 'female' | 'prefer-not-to-answer') || 'prefer-not-to-answer',
+      firstName: (patient as ConsultationPatient).first_name || '',
+      lastName: (patient as ConsultationPatient).last_name || '',
+      dateOfBirth: (patient as ConsultationPatient).date_of_birth || '',
+      gender: (patient as ConsultationPatient).gender as any || 'prefer-not-to-answer',
       consultationDate: new Date(),
-      consultationTime: '09:00'
+      consultationTime: '',
+      consultationEndTime: ''
     });
   };
 
@@ -274,7 +340,7 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast.error('Please fill in all required fields');
       return;
@@ -285,12 +351,14 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
     try {
       // Format the consultation date
       const consultationDateStr = format(formData.consultationDate, 'yyyy-MM-dd');
-      
-      // Calculate end time (30 minutes after start time)
-      const [hours, minutes] = formData.consultationTime.split(':').map(Number);
-      const startTime = new Date(`2000-01-01T${formData.consultationTime}:00`);
-      const endTime = new Date(startTime.getTime() + 30 * 60000); // Add 30 minutes
-      const endTimeStr = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
+
+      // Calculate end time (30 minutes after start time if not provided)
+      let endTimeStr = formData.consultationEndTime;
+      if (!endTimeStr) {
+        const startTime = new Date(`2000-01-01T${formData.consultationTime}:00`);
+        const endTime = new Date(startTime.getTime() + 30 * 60000); // Add 30 minutes
+        endTimeStr = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
+      }
 
       // Determine patient_id based on patient type
       // Only set patient_id for active patients (from patients table)
@@ -359,8 +427,8 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
 
       if (patientType === 'new') {
         // Create new consultation patient entry (without appointment_id - relationship via consultations table)
-        const { data: consultationPatientData, error: consultationPatientError } = await supabase
-          .from('consultation_patients')
+        const { data: consultationPatientData, error: consultationPatientError } = await (supabase
+          .from('consultation_patients' as any)
           .insert([{
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -372,7 +440,7 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
             status: 'scheduled'
           }])
           .select()
-          .single();
+          .single() as any);
 
         if (consultationPatientError) {
           console.warn('Failed to create consultation patient entry:', consultationPatientError);
@@ -398,28 +466,30 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
 
           const { data: existingPacket, error: packetError } = await findExistingPatientPacket(patientIdentity);
 
-          if (!packetError && existingPacket) {
-            console.log('Found existing shared patient packet:', existingPacket.id);
+          let packetId = existingPacket?.id || null;
 
-            // Create consultation record linking new appointment to existing patient packet
-            const { error: consultationError } = await supabase
-              .from('consultations')
-              .insert([{
-                appointment_id: appointmentData.id,
-                consultation_patient_id: consultationPatientId,
-                new_patient_packet_id: existingPacket.id,
-                patient_name: `${formData.firstName} ${formData.lastName}`,
-                consultation_date: consultationDateStr,
-                consultation_status: 'draft'
-              }]);
-
-            if (consultationError) {
-              console.warn('Failed to create consultation record:', consultationError);
-            } else {
-              console.log('Successfully created consultation record linking to shared patient packet');
-            }
+          if (packetError || !existingPacket) {
+            console.warn('No existing patient packet found for patient identity, continuing without packet:', patientIdentity);
           } else {
-            console.warn('No existing patient packet found for patient identity:', patientIdentity);
+            console.log('Found existing shared patient packet:', existingPacket.id);
+          }
+
+          // Create consultation record linking new appointment to existing patient packet (or null)
+          const { error: consultationError } = await (supabase
+            .from('consultations' as any)
+            .insert([{
+              appointment_id: appointmentData.id,
+              consultation_patient_id: consultationPatientId,
+              new_patient_packet_id: packetId,
+              patient_name: `${formData.firstName} ${formData.lastName}`,
+              consultation_date: consultationDateStr,
+              consultation_status: 'draft'
+            }]) as any);
+
+          if (consultationError) {
+            console.warn('Failed to create consultation record:', consultationError);
+          } else {
+            console.log('Successfully created consultation record linking to shared patient packet');
           }
         } catch (error) {
           console.warn('Error creating consultation record for existing patient:', error);
@@ -430,8 +500,8 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
       if (consultationPatientId && patientType === 'new') {
         try {
           // Create consultation record linking appointment to consultation patient (no packet yet)
-          const { error: consultationError } = await supabase
-            .from('consultations')
+          const { error: consultationError } = await (supabase
+            .from('consultations' as any)
             .insert([{
               appointment_id: appointmentData.id,
               consultation_patient_id: consultationPatientId,
@@ -439,7 +509,7 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
               patient_name: `${formData.firstName} ${formData.lastName}`,
               consultation_date: consultationDateStr,
               consultation_status: 'draft'
-            }]);
+            }]) as any);
 
           if (consultationError) {
             console.warn('Failed to create consultation record for new patient:', consultationError);
@@ -454,16 +524,90 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
       // Create consultation record for ACTIVE patients (link to existing patient in main table)
       if (patientType === 'active' && patientId) {
         try {
-          // Create consultation record linking appointment to active patient
-          const { error: consultationError } = await supabase
-            .from('consultations')
+          // 1. Fetch patient details to check for existing consultation_patient_id
+          const { data: patientData, error: patientError } = await (supabase
+            .from('patients')
+            .select('*')
+            .eq('id', patientId)
+            .single() as any);
+
+          if (patientError) {
+            console.error('Error fetching patient details:', patientError);
+            throw patientError;
+          }
+
+          let consultationPatientId = patientData.consultation_patient_id;
+          let packetId = null;
+
+          // Attempt to find packet (keep existing logic for packet linking as supplemental)
+          try {
+            // We import dynamically to avoid circular dependencies
+            const { findExistingPatientPacket } = await import('@/services/sharedPatientPacketService');
+            const patientIdentity = {
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+              date_of_birth: formData.dateOfBirth
+            };
+            const { data: existingPacket } = await findExistingPatientPacket(patientIdentity);
+            packetId = existingPacket?.id || null;
+            if (packetId) console.log('Found linked patient packet for active patient:', packetId);
+          } catch (e) {
+            console.warn('Error finding existing packet:', e);
+          }
+
+          // 2. If no consultation_patient_id, create new consultation_patient and link it
+          if (!consultationPatientId) {
+            console.log('No consultation_patient_id found for active patient, creating new one...');
+
+            const { data: newCP, error: cpError } = await (supabase
+              .from('consultation_patients')
+              .insert([{
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                date_of_birth: formData.dateOfBirth,
+                gender: formData.gender,
+                consultation_date: consultationDateStr,
+                consultation_time: formData.consultationTime || '09:00',
+                status: 'scheduled',
+                appointment_id: appointmentData.id
+              }])
+              .select()
+              .single() as any);
+
+            if (cpError) {
+              console.error('Error creating consultation_patient:', cpError);
+            } else if (newCP) {
+              consultationPatientId = newCP.id;
+              console.log('Created new consultation_patient:', consultationPatientId);
+
+              // Update patient record with the new consultation_patient_id
+              const { error: updateError } = await (supabase
+                .from('patients')
+                .update({ consultation_patient_id: consultationPatientId } as any)
+                .eq('id', patientId) as any);
+
+              if (updateError) {
+                console.error('Error linking new consultation_patient to patient:', updateError);
+              } else {
+                console.log('Linked new consultation_patient to active patient');
+              }
+            }
+          } else {
+            console.log('Found existing consultation_patient_id on patient record:', consultationPatientId);
+          }
+
+          // 3. Create consultation record linking appointment to active patient AND valid consultation patient ID
+          const { error: consultationError } = await (supabase
+            .from('consultations' as any)
             .insert([{
               appointment_id: appointmentData.id,
               patient_id: patientId, // Link directly to existing patient
+              consultation_patient_id: consultationPatientId, // Link to consultation patient (existing or new)
+              new_patient_packet_id: packetId, // Link to original packet if found
               patient_name: `${formData.firstName} ${formData.lastName}`,
               consultation_date: consultationDateStr,
               consultation_status: 'draft'
-            }]);
+            }]) as any);
 
           if (consultationError) {
             console.warn('Failed to create consultation record for active patient:', consultationError);
@@ -495,9 +639,10 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
         dateOfBirth: '',
         gender: 'prefer-not-to-answer',
         consultationDate: new Date(),
-        consultationTime: '09:00'
+        consultationTime: '',
+        consultationEndTime: ''
       });
-      
+
       onSuccess?.();
       onClose();
     } catch (error) {
@@ -511,7 +656,7 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
   const timeSlots = generateTimeSlots();
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={() => { }}>
       <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-indigo-600 flex items-center gap-2">
@@ -703,11 +848,10 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
                         type="button"
                         onClick={() => handleInputChange('gender', 'male')}
                         disabled={patientType !== 'new' && selectedPatient !== null}
-                        className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium ${
-                          formData.gender === 'male'
-                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-25'
-                        } ${patientType !== 'new' && selectedPatient !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium ${formData.gender === 'male'
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-25'
+                          } ${patientType !== 'new' && selectedPatient !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <Users className="h-4 w-4" />
                         Male
@@ -716,11 +860,10 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
                         type="button"
                         onClick={() => handleInputChange('gender', 'female')}
                         disabled={patientType !== 'new' && selectedPatient !== null}
-                        className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium ${
-                          formData.gender === 'female'
-                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-25'
-                        } ${patientType !== 'new' && selectedPatient !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium ${formData.gender === 'female'
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-25'
+                          } ${patientType !== 'new' && selectedPatient !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <Users className="h-4 w-4" />
                         Female
@@ -729,11 +872,10 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
                         type="button"
                         onClick={() => handleInputChange('gender', 'prefer-not-to-answer')}
                         disabled={patientType !== 'new' && selectedPatient !== null}
-                        className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium ${
-                          formData.gender === 'prefer-not-to-answer'
-                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-25'
-                        } ${patientType !== 'new' && selectedPatient !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium ${formData.gender === 'prefer-not-to-answer'
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-25'
+                          } ${patientType !== 'new' && selectedPatient !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <User className="h-4 w-4" />
                         Prefer not to say
@@ -791,24 +933,54 @@ export function AddConsultationDialog({ isOpen, onClose, onSuccess }: AddConsult
                   </div>
 
                   <div>
-                    <Label className={errors.consultationTime ? "text-red-500" : ""}>
-                      Consultation Time <span className="text-red-500">*</span>
-                    </Label>
-                    <Select value={formData.consultationTime} onValueChange={(value) => handleInputChange('consultationTime', value)}>
-                      <SelectTrigger className={errors.consultationTime ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Select time" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeSlots.map((slot) => (
-                          <SelectItem key={slot.value} value={slot.value}>
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4" />
-                              {slot.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Label className={!formData.consultationTime ? "invisible text-sm font-medium" : "text-sm font-medium text-blue-700"}>
+                        {formData.consultationTime ? "Selected Time" : "Action"}
+                      </Label>
+
+                      {formData.consultationTime ? (
+                        <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-md h-10 w-full">
+                          <Clock className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          <span className="font-medium text-green-800 text-sm truncate flex-1 leading-none">
+                            {(() => {
+                              const formatTime = (time: string) => {
+                                const [hours, minutes] = time.split(':');
+                                const hour = parseInt(hours);
+                                const ampm = hour >= 12 ? 'PM' : 'AM';
+                                const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                                return `${displayHour}:${minutes} ${ampm}`;
+                              };
+                              return formatTime(formData.consultationTime);
+                            })()}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-green-600 hover:text-green-800"
+                            onClick={() => {
+                              if (onOpenCalendar) {
+                                onOpenCalendar(getCurrentFormData());
+                              }
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            if (onOpenCalendar) {
+                              onOpenCalendar(getCurrentFormData());
+                            }
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          Open Calendar
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   <div>

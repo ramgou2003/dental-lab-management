@@ -63,7 +63,17 @@ export function AppointmentForm({
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [patients, setPatients] = useState<Patient[]>(() => {
+    if (initialPatientId && initialPatientName) {
+      return [{
+        id: initialPatientId,
+        full_name: initialPatientName,
+        first_name: initialPatientName.split(' ')[0] || '',
+        last_name: initialPatientName.split(' ').slice(1).join(' ') || ''
+      }];
+    }
+    return [];
+  });
   const [loadingPatients, setLoadingPatients] = useState(false);
   const [patientSearchQuery, setPatientSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState(''); // Assigned user ID
@@ -85,7 +95,7 @@ export function AppointmentForm({
       { value: '6-month-followup', label: '6 Months Follow Up' },
       { value: '12-month-followup', label: '12 Months Follow Up' }
     ],
-    'printed-try-in': [
+    'Appliance-delivery': [
       { value: 'printed-try-in-delivery', label: 'Printed Try-in Delivery' },
       { value: '82-day-appliance-delivery', label: '82 Days PTI Delivery' },
       { value: '120-day-final-delivery', label: '120 Days Final Delivery' }
@@ -251,7 +261,7 @@ export function AppointmentForm({
     { id: 'consultation', name: 'Consult' },
     { id: 'follow-up', name: 'Follow Up' },
     { id: 'data-collection', name: 'Data Collection' },
-    { id: 'printed-try-in', name: 'Appliance Delivery' },
+    { id: 'Appliance-delivery', name: 'Appliance Delivery' },
     { id: 'surgery', name: 'Surgery' },
     { id: 'surgical-revision', name: 'Surgical Revision' },
     // Emergency is now a flag/column, not a type
@@ -453,7 +463,11 @@ export function AppointmentForm({
           // Only set appointment type if it's valid and NOT emergency
           if (appointmentType && appointmentType.trim() !== '') {
             setIsEmergency(false);
-            setSelectedAppointmentType(appointmentType);
+            if (appointmentType === 'printed-try-in' || appointmentType === 'appliance-insertion') {
+              setSelectedAppointmentType('Appliance-delivery');
+            } else {
+              setSelectedAppointmentType(appointmentType);
+            }
           } else {
             // If we didn't restore from draft, ensure we respect the current state or default
             // But don't overwrite if we just set it via initialValues
@@ -676,7 +690,7 @@ export function AppointmentForm({
                 disabled={loadingPatients}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={loadingPatients ? "Loading patients..." : "Select a patient"} />
+                  <SelectValue placeholder={loadingPatients ? "Loading patients..." : (selectedPatient || "Select a patient")} />
                 </SelectTrigger>
                 <SelectContent>
                   {/* Search Bar */}

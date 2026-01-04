@@ -22,6 +22,7 @@ interface Appointment {
   notes?: string;
   assignedUserName?: string;
   nextAppointmentScheduled?: boolean;
+  nextAppointmentStatus?: 'scheduled' | 'not_scheduled' | 'not_required';
   nextAppointmentDate?: string;
   nextAppointmentTime?: string;
   nextAppointmentType?: string;
@@ -472,12 +473,23 @@ export function AppointmentDetailsDialog({
 
             {/* Next Appointment */}
             <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-lg ${appointment.nextAppointmentScheduled ? 'bg-purple-100' : 'bg-gray-100'}`}>
-                <CalendarCheck className={`h-5 w-5 ${appointment.nextAppointmentScheduled ? 'text-purple-600' : 'text-gray-500'}`} />
+              <div className={`p-2 rounded-lg ${(appointment.nextAppointmentStatus === 'scheduled' || appointment.nextAppointmentScheduled) ? 'bg-purple-100' :
+                  appointment.nextAppointmentStatus === 'not_required' ? 'bg-slate-100' : 'bg-gray-100'
+                }`}>
+                {appointment.nextAppointmentStatus === 'not_required' ? (
+                  <XCircle className="h-5 w-5 text-slate-500" />
+                ) : (appointment.nextAppointmentStatus === 'scheduled' || appointment.nextAppointmentScheduled) ? (
+                  <CalendarCheck className="h-5 w-5 text-purple-600" />
+                ) : (
+                  <CalendarCheck className="h-5 w-5 text-gray-500" />
+                )}
               </div>
               <div>
-                <p className={`text-sm ${appointment.nextAppointmentScheduled ? 'text-purple-600' : 'text-gray-600'}`}>Next Appointment</p>
-                {appointment.nextAppointmentScheduled && appointment.nextAppointmentDate ? (
+                <p className={`text-sm ${(appointment.nextAppointmentStatus === 'scheduled' || appointment.nextAppointmentScheduled) ? 'text-purple-600' :
+                    appointment.nextAppointmentStatus === 'not_required' ? 'text-slate-600' : 'text-gray-600'
+                  }`}>Next Appointment</p>
+
+                {(appointment.nextAppointmentStatus === 'scheduled' || appointment.nextAppointmentScheduled) && appointment.nextAppointmentDate ? (
                   <div>
                     <p className="font-semibold text-gray-900">{formatDate(appointment.nextAppointmentDate)}</p>
                     <p className="text-xs text-gray-500">
@@ -485,6 +497,8 @@ export function AppointmentDetailsDialog({
                       {appointment.nextAppointmentSubtype && ` (${getSubtypeLabel(appointment.nextAppointmentSubtype)})`}
                     </p>
                   </div>
+                ) : appointment.nextAppointmentStatus === 'not_required' ? (
+                  <p className="font-semibold text-slate-500">Not Required</p>
                 ) : (
                   <p className="font-semibold text-gray-500">Not Scheduled</p>
                 )}

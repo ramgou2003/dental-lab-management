@@ -13,6 +13,7 @@ interface CalendarHeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   canCreateAppointments?: boolean;
+  unscheduledCount?: number;
 }
 
 export function CalendarHeader({
@@ -21,7 +22,8 @@ export function CalendarHeader({
   onNewAppointment,
   searchQuery,
   onSearchChange,
-  canCreateAppointments = true
+  canCreateAppointments = true,
+  unscheduledCount = 0
 }: CalendarHeaderProps) {
   const navigate = useNavigate();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -125,12 +127,12 @@ export function CalendarHeader({
 
           {/* Next Appointments Queue Button */}
           <Button
-            onClick={() => navigate('/appointments/next-appointments')}
+            onClick={() => navigate('/appointments/unscheduled')}
             variant="outline"
-            className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100 hover:text-green-800 h-9 px-4 font-semibold"
+            className="bg-transparent text-blue-700 border-blue-300 hover:bg-blue-50 hover:text-blue-800 h-9 px-4 font-semibold"
           >
             <ClipboardList className="h-4 w-4 mr-2" />
-            Next Appointments
+            Unscheduled ({unscheduledCount})
           </Button>
 
           {/* New Appointment Button */}

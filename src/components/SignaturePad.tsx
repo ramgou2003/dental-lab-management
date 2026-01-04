@@ -258,7 +258,7 @@ export function SignaturePad({
       <div className="relative">
         <canvas
           ref={canvasRef}
-          className="border border-gray-300 rounded-md cursor-crosshair touch-none w-full"
+          className="border border-gray-300 rounded-xl cursor-crosshair touch-none w-full"
           style={{ maxWidth: `${width}px`, height: `${height}px` }}
           onMouseDown={startDrawing}
           onMouseMove={draw}
@@ -269,7 +269,7 @@ export function SignaturePad({
           onTouchEnd={stopDrawing}
         />
       </div>
-      
+
       <div className="flex gap-2">
         <Button
           type="button"

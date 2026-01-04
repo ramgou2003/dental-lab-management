@@ -167,12 +167,13 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
         // Get consultation records for these appointments
         const { data: consultationsData, error: consultationError } = await supabase
           .from('consultations')
-          .select('appointment_id, consultation_patient_id, consultation_status')
+          .select('id, appointment_id, consultation_patient_id, consultation_status')
           .in('appointment_id', appointmentIds);
 
         if (!consultationError && consultationsData) {
           consultationsData.forEach(consultation => {
-            consultationPatientsMap.set(consultation.appointment_id, consultation.consultation_patient_id);
+            // Use the consultation record ID as the "Consultation ID" for display
+            consultationPatientsMap.set(consultation.appointment_id, consultation.id);
             consultationStatusMap.set(consultation.appointment_id, consultation.consultation_status);
           });
         }
@@ -279,29 +280,29 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
   // Filter data based on search term and treatment status
   const filteredAppointments = showScheduledLeads
     ? consultationPatients.filter(patient => {
-        const fullName = `${patient.first_name} ${patient.last_name}`.toLowerCase();
-        const matchesSearch = fullName.includes(searchTerm.toLowerCase());
+      const fullName = `${patient.first_name} ${patient.last_name}`.toLowerCase();
+      const matchesSearch = fullName.includes(searchTerm.toLowerCase());
 
-        // Apply treatment status filter
-        if (treatmentStatusFilter === "all") {
-          return matchesSearch;
-        } else if (treatmentStatusFilter === "not_set") {
-          return matchesSearch && !patient.treatment_decision;
-        } else {
-          return matchesSearch && patient.treatment_decision === treatmentStatusFilter;
-        }
-      })
+      // Apply treatment status filter
+      if (treatmentStatusFilter === "all") {
+        return matchesSearch;
+      } else if (treatmentStatusFilter === "not_set") {
+        return matchesSearch && !patient.treatment_decision;
+      } else {
+        return matchesSearch && patient.treatment_decision === treatmentStatusFilter;
+      }
+    })
     : consultationAppointments.filter(appointment => {
-        const fullName = `${appointment.first_name || ''} ${appointment.last_name || ''}`.toLowerCase();
-        const patientName = appointment.patient_name.toLowerCase();
-        const phone = (appointment.phone || '').toLowerCase();
-        const email = (appointment.email || '').toLowerCase();
+      const fullName = `${appointment.first_name || ''} ${appointment.last_name || ''}`.toLowerCase();
+      const patientName = appointment.patient_name.toLowerCase();
+      const phone = (appointment.phone || '').toLowerCase();
+      const email = (appointment.email || '').toLowerCase();
 
-        return fullName.includes(searchTerm.toLowerCase()) ||
-               patientName.includes(searchTerm.toLowerCase()) ||
-               phone.includes(searchTerm.toLowerCase()) ||
-               email.includes(searchTerm.toLowerCase());
-      });
+      return fullName.includes(searchTerm.toLowerCase()) ||
+        patientName.includes(searchTerm.toLowerCase()) ||
+        phone.includes(searchTerm.toLowerCase()) ||
+        email.includes(searchTerm.toLowerCase());
+    });
 
   const getInitials = (firstName: string | null, lastName: string | null, patientName?: string) => {
     if (firstName && lastName) {

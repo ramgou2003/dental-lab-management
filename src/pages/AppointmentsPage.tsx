@@ -5,10 +5,12 @@ import { DayView, type DayViewHandle } from "@/components/calendar/DayView";
 import { AppointmentForm } from "@/components/calendar/AppointmentForm";
 import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 import { AppointmentSchedulerDialog } from "@/components/calendar/AppointmentSchedulerDialog";
+import { AddConsultationDialog } from "@/components/AddConsultationDialog";
 import { useAppointments, type Appointment } from "@/hooks/useAppointments";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AppointmentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,8 +52,11 @@ export function AppointmentsPage() {
   const [draftAppointmentData, setDraftAppointmentData] = useState<any>(null);
   const [isPickingTime, setIsPickingTime] = useState(false);
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
+  const [showAddConsultationDialog, setShowAddConsultationDialog] = useState(false);
 
   const { canCreateAppointments, canUpdateAppointments, canDeleteAppointments } = usePermissions();
+  const [unscheduledCount, setUnscheduledCount] = useState(0);
+
   const {
     appointments,
     loading,
@@ -104,6 +109,12 @@ export function AppointmentsPage() {
 
     if (appointmentType) {
       setSelectedAppointmentType(appointmentType);
+    }
+
+    // Direct routing for consultation type
+    if (appointmentType === 'consultation') {
+      setShowAddConsultationDialog(true);
+      return;
     }
 
     // Preserve draft data if we're in picking mode
@@ -185,6 +196,48 @@ export function AppointmentsPage() {
 
   const filteredAppointments = getFilteredAppointments();
 
+  // Fetch unscheduled count
+  // Using logic similar to NextAppointmentsPage to match "Unscheduled" list
+  const fetchUnscheduledCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('next_appointment_scheduled, next_appointment_status, status, status_code')
+        .or('status.eq.Appointment Completed,status.eq.No Show,status_code.eq.CMPLT,status_code.eq.NSHOW');
+
+      if (error) {
+        console.error('Error fetching unscheduled count:', error);
+        return;
+      }
+
+      if (data) {
+        const count = (data as any[]).filter(apt =>
+          (apt.next_appointment_status === 'not_scheduled' || (!apt.next_appointment_status && apt.next_appointment_scheduled !== true)) &&
+          apt.next_appointment_status !== 'not_required'
+        ).length;
+        setUnscheduledCount(count);
+      }
+    } catch (error) {
+      console.error('Error fetching unscheduled count:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnscheduledCount();
+
+    // Subscribe to changes to update count
+    const subscription = supabase
+      .channel('appointments_count_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
+        fetchUnscheduledCount();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   // Remove blocking loading state - let calendar render immediately
   // Data will load in background and update when ready
 
@@ -200,6 +253,7 @@ export function AppointmentsPage() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           canCreateAppointments={canCreateAppointments()}
+          unscheduledCount={unscheduledCount}
         />
 
         {/* Calendar Content - Scrollable */}
@@ -318,6 +372,31 @@ export function AppointmentsPage() {
         onAddLabScript={(apt) => {
           // Navigate to lab scripts page or open lab script form
           window.location.href = `/lab-scripts/new?appointment_id=${apt.id}&patient_name=${encodeURIComponent(apt.patient)}`;
+        }}
+      />
+
+      {/* Add Consultation Dialog - Special routing for consultation column */}
+      <AddConsultationDialog
+        isOpen={showAddConsultationDialog && !showSchedulerDialog}
+        onClose={() => {
+          setShowAddConsultationDialog(false);
+          handleClearSelection();
+        }}
+        onSuccess={() => {
+          setShowAddConsultationDialog(false);
+          // Refresh appointments or handle as needed
+          // handleSaveAppointment already calls add/update, but here the dialog 
+          // has likely already saved to DB. Let's just refresh.
+        }}
+        initialDate={initialFormDate}
+        initialTime={initialFormTime}
+        initialEndTime={initialFormEndTime}
+        onOpenCalendar={(data) => {
+          setDraftAppointmentData(data);
+          if (data.consultationDate) {
+            setInitialFormDate(data.consultationDate);
+          }
+          setShowSchedulerDialog(true);
         }}
       />
     </div>

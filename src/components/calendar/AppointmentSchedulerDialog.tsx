@@ -140,6 +140,45 @@ export function AppointmentSchedulerDialog({
         </DialogHeader>
 
         {/* Full Calendar DayView */}
+        <div className="flex items-center justify-between px-6 py-2 border-b bg-gray-50/50">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const prevDay = new Date(currentDate);
+              prevDay.setDate(prevDay.getDate() - 1);
+              setCurrentDate(prevDay);
+            }}
+          >
+            ← Previous Day
+          </Button>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={currentDate.toISOString().split('T')[0]}
+              onChange={(e) => {
+                if (e.target.value) {
+                  // Create date at noon to avoid timezone issues with early morning
+                  const parts = e.target.value.split('-');
+                  const newDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+                  setCurrentDate(newDate);
+                }
+              }}
+              className="border rounded px-2 py-1 text-sm font-medium"
+            />
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const nextDay = new Date(currentDate);
+              nextDay.setDate(nextDay.getDate() + 1);
+              setCurrentDate(nextDay);
+            }}
+          >
+            Next Day →
+          </Button>
+        </div>
         <div className="flex-1 overflow-hidden">
           <DayView
             date={currentDate}
@@ -153,7 +192,27 @@ export function AppointmentSchedulerDialog({
             onEdit={() => { }}
             onDelete={() => { }}
             isSchedulerMode={true}
-            allowedAppointmentTypes={appointmentType ? [appointmentType, 'emergency'] : undefined}
+            allowedAppointmentTypes={(() => {
+              // Map high-level appointment types to DayView column keys
+              const getDayViewType = (type: string | undefined): string | undefined => {
+                if (type === 'appliance-insertion' || type === 'Appliance-delivery') return 'printed-try-in';
+                if (type === 'surgery') return 'surgery';
+                return type;
+              };
+
+              const validTypes = ['emergency'];
+              if (appointmentType) {
+                const mappedType = getDayViewType(appointmentType);
+                if (mappedType) validTypes.push(mappedType);
+
+                // Explicitly allow Surgery and Appliance Delivery for appliance insertions
+                if (appointmentType === 'appliance-insertion' || appointmentType === 'Appliance-delivery') {
+                  if (!validTypes.includes('surgery')) validTypes.push('surgery');
+                  if (!validTypes.includes('printed-try-in')) validTypes.push('printed-try-in');
+                }
+              }
+              return validTypes.length > 0 ? validTypes : undefined;
+            })()}
           />
         </div>
 

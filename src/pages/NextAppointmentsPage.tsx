@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, User, Filter, ArrowUpDown, ArrowLeft, Loader2, Search, FileText, FileCheck, AlertCircle } from "lucide-react";
+import { Calendar, Clock, User, Filter, ArrowUpDown, ArrowLeft, Loader2, Search, FileText, FileCheck, AlertCircle, XCircle } from "lucide-react";
 import { AppointmentForm } from "@/components/calendar/AppointmentForm";
 
 interface NextAppointment {
@@ -19,6 +19,7 @@ interface NextAppointment {
   next_appointment_subtype: string | null;
   next_appointment_date: string;
   next_appointment_scheduled: boolean;
+  next_appointment_status?: 'scheduled' | 'not_scheduled' | 'not_required';
   status: string;
   status_code: string;
   created_at: string;
@@ -64,6 +65,7 @@ export function NextAppointmentsPage() {
           next_appointment_subtype,
           next_appointment_date,
           next_appointment_scheduled,
+          next_appointment_status,
           created_at
         `)
         // removed not('next_appointment_type', 'is', null) to include ALL completed unscheduled apps
@@ -83,6 +85,7 @@ export function NextAppointmentsPage() {
         next_appointment_subtype: appt.next_appointment_subtype,
         next_appointment_date: appt.next_appointment_date,
         next_appointment_scheduled: appt.next_appointment_scheduled,
+        next_appointment_status: appt.next_appointment_status,
         status: appt.status,
         status_code: appt.status_code,
         created_at: appt.created_at
@@ -105,13 +108,16 @@ export function NextAppointmentsPage() {
     let filtered = [...appointments];
 
     // Apply status filter (scheduled/unscheduled)
+    // Apply status filter (scheduled/unscheduled)
     if (statusFilter === "unscheduled") {
       filtered = filtered.filter(apt =>
-        apt.next_appointment_scheduled !== true &&
+        // Check new status logic OR legacy logic, but explicitly exclude 'not_required'
+        (apt.next_appointment_status === 'not_scheduled' || (!apt.next_appointment_status && apt.next_appointment_scheduled !== true)) &&
+        apt.next_appointment_status !== 'not_required' &&
         (apt.status === 'Appointment Completed' || apt.status_code === 'CMPLT' || apt.status_code === 'NSHOW' || apt.status === 'No Show')
       );
     } else if (statusFilter === "scheduled") {
-      filtered = filtered.filter(apt => apt.next_appointment_scheduled === true);
+      filtered = filtered.filter(apt => apt.next_appointment_status === 'scheduled' || apt.next_appointment_scheduled === true);
     }
     // "all" shows everything
 
@@ -174,7 +180,8 @@ export function NextAppointmentsPage() {
       const { error: updateError } = await supabase
         .from('appointments')
         .update({
-          next_appointment_scheduled: true
+          next_appointment_scheduled: true,
+          next_appointment_status: 'scheduled'
         } as any)
         .eq('id', selectedAppointment.id);
 
@@ -191,6 +198,34 @@ export function NextAppointmentsPage() {
       setSelectedAppointment(null);
     } catch (error) {
       console.error('Error updating encounter:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update appointment status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleNotRequired = async (appointment: NextAppointment) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          next_appointment_status: 'not_required'
+        } as any)
+        .eq('id', appointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Marked as not required",
+      });
+
+      // Refresh the list
+      await fetchNextAppointments();
+    } catch (error) {
+      console.error('Error updating appointment:', error);
       toast({
         title: "Error",
         description: "Failed to update appointment status",
@@ -278,7 +313,7 @@ export function NextAppointmentsPage() {
             </Button>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-indigo-700">
-                Next Appointments
+                Unscheduled
               </h1>
             </div>
           </div>
@@ -356,98 +391,9 @@ export function NextAppointmentsPage() {
         </div>
       </div>
 
-      {/* Status Filter Buttons */}
-      <div className="flex-shrink-0 px-6 pt-6">
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {/* Unscheduled */}
-          <button
-            onClick={() => setStatusFilter("unscheduled")}
-            className={`h-20 p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${statusFilter === "unscheduled"
-              ? 'border-indigo-300 bg-indigo-50 shadow-md border-b-4 border-b-indigo-500'
-              : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-          >
-            <div className="flex flex-col h-full justify-between">
-              <div className="flex items-center justify-between">
-                <div className={`p-1.5 rounded-lg ${statusFilter === "unscheduled" ? 'bg-amber-500' : 'bg-amber-100'
-                  }`}>
-                  <Clock className={`h-4 w-4 ${statusFilter === "unscheduled" ? 'text-white' : 'text-amber-600'
-                    }`} />
-                </div>
-                <span className={`text-2xl font-bold ${statusFilter === "unscheduled" ? 'text-indigo-700' : 'text-gray-900'
-                  }`}>
-                  {appointments.filter(a =>
-                    a.next_appointment_scheduled !== true &&
-                    (a.status === 'Appointment Completed' || a.status_code === 'CMPLT' || a.status_code === 'NSHOW' || a.status === 'No Show')
-                  ).length}
-                </span>
-              </div>
-              <div className={`text-xs font-medium text-left ${statusFilter === "unscheduled" ? 'text-indigo-700' : 'text-gray-600'
-                }`}>
-                Unscheduled
-              </div>
-            </div>
-          </button>
-
-          {/* Scheduled */}
-          <button
-            onClick={() => setStatusFilter("scheduled")}
-            className={`h-20 p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${statusFilter === "scheduled"
-              ? 'border-indigo-300 bg-indigo-50 shadow-md border-b-4 border-b-indigo-500'
-              : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-          >
-            <div className="flex flex-col h-full justify-between">
-              <div className="flex items-center justify-between">
-                <div className={`p-1.5 rounded-lg ${statusFilter === "scheduled" ? 'bg-green-500' : 'bg-green-100'
-                  }`}>
-                  <FileCheck className={`h-4 w-4 ${statusFilter === "scheduled" ? 'text-white' : 'text-green-600'
-                    }`} />
-                </div>
-                <span className={`text-2xl font-bold ${statusFilter === "scheduled" ? 'text-indigo-700' : 'text-gray-900'
-                  }`}>
-                  {appointments.filter(a => a.next_appointment_scheduled === true).length}
-                </span>
-              </div>
-              <div className={`text-xs font-medium text-left ${statusFilter === "scheduled" ? 'text-indigo-700' : 'text-gray-600'
-                }`}>
-                Scheduled
-              </div>
-            </div>
-          </button>
-
-          {/* All */}
-          <button
-            onClick={() => setStatusFilter("all")}
-            className={`h-20 p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${statusFilter === "all"
-              ? 'border-indigo-300 bg-indigo-50 shadow-md border-b-4 border-b-indigo-500'
-              : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-          >
-            <div className="flex flex-col h-full justify-between">
-              <div className="flex items-center justify-between">
-                <div className={`p-1.5 rounded-lg ${statusFilter === "all" ? 'bg-indigo-500' : 'bg-indigo-100'
-                  }`}>
-                  <Calendar className={`h-4 w-4 ${statusFilter === "all" ? 'text-white' : 'text-indigo-600'
-                    }`} />
-                </div>
-                <span className={`text-2xl font-bold ${statusFilter === "all" ? 'text-indigo-700' : 'text-gray-900'
-                  }`}>
-                  {appointments.length}
-                </span>
-              </div>
-              <div className={`text-xs font-medium text-left ${statusFilter === "all" ? 'text-indigo-700' : 'text-gray-600'
-                }`}>
-                All Appointments
-              </div>
-            </div>
-          </button>
-        </div>
-      </div>
-
       {/* Appointments Table */}
-      <div className="flex-1 px-6 pb-1">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col table-container-rounded" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
+      <div className="flex-1 px-6 pt-6 pb-1">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col table-container-rounded" style={{ height: 'calc(100vh - 120px)', minHeight: '500px' }}>
           {loading ? (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
@@ -530,7 +476,7 @@ export function NextAppointmentsPage() {
                         </div>
 
                         {/* Actions */}
-                        <div className="px-2 h-full flex items-center justify-center min-w-0">
+                        <div className="px-2 h-full flex items-center justify-center min-w-0 gap-2">
                           <Button
                             onClick={() => handleScheduleClick(appointment)}
                             size="sm"
@@ -538,6 +484,15 @@ export function NextAppointmentsPage() {
                           >
                             <Calendar className="h-3 w-3 mr-1" />
                             Schedule
+                          </Button>
+                          <Button
+                            onClick={() => handleNotRequired(appointment)}
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-3 text-xs text-slate-600 hover:text-slate-800 border-slate-300"
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Not Required
                           </Button>
                         </div>
                       </div>

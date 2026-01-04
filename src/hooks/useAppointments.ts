@@ -425,6 +425,29 @@ export function useAppointments() {
         return updated;
       });
 
+      // If appointment type is 'consultation', create a consultation record
+      if (newAppointment.type === 'consultation' && newAppointment.patientId) {
+        console.log('Creating linked consultation record for:', newAppointment.id);
+        const { error: consultationError } = await (supabase as any)
+          .from('consultations')
+          .insert({
+            appointment_id: newAppointment.id,
+            patient_id: newAppointment.patientId,
+            patient_name: newAppointment.patient,
+            consultation_status: 'scheduled',
+            consultation_date: newAppointment.date
+          });
+
+        if (consultationError) {
+          console.error('Error creating consultation record:', consultationError);
+          toast({
+            title: "Warning",
+            description: "Appointment created but failed to initialize consultation record",
+            variant: "destructive",
+          });
+        }
+      }
+
       toast({
         title: "Success",
         description: "Appointment created successfully",
