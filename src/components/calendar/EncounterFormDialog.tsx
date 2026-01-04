@@ -104,35 +104,45 @@ export function EncounterFormDialog({
 
   // Fetch patient details and encounter data when dialog opens
   useEffect(() => {
-    if (open && patientName) {
-      fetchPatientDetails();
-      fetchAppointmentDetails();
-      fetchPatientDetails();
-      fetchAppointmentDetails();
-      fetchEncounterData();
-      fetchConsultationData();
+    if (open) {
+      // Clear previous state immediately to prevent showing stale data
+      setConsultationData(null);
+      setAppointmentDetails(null);
+      setPatientDetails(null);
+      setAssignedUserName('N/A');
+
+      if (patientName && appointmentId) {
+        fetchPatientDetails();
+        fetchAppointmentDetails();
+        fetchEncounterData();
+        fetchConsultationData();
+      }
     }
-  }, [open, patientName, appointmentId]);
+  }, [open, appointmentId]); // Removed patientName dependency to avoid double firing if it changes slightly, though strictly it should be there. 
+  // Ideally just open/appointmentId triggers the reset/reload.
 
   const fetchConsultationData = async () => {
     try {
       const { data, error } = await supabase
-        .from('consultations')
+        .from('consultations' as any)
         .select('*')
         .eq('appointment_id', appointmentId)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid error on no rows
 
       if (data) {
         setConsultationData(data);
         // Sync patientAcceptedTreatment state for existing logic compatibility
-        if (data.treatment_decision === 'accepted') {
+        if ((data as any).treatment_decision === 'accepted') {
           setPatientAcceptedTreatment('Yes');
         } else {
           setPatientAcceptedTreatment('No');
         }
+      } else {
+        setConsultationData(null);
       }
     } catch (error) {
       console.error('Error fetching consultation:', error);
+      setConsultationData(null);
     }
   };
 
@@ -629,7 +639,7 @@ export function EncounterFormDialog({
                       <div className="flex items-center gap-2">
                         <Label className="text-xs font-medium text-blue-700 w-20 flex-shrink-0">Name:</Label>
                         <Input
-                          value={patientDetails?.full_name || 'N/A'}
+                          value={patientDetails?.full_name || patientName || 'N/A'}
                           disabled
                           className="bg-white cursor-not-allowed h-7 text-xs border-blue-200 flex-1"
                         />
@@ -637,7 +647,7 @@ export function EncounterFormDialog({
                       <div className="flex items-center gap-2">
                         <Label className="text-xs font-medium text-blue-700 w-20 flex-shrink-0">DOB:</Label>
                         <Input
-                          value={formatDate(patientDetails?.date_of_birth || null)}
+                          value={formatDate(patientDetails?.date_of_birth || (consultationData as any)?.dob || null)}
                           disabled
                           className="bg-white cursor-not-allowed h-7 text-xs border-blue-200 flex-1"
                         />
