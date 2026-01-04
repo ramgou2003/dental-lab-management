@@ -2106,7 +2106,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
           {/* Appointment Type Column Headers */}
           {appointmentTypes.map((type, index) => (
             <div key={type.key} className={`p-3 flex items-center justify-center ${index < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''}`}>
-              <span className="text-xs font-medium text-gray-700">{type.label}</span>
+              <span className="text-sm font-bold text-blue-700 uppercase tracking-wider">{type.label}</span>
             </div>
           ))}
         </div>

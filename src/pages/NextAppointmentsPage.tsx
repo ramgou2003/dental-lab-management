@@ -404,7 +404,7 @@ export function NextAppointmentsPage() {
             <>
               {/* Table Header - Fixed */}
               <div className="bg-slate-50 border-b border-slate-200 px-4 py-3 flex-shrink-0 table-header">
-                <div className="grid gap-2 lg:gap-3 text-xs font-semibold text-slate-700 uppercase tracking-wider items-center"
+                <div className="grid gap-2 lg:gap-3 text-sm font-bold text-blue-700 uppercase tracking-wider items-center"
                   style={{
                     gridTemplateColumns: 'minmax(200px, 2fr) minmax(150px, 1.5fr) minmax(140px, 1fr)'
                   }}>
