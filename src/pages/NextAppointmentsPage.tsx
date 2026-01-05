@@ -114,7 +114,7 @@ export function NextAppointmentsPage() {
         // Check new status logic OR legacy logic, but explicitly exclude 'not_required'
         (apt.next_appointment_status === 'not_scheduled' || (!apt.next_appointment_status && apt.next_appointment_scheduled !== true)) &&
         apt.next_appointment_status !== 'not_required' &&
-        (apt.status === 'Appointment Completed' || apt.status_code === 'CMPLT' || apt.status_code === 'NSHOW' || apt.status === 'No Show')
+        (apt.status === 'Appointment Completed' || apt.status_code === 'CMPLT' || apt.status_code === 'NSHOW' || apt.status === 'No Show' || apt.status_code === 'CANCL' || apt.status === 'Cancelled')
       );
     } else if (statusFilter === "scheduled") {
       filtered = filtered.filter(apt => apt.next_appointment_status === 'scheduled' || apt.next_appointment_scheduled === true);
@@ -276,7 +276,13 @@ export function NextAppointmentsPage() {
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    if (!dateStr) return 'N/A';
+    // Split on T to handle timestamps if present, taking only the date part
+    const cleanDateStr = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+    const [year, month, day] = cleanDateStr.split('-').map(Number);
+    // Create date in local time (which matches user's EST preference)
+    const date = new Date(year, month - 1, day);
+
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       year: 'numeric',

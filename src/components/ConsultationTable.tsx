@@ -328,8 +328,13 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
 
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
+    if (!dateStr) return 'N/A';
+    // Fix: Parse date components to avoid timezone shift
+    const cleanDateStr = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+    const [year, month, day] = cleanDateStr.split('-').map(Number);
+
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+      month: 'long',
       day: 'numeric',
       year: 'numeric'
     });
@@ -594,6 +599,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                       </div>
                       <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
                     </td>
+
 
                     <td className="px-6 py-4 whitespace-nowrap relative text-center">
                       <div className="flex justify-center">

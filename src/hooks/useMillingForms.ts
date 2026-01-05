@@ -5,7 +5,7 @@ export interface MillingForm {
   id: string;
   manufacturing_item_id: string;
   patient_name: string;
-  milling_location: 'in-house' | 'micro-dental-lab' | 'haus-milling' | 'evolution-dental-lab';
+  milling_location: string;
   gingiva_color: 'light' | 'medium' | 'custom' | null;
   stained_and_glazed: 'yes' | 'no' | null;
   cementation: 'yes' | 'no' | null;
@@ -25,7 +25,7 @@ export interface MillingForm {
 export interface CreateMillingFormData {
   manufacturing_item_id: string;
   patient_name: string;
-  milling_location: 'in-house' | 'micro-dental-lab' | 'haus-milling' | 'evolution-dental-lab';
+  milling_location: string;
   gingiva_color?: 'light' | 'medium' | 'custom';
   stained_and_glazed?: 'yes' | 'no';
   cementation?: 'yes' | 'no';

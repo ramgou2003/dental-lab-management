@@ -182,6 +182,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
   const [showNoShowDialog, setShowNoShowDialog] = useState<{
     appointmentId: string;
     appointmentDetails: string;
+    targetStatus?: Appointment['statusCode'];
   } | null>(null);
 
   // State for time slot long-press handling
@@ -395,7 +396,8 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
 
   // Function to find patient ID by name and navigate to profile or consultation page
   const handlePatientNameClick = async (appointment: Appointment) => {
-    console.log('Patient name clicked:', appointment.patient, 'Type:', appointment.type);
+    // Close menu immediately
+    setOpenContextMenuId(null);
 
     try {
       // For consultation appointments, navigate to consultation session page
@@ -405,8 +407,15 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
         return;
       }
 
-      // For other appointment types, navigate to patient profile
-      console.log('Searching for patient in database...');
+      // Priority 1: Use patientId if available (Most reliable)
+      if (appointment.patientId) {
+        console.log('Patient ID found, navigating directly:', appointment.patientId);
+        navigate(`/patients/${appointment.patientId}`);
+        return;
+      }
+
+      // Priority 2: Search for patient by full name (Fallback)
+      console.log('No Patient ID, searching for patient in database by name:', appointment.patient);
 
       // Search for patient by full name
       const { data: patients, error } = await supabase
@@ -424,16 +433,16 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       }
 
       if (patients && patients.length > 0) {
-        console.log('Patient found, navigating to:', `/patients/${patients[0].id}`);
+        console.log('Patient found by name, navigating to:', `/patients/${patients[0].id}`);
         // Navigate to patient profile
         navigate(`/patients/${patients[0].id}`);
       } else {
         console.warn('Patient not found:', appointment.patient);
         alert(`Patient "${appointment.patient}" not found in database. This might be mock data.`);
 
-        // For development: try to navigate to a mock patient profile
-        console.log('Trying to navigate to mock patient profile...');
-        navigate('/patients/mock-patient');
+        // For development: try to navigate to a mock patient profile if on dev environment
+        // console.log('Trying to navigate to mock patient profile...');
+        // navigate('/patients/mock-patient');
       }
     } catch (error) {
       console.error('Error searching for patient:', error);
@@ -447,11 +456,12 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     const appointment = appointments.find(apt => apt.id === appointmentId);
     if (!appointment) return;
 
-    // Check if new status is No Show
-    if (newStatus === 'NSHOW') {
+    // Check if new status is No Show or Cancelled
+    if (newStatus === 'NSHOW' || newStatus === 'CANCL') {
       setShowNoShowDialog({
         appointmentId,
-        appointmentDetails: `${appointment.patient} - ${appointment.type} at ${appointment.startTime}`
+        appointmentDetails: `${appointment.patient} - ${appointment.type} at ${appointment.startTime}`,
+        targetStatus: newStatus // added this to track which status triggered the dialog
       });
       return;
     }
@@ -464,35 +474,55 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     });
   };
 
-  // Handler for No Show dialog options
+  // Handler for No Show/Cancel dialog options
   const handleNoShowOption = async (option: 'unscheduled' | 'not_required') => {
     if (!showNoShowDialog) return;
-    const { appointmentId } = showNoShowDialog;
+    const { appointmentId, targetStatus } = showNoShowDialog;
 
-    if (option === 'unscheduled') {
-      // Option 1: Add to Unscheduled List (just set status to NSHOW)
-      if (onStatusChange) {
-        onStatusChange(appointmentId, 'NSHOW');
-      }
-    } else {
-      // Option 2: No Next Appointment Required
-      // Set status to NSHOW AND next_appointment_status to 'not_required'
-      try {
+    // Default to NSHOW if targetStatus is not present
+    const statusToApply = targetStatus || 'NSHOW';
+    const statusLabel = statusToApply === 'CANCL' ? 'Cancelled' : 'No Show';
+
+    try {
+      if (option === 'unscheduled') {
+        // Option 1: Add to Unscheduled List
+        // Explicitly set next_appointment_status to 'not_scheduled' to ensure it appears in the list
         const { error } = await supabaseClient
           .from('appointments')
           .update({
-            status_code: 'NSHOW',
-            status: 'No Show',
+            status_code: statusToApply,
+            status: statusLabel,
+            next_appointment_status: 'not_scheduled'
+          })
+          .eq('id', appointmentId);
+
+        if (error) throw error;
+        toast.success(`Appointment added to Unscheduled List (${statusLabel})`);
+      } else {
+        // Option 2: No Next Appointment Required
+        const { error } = await supabaseClient
+          .from('appointments')
+          .update({
+            status_code: statusToApply,
+            status: statusLabel,
             next_appointment_status: 'not_required'
           })
           .eq('id', appointmentId);
 
         if (error) throw error;
-        toast.success("Appointment marked as No Show (No next appointment required)");
-      } catch (err) {
-        console.error("Error updating appointment to No Show/Not Required:", err);
-        toast.error("Failed to update appointment");
+        toast.success(`Appointment marked as ${statusLabel} (No next appointment required)`);
       }
+
+      // Attempt to trigger parent update if simple callback exists
+      // (Note: This might be redundant if using realtime, but helps with immediate UI feedback if parent supports it)
+      if (onStatusChange) {
+        // We pass the new status code so parent can update local state if needed
+        onStatusChange(appointmentId, statusToApply);
+      }
+
+    } catch (err) {
+      console.error(`Error updating appointment to ${statusLabel}:`, err);
+      toast.error("Failed to update appointment");
     }
 
     setShowNoShowDialog(null);
@@ -1455,6 +1485,20 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
   // State to track if the device is a touch device (pointer: coarse)
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
+  // Helper for safe menu item clicks on touch devices to prevent dialog flashing
+  const handleSafeMenuItemClick = (action: () => void) => {
+    return {
+      onSelect: (e: Event) => {
+        e.preventDefault();
+        setTimeout(() => {
+          action();
+          // Try to close the menu by simulating a click on the body
+          document.body.click();
+        }, 100);
+      }
+    };
+  };
+
   // Effect to detect touch device capability for UI adaptation
   useEffect(() => {
     // Check if the primary pointer is coarse (touch)
@@ -2076,807 +2120,731 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="flex flex-col h-full bg-white select-none"
-      onMouseUp={(e) => {
-        // Ignore mouse up if we are in a touch interaction (prevents premature end)
-        if (isTouchRef.current) return;
-        handleMouseUp();
-      }}
-      onMouseLeave={(e) => {
-        if (isTouchRef.current) return;
-        handleMouseUp();
-      }}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      style={{
-        touchAction: isDragging ? 'none' : 'auto',
-        overscrollBehavior: isDragging ? 'none' : 'auto'
-      }}
-    >
-      {/* Column Headers - Fixed outside scrollable container */}
-      <div className="border-b border-gray-200 bg-gray-50 flex-shrink-0">
-        <div className="grid" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
-          {/* Time Column Header */}
-          <div className="p-3 border-r border-gray-200 flex items-center justify-center">
-            <span className="text-xs font-medium text-gray-600">Time</span>
-          </div>
-
-          {/* Appointment Type Column Headers */}
-          {appointmentTypes.map((type, index) => (
-            <div key={type.key} className={`p-3 flex items-center justify-center ${index < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''}`}>
-              <span className="text-sm font-bold text-blue-700 uppercase tracking-wider">{type.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Time Grid - Scrollable content only */}
+    <>
       <div
-        ref={scrollContainerRef}
-        className={`flex-1 calendar-scroll ${isDragging ? 'dragging' : ''}`}
+        ref={containerRef}
+        className="flex flex-col h-full bg-white select-none"
+        onMouseUp={(e) => {
+          // Ignore mouse up if we are in a touch interaction (prevents premature end)
+          if (isTouchRef.current) return;
+          handleMouseUp();
+        }}
+        onMouseLeave={(e) => {
+          if (isTouchRef.current) return;
+          handleMouseUp();
+        }}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
-          overscrollBehavior: isDragging ? 'none' : 'auto',
-          touchAction: isDragging ? 'none' : 'pan-y'
-        }}
-        onTouchStart={(e) => {
-          // Allow touch events to bubble to slots for drag detection
-          console.log('Container touch start');
-        }}
-        onTouchMove={(e) => {
-          if (isDragging) {
-            handleTouchMove(e);
-          }
-        }}
-        onTouchEnd={(e) => {
-          if (isDragging) {
-            handleTouchEnd(e);
-          }
+          touchAction: isDragging ? 'none' : 'auto',
+          overscrollBehavior: isDragging ? 'none' : 'auto'
         }}
       >
+        {/* Column Headers - Fixed outside scrollable container */}
+        <div className="border-b border-gray-200 bg-gray-50 flex-shrink-0">
+          <div className="grid" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
+            {/* Time Column Header */}
+            <div className="p-3 border-r border-gray-200 flex items-center justify-center">
+              <span className="text-xs font-medium text-gray-600">Time</span>
+            </div>
 
-        <div className="relative">
+            {/* Appointment Type Column Headers */}
+            {appointmentTypes.map((type, index) => (
+              <div key={type.key} className={`p-3 flex items-center justify-center ${index < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''}`}>
+                <span className="text-sm font-bold text-blue-700 uppercase tracking-wider">{type.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Time Grid - Scrollable content only */}
+        <div
+          ref={scrollContainerRef}
+          className={`flex-1 calendar-scroll ${isDragging ? 'dragging' : ''}`}
+          style={{
+            overscrollBehavior: isDragging ? 'none' : 'auto',
+            touchAction: isDragging ? 'none' : 'pan-y'
+          }}
+          onTouchStart={(e) => {
+            // Allow touch events to bubble to slots for drag detection
+            console.log('Container touch start');
+          }}
+          onTouchMove={(e) => {
+            if (isDragging) {
+              handleTouchMove(e);
+            }
+          }}
+          onTouchEnd={(e) => {
+            if (isDragging) {
+              handleTouchEnd(e);
+            }
+          }}
+        >
+
+          <div className="relative">
 
 
-          {/* Continuous appointment rectangles - positioned absolutely over the entire grid */}
-          <div className="absolute inset-0 pointer-events-none z-20">
-            {appointmentTypes.map((type, typeIndex) => {
-              // Get all appointments for this type
-              // Map both 'surgery' and 'surgical-revision' to the surgery column
-              const typeAppointments = appointments.filter(apt => {
-                // If this is the emergency column, capture all emergency appointments
-                // If appointment is Rescheduled, OVERRIDE all colors to Gray
-                if (apt.statusCode === 'RESCH') {
-                  // This is a placeholder for where the color/style override would happen
-                  // The actual styling logic for individual appointments is further down
-                  // This filter is only for determining which appointments belong to which column
-                  // and does not directly apply styles here.
-                  // The instruction's provided code snippet for `return { label: 'Rescheduled', ... }`
-                  // seems to be intended for a `getTypeColors` or similar function, not directly here.
-                  // For now, we'll just ensure rescheduled appointments are included in their original type column
-                  // but their styling will be handled by `getStatusColor` or a similar mechanism later.
+            {/* Continuous appointment rectangles - positioned absolutely over the entire grid */}
+            <div className="absolute inset-0 pointer-events-none z-20">
+              {appointmentTypes.map((type, typeIndex) => {
+                // Get all appointments for this type
+                // Map both 'surgery' and 'surgical-revision' to the surgery column
+                const typeAppointments = appointments.filter(apt => {
+                  // If this is the emergency column, capture all emergency appointments
+                  // If appointment is Rescheduled, OVERRIDE all colors to Gray
+                  if (apt.statusCode === 'RESCH') {
+                    // This is a placeholder for where the color/style override would happen
+                    // The actual styling logic for individual appointments is further down
+                    // This filter is only for determining which appointments belong to which column
+                    // and does not directly apply styles here.
+                    // The instruction's provided code snippet for `return { label: 'Rescheduled', ... }`
+                    // seems to be intended for a `getTypeColors` or similar function, not directly here.
+                    // For now, we'll just ensure rescheduled appointments are included in their original type column
+                    // but their styling will be handled by `getStatusColor` or a similar mechanism later.
+                  }
+
+                  if (type.key === 'emergency') {
+                    return apt.isEmergency === true;
+                  }
+
+                  // If appointment is marked as emergency, it belongs ONLY in the emergency column
+                  if (apt.isEmergency === true) {
+                    return false;
+                  }
+
+                  if (type.key === 'surgery') {
+                    return apt.type === 'surgery' || apt.type === 'surgical-revision';
+                  }
+                  if (type.key === 'printed-try-in') {
+                    return apt.type === 'printed-try-in' || apt.type === 'Appliance-delivery' || apt.type === 'appliance-insertion';
+                  }
+                  return apt.type === type.key;
+                });
+
+                // --- INJECT GHOST APPOINTMENT FOR DRAG SELECTION ---
+                // This allows the lane layout algorithm to treat the drag selection as a real appointment
+                // causing overlapping existing appointments to shrink automatically.
+                const persistentSelection = persistentSelectionRef.current;
+                const activeColumn = (isDialogOpen && persistentSelection.column) ? persistentSelection.column : dragColumn;
+                const activeStart = (isDialogOpen && persistentSelection.start) ? persistentSelection.start : dragStart;
+                const activeEnd = (isDialogOpen && persistentSelection.end) ? persistentSelection.end : dragEnd;
+
+                const shouldShowSelection = (isDragging || (isDialogOpen && persistentSelection.isVisible)) && activeStart && activeEnd && activeColumn === type.key;
+
+                if (shouldShowSelection && activeStart && activeEnd) {
+                  const startMinutes = activeStart.hour * 60 + activeStart.minute;
+                  const endMinutes = activeEnd.hour * 60 + activeEnd.minute;
+                  const startTotalMinutes = Math.min(startMinutes, endMinutes);
+                  const endTotalMinutes = Math.max(startMinutes, endMinutes) + 15;
+
+                  const startH = Math.floor(startTotalMinutes / 60);
+                  const startM = startTotalMinutes % 60;
+                  const endH = Math.floor(endTotalMinutes / 60);
+                  const endM = endTotalMinutes % 60;
+
+                  const startTime = `${startH.toString().padStart(2, '0')}:${startM.toString().padStart(2, '0')}`;
+                  const endTime = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+
+                  // Create a mock appointment object compatible with the type
+                  // Use 'any' cast to avoid strict type checks for missing optional props on this temporary object
+                  const mockAppointment: any = {
+                    id: 'ghost-selection',
+                    type: type.key,
+                    patient: 'New Selection',
+                    startTime,
+                    endTime,
+                    statusCode: 'NEW', // Placeholder
+                    encounterCompleted: false
+                  };
+
+                  typeAppointments.push(mockAppointment);
                 }
+                // ---------------------------------------------------
 
-                if (type.key === 'emergency') {
-                  return apt.isEmergency === true;
-                }
-
-                // If appointment is marked as emergency, it belongs ONLY in the emergency column
-                if (apt.isEmergency === true) {
-                  return false;
-                }
-
-                if (type.key === 'surgery') {
-                  return apt.type === 'surgery' || apt.type === 'surgical-revision';
-                }
-                if (type.key === 'printed-try-in') {
-                  return apt.type === 'printed-try-in' || apt.type === 'Appliance-delivery' || apt.type === 'appliance-insertion';
-                }
-                return apt.type === type.key;
-              });
-
-              // --- INJECT GHOST APPOINTMENT FOR DRAG SELECTION ---
-              // This allows the lane layout algorithm to treat the drag selection as a real appointment
-              // causing overlapping existing appointments to shrink automatically.
-              const persistentSelection = persistentSelectionRef.current;
-              const activeColumn = (isDialogOpen && persistentSelection.column) ? persistentSelection.column : dragColumn;
-              const activeStart = (isDialogOpen && persistentSelection.start) ? persistentSelection.start : dragStart;
-              const activeEnd = (isDialogOpen && persistentSelection.end) ? persistentSelection.end : dragEnd;
-
-              const shouldShowSelection = (isDragging || (isDialogOpen && persistentSelection.isVisible)) && activeStart && activeEnd && activeColumn === type.key;
-
-              if (shouldShowSelection && activeStart && activeEnd) {
-                const startMinutes = activeStart.hour * 60 + activeStart.minute;
-                const endMinutes = activeEnd.hour * 60 + activeEnd.minute;
-                const startTotalMinutes = Math.min(startMinutes, endMinutes);
-                const endTotalMinutes = Math.max(startMinutes, endMinutes) + 15;
-
-                const startH = Math.floor(startTotalMinutes / 60);
-                const startM = startTotalMinutes % 60;
-                const endH = Math.floor(endTotalMinutes / 60);
-                const endM = endTotalMinutes % 60;
-
-                const startTime = `${startH.toString().padStart(2, '0')}:${startM.toString().padStart(2, '0')}`;
-                const endTime = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
-
-                // Create a mock appointment object compatible with the type
-                // Use 'any' cast to avoid strict type checks for missing optional props on this temporary object
-                const mockAppointment: any = {
-                  id: 'ghost-selection',
-                  type: type.key,
-                  patient: 'New Selection',
-                  startTime,
-                  endTime,
-                  statusCode: 'NEW', // Placeholder
-                  encounterCompleted: false
+                // Helper to get minutes
+                const getMinutes = (time: string) => {
+                  const [h, m] = time.split(':').map(Number);
+                  return h * 60 + m;
                 };
 
-                typeAppointments.push(mockAppointment);
-              }
-              // ---------------------------------------------------
-
-              // Helper to get minutes
-              const getMinutes = (time: string) => {
-                const [h, m] = time.split(':').map(Number);
-                return h * 60 + m;
-              };
-
-              // Debug: Log the sorting process
-              if (shouldShowSelection) {
-                const ghost = typeAppointments.find(a => a.id === 'ghost-selection');
-                if (ghost) {
-                  console.log('Ghost appointment found before sort:', {
-                    id: ghost.id,
-                    startTime: ghost.startTime,
-                    minutes: getMinutes(ghost.startTime)
-                  });
-                }
-              }
-
-              // Sort logic with tolerance
-              typeAppointments.sort((a, b) => {
-                // Get raw minute values
-                const timeA = getMinutes(a.startTime);
-                const timeB = getMinutes(b.startTime);
-
-                // Check if they are effectively the same start time (within 1 minute)
-                // This handles cases where one might be 08:00 and other 08:00:00 or 08:00:30
-                const diff = timeA - timeB;
-
-                if (Math.abs(diff) < 1) {
-                  // Start times are effectively equal
-                  // Force 'ghost-selection' to be LAST (Right side)
-                  if (a.id === 'ghost-selection') return 1;
-                  if (b.id === 'ghost-selection') return -1;
-
-                  // Safe CreatedAt Sort
-                  // Treat missing created_at as "Max/Newest" so it goes to the end
-                  const dateA = a.created_at ? new Date(a.created_at).getTime() : Number.MAX_SAFE_INTEGER;
-                  const dateB = b.created_at ? new Date(b.created_at).getTime() : Number.MAX_SAFE_INTEGER;
-
-                  const dateDiff = dateA - dateB;
-                  if (dateDiff !== 0) {
-                    return dateDiff; // Oldest (Smallest) first -> Lane 0
-                  }
-
-                  // Fallback to title or ID for deterministic stability if created_at is identical
-                  return a.id.localeCompare(b.id);
-                }
-
-                // Otherwise normal time sort
-                return diff;
-              });
-
-              if (shouldShowSelection) {
-                console.log('Sorted appointments for layout:', typeAppointments.map(a => `${a.id} (${a.startTime})`));
-              }
-
-              // Group overlapping appointments
-              const groups: typeof typeAppointments[] = [];
-              if (typeAppointments.length > 0) {
-                let currentGroup = [typeAppointments[0]];
-                let groupEnd = getMinutes(typeAppointments[0].endTime);
-
-                for (let i = 1; i < typeAppointments.length; i++) {
-                  const apt = typeAppointments[i];
-                  const start = getMinutes(apt.startTime);
-
-                  // Simple overlap check with the whole group duration
-                  if (start < groupEnd) {
-                    currentGroup.push(apt);
-                    groupEnd = Math.max(groupEnd, getMinutes(apt.endTime));
-                  } else {
-                    groups.push(currentGroup);
-                    currentGroup = [apt];
-                    groupEnd = getMinutes(apt.endTime);
+                // Debug: Log the sorting process
+                if (shouldShowSelection) {
+                  const ghost = typeAppointments.find(a => a.id === 'ghost-selection');
+                  if (ghost) {
+                    console.log('Ghost appointment found before sort:', {
+                      id: ghost.id,
+                      startTime: ghost.startTime,
+                      minutes: getMinutes(ghost.startTime)
+                    });
                   }
                 }
-                groups.push(currentGroup);
-              }
 
-              // Calculate distinct "lanes" for each group to determine horizontal offset
-              const layoutMap = new Map<string, { laneIndex: number, totalLanes: number }>();
+                // Sort logic with tolerance
+                typeAppointments.sort((a, b) => {
+                  // Get raw minute values
+                  const timeA = getMinutes(a.startTime);
+                  const timeB = getMinutes(b.startTime);
 
-              groups.forEach(group => {
-                // Determine lanes
-                const lanes: typeof typeAppointments[] = [];
+                  // Check if they are effectively the same start time (within 1 minute)
+                  // This handles cases where one might be 08:00 and other 08:00:00 or 08:00:30
+                  const diff = timeA - timeB;
 
-                group.forEach(apt => {
-                  let placed = false;
+                  if (Math.abs(diff) < 1) {
+                    // Start times are effectively equal
+                    // Force 'ghost-selection' to be LAST (Right side)
+                    if (a.id === 'ghost-selection') return 1;
+                    if (b.id === 'ghost-selection') return -1;
 
-                  // Try to find a lane where this appointment doesn't overlap with the last item
-                  for (let i = 0; i < lanes.length; i++) {
-                    const lane = lanes[i];
-                    const lastInLane = lane[lane.length - 1];
+                    // Safe CreatedAt Sort
+                    // Treat missing created_at as "Max/Newest" so it goes to the end
+                    const dateA = a.created_at ? new Date(a.created_at).getTime() : Number.MAX_SAFE_INTEGER;
+                    const dateB = b.created_at ? new Date(b.created_at).getTime() : Number.MAX_SAFE_INTEGER;
 
-                    // Check overlap with last item in lane
-                    // Overlap if: Start < End (of last)
-                    if (getMinutes(apt.startTime) >= getMinutes(lastInLane.endTime)) {
-                      lane.push(apt);
-                      layoutMap.set(apt.id, { laneIndex: i, totalLanes: 0 }); // totalLanes set later
-                      placed = true;
-                      break;
+                    const dateDiff = dateA - dateB;
+                    if (dateDiff !== 0) {
+                      return dateDiff; // Oldest (Smallest) first -> Lane 0
+                    }
+
+                    // Fallback to title or ID for deterministic stability if created_at is identical
+                    return a.id.localeCompare(b.id);
+                  }
+
+                  // Otherwise normal time sort
+                  return diff;
+                });
+
+                if (shouldShowSelection) {
+                  console.log('Sorted appointments for layout:', typeAppointments.map(a => `${a.id} (${a.startTime})`));
+                }
+
+                // Group overlapping appointments
+                const groups: typeof typeAppointments[] = [];
+                if (typeAppointments.length > 0) {
+                  let currentGroup = [typeAppointments[0]];
+                  let groupEnd = getMinutes(typeAppointments[0].endTime);
+
+                  for (let i = 1; i < typeAppointments.length; i++) {
+                    const apt = typeAppointments[i];
+                    const start = getMinutes(apt.startTime);
+
+                    // Simple overlap check with the whole group duration
+                    if (start < groupEnd) {
+                      currentGroup.push(apt);
+                      groupEnd = Math.max(groupEnd, getMinutes(apt.endTime));
+                    } else {
+                      groups.push(currentGroup);
+                      currentGroup = [apt];
+                      groupEnd = getMinutes(apt.endTime);
                     }
                   }
+                  groups.push(currentGroup);
+                }
 
-                  if (!placed) {
-                    // Start new lane
-                    lanes.push([apt]);
-                    layoutMap.set(apt.id, { laneIndex: lanes.length - 1, totalLanes: 0 });
+                // Calculate distinct "lanes" for each group to determine horizontal offset
+                const layoutMap = new Map<string, { laneIndex: number, totalLanes: number }>();
+
+                groups.forEach(group => {
+                  // Determine lanes
+                  const lanes: typeof typeAppointments[] = [];
+
+                  group.forEach(apt => {
+                    let placed = false;
+
+                    // Try to find a lane where this appointment doesn't overlap with the last item
+                    for (let i = 0; i < lanes.length; i++) {
+                      const lane = lanes[i];
+                      const lastInLane = lane[lane.length - 1];
+
+                      // Check overlap with last item in lane
+                      // Overlap if: Start < End (of last)
+                      if (getMinutes(apt.startTime) >= getMinutes(lastInLane.endTime)) {
+                        lane.push(apt);
+                        layoutMap.set(apt.id, { laneIndex: i, totalLanes: 0 }); // totalLanes set later
+                        placed = true;
+                        break;
+                      }
+                    }
+
+                    if (!placed) {
+                      // Start new lane
+                      lanes.push([apt]);
+                      layoutMap.set(apt.id, { laneIndex: lanes.length - 1, totalLanes: 0 });
+                    }
+                  });
+
+                  // Update total lanes for all in group
+                  const totalLanes = lanes.length;
+                  group.forEach(apt => {
+                    const layout = layoutMap.get(apt.id)!;
+                    layoutMap.set(apt.id, { ...layout, totalLanes });
+                  });
+                });
+
+                return typeAppointments.map((appointment) => {
+                  // RENDER GHOST SELECTION
+                  if (appointment.id === 'ghost-selection') {
+                    const typeColors = getTypeColors(type.key);
+                    const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                    const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+                    const startTotalMinutes = startHour * 60 + startMinute;
+                    const endTotalMinutes = endHour * 60 + endMinute;
+
+                    // Calculate position within the grid
+                    const firstHour = hours[0];
+                    const hourHeight = 200;
+                    const startMinutesFromFirst = startTotalMinutes - (firstHour * 60);
+                    const endMinutesFromFirst = endTotalMinutes - (firstHour * 60);
+                    const topPosition = (startMinutesFromFirst / 60) * hourHeight;
+                    const bottomPosition = (endMinutesFromFirst / 60) * hourHeight;
+                    const height = bottomPosition - topPosition;
+
+                    const columnWidthVal = `((100% - 60px) / ${appointmentTypes.length})`;
+
+                    // Use lane layout
+                    const layout = layoutMap.get(appointment.id) || { laneIndex: 0, totalLanes: 1 };
+                    const { laneIndex, totalLanes } = layout;
+                    const laneWidthVal = `(${columnWidthVal} / ${totalLanes})`;
+                    const laneOffsetVal = `(${laneWidthVal} * ${laneIndex})`;
+
+                    // Match the reduced padding style
+                    const paddingLeft = totalLanes > 1 ? 4 : 8;
+                    const paddingRight = totalLanes > 1 ? 4 : 8;
+
+                    return (
+                      <div
+                        key="ghost-selection"
+                        className={`absolute ${typeColors.dragColor} rounded-lg border-2 shadow-lg z-30 pointer-events-none`}
+                        style={{
+                          left: `calc(60px + ${typeIndex} * ${columnWidthVal} + ${laneOffsetVal} + ${paddingLeft}px)`,
+                          width: `calc(${laneWidthVal} - ${paddingLeft + paddingRight}px)`,
+                          top: `${topPosition}px`,
+                          height: `${height}px`,
+                        }}
+                      >
+                        <div className="h-full flex items-end justify-end p-2">
+                          <div className="text-xs font-medium text-gray-700">
+                            {formatAppointmentTime(appointment.startTime)} - {formatAppointmentTime(appointment.endTime)}
+                          </div>
+                        </div>
+                      </div>
+                    );
                   }
-                });
 
-                // Update total lanes for all in group
-                const totalLanes = lanes.length;
-                group.forEach(apt => {
-                  const layout = layoutMap.get(apt.id)!;
-                  layoutMap.set(apt.id, { ...layout, totalLanes });
-                });
-              });
-
-              return typeAppointments.map((appointment) => {
-                // RENDER GHOST SELECTION
-                if (appointment.id === 'ghost-selection') {
-                  const typeColors = getTypeColors(type.key);
+                  // Get type colors based on appointment type and encounter completion status
+                  const typeColors = getTypeColors(appointment.type, appointment.encounterCompleted, appointment.statusCode, appointment.statusCode);
                   const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
                   const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+
                   const startTotalMinutes = startHour * 60 + startMinute;
                   const endTotalMinutes = endHour * 60 + endMinute;
 
                   // Calculate position within the grid
                   const firstHour = hours[0];
-                  const hourHeight = 200;
+                  const hourHeight = 200; // Increased from 120px to 200px for better visibility
+
+                  // Calculate exact position based on total minutes from first hour
                   const startMinutesFromFirst = startTotalMinutes - (firstHour * 60);
                   const endMinutesFromFirst = endTotalMinutes - (firstHour * 60);
+
                   const topPosition = (startMinutesFromFirst / 60) * hourHeight;
                   const bottomPosition = (endMinutesFromFirst / 60) * hourHeight;
                   const height = bottomPosition - topPosition;
 
+                  // Calculate column position to match the grid exactly
+                  // Grid uses: '60px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
                   const columnWidthVal = `((100% - 60px) / ${appointmentTypes.length})`;
 
-                  // Use lane layout
+                  // Get layout info
                   const layout = layoutMap.get(appointment.id) || { laneIndex: 0, totalLanes: 1 };
                   const { laneIndex, totalLanes } = layout;
+
+                  // Calculate exact left position and width based on lane
+                  // Base Left + (Lane Index * Lane Width)
                   const laneWidthVal = `(${columnWidthVal} / ${totalLanes})`;
                   const laneOffsetVal = `(${laneWidthVal} * ${laneIndex})`;
 
-                  // Match the reduced padding style
+                  // Use smaller padding when lanes are split to maximize space
                   const paddingLeft = totalLanes > 1 ? 4 : 8;
+                  // Standard padding on the right (reverted from 24px)
                   const paddingRight = totalLanes > 1 ? 4 : 8;
 
                   return (
-                    <div
-                      key="ghost-selection"
-                      className={`absolute ${typeColors.dragColor} rounded-lg border-2 shadow-lg z-30 pointer-events-none`}
-                      style={{
-                        left: `calc(60px + ${typeIndex} * ${columnWidthVal} + ${laneOffsetVal} + ${paddingLeft}px)`,
-                        width: `calc(${laneWidthVal} - ${paddingLeft + paddingRight}px)`,
-                        top: `${topPosition}px`,
-                        height: `${height}px`,
-                      }}
-                    >
-                      <div className="h-full flex items-end justify-end p-2">
-                        <div className="text-xs font-medium text-gray-700">
-                          {formatAppointmentTime(appointment.startTime)} - {formatAppointmentTime(appointment.endTime)}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
+                    <React.Fragment key={appointment.id}>
 
-                // Get type colors based on appointment type and encounter completion status
-                const typeColors = getTypeColors(appointment.type, appointment.encounterCompleted, appointment.statusCode, appointment.statusCode);
-                const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
-                const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
-
-                const startTotalMinutes = startHour * 60 + startMinute;
-                const endTotalMinutes = endHour * 60 + endMinute;
-
-                // Calculate position within the grid
-                const firstHour = hours[0];
-                const hourHeight = 200; // Increased from 120px to 200px for better visibility
-
-                // Calculate exact position based on total minutes from first hour
-                const startMinutesFromFirst = startTotalMinutes - (firstHour * 60);
-                const endMinutesFromFirst = endTotalMinutes - (firstHour * 60);
-
-                const topPosition = (startMinutesFromFirst / 60) * hourHeight;
-                const bottomPosition = (endMinutesFromFirst / 60) * hourHeight;
-                const height = bottomPosition - topPosition;
-
-                // Calculate column position to match the grid exactly
-                // Grid uses: '60px 1fr 1fr 1fr 1fr 1fr 1fr' - so each column gets equal 1fr
-                const columnWidthVal = `((100% - 60px) / ${appointmentTypes.length})`;
-
-                // Get layout info
-                const layout = layoutMap.get(appointment.id) || { laneIndex: 0, totalLanes: 1 };
-                const { laneIndex, totalLanes } = layout;
-
-                // Calculate exact left position and width based on lane
-                // Base Left + (Lane Index * Lane Width)
-                const laneWidthVal = `(${columnWidthVal} / ${totalLanes})`;
-                const laneOffsetVal = `(${laneWidthVal} * ${laneIndex})`;
-
-                // Use smaller padding when lanes are split to maximize space
-                const paddingLeft = totalLanes > 1 ? 4 : 8;
-                // Standard padding on the right (reverted from 24px)
-                const paddingRight = totalLanes > 1 ? 4 : 8;
-
-                return (
-                  <React.Fragment key={appointment.id}>
-
-                    <ContextMenu
-                      key={appointment.id}
-                      modal={true}
-                    >
-                      <ContextMenuTrigger asChild>
-                        <div
-                          className={`absolute ${typeColors.color} rounded-lg border-2 ${appointment.isEmergency ? '!border-red-600' : ''} shadow-sm cursor-pointer hover:shadow-lg transition-all z-10 select-none ${isDragging ? 'pointer-events-none' : 'pointer-events-auto'}`}
-                          style={{
-                            // Formula: HeaderWidth + (TypeIndex * ColWidth) + LaneOffset + PaddingLeft
-                            left: `calc(60px + ${typeIndex} * ${columnWidthVal} + ${laneOffsetVal} + ${paddingLeft}px)`,
-                            // Width: LaneWidth - (LeftPadding + RightPadding)
-                            width: `calc(${laneWidthVal} - ${paddingLeft + paddingRight}px)`,
-                            top: `${topPosition}px`,
-                            height: `${height}px`,
-                            touchAction: 'none',
-                            WebkitUserSelect: 'none',
-                            userSelect: 'none',
-                            WebkitTouchCallout: 'none', // Critical for iOS to prevent magnifier/menu
-                          }}
-                          onMouseDown={(e) => {
-                            // Allow right-click to propagate for ContextMenu
-                            if (e.button === 2) {
-                              return; // Let ContextMenuTrigger handle this
-                            }
-
-                            e.preventDefault();
-                            e.stopPropagation(); // Stop propagation to container generally
-
-                            // Store event data for use in timer
-                            const clientX = e.clientX;
-                            const clientY = e.clientY;
-                            const currentTarget = e.currentTarget; // Not strict needed but good for refs
-
-                            // Start a timer to delay drag initiation
-                            // This allows short clicks to register as 'Open Details' without starting a drag
-                            holdTimerRef.current = setTimeout(() => {
-                              console.log('Mouse Drag Timer Fired - Starting Selection');
-
-                              // Mark this as starting on an appointment so single clicks don't create new ones
-                              ignoreSingleClickRef.current = true;
-                              setIsDragging(true); // Explicitly set dragging
-
-                              // Manually find the underlying time slot to trigger drag start
-                              // We need to look through the layers to find the data-hour/minute slot
-                              const elements = document.elementsFromPoint(clientX, clientY);
-                              const slotElement = elements.find(el => el.hasAttribute('data-hour') && el.hasAttribute('data-minute'));
-
-                              if (slotElement) {
-                                const hour = parseInt(slotElement.getAttribute('data-hour') || '0');
-                                const minute = parseInt(slotElement.getAttribute('data-minute') || '0');
-                                const column = slotElement.getAttribute('data-column') || '';
-
-                                console.log('Manual drag start on appointment (delayed):', { hour, minute, column });
-
-                                // We need to mock the event or ensure handleMouseDown can handle the disconnect?
-                                // handleMouseDown mainly uses it for e.buttons check (which isn't async-safe usually, but we assume left button)
-                                // and preventDefault.
-                                // We'll reconstruct a minimal object if needed, or pass the original 'e' if React event persists (it doesn't async).
-                                // But handleMouseDown lines 2700+ mainly uses args.
-
-                                handleMouseDown(hour, minute, column, {
-                                  preventDefault: () => { },
-                                  stopPropagation: () => { },
-                                  button: 0,
-                                  buttons: 1 // Simulate held button
-                                } as any);
+                      <ContextMenu
+                        key={appointment.id}
+                        modal={true}
+                      >
+                        <ContextMenuTrigger asChild>
+                          <div
+                            className={`absolute ${typeColors.color} rounded-lg border-2 ${appointment.isEmergency ? '!border-red-600' : ''} shadow-sm cursor-pointer hover:shadow-lg transition-all z-10 select-none ${isDragging ? 'pointer-events-none' : 'pointer-events-auto'}`}
+                            style={{
+                              // Formula: HeaderWidth + (TypeIndex * ColWidth) + LaneOffset + PaddingLeft
+                              left: `calc(60px + ${typeIndex} * ${columnWidthVal} + ${laneOffsetVal} + ${paddingLeft}px)`,
+                              // Width: LaneWidth - (LeftPadding + RightPadding)
+                              width: `calc(${laneWidthVal} - ${paddingLeft + paddingRight}px)`,
+                              top: `${topPosition}px`,
+                              height: `${height}px`,
+                              touchAction: 'none',
+                              WebkitUserSelect: 'none',
+                              userSelect: 'none',
+                              WebkitTouchCallout: 'none', // Critical for iOS to prevent magnifier/menu
+                            }}
+                            onMouseDown={(e) => {
+                              // Allow right-click to propagate for ContextMenu
+                              if (e.button === 2) {
+                                return; // Let ContextMenuTrigger handle this
                               }
 
-                              holdTimerRef.current = null; // Clear ref so MouseUp knows it fired
-                            }, 200); // 200ms delay
-                          }}
-                          onMouseMove={(e) => {
-                            e.stopPropagation();
-                            // Optional: If moved significantly before timer, maybe cancel timer?
-                            // But 'Hold to drag' usually implies keeping still-ish.
-                            // For now, let's keep it simple: Time based.
-                          }}
-                          onMouseUp={(e) => {
-                            // If timer is still running, it means it was a CLICK
-                            if (holdTimerRef.current) {
-                              clearTimeout(holdTimerRef.current);
-                              holdTimerRef.current = null;
-
-                              // Trigger Click Logic
-                              e.stopPropagation();
-                              // e.preventDefault(); // Might not need this if we handled MouseDown
-                              console.log('Quick Click detected - Opening Appointment');
-                              onAppointmentClick(appointment);
-                            } else {
-                              // Timer fired, so we were dragging.
-                              // Drag end logic is handled by global Window MouseUp usually, 
-                              // but we should ensure we don't trigger click.
-                            }
-                          }}
-                          onClick={(e) => {
-                            // Clean up just in case, though MouseUp should handle it
-                            e.stopPropagation();
-                            e.preventDefault();
-                          }}
-                          onTouchStart={(e) => {
-                            isTouchRef.current = true;
-
-                            // Prevent default if necessary, but we want to allow scrolling if they move immediately
-                            // e.preventDefault(); 
-
-                            const touch = e.touches[0];
-                            const clientX = touch.clientX;
-                            const clientY = touch.clientY;
-
-                            if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-
-                            holdTimerRef.current = setTimeout(() => {
-                              console.log('Appointment Card Hold Timer FIRED');
-                              setIsDragging(true);
-                              ignoreSingleClickRef.current = true; // Prevent opening details
-
-                              // Find underlying slot
-                              const elements = document.elementsFromPoint(clientX, clientY);
-                              const slotElement = elements.find(el => el.hasAttribute('data-hour') && el.hasAttribute('data-minute'));
-
-                              if (slotElement) {
-                                const h = parseInt(slotElement.getAttribute('data-hour') || '0');
-                                const m = parseInt(slotElement.getAttribute('data-minute') || '0');
-                                const c = slotElement.getAttribute('data-column') || '';
-
-                                console.log('Hold Drag Start on Slot:', { h, m, c });
-
-                                setDragStart({ hour: h, minute: m, column: c });
-                                setDragEnd({ hour: h, minute: m, column: c });
-                                setDragColumn(c);
-
-                                // Mock Mouse Down to initialize any other state logic
-                                handleMouseDown(h, m, c, {
-                                  button: 0,
-                                  preventDefault: () => { },
-                                  stopPropagation: () => { }
-                                } as unknown as React.MouseEvent);
-
-                                if (navigator.vibrate) navigator.vibrate(50);
-                              }
-                            }, 500);
-                          }}
-                          onTouchEnd={(e) => {
-                            if (holdTimerRef.current) {
-                              // Timer still running? Means Hold time (<500ms) was short. This is a TAP.
-                              clearTimeout(holdTimerRef.current);
-                              holdTimerRef.current = null;
-
-                              // Explicitly trigger click logic for Tap
-                              if (!isDragging) {
-                                e.preventDefault(); // Prevent ghost click
-                                onAppointmentClick(appointment);
-                              }
-                            }
-
-                            // Reset touch ref after delay
-                            setTimeout(() => {
-                              isTouchRef.current = false;
-                            }, 500);
-                          }}
-                          onTouchMove={(e) => {
-                            // If moved significantly, cancel timer
-                            if (holdTimerRef.current) {
-                              // We could calculate distance, but for now any move cancels "Hold" (allows scroll)
-                              // UNLESS isDragging is true (handled by global logic)
-                              if (!isDragging) {
-                                clearTimeout(holdTimerRef.current);
-                                holdTimerRef.current = null;
-                              }
-                            }
-                          }}
-                          // Use Capture phase to intercept the event before Radix ContextMenu sees it
-                          onContextMenuCapture={(e) => {
-                            // If we are in a touch interaction, prevent the native context menu
-                            // because we have a dedicated 3-dots button and we want hold-to-drag
-                            if (isTouchRef.current) {
                               e.preventDefault();
-                              e.stopPropagation();
-                            }
-                          }}
+                              e.stopPropagation(); // Stop propagation to container generally
 
-                        >
-                          {/* Vertical status capsule on the left edge */}
-                          <div className={`absolute left-0.5 top-0.5 bottom-0.5 w-4 rounded-full ${getStatusDotColor(appointment.statusCode)} flex flex-col items-center justify-center overflow-hidden z-20`}>
-                            {/* Text centered in the badge - full height flex to center */}
-                            <div className="flex items-center justify-center w-full h-full">
-                              <span
-                                className="text-[8px] font-bold text-white whitespace-nowrap select-none tracking-widest"
-                                style={{
-                                  writingMode: 'vertical-rl',
-                                  textOrientation: 'mixed',
-                                  transform: 'rotate(180deg)', // Bottom-to-top reading
-                                }}
-                              >
-                                {appointment.statusCode}
-                              </span>
-                            </div>
+                              // Store event data for use in timer
+                              const clientX = e.clientX;
+                              const clientY = e.clientY;
+                              const currentTarget = e.currentTarget; // Not strict needed but good for refs
 
-                            {/* Bottom: 3-Dots Menu Button - ABSOLUTE POSITIONED */}
-                            <div
-                              className="absolute bottom-1 flex items-center justify-center w-full"
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onClick={(e) => e.stopPropagation()}
-                              onTouchStart={(e) => e.stopPropagation()}
-                              onTouchEnd={(e) => e.stopPropagation()}
-                            >
-                              {isTouchDevice && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-4 w-4 p-0 hover:bg-black/20 text-white rounded-full"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <MoreVertical className="h-3 w-3" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent className="w-56 touch-manipulation select-none" align="start" side="right">
-                                    {appointment.statusCode !== 'RESCH' && (
-                                      <>
-                                        <DropdownMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
-                                          <ClipboardList className="mr-2 h-4 w-4" />
-                                          {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
-                                          <FileEdit className="mr-2 h-4 w-4" />
-                                          Add New Lab Script
-                                        </DropdownMenuItem>
-                                      </>
-                                    )}
-                                    {appointment.statusCode !== 'CMPLT' && (
-                                      <>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuSub>
-                                          <DropdownMenuSubTrigger className="touch-manipulation select-none">
-                                            <CheckCircle className="mr-2 h-4 w-4" />
-                                            Change Status
-                                          </DropdownMenuSubTrigger>
-                                          <DropdownMenuSubContent className="touch-manipulation select-none">
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleCompleteAppointment(appointment))}>
-                                              <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                                              Complete Appointment
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
-                                              <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
-                                              Not Confirmed
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
-                                              <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                                              Appointment Confirmed
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
-                                              <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                                              Electronically Confirmed
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
-                                              <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
-                                              Emergency Patient
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
-                                              <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
-                                              Patient has Arrived
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
-                                              <UserCheck className="mr-2 h-4 w-4 text-indigo-600" />
-                                              Seated & Ready
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
-                                              <Clock3 className="mr-2 h-4 w-4 text-orange-500" />
-                                              Left Message 1
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
-                                              <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
-                                              Left Message 2
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
-                                              <UserCircle className="mr-2 h-4 w-4 text-purple-600" />
-                                              Multiple Appointments
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
-                                              <Calendar className="mr-2 h-4 w-4 text-blue-400" />
-                                              2 Week Check
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
-                                              <XCircle className="mr-2 h-4 w-4 text-red-500" />
-                                              No Show
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleReschedule(appointment))}>
-                                              <Clock className="mr-2 h-4 w-4 text-amber-600" />
-                                              Reschedule Appointment
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
-                                              <XCircle className="mr-2 h-4 w-4 text-red-600" />
-                                              Cancelled
-                                            </DropdownMenuItem>
-                                          </DropdownMenuSubContent>
-                                        </DropdownMenuSub>
-                                      </>
-                                    )}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem {...handleMenuItemAction(() => {
-                                      // Health History
-                                      if (appointment.patientId) {
-                                        handleOpenHealthHistory(appointment.patientId, appointment.patient);
-                                      } else {
-                                        toast("No patient ID associated with this appointment");
-                                      }
-                                    })}>
-                                      <Heart className="mr-2 h-4 w-4 text-red-500" />
-                                      Health History
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem {...handleMenuItemAction(() => {
-                                      // Comfort Preference
-                                      if (appointment.patientId) {
-                                        handleOpenComfortPreference(appointment.patientId, appointment.patient);
-                                      } else {
-                                        toast("No patient ID associated with this appointment");
-                                      }
-                                    })}>
-                                      <Smile className="mr-2 h-4 w-4 text-orange-500" />
-                                      Comfort Preference
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    {appointment.statusCode !== 'CMPLT' && (
-                                      <DropdownMenuItem {...handleMenuItemAction(() => onEdit && onEdit(appointment))}>
-                                        <Edit className="mr-2 h-4 w-4" />
-                                        Edit Appointment
-                                      </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuItem
-                                      className="text-red-600 focus:text-red-600"
-                                      {...handleMenuItemAction(() => onDelete && onDelete(appointment.id))}
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete Appointment
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                            </div>
-                          </div>
-                          <div className="p-1 pl-5 pr-1 h-full flex flex-col justify-between">
-                            {(() => {
-                              // Calculate appointment duration in minutes
-                              const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
-                              const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
-                              const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+                              // Start a timer to delay drag initiation
+                              // This allows short clicks to register as 'Open Details' without starting a drag
+                              holdTimerRef.current = setTimeout(() => {
+                                console.log('Mouse Drag Timer Fired - Starting Selection');
 
-                              // Different layouts for 15 and 30 minute appointments
-                              if (durationMinutes === 15) {
-                                // Single line layout for 15-minute appointments
-                                // Get the actual appointment type colors for the badge
-                                const actualTypeColors = getTypeColors(appointment.type);
-                                const firstLetter = actualTypeColors.shortLabel?.charAt(0) || actualTypeColors.label?.charAt(0) || 'A';
-                                const columnWidth = getColumnWidth() / totalLanes;
+                                // Mark this as starting on an appointment so single clicks don't create new ones
+                                ignoreSingleClickRef.current = true;
+                                setIsDragging(true); // Explicitly set dragging
 
-                                // Determine time font size based on column width
-                                let timeFontSize = 'text-[10px]';
-                                if (columnWidth < 100) {
-                                  timeFontSize = 'text-[8px]';
-                                } else if (columnWidth < 120) {
-                                  timeFontSize = 'text-[9px]';
+                                // Manually find the underlying time slot to trigger drag start
+                                // We need to look through the layers to find the data-hour/minute slot
+                                const elements = document.elementsFromPoint(clientX, clientY);
+                                const slotElement = elements.find(el => el.hasAttribute('data-hour') && el.hasAttribute('data-minute'));
+
+                                if (slotElement) {
+                                  const hour = parseInt(slotElement.getAttribute('data-hour') || '0');
+                                  const minute = parseInt(slotElement.getAttribute('data-minute') || '0');
+                                  const column = slotElement.getAttribute('data-column') || '';
+
+                                  console.log('Manual drag start on appointment (delayed):', { hour, minute, column });
+
+                                  // We need to mock the event or ensure handleMouseDown can handle the disconnect?
+                                  // handleMouseDown mainly uses it for e.buttons check (which isn't async-safe usually, but we assume left button)
+                                  // and preventDefault.
+                                  // We'll reconstruct a minimal object if needed, or pass the original 'e' if React event persists (it doesn't async).
+                                  // But handleMouseDown lines 2700+ mainly uses args.
+
+                                  handleMouseDown(hour, minute, column, {
+                                    preventDefault: () => { },
+                                    stopPropagation: () => { },
+                                    button: 0,
+                                    buttons: 1 // Simulate held button
+                                  } as any);
                                 }
 
-                                return (
-                                  <div className="flex flex-col h-full w-full overflow-hidden">
-                                    {/* Top row - Patient name and status code */}
-                                    <div className="flex items-start justify-between gap-1 mb-0 border-b border-black/5 pb-[1px]">
-                                      <h4
-                                        className="font-medium text-[10px] text-gray-800 whitespace-normal break-words line-clamp-2 flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors leading-tight"
-                                        onClick={(e) => {
-                                          console.log('15-minute appointment patient name clicked');
-                                          e.stopPropagation();
-                                          handlePatientNameClick(appointment);
-                                        }}
-                                      >
-                                        {appointment.patient}
-                                      </h4>
-                                      {/* Removed Status Code Badge */}
-                                    </div>
-                                    {/* Middle - Assigned user and subtype */}
-                                    {/* Middle - Assigned user and subtype vertically stacked */}
-                                    <div className="flex flex-col gap-0 min-w-0">
-                                      {appointment.assignedUserName && (
-                                        <div className="text-[8px] text-gray-500 truncate leading-tight">
-                                          👤 {appointment.assignedUserName}
-                                        </div>
-                                      )}
-                                      {appointment.archType ? (
-                                        <div className="flex flex-col gap-0.5 mt-0.5">
-                                          {appointment.archType === 'Dual' ? (
-                                            <>
-                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate">
-                                                U: {getSubtypeLabel(appointment.upperArchSubtype || '')}
-                                              </span>
-                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate mt-0.5">
-                                                L: {getSubtypeLabel(appointment.lowerArchSubtype || '')}
-                                              </span>
-                                            </>
-                                          ) : (
-                                            <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate">
-                                              {appointment.archType === 'Upper' ? 'U' : 'L'}: {getSubtypeLabel(appointment.archType === 'Upper' ? appointment.upperArchSubtype || '' : appointment.lowerArchSubtype || '')}
-                                            </span>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        appointment.subtype && getSubtypeLabel(appointment.subtype) && (
-                                          <div className="mt-0.5">
-                                            <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate">
-                                              {getSubtypeLabel(appointment.subtype)}
-                                            </span>
-                                          </div>
-                                        )
-                                      )}
-                                    </div>
-                                    {/* Bottom row - Time and badge */}
-                                    <div className="flex items-end justify-between gap-0.5 mt-auto">
-                                      <div className="flex flex-col items-start leading-[0.8]">
-                                        <span className={`${timeFontSize} text-gray-600 whitespace-nowrap`}>
-                                          {formatAppointmentTime(appointment.startTime)}
-                                        </span>
-                                        <span className={`${timeFontSize} text-gray-600 whitespace-nowrap`}>
-                                          {formatAppointmentTime(appointment.endTime)}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        {appointment.isEmergency && (
-                                          <span className="inline-flex items-center justify-center w-3 h-3 text-[8px] font-bold text-white bg-red-600 rounded-full" title="Emergency">
-                                            E
-                                          </span>
-                                        )}
-                                        <span className={`inline-flex items-center justify-center w-3 h-3 text-[8px] font-bold text-white rounded-full uppercase ${actualTypeColors.badgeColor || 'bg-gray-500'}`}>
-                                          {firstLetter}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
+                                holdTimerRef.current = null; // Clear ref so MouseUp knows it fired
+                              }, 200); // 200ms delay
+                            }}
+                            onMouseMove={(e) => {
+                              e.stopPropagation();
+                              // Optional: If moved significantly before timer, maybe cancel timer?
+                              // But 'Hold to drag' usually implies keeping still-ish.
+                              // For now, let's keep it simple: Time based.
+                            }}
+                            onMouseUp={(e) => {
+                              // If timer is still running, it means it was a CLICK
+                              if (holdTimerRef.current) {
+                                clearTimeout(holdTimerRef.current);
+                                holdTimerRef.current = null;
+
+                                // Trigger Click Logic
+                                e.stopPropagation();
+                                // e.preventDefault(); // Might not need this if we handled MouseDown
+                                console.log('Quick Click detected - Opening Appointment');
+                                onAppointmentClick(appointment);
                               } else {
-                                // Layout for 30-minute and longer appointments
-                                return (
-                                  <div className="flex flex-col h-full justify-between">
-                                    {/* Top section - Name and status code */}
-                                    <div className="flex flex-col gap-0">
-                                      <div className="flex items-start justify-between gap-1 border-b border-black/5 pb-[1px] mb-[1px]">
+                                // Timer fired, so we were dragging.
+                                // Drag end logic is handled by global Window MouseUp usually, 
+                                // but we should ensure we don't trigger click.
+                              }
+                            }}
+                            onClick={(e) => {
+                              // Clean up just in case, though MouseUp should handle it
+                              e.stopPropagation();
+                              e.preventDefault();
+                            }}
+                            onTouchStart={(e) => {
+                              isTouchRef.current = true;
+
+                              // Prevent default if necessary, but we want to allow scrolling if they move immediately
+                              // e.preventDefault(); 
+
+                              const touch = e.touches[0];
+                              const clientX = touch.clientX;
+                              const clientY = touch.clientY;
+
+                              if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+
+                              holdTimerRef.current = setTimeout(() => {
+                                console.log('Appointment Card Hold Timer FIRED');
+                                setIsDragging(true);
+                                ignoreSingleClickRef.current = true; // Prevent opening details
+
+                                // Find underlying slot
+                                const elements = document.elementsFromPoint(clientX, clientY);
+                                const slotElement = elements.find(el => el.hasAttribute('data-hour') && el.hasAttribute('data-minute'));
+
+                                if (slotElement) {
+                                  const h = parseInt(slotElement.getAttribute('data-hour') || '0');
+                                  const m = parseInt(slotElement.getAttribute('data-minute') || '0');
+                                  const c = slotElement.getAttribute('data-column') || '';
+
+                                  console.log('Hold Drag Start on Slot:', { h, m, c });
+
+                                  setDragStart({ hour: h, minute: m, column: c });
+                                  setDragEnd({ hour: h, minute: m, column: c });
+                                  setDragColumn(c);
+
+                                  // Mock Mouse Down to initialize any other state logic
+                                  handleMouseDown(h, m, c, {
+                                    button: 0,
+                                    preventDefault: () => { },
+                                    stopPropagation: () => { }
+                                  } as unknown as React.MouseEvent);
+
+                                  if (navigator.vibrate) navigator.vibrate(50);
+                                }
+                              }, 500);
+                            }}
+                            onTouchEnd={(e) => {
+                              if (holdTimerRef.current) {
+                                // Timer still running? Means Hold time (<500ms) was short. This is a TAP.
+                                clearTimeout(holdTimerRef.current);
+                                holdTimerRef.current = null;
+
+                                // Explicitly trigger click logic for Tap
+                                if (!isDragging) {
+                                  e.preventDefault(); // Prevent ghost click
+                                  onAppointmentClick(appointment);
+                                }
+                              }
+
+                              // Reset touch ref after delay
+                              setTimeout(() => {
+                                isTouchRef.current = false;
+                              }, 500);
+                            }}
+                            onTouchMove={(e) => {
+                              // If moved significantly, cancel timer
+                              if (holdTimerRef.current) {
+                                // We could calculate distance, but for now any move cancels "Hold" (allows scroll)
+                                // UNLESS isDragging is true (handled by global logic)
+                                if (!isDragging) {
+                                  clearTimeout(holdTimerRef.current);
+                                  holdTimerRef.current = null;
+                                }
+                              }
+                            }}
+                            // Use Capture phase to intercept the event before Radix ContextMenu sees it
+                            onContextMenuCapture={(e) => {
+                              // If we are in a touch interaction, prevent the native context menu
+                              // because we have a dedicated 3-dots button and we want hold-to-drag
+                              if (isTouchRef.current) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
+                            }}
+
+                          >
+                            {/* Vertical status capsule on the left edge */}
+                            <div className={`absolute left-0.5 top-0.5 bottom-0.5 w-4 rounded-full ${getStatusDotColor(appointment.statusCode)} flex flex-col items-center justify-center overflow-hidden z-20`}>
+                              {/* Text centered in the badge - full height flex to center */}
+                              <div className="flex items-center justify-center w-full h-full">
+                                <span
+                                  className="text-[8px] font-bold text-white whitespace-nowrap select-none tracking-widest"
+                                  style={{
+                                    writingMode: 'vertical-rl',
+                                    textOrientation: 'mixed',
+                                    transform: 'rotate(180deg)', // Bottom-to-top reading
+                                  }}
+                                >
+                                  {appointment.statusCode}
+                                </span>
+                              </div>
+
+                              {/* Bottom: 3-Dots Menu Button - ABSOLUTE POSITIONED */}
+                              <div
+                                className="absolute bottom-1 flex items-center justify-center w-full"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => e.stopPropagation()}
+                                onTouchEnd={(e) => e.stopPropagation()}
+                              >
+                                {isTouchDevice && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-4 w-4 p-0 hover:bg-black/20 text-white rounded-full"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <MoreVertical className="h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="w-56 touch-manipulation select-none" align="start" side="right">
+                                      {appointment.statusCode !== 'RESCH' && (
+                                        <>
+                                          <DropdownMenuItem {...handleSafeMenuItemClick(() => handleEncounterForm(appointment))}>
+                                            <ClipboardList className="mr-2 h-4 w-4" />
+                                            {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem {...handleSafeMenuItemClick(() => handleAddNewLabScript(appointment))}>
+                                            <FileEdit className="mr-2 h-4 w-4" />
+                                            Add New Lab Script
+                                          </DropdownMenuItem>
+                                        </>
+                                      )}
+                                      {appointment.statusCode !== 'CMPLT' && (
+                                        <>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuSub>
+                                            <DropdownMenuSubTrigger className="touch-manipulation select-none">
+                                              <CheckCircle className="mr-2 h-4 w-4" />
+                                              Change Status
+                                            </DropdownMenuSubTrigger>
+                                            <DropdownMenuSubContent className="touch-manipulation select-none">
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleCompleteAppointment(appointment))}>
+                                                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                                Complete Appointment
+                                              </DropdownMenuItem>
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
+                                                <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
+                                                Not Confirmed
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
+                                                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                                Appointment Confirmed
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
+                                                <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                                Electronically Confirmed
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
+                                                <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
+                                                Emergency Patient
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
+                                                <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
+                                                Patient has Arrived
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
+                                                <UserCheck className="mr-2 h-4 w-4 text-indigo-600" />
+                                                Seated & Ready
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
+                                                <Clock3 className="mr-2 h-4 w-4 text-orange-500" />
+                                                Left Message 1
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
+                                                <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
+                                                Left Message 2
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
+                                                <UserCircle className="mr-2 h-4 w-4 text-purple-600" />
+                                                Multiple Appointments
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
+                                                <Calendar className="mr-2 h-4 w-4 text-blue-400" />
+                                                2 Week Check
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
+                                                <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                                                No Show
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleReschedule(appointment))}>
+                                                <Clock className="mr-2 h-4 w-4 text-amber-600" />
+                                                Reschedule Appointment
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
+                                                <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                                                Cancelled
+                                              </DropdownMenuItem>
+                                            </DropdownMenuSubContent>
+                                          </DropdownMenuSub>
+                                        </>
+                                      )}
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem {...handleSafeMenuItemClick(() => {
+                                        // Health History
+                                        if (appointment.patientId) {
+                                          handleOpenHealthHistory(appointment.patientId, appointment.patient);
+                                        } else {
+                                          toast("No patient ID associated with this appointment");
+                                        }
+                                      })}>
+                                        <Heart className="mr-2 h-4 w-4 text-red-500" />
+                                        Health History
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem {...handleSafeMenuItemClick(() => {
+                                        // Comfort Preference
+                                        if (appointment.patientId) {
+                                          handleOpenComfortPreference(appointment.patientId, appointment.patient);
+                                        } else {
+                                          toast("No patient ID associated with this appointment");
+                                        }
+                                      })}>
+                                        <Smile className="mr-2 h-4 w-4 text-orange-500" />
+                                        Comfort Preference
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      {appointment.statusCode !== 'CMPLT' && (
+                                        <DropdownMenuItem {...handleSafeMenuItemClick(() => onEdit && onEdit(appointment))}>
+                                          <Edit className="mr-2 h-4 w-4" />
+                                          Edit Appointment
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem
+                                        className="text-red-600 focus:text-red-600"
+                                        {...handleSafeMenuItemClick(() => onDelete && onDelete(appointment.id))}
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete Appointment
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </div>
+                            </div>
+                            <div className="p-1 pl-5 pr-1 h-full flex flex-col justify-between">
+                              {(() => {
+                                // Calculate appointment duration in minutes
+                                const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                                const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+                                const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+
+                                // Different layouts for 15 and 30 minute appointments
+                                if (durationMinutes === 15) {
+                                  // Single line layout for 15-minute appointments
+                                  // Get the actual appointment type colors for the badge
+                                  const actualTypeColors = getTypeColors(appointment.type);
+                                  const firstLetter = actualTypeColors.shortLabel?.charAt(0) || actualTypeColors.label?.charAt(0) || 'A';
+                                  const columnWidth = getColumnWidth() / totalLanes;
+
+                                  // Determine time font size based on column width
+                                  let timeFontSize = 'text-[10px]';
+                                  if (columnWidth < 100) {
+                                    timeFontSize = 'text-[8px]';
+                                  } else if (columnWidth < 120) {
+                                    timeFontSize = 'text-[9px]';
+                                  }
+
+                                  return (
+                                    <div className="flex flex-col h-full w-full overflow-hidden">
+                                      {/* Top row - Patient name and status code */}
+                                      <div className="flex items-start justify-between gap-1 mb-0 border-b border-black/5 pb-[1px]">
                                         <h4
-                                          className="font-semibold text-[11px] text-gray-800 whitespace-normal break-words line-clamp-2 flex-1 underline cursor-pointer hover:text-blue-600 transition-colors leading-tight"
+                                          className="font-medium text-[10px] text-gray-800 whitespace-normal break-words line-clamp-2 flex-1 min-w-0 underline cursor-pointer hover:text-blue-600 transition-colors leading-tight"
                                           onClick={(e) => {
-                                            console.log('30+ minute appointment patient name clicked');
+                                            console.log('15-minute appointment patient name clicked');
                                             e.stopPropagation();
                                             handlePatientNameClick(appointment);
                                           }}
@@ -2885,488 +2853,566 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                         </h4>
                                         {/* Removed Status Code Badge */}
                                       </div>
-                                      <div className="flex flex-col gap-0.5">
+                                      {/* Middle - Assigned user and subtype */}
+                                      {/* Middle - Assigned user and subtype vertically stacked */}
+                                      <div className="flex flex-col gap-0 min-w-0">
                                         {appointment.assignedUserName && (
-                                          <div className="text-[9px] text-gray-500 truncate leading-tight">
+                                          <div className="text-[8px] text-gray-500 truncate leading-tight">
                                             👤 {appointment.assignedUserName}
                                           </div>
                                         )}
                                         {appointment.archType ? (
-                                          <div className="flex flex-col gap-1 mt-1">
+                                          <div className="flex flex-col gap-0.5 mt-0.5">
                                             {appointment.archType === 'Dual' ? (
                                               <>
-                                                <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
-                                                  Upper: {getSubtypeLabel(appointment.upperArchSubtype || '')}
+                                                <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate">
+                                                  U: {getSubtypeLabel(appointment.upperArchSubtype || '')}
                                                 </span>
-                                                <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
-                                                  Lower: {getSubtypeLabel(appointment.lowerArchSubtype || '')}
+                                                <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate mt-0.5">
+                                                  L: {getSubtypeLabel(appointment.lowerArchSubtype || '')}
                                                 </span>
                                               </>
                                             ) : (
-                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
-                                                {appointment.archType}: {getSubtypeLabel(appointment.archType === 'Upper' ? appointment.upperArchSubtype || '' : appointment.lowerArchSubtype || '')}
+                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate">
+                                                {appointment.archType === 'Upper' ? 'U' : 'L'}: {getSubtypeLabel(appointment.archType === 'Upper' ? appointment.upperArchSubtype || '' : appointment.lowerArchSubtype || '')}
                                               </span>
                                             )}
                                           </div>
                                         ) : (
                                           appointment.subtype && getSubtypeLabel(appointment.subtype) && (
-                                            <div className="mt-1">
-                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
-                                                📋 {getSubtypeLabel(appointment.subtype)}
+                                            <div className="mt-0.5">
+                                              <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1 text-[7px] font-medium leading-none w-fit max-w-full truncate">
+                                                {getSubtypeLabel(appointment.subtype)}
                                               </span>
                                             </div>
                                           )
                                         )}
                                       </div>
+                                      {/* Bottom row - Time and badge */}
+                                      <div className="flex items-end justify-between gap-0.5 mt-auto">
+                                        <div className="flex flex-col items-start leading-[0.8]">
+                                          <span className={`${timeFontSize} text-gray-600 whitespace-nowrap`}>
+                                            {formatAppointmentTime(appointment.startTime)}
+                                          </span>
+                                          <span className={`${timeFontSize} text-gray-600 whitespace-nowrap`}>
+                                            {formatAppointmentTime(appointment.endTime)}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          {appointment.isEmergency && (
+                                            <span className="inline-flex items-center justify-center w-3 h-3 text-[8px] font-bold text-white bg-red-600 rounded-full" title="Emergency">
+                                              E
+                                            </span>
+                                          )}
+                                          <span className={`inline-flex items-center justify-center w-3 h-3 text-[8px] font-bold text-white rounded-full uppercase ${actualTypeColors.badgeColor || 'bg-gray-500'}`}>
+                                            {firstLetter}
+                                          </span>
+                                        </div>
+                                      </div>
                                     </div>
-                                    {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
-                                    <div className="flex justify-between items-end gap-1 min-w-0 w-full overflow-hidden">
-                                      {(() => {
-                                        const columnWidth = getColumnWidth() / totalLanes;
-                                        // Get the actual appointment type colors for the badge
-                                        const actualTypeColors = getTypeColors(
-                                          appointment.type,
-                                          appointmentEncounterStatus[appointment.id] || appointment.encounterCompleted,
-                                          appointment.statusCode,
-                                          appointment.statusCode
-                                        );
-                                        const label = actualTypeColors.shortLabel || actualTypeColors.label;
-
-                                        // Determine display text, badge size, and time size based on column width
-                                        let displayText, badgeSize, badgePadding, timeFontSize;
-
-                                        if (columnWidth >= 140) {
-                                          // Wide columns - show full text
-                                          displayText = label;
-                                          badgeSize = 'text-[9px]';
-                                          badgePadding = 'px-1 py-0';
-                                          timeFontSize = 'text-[10px]';
-                                        } else if (columnWidth >= 120) {
-                                          // Medium columns - show full text but smaller
-                                          displayText = label;
-                                          badgeSize = 'text-[8px]';
-                                          badgePadding = 'px-1 py-0';
-                                          timeFontSize = 'text-[9px]';
-                                        } else if (columnWidth >= 100) {
-                                          // Narrow columns - start abbreviating "Data Collection"
-                                          displayText = (label === 'Data Collection') ? 'Data' : label;
-                                          badgeSize = 'text-[8px]';
-                                          badgePadding = 'px-1 py-0';
-                                          timeFontSize = 'text-[9px]';
-                                        } else if (columnWidth >= 80) {
-                                          // Very narrow - abbreviate and smaller size
-                                          displayText = (label === 'Data Collection') ? 'Data' : label;
-                                          badgeSize = 'text-[7px]';
-                                          badgePadding = 'px-0.5 py-0';
-                                          timeFontSize = 'text-[9px]';
-                                        } else {
-                                          // Ultra narrow - minimal badge and time
-                                          displayText = (label === 'Data Collection') ? 'Data' : label;
-                                          badgeSize = 'text-[7px]';
-                                          badgePadding = 'px-0.5 py-0';
-                                          timeFontSize = 'text-[8px]';
-                                        }
-
-                                        return (
-                                          <>
-                                            <div className="flex gap-1 items-center overflow-hidden">
-                                              {appointment.isEmergency && (
-                                                <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase bg-red-600 text-white ${badgeSize} ${badgePadding}`}>
-                                                  Emergency
+                                  );
+                                } else {
+                                  // Layout for 30-minute and longer appointments
+                                  return (
+                                    <div className="flex flex-col h-full justify-between">
+                                      {/* Top section - Name and status code */}
+                                      <div className="flex flex-col gap-0">
+                                        <div className="flex items-start justify-between gap-1 border-b border-black/5 pb-[1px] mb-[1px]">
+                                          <h4
+                                            className="font-semibold text-[11px] text-gray-800 whitespace-normal break-words line-clamp-2 flex-1 underline cursor-pointer hover:text-blue-600 transition-colors leading-tight"
+                                            onClick={(e) => {
+                                              console.log('30+ minute appointment patient name clicked');
+                                              e.stopPropagation();
+                                              handlePatientNameClick(appointment);
+                                            }}
+                                          >
+                                            {appointment.patient}
+                                          </h4>
+                                          {/* Removed Status Code Badge */}
+                                        </div>
+                                        <div className="flex flex-col gap-0.5">
+                                          {appointment.assignedUserName && (
+                                            <div className="text-[9px] text-gray-500 truncate leading-tight">
+                                              👤 {appointment.assignedUserName}
+                                            </div>
+                                          )}
+                                          {appointment.archType ? (
+                                            <div className="flex flex-col gap-1 mt-1">
+                                              {appointment.archType === 'Dual' ? (
+                                                <>
+                                                  <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
+                                                    Upper: {getSubtypeLabel(appointment.upperArchSubtype || '')}
+                                                  </span>
+                                                  <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
+                                                    Lower: {getSubtypeLabel(appointment.lowerArchSubtype || '')}
+                                                  </span>
+                                                </>
+                                              ) : (
+                                                <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
+                                                  {appointment.archType}: {getSubtypeLabel(appointment.archType === 'Upper' ? appointment.upperArchSubtype || '' : appointment.lowerArchSubtype || '')}
                                                 </span>
                                               )}
-                                              <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase ${actualTypeColors.badgeColor || 'bg-gray-100 text-gray-800'} ${badgeSize} ${badgePadding}`}>
-                                                {label === 'Data Collection' ? 'Data' : displayText}
-                                              </span>
                                             </div>
-                                            <div className="flex flex-col items-end flex-shrink-0">
-                                              <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
-                                                {formatAppointmentTime(appointment.startTime)}
-                                              </span>
-                                              <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
-                                                {formatAppointmentTime(appointment.endTime)}
-                                              </span>
-                                            </div>
-                                          </>
-                                        );
-                                      })()}
+                                          ) : (
+                                            appointment.subtype && getSubtypeLabel(appointment.subtype) && (
+                                              <div className="mt-1">
+                                                <span className="inline-flex items-center bg-blue-50 text-blue-700 border border-blue-100 rounded px-1.5 py-0.5 text-[8px] font-semibold leading-none w-fit max-w-full truncate">
+                                                  📋 {getSubtypeLabel(appointment.subtype)}
+                                                </span>
+                                              </div>
+                                            )
+                                          )}
+                                        </div>
+                                      </div>
+                                      {/* Bottom row - Badge left (adaptive), Time right (always visible) */}
+                                      <div className="flex justify-between items-end gap-1 min-w-0 w-full overflow-hidden">
+                                        {(() => {
+                                          const columnWidth = getColumnWidth() / totalLanes;
+                                          // Get the actual appointment type colors for the badge
+                                          const actualTypeColors = getTypeColors(
+                                            appointment.type,
+                                            appointmentEncounterStatus[appointment.id] || appointment.encounterCompleted,
+                                            appointment.statusCode,
+                                            appointment.statusCode
+                                          );
+                                          const label = actualTypeColors.shortLabel || actualTypeColors.label;
+
+                                          // Determine display text, badge size, and time size based on column width
+                                          let displayText, badgeSize, badgePadding, timeFontSize;
+
+                                          if (columnWidth >= 140) {
+                                            // Wide columns - show full text
+                                            displayText = label;
+                                            badgeSize = 'text-[9px]';
+                                            badgePadding = 'px-1 py-0';
+                                            timeFontSize = 'text-[10px]';
+                                          } else if (columnWidth >= 120) {
+                                            // Medium columns - show full text but smaller
+                                            displayText = label;
+                                            badgeSize = 'text-[8px]';
+                                            badgePadding = 'px-1 py-0';
+                                            timeFontSize = 'text-[9px]';
+                                          } else if (columnWidth >= 100) {
+                                            // Narrow columns - start abbreviating "Data Collection"
+                                            displayText = (label === 'Data Collection') ? 'Data' : label;
+                                            badgeSize = 'text-[8px]';
+                                            badgePadding = 'px-1 py-0';
+                                            timeFontSize = 'text-[9px]';
+                                          } else if (columnWidth >= 80) {
+                                            // Very narrow - abbreviate and smaller size
+                                            displayText = (label === 'Data Collection') ? 'Data' : label;
+                                            badgeSize = 'text-[7px]';
+                                            badgePadding = 'px-0.5 py-0';
+                                            timeFontSize = 'text-[9px]';
+                                          } else {
+                                            // Ultra narrow - minimal badge and time
+                                            displayText = (label === 'Data Collection') ? 'Data' : label;
+                                            badgeSize = 'text-[7px]';
+                                            badgePadding = 'px-0.5 py-0';
+                                            timeFontSize = 'text-[8px]';
+                                          }
+
+                                          return (
+                                            <>
+                                              <div className="flex gap-1 items-center overflow-hidden">
+                                                {appointment.isEmergency && (
+                                                  <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase bg-red-600 text-white ${badgeSize} ${badgePadding}`}>
+                                                    Emergency
+                                                  </span>
+                                                )}
+                                                <span className={`inline-flex items-center justify-center font-medium rounded-full transition-all duration-200 text-center flex-shrink-0 whitespace-nowrap uppercase ${actualTypeColors.badgeColor || 'bg-gray-100 text-gray-800'} ${badgeSize} ${badgePadding}`}>
+                                                  {label === 'Data Collection' ? 'Data' : displayText}
+                                                </span>
+                                              </div>
+                                              <div className="flex flex-col items-end flex-shrink-0">
+                                                <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                                  {formatAppointmentTime(appointment.startTime)}
+                                                </span>
+                                                <span className={`${timeFontSize} text-gray-600 whitespace-nowrap leading-tight`}>
+                                                  {formatAppointmentTime(appointment.endTime)}
+                                                </span>
+                                              </div>
+                                            </>
+                                          );
+                                        })()}
+                                      </div>
                                     </div>
-                                  </div>
-                                );
-                              }
-                            })()}
-                            {(() => {
-                              // Calculate appointment duration in minutes
-                              const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
-                              const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
-                              const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
-
-                              // No additional badge needed since it's now inline for 30+ minute appointments
-                              return null;
-                            })()}
-                          </div>
-                        </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent className="w-56 touch-manipulation select-none">
-                        {appointment.statusCode !== 'RESCH' && (
-                          <>
-                            <ContextMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
-                              <ClipboardList className="mr-2 h-4 w-4" />
-                              {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
-                            </ContextMenuItem>
-                            <ContextMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
-                              <FileEdit className="mr-2 h-4 w-4" />
-                              Add New Lab Script
-                            </ContextMenuItem>
-                          </>
-                        )}
-                        {appointment.statusCode !== 'CMPLT' && (
-                          <>
-                            <ContextMenuSeparator />
-                            <ContextMenuSub>
-                              <ContextMenuSubTrigger className="touch-manipulation select-none" {...handleSubMenuTrigger()}>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Change Status
-                              </ContextMenuSubTrigger>
-                              <ContextMenuSubContent className="touch-manipulation select-none">
-                                <ContextMenuItem {...handleMenuItemAction(() => handleCompleteAppointment(appointment))}>
-                                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                                  Complete Appointment
-                                </ContextMenuItem>
-                                <ContextMenuSeparator />
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
-                                  <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
-                                  Not Confirmed
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
-                                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                                  Appointment Confirmed
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
-                                  <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                                  Electronically Confirmed
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
-                                  <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
-                                  Emergency Patient
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
-                                  <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
-                                  Patient has Arrived
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
-                                  <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
-                                  Ready for Operatory
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
-                                  <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
-                                  Left 1st Message
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
-                                  <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
-                                  Left 2nd Message
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
-                                  <CheckCircle className="mr-2 h-4 w-4 text-indigo-600" />
-                                  Multi-Appointment
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
-                                  <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
-                                  2 Week Calls
-                                </ContextMenuItem>
-                                <ContextMenuSeparator />
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
-                                  <XCircle className="mr-2 h-4 w-4 text-red-700" />
-                                  No Show
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleReschedule(appointment))}>
-                                  <Clock className="mr-2 h-4 w-4 text-amber-600" />
-                                  Reschedule Appointment
-                                </ContextMenuItem>
-                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
-                                  <XCircle className="mr-2 h-4 w-4 text-slate-600" />
-                                  Cancel Appointment
-                                </ContextMenuItem>
-
-                              </ContextMenuSubContent>
-                            </ContextMenuSub>
-                          </>
-                        )}
-                        <ContextMenuSeparator />
-                        {appointment.type === 'consultation' ? (
-                          <ContextMenuItem {...handleMenuItemAction(() => handleNavigateToConsultation(appointment.id))}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            View Consultation
-                          </ContextMenuItem>
-                        ) : (
-                          <ContextMenuItem {...handleMenuItemAction(() => handleViewPatientProfile(appointment))}>
-                            <UserCircle className="mr-2 h-4 w-4" />
-                            View Patient Profile
-                          </ContextMenuItem>
-                        )}
-                        <ContextMenuItem {...handleMenuItemAction(() => handleViewHealthHistory(appointment))}>
-                          <Heart className="mr-2 h-4 w-4" />
-                          View Health History
-                        </ContextMenuItem>
-                        <ContextMenuItem {...handleMenuItemAction(() => handleViewComfortPreference(appointment))}>
-                          <Smile className="mr-2 h-4 w-4" />
-                          View Comfort Preference
-                        </ContextMenuItem>
-                        <ContextMenuSeparator />
-                        {appointment.statusCode !== 'CMPLT' && (
-                          <ContextMenuItem {...handleMenuItemAction(() => handleEditAppointment(appointment))}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Appointment
-                          </ContextMenuItem>
-                        )}
-                        <ContextMenuItem {...handleMenuItemAction(() => handleDeleteFromMenu(appointment.id))} className="text-red-600 focus:text-red-600">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete Appointment
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  </React.Fragment>
-                );
-              });
-            })}
-          </div>
-
-          {/* Hour grid */}
-          <div className="grid grid-cols-1 relative">
-            {/* Current Time Line (EST) */}
-            {(() => {
-              if (!currentEstDate) return null;
-
-              // Only show if the view date matches current EST date
-              if (!isSameDay(date, currentEstDate)) return null;
-
-              const currentHour = currentEstDate.getHours();
-              const currentMinute = currentEstDate.getMinutes();
-
-              // Check if current time is within view range (7 AM - 7 PM)
-              if (currentHour >= 7 && currentHour < 19) { // 19 is 7PM, so up to 18:59 is inside the 7-7 range block roughly?
-                // Wait, if grid goes TO 7 PM, usually it means 7PM is the start of the last slot?
-                // If hours include 19 (7 PM), does the last block go from 7 PM to 8 PM?
-                // Users usually say "7 to 7", implying 12 hours view.
-                // Array [7...19] has 13 items. 7AM start -> 8PM end (19:00 start).
-                // If user meant 7AM to 7PM *Visual Range*, maybe just [7...18]?
-                // Detailed verification: If user says "Starts at 7 AM and till 7 PM", usually means the last hour shown is 6 PM - 7 PM, or sometimes 7 PM line is the bottom.
-                // Given the array I defined [7...19], let's stick to it.
-                // 19:00 is displayed as a row.
-
-                const startHour = 7;
-                const hourHeight = 200;
-
-                const minutesFromStart = ((currentHour - startHour) * 60) + currentMinute;
-                const topPosition = (minutesFromStart / 60) * hourHeight;
-
-                return (
-                  <div
-                    className="absolute left-[60px] right-0 z-40 flex items-center pointer-events-none"
-                    style={{ top: `${topPosition}px` }}
-                  >
-                    <div className="w-full border-b-2 border-blue-500 border-dashed opacity-50 shadow-sm"></div>
-                    <div className="absolute right-0 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-l-md transform -translate-y-1/2">
-                      {currentHour.toString().padStart(2, '0')}:{currentMinute.toString().padStart(2, '0')}
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-            {hours.map((hour) => {
-              return (
-                <div key={hour} className="border-b border-gray-200 h-[200px]">
-                  <div className="grid h-full" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
-                    {/* Time Column */}
-                    <div className="border-r border-gray-200 flex items-start justify-end pl-2 pr-1 pt-1 pb-2">
-                      <span className="text-xs font-medium text-gray-600 whitespace-nowrap text-right">
-                        {formatTime(hour)}
-                      </span>
-                    </div>
-
-                    {/* Appointment Type Columns */}
-                    {appointmentTypes.map((type, typeIndex) => {
-                      const typeColors = getTypeColors(type.key);
-
-                      const hasActiveSelection = isDragging && dragColumn === type.key;
-
-                      // Check if this hour has appointments for subtle visual feedback
-                      const hourHasAppointment = hasAppointmentInHour(hour, type.key);
-
-
-                      const isColumnDisabled = allowedAppointmentTypes && !allowedAppointmentTypes.includes(type.key);
-
-                      return (
-                        <div
-                          key={type.key}
-                          className={`p-2 transition-all relative ${typeIndex < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''
-                            } ${hasActiveSelection
-                              ? ``
-                              : `cursor-pointer`
-                            } ${isColumnDisabled ? 'bg-gray-50 opacity-50 cursor-not-allowed' : ''}`}
-                          onMouseDown={(e) => {
-                            if (isColumnDisabled) return; // Block interaction if disabled
-                            // Calculate which 15-minute slot was clicked based on position
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const relativeY = e.clientY - rect.top;
-                            const slotHeight = rect.height / 4;
-                            const slotIndex = Math.floor(relativeY / slotHeight);
-                            const minute = Math.min(slotIndex * 15, 45);
-
-                            // Allow drag start even if there's an appointment (for overlaps)
-                            handleMouseDown(hour, minute, type.key, e);
-                          }}
-                          onTouchStart={(e) => {
-                            if (isColumnDisabled) return; // Block interaction if disabled
-                            // DO NOT Prevent Default here. Allow scrolling to start.
-
-                            // Mark touch active to block ghost mouse events
-                            isTouchRef.current = true;
-
-                            const touch = e.touches[0];
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const relativeY = touch.clientY - rect.top;
-                            // Store data for the timer callback
-                            const startData = {
-                              hour, minute: Math.min(Math.floor(relativeY / (rect.height / 4)) * 15, 45), typeKey: type.key,
-                              clientX: touch.clientX,
-                              clientY: touch.clientY,
-                              target: e.currentTarget
-                            };
-
-                            // Start 1-second timer
-                            holdTimerRef.current = setTimeout(() => {
-                              // Timer fired! Start dragging.
-                              // Now subsequent moves will need to be blocked.
-
-                              // Execute the mouse down logic
-                              // We need to reconstruct the synthetic event logic or call handleMouseDown directly
-                              // Note: handleMouseDown expects a generic event mostly for stopPropagation
-                              // We can pass a mock.
-
-                              const syntheticEvent = {
-                                button: 0,
-                                clientX: startData.clientX,
-                                clientY: startData.clientY,
-                                preventDefault: () => { },
-                                stopPropagation: () => { }
-                              } as unknown as React.MouseEvent;
-
-                              handleMouseDown(startData.hour, startData.minute, startData.typeKey, syntheticEvent);
-                            }, 500);
-                          }}
-                          onTouchMove={(e) => {
-                            if (isDragging) {
-                              // Drag is active! Block scroll.
-                              e.preventDefault();
-
-                              const touch = e.touches[0];
-                              const element = document.elementFromPoint(touch.clientX, touch.clientY);
-
-                              if (element) {
-                                const slotDiv = element.closest('[data-hour]');
-                                if (slotDiv) {
-                                  const h = parseInt(slotDiv.getAttribute('data-hour') || '0');
-                                  const m = parseInt(slotDiv.getAttribute('data-minute') || '0');
-                                  const c = slotDiv.getAttribute('data-column') || '';
-                                  handleMouseEnter(h, m, c, touch.clientY);
+                                  );
                                 }
-                              }
-                            } else {
-                              // Not dragging yet.
-                              // If user moves significantly, it's a scroll. Cancel the hold timer.
-                              if (holdTimerRef.current) {
-                                clearTimeout(holdTimerRef.current);
-                                holdTimerRef.current = null;
-                              }
-                              // Allow default (scroll)
-                            }
-                          }}
-                          onTouchEnd={(e) => {
-                            // Prevent Default to stop mouse emulation (ghost clicks)
-                            if (e && e.cancelable) e.preventDefault();
+                              })()}
+                              {(() => {
+                                // Calculate appointment duration in minutes
+                                const [startHour, startMinute] = appointment.startTime.split(':').map(Number);
+                                const [endHour, endMinute] = appointment.endTime.split(':').map(Number);
+                                const durationMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
 
-                            // Clear timer if it exists (user tapped or let go early)
-                            if (holdTimerRef.current) {
-                              clearTimeout(holdTimerRef.current);
-                              holdTimerRef.current = null;
-                            }
+                                // No additional badge needed since it's now inline for 30+ minute appointments
+                                return null;
+                              })()}
+                            </div>
+                          </div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent className="w-56 touch-manipulation select-none">
+                          {appointment.statusCode !== 'RESCH' && (
+                            <>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
+                                <ClipboardList className="mr-2 h-4 w-4" />
+                                {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
+                              </ContextMenuItem>
+                              <ContextMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
+                                <FileEdit className="mr-2 h-4 w-4" />
+                                Add New Lab Script
+                              </ContextMenuItem>
+                            </>
+                          )}
+                          {appointment.statusCode !== 'CMPLT' && (
+                            <>
+                              <ContextMenuSeparator />
+                              <ContextMenuSub>
+                                <ContextMenuSubTrigger className="touch-manipulation select-none" {...handleSubMenuTrigger()}>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Change Status
+                                </ContextMenuSubTrigger>
+                                <ContextMenuSubContent className="touch-manipulation select-none">
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleCompleteAppointment(appointment))}>
+                                    <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                    Complete Appointment
+                                  </ContextMenuItem>
+                                  <ContextMenuSeparator />
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
+                                    <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
+                                    Not Confirmed
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
+                                    <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                    Appointment Confirmed
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
+                                    <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                    Electronically Confirmed
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
+                                    <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
+                                    Emergency Patient
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
+                                    <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
+                                    Patient has Arrived
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
+                                    <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
+                                    Ready for Operatory
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
+                                    <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
+                                    Left 1st Message
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
+                                    <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
+                                    Left 2nd Message
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
+                                    <CheckCircle className="mr-2 h-4 w-4 text-indigo-600" />
+                                    Multi-Appointment
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
+                                    <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
+                                    2 Week Calls
+                                  </ContextMenuItem>
+                                  <ContextMenuSeparator />
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
+                                    <XCircle className="mr-2 h-4 w-4 text-red-700" />
+                                    No Show
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleReschedule(appointment))}>
+                                    <Clock className="mr-2 h-4 w-4 text-amber-600" />
+                                    Reschedule Appointment
+                                  </ContextMenuItem>
+                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
+                                    <XCircle className="mr-2 h-4 w-4 text-slate-600" />
+                                    Cancel Appointment
+                                  </ContextMenuItem>
 
-                            // Check if we were dragging
-                            handleMouseUp();
+                                </ContextMenuSubContent>
+                              </ContextMenuSub>
+                            </>
+                          )}
+                          <ContextMenuSeparator />
+                          {appointment.type === 'consultation' ? (
+                            <ContextMenuItem {...handleMenuItemAction(() => handleNavigateToConsultation(appointment.id))}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              View Consultation
+                            </ContextMenuItem>
+                          ) : (
+                            <ContextMenuItem {...handleMenuItemAction(() => handleViewPatientProfile(appointment))}>
+                              <UserCircle className="mr-2 h-4 w-4" />
+                              View Patient Profile
+                            </ContextMenuItem>
+                          )}
+                          <ContextMenuItem {...handleMenuItemAction(() => handleViewHealthHistory(appointment))}>
+                            <Heart className="mr-2 h-4 w-4" />
+                            View Health History
+                          </ContextMenuItem>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleViewComfortPreference(appointment))}>
+                            <Smile className="mr-2 h-4 w-4" />
+                            View Comfort Preference
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          {appointment.statusCode !== 'CMPLT' && (
+                            <ContextMenuItem {...handleMenuItemAction(() => handleEditAppointment(appointment))}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Appointment
+                            </ContextMenuItem>
+                          )}
+                          <ContextMenuItem {...handleMenuItemAction(() => handleDeleteFromMenu(appointment.id))} className="text-red-600 focus:text-red-600">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Appointment
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
+                    </React.Fragment>
+                  );
+                });
+              })}
+            </div>
 
-                            // Reset touch ref after a short delay to ensure we block trailing mouse events
-                            setTimeout(() => {
-                              isTouchRef.current = false;
-                            }, 500);
-                          }}
-                          onMouseMove={(e) => {
-                            if (isDragging && dragColumn === type.key) {
-                              // Check if we're hovering over an appointment area
+            {/* Hour grid */}
+            <div className="grid grid-cols-1 relative">
+              {/* Current Time Line (EST) */}
+              {(() => {
+                if (!currentEstDate) return null;
+
+                // Only show if the view date matches current EST date
+                if (!isSameDay(date, currentEstDate)) return null;
+
+                const currentHour = currentEstDate.getHours();
+                const currentMinute = currentEstDate.getMinutes();
+
+                // Check if current time is within view range (7 AM - 7 PM)
+                if (currentHour >= 7 && currentHour < 19) { // 19 is 7PM, so up to 18:59 is inside the 7-7 range block roughly?
+                  // Wait, if grid goes TO 7 PM, usually it means 7PM is the start of the last slot?
+                  // If hours include 19 (7 PM), does the last block go from 7 PM to 8 PM?
+                  // Users usually say "7 to 7", implying 12 hours view.
+                  // Array [7...19] has 13 items. 7AM start -> 8PM end (19:00 start).
+                  // If user meant 7AM to 7PM *Visual Range*, maybe just [7...18]?
+                  // Detailed verification: If user says "Starts at 7 AM and till 7 PM", usually means the last hour shown is 6 PM - 7 PM, or sometimes 7 PM line is the bottom.
+                  // Given the array I defined [7...19], let's stick to it.
+                  // 19:00 is displayed as a row.
+
+                  const startHour = 7;
+                  const hourHeight = 200;
+
+                  const minutesFromStart = ((currentHour - startHour) * 60) + currentMinute;
+                  const topPosition = (minutesFromStart / 60) * hourHeight;
+
+                  return (
+                    <div
+                      className="absolute left-[60px] right-0 z-40 flex items-center pointer-events-none"
+                      style={{ top: `${topPosition}px` }}
+                    >
+                      <div className="w-full border-b-2 border-blue-500 border-dashed opacity-50 shadow-sm"></div>
+                      <div className="absolute right-0 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-l-md transform -translate-y-1/2">
+                        {currentHour.toString().padStart(2, '0')}:{currentMinute.toString().padStart(2, '0')}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              {hours.map((hour) => {
+                return (
+                  <div key={hour} className="border-b border-gray-200 h-[200px]">
+                    <div className="grid h-full" style={{ gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr 1fr' }}>
+                      {/* Time Column */}
+                      <div className="border-r border-gray-200 flex items-start justify-end pl-2 pr-1 pt-1 pb-2">
+                        <span className="text-xs font-medium text-gray-600 whitespace-nowrap text-right">
+                          {formatTime(hour)}
+                        </span>
+                      </div>
+
+                      {/* Appointment Type Columns */}
+                      {appointmentTypes.map((type, typeIndex) => {
+                        const typeColors = getTypeColors(type.key);
+
+                        const hasActiveSelection = isDragging && dragColumn === type.key;
+
+                        // Check if this hour has appointments for subtle visual feedback
+                        const hourHasAppointment = hasAppointmentInHour(hour, type.key);
+
+
+                        const isColumnDisabled = allowedAppointmentTypes && !allowedAppointmentTypes.includes(type.key);
+
+                        return (
+                          <div
+                            key={type.key}
+                            className={`p-2 transition-all relative ${typeIndex < appointmentTypes.length - 1 ? 'border-r border-gray-200' : ''
+                              } ${hasActiveSelection
+                                ? ``
+                                : `cursor-pointer`
+                              } ${isColumnDisabled ? 'bg-gray-50 opacity-50 cursor-not-allowed' : ''}`}
+                            onMouseDown={(e) => {
+                              if (isColumnDisabled) return; // Block interaction if disabled
+                              // Calculate which 15-minute slot was clicked based on position
                               const rect = e.currentTarget.getBoundingClientRect();
                               const relativeY = e.clientY - rect.top;
                               const slotHeight = rect.height / 4;
                               const slotIndex = Math.floor(relativeY / slotHeight);
                               const minute = Math.min(slotIndex * 15, 45);
 
-                              // Allow drag update even if over an existing appointment
-                              handleMouseEnter(hour, minute, type.key, e.clientY);
-                            }
-                          }}
-                          onContextMenu={(e) => e.preventDefault()} // Block native context menu on long press
-                          style={{
-                            userSelect: 'none',
-                            WebkitUserSelect: 'none',
-                            WebkitTouchCallout: 'none' // Disable iOS magnifier/callout
-                          }}
-                        >
-                          {/* 15-minute separator lines */}
-                          <div className="absolute inset-0 pointer-events-none">
-                            {/* 15-minute line */}
-                            <div
-                              className="absolute left-2 right-2 border-t border-dashed border-gray-300 opacity-30"
-                              style={{ top: '25%' }}
-                            />
-                            {/* 30-minute line */}
-                            <div
-                              className="absolute left-2 right-2 border-t border-dashed border-gray-300 opacity-30"
-                              style={{ top: '50%' }}
-                            />
-                            {/* 45-minute line */}
-                            <div
-                              className="absolute left-2 right-2 border-t border-dashed border-gray-300 opacity-30"
-                              style={{ top: '75%' }}
-                            />
-                          </div>
+                              // Allow drag start even if there's an appointment (for overlaps)
+                              handleMouseDown(hour, minute, type.key, e);
+                            }}
+                            onTouchStart={(e) => {
+                              if (isColumnDisabled) return; // Block interaction if disabled
+                              // DO NOT Prevent Default here. Allow scrolling to start.
 
-                          {/* 15-minute hover slots */}
-                          {[0, 15, 30, 45].map((minute) => {
-                            const hasAppointment = hasAppointmentInSlot(hour, minute, type.key);
-                            return (
+                              // Mark touch active to block ghost mouse events
+                              isTouchRef.current = true;
+
+                              const touch = e.touches[0];
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              const relativeY = touch.clientY - rect.top;
+                              // Store data for the timer callback
+                              const startData = {
+                                hour, minute: Math.min(Math.floor(relativeY / (rect.height / 4)) * 15, 45), typeKey: type.key,
+                                clientX: touch.clientX,
+                                clientY: touch.clientY,
+                                target: e.currentTarget
+                              };
+
+                              // Start 1-second timer
+                              holdTimerRef.current = setTimeout(() => {
+                                // Timer fired! Start dragging.
+                                // Now subsequent moves will need to be blocked.
+
+                                // Execute the mouse down logic
+                                // We need to reconstruct the synthetic event logic or call handleMouseDown directly
+                                // Note: handleMouseDown expects a generic event mostly for stopPropagation
+                                // We can pass a mock.
+
+                                const syntheticEvent = {
+                                  button: 0,
+                                  clientX: startData.clientX,
+                                  clientY: startData.clientY,
+                                  preventDefault: () => { },
+                                  stopPropagation: () => { }
+                                } as unknown as React.MouseEvent;
+
+                                handleMouseDown(startData.hour, startData.minute, startData.typeKey, syntheticEvent);
+                              }, 500);
+                            }}
+                            onTouchMove={(e) => {
+                              if (isDragging) {
+                                // Drag is active! Block scroll.
+                                e.preventDefault();
+
+                                const touch = e.touches[0];
+                                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+
+                                if (element) {
+                                  const slotDiv = element.closest('[data-hour]');
+                                  if (slotDiv) {
+                                    const h = parseInt(slotDiv.getAttribute('data-hour') || '0');
+                                    const m = parseInt(slotDiv.getAttribute('data-minute') || '0');
+                                    const c = slotDiv.getAttribute('data-column') || '';
+                                    handleMouseEnter(h, m, c, touch.clientY);
+                                  }
+                                }
+                              } else {
+                                // Not dragging yet.
+                                // If user moves significantly, it's a scroll. Cancel the hold timer.
+                                if (holdTimerRef.current) {
+                                  clearTimeout(holdTimerRef.current);
+                                  holdTimerRef.current = null;
+                                }
+                                // Allow default (scroll)
+                              }
+                            }}
+                            onTouchEnd={(e) => {
+                              // Prevent Default to stop mouse emulation (ghost clicks)
+                              if (e && e.cancelable) e.preventDefault();
+
+                              // Clear timer if it exists (user tapped or let go early)
+                              if (holdTimerRef.current) {
+                                clearTimeout(holdTimerRef.current);
+                                holdTimerRef.current = null;
+                              }
+
+                              // Check if we were dragging
+                              handleMouseUp();
+
+                              // Reset touch ref after a short delay to ensure we block trailing mouse events
+                              setTimeout(() => {
+                                isTouchRef.current = false;
+                              }, 500);
+                            }}
+                            onMouseMove={(e) => {
+                              if (isDragging && dragColumn === type.key) {
+                                // Check if we're hovering over an appointment area
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const relativeY = e.clientY - rect.top;
+                                const slotHeight = rect.height / 4;
+                                const slotIndex = Math.floor(relativeY / slotHeight);
+                                const minute = Math.min(slotIndex * 15, 45);
+
+                                // Allow drag update even if over an existing appointment
+                                handleMouseEnter(hour, minute, type.key, e.clientY);
+                              }
+                            }}
+                            onContextMenu={(e) => e.preventDefault()} // Block native context menu on long press
+                            style={{
+                              userSelect: 'none',
+                              WebkitUserSelect: 'none',
+                              WebkitTouchCallout: 'none' // Disable iOS magnifier/callout
+                            }}
+                          >
+                            {/* 15-minute separator lines */}
+                            <div className="absolute inset-0 pointer-events-none">
+                              {/* 15-minute line */}
                               <div
-                                key={minute}
-                                // Always show pointer cursor to indicate drag-to-create is possible
-                                // even if the slot has an appointment (for overlaps)
-                                className="absolute inset-x-0 transition-all cursor-pointer hover:bg-gray-50"
-                                style={{
-                                  top: `${(minute / 60) * 100}%`,
-                                  height: '25%',
-                                }}
-                                data-hour={hour}
-                                data-minute={minute}
-                                data-column={type.key}
+                                className="absolute left-2 right-2 border-t border-dashed border-gray-300 opacity-30"
+                                style={{ top: '25%' }}
                               />
-                            );
-                          })}
+                              {/* 30-minute line */}
+                              <div
+                                className="absolute left-2 right-2 border-t border-dashed border-gray-300 opacity-30"
+                                style={{ top: '50%' }}
+                              />
+                              {/* 45-minute line */}
+                              <div
+                                className="absolute left-2 right-2 border-t border-dashed border-gray-300 opacity-30"
+                                style={{ top: '75%' }}
+                              />
+                            </div>
 
-                        </div>
-                      );
-                    })}
+                            {/* 15-minute hover slots */}
+                            {[0, 15, 30, 45].map((minute) => {
+                              const hasAppointment = hasAppointmentInSlot(hour, minute, type.key);
+                              return (
+                                <div
+                                  key={minute}
+                                  // Always show pointer cursor to indicate drag-to-create is possible
+                                  // even if the slot has an appointment (for overlaps)
+                                  className="absolute inset-x-0 transition-all cursor-pointer hover:bg-gray-50"
+                                  style={{
+                                    top: `${(minute / 60) * 100}%`,
+                                    height: '25%',
+                                  }}
+                                  data-hour={hour}
+                                  data-minute={minute}
+                                  data-column={type.key}
+                                />
+                              );
+                            })}
+
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -3395,31 +3441,40 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
             <Dialog open={!!showNoShowDialog} onOpenChange={(open) => {
               if (!open) setShowNoShowDialog(null);
             }}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md touch-manipulation">
                 <DialogHeader>
-                  <DialogTitle>No Show Options</DialogTitle>
+                  <DialogTitle>{showNoShowDialog?.targetStatus === 'CANCL' ? 'Cancellation Options' : 'No Show Options'}</DialogTitle>
                   <DialogDescription>
-                    How would you like to handle this no-show?
+                    How would you like to handle this {showNoShowDialog?.targetStatus === 'CANCL' ? 'cancellation' : 'no show'}?
                   </DialogDescription>
                 </DialogHeader>
-                <div className="flex flex-col gap-4 mt-4">
+                <div className="flex flex-col gap-4 py-4">
                   <Button
                     variant="outline"
-                    className="flex flex-col items-start h-auto p-4 border-blue-200 bg-blue-50 hover:bg-blue-100"
+                    className="flex flex-col items-start gap-1 h-auto p-4 hover:bg-amber-50 border-amber-200"
                     onClick={() => handleNoShowOption('unscheduled')}
                   >
-                    <div className="flex items-center gap-2 font-semibold text-blue-900">
-                      <ClipboardList className="h-4 w-4" />
-                      Add to Unscheduled List
+                    <div className="flex items-center gap-2 font-semibold text-amber-900">
+                      <AlertCircle className="h-4 w-4" />
+                      Add to Unscheduled List ({showNoShowDialog?.targetStatus === 'CANCL' ? 'Cancelled' : 'No Show'})
                     </div>
-                    <span className="text-sm text-blue-700 mt-1">
-                      Schedule later via Next Appointments
+                    <span className="text-sm text-amber-700 mt-1">
+                      Patient needs to reschedule later
                     </span>
                   </Button>
 
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-gray-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-gray-500">Or</span>
+                    </div>
+                  </div>
+
                   <Button
                     variant="outline"
-                    className="flex flex-col items-start h-auto p-4 border-red-200 bg-red-50 hover:bg-red-100"
+                    className="flex flex-col items-start gap-1 h-auto p-4 hover:bg-red-50 border-red-200"
                     onClick={() => handleNoShowOption('not_required')}
                   >
                     <div className="flex items-center gap-2 font-semibold text-red-900">
@@ -3427,7 +3482,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                       No Next Appointment Required
                     </div>
                     <span className="text-sm text-red-700 mt-1">
-                      Mark as complete and finish
+                      Mark as {showNoShowDialog?.targetStatus === 'CANCL' ? 'cancelled' : 'no show'} and finish
                     </span>
                   </Button>
                 </div>
@@ -3933,7 +3988,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
           </>
         )
       }
-    </div >
+    </>
   );
 }
 );

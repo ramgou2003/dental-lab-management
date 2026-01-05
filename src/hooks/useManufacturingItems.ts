@@ -25,7 +25,7 @@ export interface ManufacturingItem {
   stained_and_glazed: string | null;
   cementation: string | null;
   additional_notes: string | null;
-  status: 'pending-printing' | 'pending-milling' | 'in-production' | 'milling' | 'in-transit' | 'quality-check' | 'inspection' | 'completed' | 'rejected';
+  status: 'pending-printing' | 'pending-milling' | 'printing' | 'in-production' | 'milling' | 'in-transit' | 'quality-check' | 'inspection' | 'completed' | 'rejected';
   printing_completed_at: string | null;
   printing_completed_by: string | null;
   printing_completed_by_name: string | null;
@@ -71,7 +71,7 @@ export function useManufacturingItems() {
         return;
       }
 
-      setManufacturingItems(data || []);
+      setManufacturingItems((data as any) || []);
     } catch (error) {
       console.error('Error:', error);
       setError('An unexpected error occurred');
@@ -84,7 +84,7 @@ export function useManufacturingItems() {
     try {
       const { error } = await supabase
         .from('manufacturing_items')
-        .update({ 
+        .update({
           status: newStatus,
           updated_at: new Date().toISOString()
         })
@@ -96,9 +96,9 @@ export function useManufacturingItems() {
       }
 
       // Update local state
-      setManufacturingItems(prev => 
-        prev.map(item => 
-          item.id === itemId 
+      setManufacturingItems(prev =>
+        prev.map(item =>
+          item.id === itemId
             ? { ...item, status: newStatus, updated_at: new Date().toISOString() }
             : item
         )
@@ -205,13 +205,13 @@ export function useManufacturingItems() {
         prev.map(item =>
           item.id === itemId
             ? {
-                ...item,
-                status: 'inspection',
-                printing_completed_at: completedAtTimestamp,
-                printing_completed_by: completionData.completed_by,
-                printing_completed_by_name: completionData.completed_by_name,
-                updated_at: new Date().toISOString()
-              }
+              ...item,
+              status: 'inspection',
+              printing_completed_at: completedAtTimestamp,
+              printing_completed_by: completionData.completed_by,
+              printing_completed_by_name: completionData.completed_by_name,
+              updated_at: new Date().toISOString()
+            }
             : item
         )
       );
@@ -301,11 +301,13 @@ export function useManufacturingItems() {
       const completedAtTimestamp = `${datePart}T${timePart}-05:00`;
 
       // Fetch the current item from database to get all details
-      const { data: currentItem, error: fetchError } = await supabase
+      const { data: currentItemData, error: fetchError } = await supabase
         .from('manufacturing_items')
         .select('*')
         .eq('id', itemId)
         .single();
+
+      const currentItem = currentItemData as any;
 
       if (fetchError || !currentItem) {
         console.error('Error fetching manufacturing item:', fetchError);
@@ -395,11 +397,13 @@ export function useManufacturingItems() {
   const reprintManufacturingItem = async (itemId: string) => {
     try {
       // Fetch the current item from database to get all details
-      const { data: currentItem, error: fetchError } = await supabase
+      const { data: currentItemData, error: fetchError } = await supabase
         .from('manufacturing_items')
         .select('*')
         .eq('id', itemId)
         .single();
+
+      const currentItem = currentItemData as any;
 
       if (fetchError || !currentItem) {
         console.error('Error fetching manufacturing item:', fetchError);
@@ -500,7 +504,7 @@ export function useManufacturingItems() {
         throw error;
       }
 
-      return data || null;
+      return (data as any) || null;
     } catch (error) {
       console.error('Error:', error);
       return null;

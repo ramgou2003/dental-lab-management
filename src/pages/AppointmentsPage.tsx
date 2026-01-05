@@ -203,7 +203,7 @@ export function AppointmentsPage() {
       const { data, error } = await supabase
         .from('appointments')
         .select('next_appointment_scheduled, next_appointment_status, status, status_code')
-        .or('status.eq.Appointment Completed,status.eq.No Show,status_code.eq.CMPLT,status_code.eq.NSHOW');
+        .or('status.eq.Appointment Completed,status.eq.No Show,status.eq.Cancelled,status_code.eq.CMPLT,status_code.eq.NSHOW,status_code.eq.CANCL');
 
       if (error) {
         console.error('Error fetching unscheduled count:', error);

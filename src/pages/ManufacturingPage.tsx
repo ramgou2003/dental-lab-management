@@ -85,7 +85,7 @@ export function ManufacturingPage() {
   // Check if the case is tie bar and superstructure
   const isTieBarSuperstructure = (item: any) => {
     return item?.upper_appliance_type === 'ti-bar-superstructure' ||
-           item?.lower_appliance_type === 'ti-bar-superstructure';
+      item?.lower_appliance_type === 'ti-bar-superstructure';
   };
 
   const handleViewManufacturingScript = (item: any) => {
@@ -409,11 +409,11 @@ export function ManufacturingPage() {
       statusMatch = item.status === 'inspection';
     } else if (activeFilter === "incomplete") {
       statusMatch = item.status === 'pending-printing' ||
-                   item.status === 'pending-milling' ||
-                   item.status === 'printing' ||
-                   item.status === 'milling' ||
-                   item.status === 'in-transit' ||
-                   item.status === 'inspection';
+        item.status === 'pending-milling' ||
+        item.status === 'printing' ||
+        item.status === 'milling' ||
+        item.status === 'in-transit' ||
+        item.status === 'inspection';
     } else if (activeFilter === "completed") {
       statusMatch = item.status === 'completed' || item.status === 'rejected';
     }
@@ -489,18 +489,16 @@ export function ManufacturingPage() {
             <button
               key={index}
               onClick={() => setActiveFilter(stat.filter)}
-              className={`h-20 sm:h-22 lg:h-24 p-2 sm:p-3 lg:p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${
-                activeFilter === stat.filter
-                  ? 'border-indigo-300 bg-indigo-50 shadow-md border-b-4 border-b-indigo-500'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
+              className={`h-20 sm:h-22 lg:h-24 p-2 sm:p-3 lg:p-3 rounded-xl border transition-all duration-200 hover:shadow-md relative ${activeFilter === stat.filter
+                ? 'border-indigo-300 bg-indigo-50 shadow-md border-b-4 border-b-indigo-500'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+                }`}
             >
               <div className="flex flex-col h-full justify-between">
                 {/* Icon and Number at the top */}
                 <div className="flex items-center justify-between">
-                  <p className={`text-base sm:text-lg lg:text-xl font-bold leading-none ${
-                    activeFilter === stat.filter ? 'text-indigo-900' : 'text-gray-900'
-                  }`}>
+                  <p className={`text-base sm:text-lg lg:text-xl font-bold leading-none ${activeFilter === stat.filter ? 'text-indigo-900' : 'text-gray-900'
+                    }`}>
                     {stat.value}
                   </p>
                   <div className={`p-1 sm:p-1 lg:p-2 rounded-lg flex-shrink-0 ${stat.color}`}>
@@ -510,11 +508,10 @@ export function ManufacturingPage() {
 
                 {/* Title at the bottom */}
                 <div className="w-full text-center">
-                  <p className={`text-xs sm:text-sm lg:text-sm font-semibold leading-tight ${
-                    activeFilter === stat.filter
-                      ? 'text-indigo-700'
-                      : 'text-gray-600'
-                  }`}>
+                  <p className={`text-xs sm:text-sm lg:text-sm font-semibold leading-tight ${activeFilter === stat.filter
+                    ? 'text-indigo-700'
+                    : 'text-gray-600'
+                    }`}>
                     {stat.title}
                   </p>
                 </div>
@@ -533,134 +530,121 @@ export function ManufacturingPage() {
             </div>
           ) : sortedManufacturingItems.length > 0 ? (
             <div className="flex-1 overflow-y-scroll p-6 scrollbar-thin scrollbar-track-gray-50 scrollbar-thumb-gray-300 hover:scrollbar-thumb-blue-500 scrollbar-thumb-rounded-full scrollbar-track-rounded-full scrollbar-enhanced table-body">
-                <div className="space-y-4">
-                  {sortedManufacturingItems.map((item) => {
-                    // Format appliance types for display
-                    const formatApplianceType = (type: string | null | undefined) => {
-                      if (!type) return 'N/A';
-                      return type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    };
+              <div className="space-y-4">
+                {sortedManufacturingItems.map((item) => {
+                  // Format appliance types for display
+                  const formatApplianceType = (type: string | null | undefined) => {
+                    if (!type) return 'N/A';
+                    return type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  };
 
-                    const upperAppliance = formatApplianceType(item.upper_appliance_type);
-                    const lowerAppliance = formatApplianceType(item.lower_appliance_type);
+                  const upperAppliance = formatApplianceType(item.upper_appliance_type);
+                  const lowerAppliance = formatApplianceType(item.lower_appliance_type);
 
-                    // Render action buttons based on status and manufacturing method
-                    const renderActionButtons = () => {
-                      switch (item.status) {
-                        case 'pending-printing':
-                          return (
-                            <ParticleButton
-                              className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                              onClick={() => handleStatusChange(item.id, 'printing')}
-                              onSuccess={() => {}}
-                              successDuration={1000}
+                  // Render action buttons based on status and manufacturing method
+                  const renderActionButtons = () => {
+                    switch (item.status) {
+                      case 'pending-printing':
+                        return (
+                          <ParticleButton
+                            className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                            onClick={() => handleStatusChange(item.id, 'printing')}
+                            onSuccess={() => { }}
+                            successDuration={1000}
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Start Printing
+                          </ParticleButton>
+                        );
+                      case 'pending-milling':
+                        return (
+                          <ParticleButton
+                            className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                            onClick={() => handleStartMilling(item)}
+                            onSuccess={() => { }}
+                            successDuration={1000}
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Start Milling
+                          </ParticleButton>
+                        );
+                      case 'printing':
+                        return (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCompletePrinting(item)}
+                              className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 px-4 py-2 text-sm font-semibold"
                             >
-                              <Play className="h-4 w-4 mr-2" />
-                              Start Printing
-                            </ParticleButton>
-                          );
-                        case 'pending-milling':
-                          return (
-                            <ParticleButton
-                              className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 bg-white px-6 py-2.5 text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                              onClick={() => handleStartMilling(item)}
-                              onSuccess={() => {}}
-                              successDuration={1000}
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Complete Printing
+                            </Button>
+                          </div>
+                        );
+                      case 'milling':
+                        return (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewManufacturingScript(item)}
+                              className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
                             >
-                              <Play className="h-4 w-4 mr-2" />
-                              Start Milling
-                            </ParticleButton>
-                          );
-                        case 'printing':
-                          return (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleCompletePrinting(item)}
-                                className="border-2 border-green-600 text-green-600 hover:border-green-700 hover:text-green-700 hover:bg-green-50 px-4 py-2 text-sm font-semibold"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Complete Printing
-                              </Button>
-                            </div>
-                          );
-                        case 'milling':
-                          return (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewManufacturingScript(item)}
-                                className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Script
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleShippedByLab(item)}
-                                className="border-2 border-yellow-600 text-yellow-600 hover:border-yellow-700 hover:text-yellow-700 hover:bg-yellow-50 px-4 py-2 text-sm font-semibold"
-                              >
-                                <Truck className="h-4 w-4 mr-2" />
-                                Shipped by Lab
-                              </Button>
-                            </div>
-                          );
-                        case 'in-transit':
-                          return (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleApplianceReceived(item)}
-                                className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
-                              >
-                                <Package className="h-4 w-4 mr-2" />
-                                Appliance Received
-                              </Button>
-                            </div>
-                          );
-                        case 'inspection':
-                          return (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleCompleteInspection(item)}
-                                className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Complete Inspection
-                              </Button>
-                            </div>
-                          );
-                        case 'completed':
-                          return (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewReport(item)}
-                                className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 text-sm font-semibold"
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                View Report
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleReprint(item)}
-                                className="border-2 border-orange-600 text-orange-600 hover:border-orange-700 hover:text-orange-700 hover:bg-orange-50 px-4 py-2 text-sm font-semibold"
-                              >
-                                <Printer className="h-4 w-4 mr-2" />
-                                Reprint
-                              </Button>
-                            </div>
-                          );
-                        case 'rejected':
-                          return (
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Script
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleShippedByLab(item)}
+                              className="border-2 border-yellow-600 text-yellow-600 hover:border-yellow-700 hover:text-yellow-700 hover:bg-yellow-50 px-4 py-2 text-sm font-semibold"
+                            >
+                              <Truck className="h-4 w-4 mr-2" />
+                              Shipped by Lab
+                            </Button>
+                          </div>
+                        );
+                      case 'in-transit':
+                        return (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApplianceReceived(item)}
+                              className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
+                            >
+                              <Package className="h-4 w-4 mr-2" />
+                              Appliance Received
+                            </Button>
+                          </div>
+                        );
+                      case 'inspection':
+                        return (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCompleteInspection(item)}
+                              className="border-2 border-blue-600 text-blue-600 hover:border-blue-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-2 text-sm font-semibold"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Complete Inspection
+                            </Button>
+                          </div>
+                        );
+                      case 'completed':
+                        return (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewReport(item)}
+                              className="border-2 border-indigo-600 text-indigo-600 hover:border-indigo-700 hover:text-indigo-700 hover:bg-indigo-50 px-4 py-2 text-sm font-semibold"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              View Report
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -670,200 +654,212 @@ export function ManufacturingPage() {
                               <Printer className="h-4 w-4 mr-2" />
                               Reprint
                             </Button>
-                          );
-                        default:
-                          return null;
-                      }
-                    };
+                          </div>
+                        );
+                      case 'rejected':
+                        return (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReprint(item)}
+                            className="border-2 border-orange-600 text-orange-600 hover:border-orange-700 hover:text-orange-700 hover:bg-orange-50 px-4 py-2 text-sm font-semibold"
+                          >
+                            <Printer className="h-4 w-4 mr-2" />
+                            Reprint
+                          </Button>
+                        );
+                      default:
+                        return null;
+                    }
+                  };
 
-                    return (
-                      <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
-                        <div className="flex items-center justify-between">
-                          {/* Left side - Patient info and appliance details */}
-                          <div className="flex items-center space-x-4 flex-1">
-                            {/* Manufacturing Avatar */}
-                            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <Factory className="h-4 w-4 text-white" />
-                            </div>
-
-                            {/* Patient Details */}
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-sm font-semibold text-gray-900 truncate">{item.patient_name}</h3>
-                              <div className="flex items-center space-x-4 mt-1">
-                                {/* Appliance Types */}
-                                {item.upper_appliance_type && (
-                                  <span className="text-xs text-gray-600">
-                                    <span className="font-medium">Upper:</span> {upperAppliance}
-                                  </span>
-                                )}
-                                {item.lower_appliance_type && (
-                                  <span className="text-xs text-gray-600">
-                                    <span className="font-medium">Lower:</span> {lowerAppliance}
-                                  </span>
-                                )}
-                                {/* Shade */}
-                                <span className="text-xs text-gray-600">
-                                  <span className="font-medium">Shade:</span> {item.shade}
-                                </span>
-                              </div>
-                              {/* Appliance Numbers */}
-                              {(item.upper_appliance_number || item.lower_appliance_number) && (
-                                <div className="flex items-center space-x-4 mt-1">
-                                  {item.upper_appliance_number && (
-                                    <span className="text-xs text-gray-600">
-                                      <span className="font-medium">Upper #:</span>
-                                      <span className="ml-1 font-mono text-purple-600">{item.upper_appliance_number}</span>
-                                    </span>
-                                  )}
-                                  {item.lower_appliance_number && (
-                                    <span className="text-xs text-gray-600">
-                                      <span className="font-medium">Lower #:</span>
-                                      <span className="ml-1 font-mono text-purple-600">{item.lower_appliance_number}</span>
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                              {/* Nightguard Information */}
-                              {item.is_nightguard_needed === 'yes' && (
-                                <div className="flex items-center space-x-4 mt-1">
-                                  <span className="text-xs text-gray-600">
-                                    <span className="font-medium">Nightguard Needed:</span>
-                                    <span className="ml-1 text-green-600 font-semibold">Yes</span>
-                                  </span>
-                                  {item.upper_nightguard_number && (
-                                    <span className="text-xs text-gray-600">
-                                      <span className="font-medium">Upper NG #:</span>
-                                      <span className="ml-1 font-mono text-green-600">{item.upper_nightguard_number}</span>
-                                    </span>
-                                  )}
-                                  {item.lower_nightguard_number && (
-                                    <span className="text-xs text-gray-600">
-                                      <span className="font-medium">Lower NG #:</span>
-                                      <span className="ml-1 font-mono text-green-600">{item.lower_nightguard_number}</span>
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                              {/* Status Badge */}
-                              <div className="mt-2">
-                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                                  item.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                  item.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                  item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
-                                  item.status === 'milling' ? 'bg-cyan-100 text-cyan-700' :
-                                  item.status === 'in-transit' ? 'bg-yellow-100 text-yellow-700' :
-                                  item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
-                                  item.status === 'inspection' ? 'bg-purple-100 text-purple-700' :
-                                  'bg-amber-100 text-amber-700'
-                                }`}>
-                                  {item.status === 'pending-printing' ? 'New Script' :
-                                   item.status === 'pending-milling' ? 'New Script' :
-                                   item.status === 'in-production' ? 'Printing' :
-                                   item.status === 'milling' ? 'Milling' :
-                                   item.status === 'in-transit' ? 'In Transit' :
-                                   item.status === 'quality-check' ? 'Inspection' :
-                                   item.status === 'inspection' ? 'Inspection' :
-                                   item.status === 'completed' ? 'Completed' :
-                                   item.status === 'rejected' ? 'Rejected' :
-                                   item.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                </span>
-                              </div>
-                            </div>
+                  return (
+                    <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4">
+                      <div className="flex items-center justify-between">
+                        {/* Left side - Patient info and appliance details */}
+                        <div className="flex items-center space-x-4 flex-1">
+                          {/* Manufacturing Avatar */}
+                          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Factory className="h-4 w-4 text-white" />
                           </div>
 
-                          {/* Right side - Action Buttons */}
-                          <div className="ml-4 flex flex-col gap-2">
-                            {renderActionButtons()}
-                            {/* View Details Button - Always visible */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewManufacturingScript(item)}
-                              className="border-2 border-gray-400 text-gray-700 hover:border-gray-600 hover:text-gray-900 hover:bg-gray-50 px-4 py-2 text-sm font-semibold"
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </Button>
+                          {/* Patient Details */}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-sm font-semibold text-gray-900 truncate">{item.patient_name}</h3>
+                            <div className="flex items-center space-x-4 mt-1">
+                              {/* Appliance Types */}
+                              {item.upper_appliance_type && (
+                                <span className="text-xs text-gray-600">
+                                  <span className="font-medium">Upper:</span> {upperAppliance}
+                                </span>
+                              )}
+                              {item.lower_appliance_type && (
+                                <span className="text-xs text-gray-600">
+                                  <span className="font-medium">Lower:</span> {lowerAppliance}
+                                </span>
+                              )}
+                              {/* Shade */}
+                              <span className="text-xs text-gray-600">
+                                <span className="font-medium">Shade:</span> {item.shade}
+                              </span>
+                            </div>
+                            {/* Appliance Numbers */}
+                            {(item.upper_appliance_number || item.lower_appliance_number) && (
+                              <div className="flex items-center space-x-4 mt-1">
+                                {item.upper_appliance_number && (
+                                  <span className="text-xs text-gray-600">
+                                    <span className="font-medium">Upper #:</span>
+                                    <span className="ml-1 font-mono text-purple-600">{item.upper_appliance_number}</span>
+                                  </span>
+                                )}
+                                {item.lower_appliance_number && (
+                                  <span className="text-xs text-gray-600">
+                                    <span className="font-medium">Lower #:</span>
+                                    <span className="ml-1 font-mono text-purple-600">{item.lower_appliance_number}</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {/* Nightguard Information */}
+                            {item.is_nightguard_needed === 'yes' && (
+                              <div className="flex items-center space-x-4 mt-1">
+                                <span className="text-xs text-gray-600">
+                                  <span className="font-medium">Nightguard Needed:</span>
+                                  <span className="ml-1 text-green-600 font-semibold">Yes</span>
+                                </span>
+                                {item.upper_nightguard_number && (
+                                  <span className="text-xs text-gray-600">
+                                    <span className="font-medium">Upper NG #:</span>
+                                    <span className="ml-1 font-mono text-green-600">{item.upper_nightguard_number}</span>
+                                  </span>
+                                )}
+                                {item.lower_nightguard_number && (
+                                  <span className="text-xs text-gray-600">
+                                    <span className="font-medium">Lower NG #:</span>
+                                    <span className="ml-1 font-mono text-green-600">{item.lower_nightguard_number}</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {/* Status Badge */}
+                            <div className="mt-2">
+                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                item.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                  item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
+                                    item.status === 'milling' ? 'bg-cyan-100 text-cyan-700' :
+                                      item.status === 'in-transit' ? 'bg-yellow-100 text-yellow-700' :
+                                        item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
+                                          item.status === 'inspection' ? 'bg-purple-100 text-purple-700' :
+                                            'bg-amber-100 text-amber-700'
+                                }`}>
+                                {item.status === 'pending-printing' ? 'New Script' :
+                                  item.status === 'pending-milling' ? 'New Script' :
+                                    item.status === 'in-production' ? 'Printing' :
+                                      item.status === 'milling' ? 'Milling' :
+                                        item.status === 'in-transit' ? 'In Transit' :
+                                          item.status === 'quality-check' ? 'Inspection' :
+                                            item.status === 'inspection' ? 'Inspection' :
+                                              item.status === 'completed' ? 'Completed' :
+                                                item.status === 'rejected' ? 'Rejected' :
+                                                  item.status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Additional info for completed items */}
-                        {item.status === 'completed' && (
-                          <div className="mt-4 pt-4 border-t border-gray-200">
-                            <div className="grid grid-cols-2 gap-4">
-                              {/* Left column - Printing info */}
-                              <div className="space-y-2">
-                                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Printing Details</h4>
-                                {item.printing_completed_by_name && (
-                                  <div className="flex items-center text-xs text-gray-600">
-                                    <User className="h-3 w-3 mr-2 text-gray-400" />
-                                    <span className="font-medium">Printed by:</span>
-                                    <span className="ml-1">{item.printing_completed_by_name}</span>
-                                  </div>
-                                )}
-                                {item.printing_completed_at && (
-                                  <div className="flex items-center text-xs text-gray-600">
-                                    <Clock className="h-3 w-3 mr-2 text-gray-400" />
-                                    <span className="font-medium">Completed:</span>
-                                    <span className="ml-1">
-                                      {new Date(item.printing_completed_at).toLocaleString('en-US', {
-                                        timeZone: 'America/New_York',
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric',
-                                        hour: 'numeric',
-                                        minute: '2-digit',
-                                        hour12: true
-                                      })}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
+                        {/* Right side - Action Buttons */}
+                        <div className="ml-4 flex flex-col gap-2">
+                          {renderActionButtons()}
+                          {/* View Details Button - Always visible */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewManufacturingScript(item)}
+                            className="border-2 border-gray-400 text-gray-700 hover:border-gray-600 hover:text-gray-900 hover:bg-gray-50 px-4 py-2 text-sm font-semibold"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Button>
+                        </div>
+                      </div>
 
-                              {/* Right column - Inspection info */}
-                              <div className="space-y-2">
-                                <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Inspection Details</h4>
-                                {item.inspection_status && (
-                                  <div className="flex items-center text-xs">
-                                    <CheckCircle className={`h-3 w-3 mr-2 ${item.inspection_status === 'approved' ? 'text-green-500' : 'text-red-500'}`} />
-                                    <span className="font-medium">Status:</span>
-                                    <span className={`ml-1 font-semibold ${item.inspection_status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
-                                      {item.inspection_status === 'approved' ? 'Approved' : 'Rejected'}
-                                    </span>
-                                  </div>
-                                )}
-                                {item.inspection_completed_by_name && (
-                                  <div className="flex items-center text-xs text-gray-600">
-                                    <User className="h-3 w-3 mr-2 text-gray-400" />
-                                    <span className="font-medium">Inspected by:</span>
-                                    <span className="ml-1">{item.inspection_completed_by_name}</span>
-                                  </div>
-                                )}
-                                {item.inspection_completed_at && (
-                                  <div className="flex items-center text-xs text-gray-600">
-                                    <Clock className="h-3 w-3 mr-2 text-gray-400" />
-                                    <span className="font-medium">Completed:</span>
-                                    <span className="ml-1">
-                                      {new Date(item.inspection_completed_at).toLocaleString('en-US', {
-                                        timeZone: 'America/New_York',
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric',
-                                        hour: 'numeric',
-                                        minute: '2-digit',
-                                        hour12: true
-                                      })}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
+                      {/* Additional info for completed items */}
+                      {item.status === 'completed' && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Left column - Printing info */}
+                            <div className="space-y-2">
+                              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Printing Details</h4>
+                              {item.printing_completed_by_name && (
+                                <div className="flex items-center text-xs text-gray-600">
+                                  <User className="h-3 w-3 mr-2 text-gray-400" />
+                                  <span className="font-medium">Printed by:</span>
+                                  <span className="ml-1">{item.printing_completed_by_name}</span>
+                                </div>
+                              )}
+                              {item.printing_completed_at && (
+                                <div className="flex items-center text-xs text-gray-600">
+                                  <Clock className="h-3 w-3 mr-2 text-gray-400" />
+                                  <span className="font-medium">Completed:</span>
+                                  <span className="ml-1">
+                                    {new Date(item.printing_completed_at).toLocaleString('en-US', {
+                                      timeZone: 'America/New_York',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Right column - Inspection info */}
+                            <div className="space-y-2">
+                              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Inspection Details</h4>
+                              {item.inspection_status && (
+                                <div className="flex items-center text-xs">
+                                  <CheckCircle className={`h-3 w-3 mr-2 ${item.inspection_status === 'approved' ? 'text-green-500' : 'text-red-500'}`} />
+                                  <span className="font-medium">Status:</span>
+                                  <span className={`ml-1 font-semibold ${item.inspection_status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
+                                    {item.inspection_status === 'approved' ? 'Approved' : 'Rejected'}
+                                  </span>
+                                </div>
+                              )}
+                              {item.inspection_completed_by_name && (
+                                <div className="flex items-center text-xs text-gray-600">
+                                  <User className="h-3 w-3 mr-2 text-gray-400" />
+                                  <span className="font-medium">Inspected by:</span>
+                                  <span className="ml-1">{item.inspection_completed_by_name}</span>
+                                </div>
+                              )}
+                              {item.inspection_completed_at && (
+                                <div className="flex items-center text-xs text-gray-600">
+                                  <Clock className="h-3 w-3 mr-2 text-gray-400" />
+                                  <span className="font-medium">Completed:</span>
+                                  <span className="ml-1">
+                                    {new Date(item.inspection_completed_at).toLocaleString('en-US', {
+                                      timeZone: 'America/New_York',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="text-center py-12">
@@ -873,13 +869,13 @@ export function ManufacturingPage() {
               </h3>
               <p className="text-gray-500 mb-4">
                 {activeFilter === "new-script" ? "No new manufacturing scripts found." :
-                 activeFilter === "printing" ? "No items currently printing." :
-                 activeFilter === "milling" ? "No items currently in milling." :
-                 activeFilter === "in-transit" ? "No items currently in transit." :
-                 activeFilter === "inspection" ? "No items currently in inspection." :
-                 activeFilter === "incomplete" ? "No incomplete manufacturing items found." :
-                 activeFilter === "completed" ? "No completed manufacturing items found." :
-                 "No manufacturing items available at the moment."}
+                  activeFilter === "printing" ? "No items currently printing." :
+                    activeFilter === "milling" ? "No items currently in milling." :
+                      activeFilter === "in-transit" ? "No items currently in transit." :
+                        activeFilter === "inspection" ? "No items currently in inspection." :
+                          activeFilter === "incomplete" ? "No incomplete manufacturing items found." :
+                            activeFilter === "completed" ? "No completed manufacturing items found." :
+                              "No manufacturing items available at the moment."}
               </p>
               <Button
                 onClick={() => window.location.href = '/report-cards'}
@@ -917,8 +913,8 @@ export function ManufacturingPage() {
 
       {/* Start Milling Dialog */}
       <Dialog open={showMillingDialog} onOpenChange={setShowMillingDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-6 py-4 border-b border-gray-100">
             <DialogTitle className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Settings className="h-6 w-6 text-blue-600" />
@@ -932,7 +928,7 @@ export function ManufacturingPage() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="p-6">
+          <div className="flex-1 overflow-y-auto px-6 py-4">
             <div className="space-y-4">
               {/* Appliance Summary */}
               {selectedMillingItem && (
@@ -1135,15 +1131,13 @@ export function ManufacturingPage() {
                   <button
                     type="button"
                     onClick={() => setStainedAndGlazed(stainedAndGlazed === "yes" ? "" : "yes")}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${
-                      stainedAndGlazed === "yes"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${stainedAndGlazed === "yes"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                      }`}
                   >
-                    <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      stainedAndGlazed === "yes" ? "border-white" : "border-gray-400"
-                    }`}>
+                    <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${stainedAndGlazed === "yes" ? "border-white" : "border-gray-400"
+                      }`}>
                       {stainedAndGlazed === "yes" && (
                         <div className="w-1.5 h-1.5 bg-white rounded-full" />
                       )}
@@ -1153,15 +1147,13 @@ export function ManufacturingPage() {
                   <button
                     type="button"
                     onClick={() => setStainedAndGlazed(stainedAndGlazed === "no" ? "" : "no")}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${
-                      stainedAndGlazed === "no"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                    }`}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${stainedAndGlazed === "no"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                      }`}
                   >
-                    <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      stainedAndGlazed === "no" ? "border-white" : "border-gray-400"
-                    }`}>
+                    <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${stainedAndGlazed === "no" ? "border-white" : "border-gray-400"
+                      }`}>
                       {stainedAndGlazed === "no" && (
                         <div className="w-1.5 h-1.5 bg-white rounded-full" />
                       )}
@@ -1181,15 +1173,13 @@ export function ManufacturingPage() {
                     <button
                       type="button"
                       onClick={() => setCementation(cementation === "yes" ? "" : "yes")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${
-                        cementation === "yes"
-                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                      }`}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${cementation === "yes"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                        }`}
                     >
-                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        cementation === "yes" ? "border-white" : "border-gray-400"
-                      }`}>
+                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${cementation === "yes" ? "border-white" : "border-gray-400"
+                        }`}>
                         {cementation === "yes" && (
                           <div className="w-1.5 h-1.5 bg-white rounded-full" />
                         )}
@@ -1199,15 +1189,13 @@ export function ManufacturingPage() {
                     <button
                       type="button"
                       onClick={() => setCementation(cementation === "no" ? "" : "no")}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${
-                        cementation === "no"
-                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-                      }`}
+                      className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border whitespace-nowrap flex items-center gap-2 ${cementation === "no"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                        }`}
                     >
-                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        cementation === "no" ? "border-white" : "border-gray-400"
-                      }`}>
+                      <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${cementation === "no" ? "border-white" : "border-gray-400"
+                        }`}>
                         {cementation === "no" && (
                           <div className="w-1.5 h-1.5 bg-white rounded-full" />
                         )}
@@ -1231,58 +1219,59 @@ export function ManufacturingPage() {
                   className="mt-1 min-h-[80px]"
                 />
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end pt-4">
-                <Button
-                  onClick={async () => {
-                    if (millingLocation && selectedMillingItem) {
-                      try {
-                        // Update manufacturing item with milling details
-                        await updateManufacturingItemWithMillingDetails(
-                          selectedMillingItem.id,
-                          'milling',
-                          {
-                            milling_location: millingLocation,
-                            gingiva_color: gingivaColor,
-                            stained_and_glazed: stainedAndGlazed,
-                            cementation: cementation,
-                            additional_notes: additionalNotes
-                          }
-                        );
-
-                        // Create milling form record
-                        await createMillingForm({
-                          manufacturing_item_id: selectedMillingItem.id,
-                          patient_name: selectedMillingItem.patient_name,
-                          milling_location: millingLocation as 'in-house' | 'micro-dental-lab' | 'haus-milling' | 'evolution-dental-lab',
-                          gingiva_color: gingivaColor as 'light' | 'medium' | 'custom' | undefined,
-                          stained_and_glazed: stainedAndGlazed as 'yes' | 'no' | undefined,
-                          cementation: cementation as 'yes' | 'no' | undefined,
-                          additional_notes: additionalNotes || undefined,
-                          upper_appliance_type: selectedMillingItem.upper_appliance_type,
-                          lower_appliance_type: selectedMillingItem.lower_appliance_type,
-                          upper_appliance_number: selectedMillingItem.upper_appliance_number,
-                          lower_appliance_number: selectedMillingItem.lower_appliance_number,
-                          shade: selectedMillingItem.shade,
-                          screw: selectedMillingItem.screw,
-                          material: selectedMillingItem.material,
-                          arch_type: selectedMillingItem.arch_type
-                        });
-
-                        setShowMillingDialog(false);
-                      } catch (error) {
-                        // Error is handled by the hooks
-                      }
-                    }
-                  }}
-                  disabled={!millingLocation}
-                  className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Start Milling
-                </Button>
-              </div>
             </div>
+          </div>
+
+          <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <Button
+              onClick={async () => {
+                if (millingLocation && selectedMillingItem) {
+                  try {
+                    // Update manufacturing item with milling details
+                    await updateManufacturingItemWithMillingDetails(
+                      selectedMillingItem.id,
+                      'milling',
+                      {
+                        milling_location: millingLocation,
+                        gingiva_color: gingivaColor,
+                        stained_and_glazed: stainedAndGlazed,
+                        cementation: cementation,
+                        additional_notes: additionalNotes
+                      }
+                    );
+
+                    // Create milling form record
+                    await createMillingForm({
+                      manufacturing_item_id: selectedMillingItem.id,
+                      patient_name: selectedMillingItem.patient_name,
+                      milling_location: millingLocation,
+                      gingiva_color: (gingivaColor || undefined) as 'light' | 'medium' | 'custom' | undefined,
+                      stained_and_glazed: (stainedAndGlazed || undefined) as 'yes' | 'no' | undefined,
+                      cementation: (cementation || undefined) as 'yes' | 'no' | undefined,
+                      additional_notes: additionalNotes || undefined,
+                      upper_appliance_type: selectedMillingItem.upper_appliance_type,
+                      lower_appliance_type: selectedMillingItem.lower_appliance_type,
+                      upper_appliance_number: selectedMillingItem.upper_appliance_number,
+                      lower_appliance_number: selectedMillingItem.lower_appliance_number,
+                      shade: selectedMillingItem.shade,
+                      screw: selectedMillingItem.screw,
+                      material: selectedMillingItem.material,
+                      arch_type: selectedMillingItem.arch_type
+                    });
+
+                    toast.success('Milling started successfully');
+                    setShowMillingDialog(false);
+                  } catch (error: any) {
+                    console.error("Error starting milling:", error);
+                    toast.error(error.message || "Failed to start milling process");
+                  }
+                }
+              }}
+              disabled={!millingLocation}
+              className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Start Milling
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1456,12 +1445,12 @@ export function ManufacturingPage() {
                       <span className="text-green-700">Current Status:</span>
                       <span className="ml-2 font-medium text-green-900">
                         {selectedViewItem.status === 'milling' ? 'In Milling' :
-                         selectedViewItem.status === 'in-transit' ? 'In Transit' :
-                         selectedViewItem.status === 'quality-check' ? 'Quality Check' :
-                         selectedViewItem.status === 'inspection' ? 'Inspection' :
-                         selectedViewItem.status === 'completed' ? 'Completed' :
-                         selectedViewItem.status === 'rejected' ? 'Rejected' :
-                         selectedViewItem.status.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          selectedViewItem.status === 'in-transit' ? 'In Transit' :
+                            selectedViewItem.status === 'quality-check' ? 'Quality Check' :
+                              selectedViewItem.status === 'inspection' ? 'Inspection' :
+                                selectedViewItem.status === 'completed' ? 'Completed' :
+                                  selectedViewItem.status === 'rejected' ? 'Rejected' :
+                                    selectedViewItem.status.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                       </span>
                     </div>
                     <div>
@@ -1738,11 +1727,10 @@ export function ManufacturingPage() {
                     <div className="mb-4 p-3 bg-white rounded-lg border-2 border-purple-200">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-purple-700">Inspection Status</span>
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                          selectedReportItem.inspection_status === 'approved'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${selectedReportItem.inspection_status === 'approved'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
+                          }`}>
                           {selectedReportItem.inspection_status === 'approved' ? '✓ APPROVED' : '✗ REJECTED'}
                         </span>
                       </div>
@@ -1754,41 +1742,37 @@ export function ManufacturingPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="flex items-center justify-between p-2 bg-white rounded border border-purple-200">
                           <span className="text-sm text-purple-700">Print Quality</span>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${
-                            selectedReportItem.inspection_print_quality === 'pass'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${selectedReportItem.inspection_print_quality === 'pass'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                            }`}>
                             {selectedReportItem.inspection_print_quality === 'pass' ? 'PASS' : 'FAIL'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between p-2 bg-white rounded border border-purple-200">
                           <span className="text-sm text-purple-700">Physical Defects</span>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${
-                            selectedReportItem.inspection_physical_defects === 'pass'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${selectedReportItem.inspection_physical_defects === 'pass'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                            }`}>
                             {selectedReportItem.inspection_physical_defects === 'pass' ? 'PASS' : 'FAIL'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between p-2 bg-white rounded border border-purple-200">
                           <span className="text-sm text-purple-700">Screw Access Channel</span>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${
-                            selectedReportItem.inspection_screw_access_channel === 'pass'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${selectedReportItem.inspection_screw_access_channel === 'pass'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                            }`}>
                             {selectedReportItem.inspection_screw_access_channel === 'pass' ? 'PASS' : 'FAIL'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between p-2 bg-white rounded border border-purple-200">
                           <span className="text-sm text-purple-700">MUA Platform</span>
-                          <span className={`px-2 py-1 rounded text-xs font-bold ${
-                            selectedReportItem.inspection_mua_platform === 'pass'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}>
+                          <span className={`px-2 py-1 rounded text-xs font-bold ${selectedReportItem.inspection_mua_platform === 'pass'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                            }`}>
                             {selectedReportItem.inspection_mua_platform === 'pass' ? 'PASS' : 'FAIL'}
                           </span>
                         </div>

@@ -5240,10 +5240,10 @@ export function PatientProfilePage() {
                         <Badge
                           variant="outline"
                           className={`font-medium text-xs ${patient.status === 'ACTIVE'
-                              ? 'bg-green-50 border-green-200 text-green-700'
-                              : patient.status === 'INACTIVE'
-                                ? 'bg-red-50 border-red-200 text-red-700'
-                                : 'bg-blue-50 border-blue-200 text-blue-700'
+                            ? 'bg-green-50 border-green-200 text-green-700'
+                            : patient.status === 'INACTIVE'
+                              ? 'bg-red-50 border-red-200 text-red-700'
+                              : 'bg-blue-50 border-blue-200 text-blue-700'
                             }`}
                         >
                           {patient.status}
@@ -5262,16 +5262,16 @@ export function PatientProfilePage() {
                         <Badge
                           variant="outline"
                           className={`font-medium text-xs ${patient.treatment_status === 'Treatment Not Started'
-                              ? 'bg-gray-50 border-gray-200 text-gray-700'
-                              : patient.treatment_status === 'Treatment In Progress'
-                                ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                : patient.treatment_status === 'Treatment Completed'
-                                  ? 'bg-green-50 border-green-200 text-green-700'
-                                  : patient.treatment_status === 'Patient Deceased'
-                                    ? 'bg-black border-gray-800 text-white'
-                                    : patient.treatment_status === 'Dismissed DNC'
-                                      ? 'bg-red-50 border-red-200 text-red-700'
-                                      : 'bg-gray-50 border-gray-200 text-gray-700'
+                            ? 'bg-gray-50 border-gray-200 text-gray-700'
+                            : patient.treatment_status === 'Treatment In Progress'
+                              ? 'bg-blue-50 border-blue-200 text-blue-700'
+                              : patient.treatment_status === 'Treatment Completed'
+                                ? 'bg-green-50 border-green-200 text-green-700'
+                                : patient.treatment_status === 'Patient Deceased'
+                                  ? 'bg-black border-gray-800 text-white'
+                                  : patient.treatment_status === 'Dismissed DNC'
+                                    ? 'bg-red-50 border-red-200 text-red-700'
+                                    : 'bg-gray-50 border-gray-200 text-gray-700'
                             }`}
                         >
                           {patient.treatment_status || 'No Treatment Status'}
@@ -5301,15 +5301,15 @@ export function PatientProfilePage() {
                           <span className="font-medium text-blue-800">App:</span>
                           <div className="flex items-center gap-1">
                             <span className={`px-1 py-0.5 rounded text-xs font-medium ${patient.upper_treatment && patient.upper_treatment !== "NO TREATMENT"
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-gray-100 text-gray-500'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-500'
                               }`}>
                               U
                             </span>
                             <span className="text-gray-400">|</span>
                             <span className={`px-1 py-0.5 rounded text-xs font-medium ${patient.lower_treatment && patient.lower_treatment !== "NO TREATMENT"
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-gray-100 text-gray-500'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-500'
                               }`}>
                               L
                             </span>
@@ -5703,8 +5703,8 @@ export function PatientProfilePage() {
                                       key={index}
                                       variant={condition.critical ? "destructive" : "secondary"}
                                       className={`text-xs ${condition.critical
-                                          ? 'bg-red-100 text-red-800 border-red-300'
-                                          : 'bg-blue-100 text-blue-800 border-blue-300'
+                                        ? 'bg-red-100 text-red-800 border-red-300'
+                                        : 'bg-blue-100 text-blue-800 border-blue-300'
                                         }`}
                                     >
                                       {condition.critical && <AlertTriangle className="h-3 w-3 mr-1 inline" />}
@@ -6107,10 +6107,10 @@ export function PatientProfilePage() {
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
                                   <div className={`w-3 h-3 rounded-full ${appointment.status === 'confirmed' ? 'bg-green-500' :
-                                      appointment.status === 'not-confirmed' ? 'bg-orange-500' :
-                                        appointment.status === 'cancelled' ? 'bg-red-500' :
-                                          appointment.status === 'pending' ? 'bg-yellow-500' :
-                                            'bg-gray-400'
+                                    appointment.status === 'not-confirmed' ? 'bg-orange-500' :
+                                      appointment.status === 'cancelled' ? 'bg-red-500' :
+                                        appointment.status === 'pending' ? 'bg-yellow-500' :
+                                          'bg-gray-400'
                                     }`}></div>
                                   <h3 className="font-semibold text-gray-900">{appointment.type}</h3>
                                   <Badge variant={
@@ -6125,7 +6125,17 @@ export function PatientProfilePage() {
                                 <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                                   <div className="flex items-center gap-2">
                                     <Calendar className="h-4 w-4" />
-                                    <span>{new Date(appointment.date).toLocaleDateString()}</span>
+                                    <span>{(() => {
+                                      if (!appointment.date) return 'N/A';
+                                      // Fix: Parse date components to avoid timezone shift
+                                      const cleanDateStr = appointment.date.includes('T') ? appointment.date.split('T')[0] : appointment.date;
+                                      const [year, month, day] = cleanDateStr.split('-').map(Number);
+                                      return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+                                        day: 'numeric',
+                                        month: 'long',
+                                        year: 'numeric'
+                                      });
+                                    })()}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Clock className="h-4 w-4" />
@@ -6309,8 +6319,8 @@ export function PatientProfilePage() {
                               {/* Arch Type */}
                               <div className="col-span-1 text-center border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${script.arch_type === 'dual' ? 'bg-purple-100 text-purple-700' :
-                                    script.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
-                                      'bg-green-100 text-green-700'
+                                  script.arch_type === 'upper' ? 'bg-blue-100 text-blue-700' :
+                                    'bg-green-100 text-green-700'
                                   }`}>
                                   {script.arch_type === 'dual' ? 'Dual Arch' :
                                     script.arch_type === 'upper' ? 'Upper Arch' : 'Lower Arch'}
@@ -6337,10 +6347,10 @@ export function PatientProfilePage() {
                               {/* Status */}
                               <div className="col-span-1 border-r border-gray-300 pr-4 h-full flex items-center justify-center">
                                 <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${script.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                                    script.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                                      script.status === 'delayed' ? 'bg-red-100 text-red-700' :
-                                        script.status === 'hold' ? 'bg-purple-100 text-purple-700' :
-                                          'bg-amber-100 text-amber-700'
+                                  script.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                                    script.status === 'delayed' ? 'bg-red-100 text-red-700' :
+                                      script.status === 'hold' ? 'bg-purple-100 text-purple-700' :
+                                        'bg-amber-100 text-amber-700'
                                   }`}>
                                   {script.status}
                                 </span>
@@ -6438,9 +6448,9 @@ export function PatientProfilePage() {
                                   {/* Status Badge */}
                                   <div className="mt-2">
                                     <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${item.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                        item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
-                                          item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
-                                            'bg-amber-100 text-amber-700'
+                                      item.status === 'in-production' ? 'bg-blue-100 text-blue-700' :
+                                        item.status === 'quality-check' ? 'bg-purple-100 text-purple-700' :
+                                          'bg-amber-100 text-amber-700'
                                       }`}>
                                       {item.status === 'pending-printing' ? 'New Script' :
                                         item.status === 'in-production' ? 'Printing' :
@@ -6555,9 +6565,9 @@ export function PatientProfilePage() {
                               <div className="ml-4 flex items-center gap-3">
                                 {/* Status Badge */}
                                 <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${item.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
-                                    item.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
-                                      item.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
-                                        'bg-gray-100 text-gray-800'
+                                  item.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
+                                    item.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
+                                      'bg-gray-100 text-gray-800'
                                   }`}>
                                   {item.delivery_status === 'ready-for-delivery' ? 'Ready for Delivery' :
                                     item.delivery_status === 'patient-scheduled' ? 'Scheduled' :
@@ -6675,20 +6685,20 @@ export function PatientProfilePage() {
                               }
                             }}
                             className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors mb-1 border ${selectedDocCategory === category.id
-                                ? 'bg-blue-50 border-blue-300'
-                                : dragOverCategory === category.id
-                                  ? 'bg-green-50 border-green-400 ring-2 ring-green-300'
-                                  : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                              ? 'bg-blue-50 border-blue-300'
+                              : dragOverCategory === category.id
+                                ? 'bg-green-50 border-green-400 ring-2 ring-green-300'
+                                : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                               }`}
                           >
                             <div className="flex items-center gap-3">
                               <div className={`p-1.5 rounded-lg ${selectedDocCategory === category.id ? 'bg-blue-100' :
-                                  dragOverCategory === category.id ? 'bg-green-100' :
-                                    'bg-gray-100'
+                                dragOverCategory === category.id ? 'bg-green-100' :
+                                  'bg-gray-100'
                                 }`}>
                                 <category.icon className={`h-4 w-4 ${selectedDocCategory === category.id ? 'text-blue-600' :
-                                    dragOverCategory === category.id ? 'text-green-600' :
-                                      'text-gray-600'
+                                  dragOverCategory === category.id ? 'text-green-600' :
+                                    'text-gray-600'
                                   }`} />
                               </div>
                               <span className={`text-sm ${selectedDocCategory === category.id ? 'text-blue-700 font-medium' : 'text-gray-700'
@@ -6696,8 +6706,8 @@ export function PatientProfilePage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${selectedDocCategory === category.id
-                                  ? 'bg-blue-200 text-blue-700'
-                                  : 'bg-gray-200 text-gray-600'
+                                ? 'bg-blue-200 text-blue-700'
+                                : 'bg-gray-200 text-gray-600'
                                 }`}>
                                 {docCount}
                               </span>
@@ -6980,9 +6990,9 @@ export function PatientProfilePage() {
                                         <div className="flex items-start justify-between gap-3">
                                           <div className="flex items-start gap-3 flex-1 min-w-0">
                                             <div className={`p-2.5 rounded-xl flex-shrink-0 ${isImage ? 'bg-purple-100' :
-                                                isPdf ? 'bg-red-100' :
-                                                  isUploaded ? 'bg-blue-100' :
-                                                    'bg-gray-100'
+                                              isPdf ? 'bg-red-100' :
+                                                isUploaded ? 'bg-blue-100' :
+                                                  'bg-gray-100'
                                               }`}>
                                               {isImage ? (
                                                 <FileImage className="h-5 w-5 text-purple-600" />
@@ -7004,8 +7014,8 @@ export function PatientProfilePage() {
                                                 </span>
                                                 {isUploaded && doc.file_type && (
                                                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
-                                                      isPdf ? 'bg-red-100 text-red-700' :
-                                                        'bg-gray-100 text-gray-700'
+                                                    isPdf ? 'bg-red-100 text-red-700' :
+                                                      'bg-gray-100 text-gray-700'
                                                     }`}>
                                                     {isImage ? 'Image' : isPdf ? 'PDF' : doc.file_type.split('/')[1]?.toUpperCase() || 'FILE'}
                                                   </span>
@@ -7151,14 +7161,14 @@ export function PatientProfilePage() {
                                   <div className="flex items-start justify-between">
                                     <div className="flex items-start gap-3">
                                       <div className={`p-2.5 rounded-xl ${consultation.consultation_status === 'completed' ? 'bg-green-100' :
-                                          consultation.consultation_status === 'in_progress' ? 'bg-blue-100' :
-                                            consultation.consultation_status === 'scheduled' ? 'bg-purple-100' :
-                                              'bg-yellow-100'
+                                        consultation.consultation_status === 'in_progress' ? 'bg-blue-100' :
+                                          consultation.consultation_status === 'scheduled' ? 'bg-purple-100' :
+                                            'bg-yellow-100'
                                         }`}>
                                         <Stethoscope className={`h-5 w-5 ${consultation.consultation_status === 'completed' ? 'text-green-600' :
-                                            consultation.consultation_status === 'in_progress' ? 'text-blue-600' :
-                                              consultation.consultation_status === 'scheduled' ? 'text-purple-600' :
-                                                'text-yellow-600'
+                                          consultation.consultation_status === 'in_progress' ? 'text-blue-600' :
+                                            consultation.consultation_status === 'scheduled' ? 'text-purple-600' :
+                                              'text-yellow-600'
                                           }`} />
                                       </div>
                                       <div>
@@ -7171,9 +7181,9 @@ export function PatientProfilePage() {
                                         </h4>
                                         <div className="flex items-center gap-2 mt-1">
                                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${consultation.consultation_status === 'completed' ? 'bg-green-100 text-green-700' :
-                                              consultation.consultation_status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                                                consultation.consultation_status === 'scheduled' ? 'bg-purple-100 text-purple-700' :
-                                                  'bg-yellow-100 text-yellow-700'
+                                            consultation.consultation_status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                              consultation.consultation_status === 'scheduled' ? 'bg-purple-100 text-purple-700' :
+                                                'bg-yellow-100 text-yellow-700'
                                             }`}>
                                             {consultation.consultation_status === 'completed' ? 'Completed' :
                                               consultation.consultation_status === 'in_progress' ? 'In Progress' :
@@ -7183,8 +7193,8 @@ export function PatientProfilePage() {
                                           </span>
                                           {consultation.treatment_decision && (
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${consultation.treatment_decision === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
-                                                consultation.treatment_decision === 'not-accepted' ? 'bg-red-100 text-red-700' :
-                                                  'bg-yellow-100 text-yellow-700'
+                                              consultation.treatment_decision === 'not-accepted' ? 'bg-red-100 text-red-700' :
+                                                'bg-yellow-100 text-yellow-700'
                                               }`}>
                                               {consultation.treatment_decision === 'accepted' ? 'Accepted' :
                                                 consultation.treatment_decision === 'not-accepted' ? 'Not Accepted' :
@@ -7271,8 +7281,8 @@ export function PatientProfilePage() {
                                               Uploaded
                                             </span>
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
-                                                isPdf ? 'bg-red-100 text-red-700' :
-                                                  'bg-gray-100 text-gray-700'
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                                'bg-gray-100 text-gray-700'
                                               }`}>
                                               {getFileTypeLabel()}
                                             </span>
@@ -7413,7 +7423,7 @@ export function PatientProfilePage() {
                                         <h4 className="text-sm font-semibold text-gray-900">New Patient Packet</h4>
                                         <div className="flex items-center gap-2 mt-1">
                                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${packet.form_status === 'completed' ? 'bg-green-100 text-green-700' :
-                                              packet.form_status === 'reviewed' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                                            packet.form_status === 'reviewed' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
                                             }`}>
                                             {packet.form_status === 'completed' ? 'Completed' : packet.form_status === 'reviewed' ? 'Reviewed' : 'Submitted'}
                                           </span>
@@ -7942,8 +7952,8 @@ export function PatientProfilePage() {
                                               Uploaded
                                             </span>
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
-                                                isPdf ? 'bg-red-100 text-red-700' :
-                                                  'bg-gray-100 text-gray-700'
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                                'bg-gray-100 text-gray-700'
                                               }`}>
                                               {getFileTypeLabel()}
                                             </span>
@@ -8173,8 +8183,8 @@ export function PatientProfilePage() {
                                               Uploaded
                                             </span>
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
-                                                isPdf ? 'bg-red-100 text-red-700' :
-                                                  'bg-gray-100 text-gray-700'
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                                'bg-gray-100 text-gray-700'
                                               }`}>
                                               {getFileTypeLabel()}
                                             </span>
@@ -8415,8 +8425,8 @@ export function PatientProfilePage() {
                                               Uploaded
                                             </span>
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
-                                                isPdf ? 'bg-red-100 text-red-700' :
-                                                  'bg-gray-100 text-gray-700'
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                                'bg-gray-100 text-gray-700'
                                               }`}>
                                               {getFileTypeLabel()}
                                             </span>
@@ -8807,8 +8817,8 @@ export function PatientProfilePage() {
                                               Uploaded
                                             </span>
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
-                                                isPdf ? 'bg-red-100 text-red-700' :
-                                                  'bg-gray-100 text-gray-700'
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                                'bg-gray-100 text-gray-700'
                                               }`}>
                                               {getFileTypeLabel()}
                                             </span>
@@ -8962,8 +8972,8 @@ export function PatientProfilePage() {
                                               Uploaded
                                             </span>
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isImage ? 'bg-purple-100 text-purple-700' :
-                                                isPdf ? 'bg-red-100 text-red-700' :
-                                                  'bg-gray-100 text-gray-700'
+                                              isPdf ? 'bg-red-100 text-red-700' :
+                                                'bg-gray-100 text-gray-700'
                                               }`}>
                                               {getFileTypeLabel()}
                                             </span>
@@ -9192,10 +9202,10 @@ export function PatientProfilePage() {
                   {/* Drag & Drop Zone */}
                   <div
                     className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${dragActive
-                        ? 'border-blue-500 bg-blue-50'
-                        : selectedFile
-                          ? 'border-green-300 bg-green-50'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                      ? 'border-blue-500 bg-blue-50'
+                      : selectedFile
+                        ? 'border-green-300 bg-green-50'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                       }`}
                     onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                     onDragLeave={() => setDragActive(false)}
@@ -10407,7 +10417,7 @@ export function PatientProfilePage() {
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                       <div className={`w-2 h-2 rounded-full ${packet.form_status === 'completed' ? 'bg-green-500' :
-                                          packet.form_status === 'reviewed' ? 'bg-blue-500' : 'bg-orange-500'
+                                        packet.form_status === 'reviewed' ? 'bg-blue-500' : 'bg-orange-500'
                                         }`}></div>
                                       <span className="text-sm font-semibold text-gray-900">
                                         New Patient Packet
@@ -10416,10 +10426,10 @@ export function PatientProfilePage() {
 
                                     {/* Status Badge */}
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${packet.form_status === 'completed'
-                                        ? 'bg-green-100 text-green-800 border border-green-200'
-                                        : packet.form_status === 'reviewed'
-                                          ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                                          : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                      ? 'bg-green-100 text-green-800 border border-green-200'
+                                      : packet.form_status === 'reviewed'
+                                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                        : 'bg-orange-100 text-orange-800 border border-orange-200'
                                       }`}>
                                       {packet.form_status === 'completed' ? 'Completed' :
                                         packet.form_status === 'reviewed' ? 'Reviewed' : 'Draft'}
@@ -10533,8 +10543,8 @@ export function PatientProfilePage() {
                                       </span>
                                     </div>
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${agreement.status === 'completed'
-                                        ? 'bg-green-100 text-green-800 border border-green-200'
-                                        : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                      ? 'bg-green-100 text-green-800 border border-green-200'
+                                      : 'bg-orange-100 text-orange-800 border border-orange-200'
                                       }`}>
                                       {agreement.status === 'completed' ? 'Completed' : 'Draft'}
                                     </span>
@@ -10705,14 +10715,14 @@ export function PatientProfilePage() {
                                         <div className="flex items-center justify-between mb-2">
                                           <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
-                                                form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                              form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                               }`}></div>
                                             <span className="text-sm font-semibold text-gray-900">
                                               Consent Packet
                                             </span>
                                           </div>
                                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                              form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                            form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                                             }`}>
                                             {form.status === 'signed' ? 'Signed' :
                                               form.status === 'completed' ? 'Completed' : 'Draft'}
@@ -10863,14 +10873,14 @@ export function PatientProfilePage() {
                                         <div className="flex items-center justify-between mb-2">
                                           <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${form.status === 'completed' ? 'bg-green-500' :
-                                                form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
+                                              form.status === 'submitted' ? 'bg-blue-500' : 'bg-orange-500'
                                               }`}></div>
                                             <span className="text-sm font-semibold text-gray-900">
                                               Medical Records Release Form
                                             </span>
                                           </div>
                                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${form.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                              form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                            form.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
                                             }`}>
                                             {form.status === 'completed' ? 'Completed' :
                                               form.status === 'submitted' ? 'Submitted' : 'Draft'}
@@ -10998,14 +11008,14 @@ export function PatientProfilePage() {
                                         <div className="flex items-start justify-between mb-2">
                                           <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
-                                                form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                              form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                               }`}></div>
                                             <span className="text-sm font-semibold text-gray-900">
                                               Informed Consent - Nicotine Use Form
                                             </span>
                                           </div>
                                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
-                                              form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                            form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
                                             }`}>
                                             {form.status === 'signed' ? 'Signed' :
                                               form.status === 'completed' ? 'Completed' : 'Draft'}
@@ -11164,14 +11174,14 @@ export function PatientProfilePage() {
                                         <div className="flex items-center justify-between mb-2">
                                           <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
-                                                form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                              form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                               }`}></div>
                                             <span className="text-sm font-semibold text-gray-900">
                                               Final Design Approval Form
                                             </span>
                                           </div>
                                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                              form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                            form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                                             }`}>
                                             {form.status === 'signed' ? 'Signed' :
                                               form.status === 'completed' ? 'Completed' : 'Draft'}
@@ -11333,14 +11343,14 @@ export function PatientProfilePage() {
                                         <div className="flex items-center justify-between mb-2">
                                           <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
-                                                form.status === 'submitted' ? 'bg-green-500' : 'bg-orange-500'
+                                              form.status === 'submitted' ? 'bg-green-500' : 'bg-orange-500'
                                               }`}></div>
                                             <span className="text-sm font-semibold text-gray-900">
                                               Thank You & Pre-Surgery Form
                                             </span>
                                           </div>
                                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-700' :
-                                              form.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                            form.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                                             }`}>
                                             {form.status === 'signed' ? 'Signed' :
                                               form.status === 'submitted' ? 'Submitted' : 'Draft'}
@@ -11478,7 +11488,7 @@ export function PatientProfilePage() {
                                         <div className="flex items-start justify-between mb-2">
                                           <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full ${form.status === 'signed' ? 'bg-green-500' :
-                                                form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
+                                              form.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'
                                               }`}></div>
                                             <span className="text-sm font-semibold text-gray-900">
                                               3-Year Care Package Enrollment Agreement
@@ -11487,7 +11497,7 @@ export function PatientProfilePage() {
 
                                           {/* Status Badge */}
                                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${form.status === 'signed' ? 'bg-green-100 text-green-800 border border-green-200' :
-                                              form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                            form.status === 'completed' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
                                             }`}>
                                             {form.status === 'signed' ? 'Signed' :
                                               form.status === 'completed' ? 'Completed' : 'Draft'}
@@ -11602,7 +11612,7 @@ export function PatientProfilePage() {
                                       <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${form.status === 'completed' ? 'bg-green-500' :
-                                              form.status === 'signed' ? 'bg-green-500' : 'bg-purple-500'
+                                            form.status === 'signed' ? 'bg-green-500' : 'bg-purple-500'
                                             }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             5-Year Extended Warranty Plan
@@ -11747,7 +11757,7 @@ export function PatientProfilePage() {
                                       <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                           <div className={`w-2 h-2 rounded-full ${form.status === 'completed' ? 'bg-green-500' :
-                                              form.status === 'signed' ? 'bg-green-500' : 'bg-orange-500'
+                                            form.status === 'signed' ? 'bg-green-500' : 'bg-orange-500'
                                             }`}></div>
                                           <span className="text-sm font-semibold text-gray-900">
                                             Partial Payment Agreement
@@ -12117,12 +12127,12 @@ export function PatientProfilePage() {
                                   <div className="flex flex-wrap gap-1 mb-3">
                                     {/* Consultation Status */}
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium border ${consultation.consultation_status === 'completed'
-                                        ? 'bg-green-100 text-green-800 border-green-200'
-                                        : consultation.consultation_status === 'in-progress'
-                                          ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                          : consultation.consultation_status === 'scheduled'
-                                            ? 'bg-purple-100 text-purple-800 border-purple-200'
-                                            : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                      ? 'bg-green-100 text-green-800 border-green-200'
+                                      : consultation.consultation_status === 'in-progress'
+                                        ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                        : consultation.consultation_status === 'scheduled'
+                                          ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                          : 'bg-yellow-100 text-yellow-800 border-yellow-200'
                                       }`}>
                                       {consultation.consultation_status === 'completed' ? 'Completed' :
                                         consultation.consultation_status === 'in-progress' ? 'In Progress' :
@@ -12134,12 +12144,12 @@ export function PatientProfilePage() {
                                     {/* Outcome Status (Treatment Decision) */}
                                     {consultation.treatment_decision && (
                                       <span className={`px-2 py-1 rounded-full text-xs font-medium border ${consultation.treatment_decision === 'accepted'
-                                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                          : consultation.treatment_decision === 'declined'
-                                            ? 'bg-red-100 text-red-800 border-red-200'
-                                            : consultation.treatment_decision === 'followup-required'
-                                              ? 'bg-orange-100 text-orange-800 border-orange-200'
-                                              : 'bg-purple-100 text-purple-800 border-purple-200'
+                                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                        : consultation.treatment_decision === 'declined'
+                                          ? 'bg-red-100 text-red-800 border-red-200'
+                                          : consultation.treatment_decision === 'followup-required'
+                                            ? 'bg-orange-100 text-orange-800 border-orange-200'
+                                            : 'bg-purple-100 text-purple-800 border-purple-200'
                                         }`}>
                                         {consultation.treatment_decision === 'accepted' ? 'Treatment Accepted' :
                                           consultation.treatment_decision === 'declined' ? 'Treatment Declined' :
@@ -12187,8 +12197,8 @@ export function PatientProfilePage() {
                                         <div className="flex items-center justify-between text-xs">
                                           <span className="text-gray-500">Treatment Plan:</span>
                                           <span className={`font-medium ${consultation.treatment_plan_approved
-                                              ? 'text-green-700'
-                                              : 'text-red-700'
+                                            ? 'text-green-700'
+                                            : 'text-red-700'
                                             }`}>
                                             {consultation.treatment_plan_approved ? 'Approved' : 'Not Approved'}
                                           </span>
@@ -12448,8 +12458,8 @@ export function PatientProfilePage() {
 
                                   {/* Status Badge */}
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${sheet.status === 'completed'
-                                      ? 'bg-green-100 text-green-800 border border-green-200'
-                                      : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                    ? 'bg-green-100 text-green-800 border border-green-200'
+                                    : 'bg-orange-100 text-orange-800 border border-orange-200'
                                     }`}>
                                     {sheet.status === 'completed' ? 'Completed' : 'Draft'}
                                   </span>
@@ -12621,8 +12631,8 @@ export function PatientProfilePage() {
 
                                   {/* Status Badge */}
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${sheet.status === 'completed'
-                                      ? 'bg-green-100 text-green-800 border border-green-200'
-                                      : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                    ? 'bg-green-100 text-green-800 border border-green-200'
+                                    : 'bg-orange-100 text-orange-800 border border-orange-200'
                                     }`}>
                                     {sheet.status === 'completed' ? 'Completed' : 'Draft'}
                                   </span>
@@ -12814,9 +12824,9 @@ export function PatientProfilePage() {
                 </div>
                 <div className="ml-auto">
                   <span className={`px-4 py-2 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
-                      selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
-                        selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
-                          'bg-gray-100 text-gray-800'
+                    selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
+                      selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
+                        'bg-gray-100 text-gray-800'
                     }`}>
                     {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
                       selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
@@ -12908,9 +12918,9 @@ export function PatientProfilePage() {
                       <div className="flex justify-between items-center">
                         <span className="font-medium text-green-800">Current Status:</span>
                         <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-200 text-green-900' :
-                            selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-200 text-blue-900' :
-                              selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-200 text-emerald-900' :
-                                'bg-gray-200 text-gray-900'
+                          selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-200 text-blue-900' :
+                            selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-200 text-emerald-900' :
+                              'bg-gray-200 text-gray-900'
                           }`}>
                           {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
                             selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
@@ -13236,15 +13246,15 @@ export function PatientProfilePage() {
                               onClick={() => !isDisabled && handleToggleReason(reason)}
                               disabled={isDisabled}
                               className={`flex items-center gap-2 p-2.5 rounded-lg border-2 transition-all duration-200 text-left min-h-[45px] ${isSelected
-                                  ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-md'
-                                  : isDisabled
-                                    ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
-                                    : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 cursor-pointer hover:shadow-sm'
+                                ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-md'
+                                : isDisabled
+                                  ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+                                  : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 cursor-pointer hover:shadow-sm'
                                 }`}
                             >
                               <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected
-                                  ? 'border-indigo-500 bg-indigo-500'
-                                  : 'border-gray-300'
+                                ? 'border-indigo-500 bg-indigo-500'
+                                : 'border-gray-300'
                                 }`}>
                                 {isSelected && (
                                   <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
@@ -13326,8 +13336,8 @@ export function PatientProfilePage() {
                           {/* Pre-Surgical Pictures - Balanced sizing */}
                           {dataCollectionFormData.reasonsForCollection.includes("PRE SURGICAL DATA COLLECTION") && (
                             <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.preSurgicalPictures === null
-                                ? 'border-red-300 bg-red-50 shadow-sm'
-                                : 'border-gray-200 shadow-sm hover:shadow-md'
+                              ? 'border-red-300 bg-red-50 shadow-sm'
+                              : 'border-gray-200 shadow-sm hover:shadow-md'
                               }`}>
                               <div className="flex items-center justify-between">
                                 <h5 className="text-sm font-bold text-gray-800 flex items-center gap-2">
@@ -13339,8 +13349,8 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('preSurgicalPictures', null, true)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${dataCollectionFormData.dataCollected.preSurgicalPictures === true
-                                        ? 'bg-green-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-md'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13352,8 +13362,8 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('preSurgicalPictures', null, false)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${dataCollectionFormData.dataCollected.preSurgicalPictures === false
-                                        ? 'bg-red-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-300 hover:border-red-400'
+                                      ? 'bg-red-500 text-white shadow-md'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-300 hover:border-red-400'
                                       }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13370,8 +13380,8 @@ export function PatientProfilePage() {
                           {(dataCollectionFormData.reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") ||
                             dataCollectionFormData.reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION")) && (
                               <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.surgicalPictures === null
-                                  ? 'border-red-300 bg-red-50 shadow-sm'
-                                  : 'border-gray-200 shadow-sm hover:shadow-md'
+                                ? 'border-red-300 bg-red-50 shadow-sm'
+                                : 'border-gray-200 shadow-sm hover:shadow-md'
                                 }`}>
                                 <div className="flex items-center justify-between">
                                   <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
@@ -13383,8 +13393,8 @@ export function PatientProfilePage() {
                                       type="button"
                                       onClick={() => handleDataCollectionToggle('surgicalPictures', null, true)}
                                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.surgicalPictures === true
-                                          ? 'bg-blue-500 text-white shadow-md'
-                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        ? 'bg-blue-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                                         }`}
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13396,8 +13406,8 @@ export function PatientProfilePage() {
                                       type="button"
                                       onClick={() => handleDataCollectionToggle('surgicalPictures', null, false)}
                                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.surgicalPictures === false
-                                          ? 'bg-red-500 text-white shadow-md'
-                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        ? 'bg-red-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                                         }`}
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13415,8 +13425,8 @@ export function PatientProfilePage() {
                             !dataCollectionFormData.reasonsForCollection.includes("SURGICAL DAY DATA COLLECTION") &&
                             !dataCollectionFormData.reasonsForCollection.includes("SURGICAL REVISION DATA COLLECTION") && (
                               <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.followUpPictures === null
-                                  ? 'border-red-300 bg-red-50 shadow-sm'
-                                  : 'border-gray-200 shadow-sm hover:shadow-md'
+                                ? 'border-red-300 bg-red-50 shadow-sm'
+                                : 'border-gray-200 shadow-sm hover:shadow-md'
                                 }`}>
                                 <div className="flex items-center justify-between">
                                   <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
@@ -13428,8 +13438,8 @@ export function PatientProfilePage() {
                                       type="button"
                                       onClick={() => handleDataCollectionToggle('followUpPictures', null, true)}
                                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.followUpPictures === true
-                                          ? 'bg-blue-500 text-white shadow-md'
-                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        ? 'bg-blue-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                                         }`}
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13441,8 +13451,8 @@ export function PatientProfilePage() {
                                       type="button"
                                       onClick={() => handleDataCollectionToggle('followUpPictures', null, false)}
                                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.followUpPictures === false
-                                          ? 'bg-red-500 text-white shadow-md'
-                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        ? 'bg-red-500 text-white shadow-md'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                                         }`}
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13458,8 +13468,8 @@ export function PatientProfilePage() {
                           {/* Fractured Appliance Pictures - Only show if "APPLIANCE FRACTURED" is selected */}
                           {dataCollectionFormData.reasonsForCollection.includes("APPLIANCE FRACTURED") && (
                             <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.fracturedAppliancePictures === null
-                                ? 'border-red-300 bg-red-50 shadow-sm'
-                                : 'border-gray-200 shadow-sm hover:shadow-md'
+                              ? 'border-red-300 bg-red-50 shadow-sm'
+                              : 'border-gray-200 shadow-sm hover:shadow-md'
                               }`}>
                               <div className="flex items-center justify-between">
                                 <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
@@ -13471,8 +13481,8 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('fracturedAppliancePictures', null, true)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.fracturedAppliancePictures === true
-                                        ? 'bg-blue-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                      ? 'bg-blue-500 text-white shadow-md'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                                       }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13484,8 +13494,8 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('fracturedAppliancePictures', null, false)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.fracturedAppliancePictures === false
-                                        ? 'bg-red-500 text-white shadow-md'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                      ? 'bg-red-500 text-white shadow-md'
+                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                                       }`}
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13500,8 +13510,8 @@ export function PatientProfilePage() {
 
                           {/* CBCT Section - Always show for all reason selections */}
                           <div className={`bg-white rounded-lg p-4 border-2 transition-all duration-300 ${dataCollectionFormData.dataCollected.cbctTaken === null
-                              ? 'border-red-300 bg-red-50 shadow-sm'
-                              : 'border-gray-200 shadow-sm hover:shadow-md'
+                            ? 'border-red-300 bg-red-50 shadow-sm'
+                            : 'border-gray-200 shadow-sm hover:shadow-md'
                             }`}>
                             <div className="flex items-center justify-between">
                               <h5 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
@@ -13513,8 +13523,8 @@ export function PatientProfilePage() {
                                   type="button"
                                   onClick={() => handleDataCollectionToggle('cbctTaken', null, true)}
                                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.cbctTaken === true
-                                      ? 'bg-green-500 text-white shadow-md'
-                                      : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-300 hover:border-green-400'
+                                    ? 'bg-green-500 text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-300 hover:border-green-400'
                                     }`}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13526,8 +13536,8 @@ export function PatientProfilePage() {
                                   type="button"
                                   onClick={() => handleDataCollectionToggle('cbctTaken', null, false)}
                                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.cbctTaken === false
-                                      ? 'bg-red-500 text-white shadow-md'
-                                      : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-300 hover:border-red-400'
+                                    ? 'bg-red-500 text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-300 hover:border-red-400'
                                     }`}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -13575,13 +13585,13 @@ export function PatientProfilePage() {
                                   type="button"
                                   onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'upper', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper)}
                                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper
-                                      ? 'bg-blue-500 text-white shadow-sm'
-                                      : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
+                                    ? 'bg-blue-500 text-white shadow-sm'
+                                    : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
                                     }`}
                                 >
                                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper
-                                      ? 'border-white bg-white'
-                                      : 'border-gray-400 bg-transparent'
+                                    ? 'border-white bg-white'
+                                    : 'border-gray-400 bg-transparent'
                                     }`}>
                                     {dataCollectionFormData.dataCollected.preSurgicalJawRecords.upper && (
                                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -13593,13 +13603,13 @@ export function PatientProfilePage() {
                                   type="button"
                                   onClick={() => handleDataCollectionToggle('preSurgicalJawRecords', 'lower', !dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower)}
                                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower
-                                      ? 'bg-blue-500 text-white shadow-sm'
-                                      : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
+                                    ? 'bg-blue-500 text-white shadow-sm'
+                                    : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-300 hover:border-blue-400'
                                     }`}
                                 >
                                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower
-                                      ? 'border-white bg-white'
-                                      : 'border-gray-400 bg-transparent'
+                                    ? 'border-white bg-white'
+                                    : 'border-gray-400 bg-transparent'
                                     }`}>
                                     {dataCollectionFormData.dataCollected.preSurgicalJawRecords.lower && (
                                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -13623,13 +13633,13 @@ export function PatientProfilePage() {
                                   type="button"
                                   onClick={() => handleDataCollectionToggle('facialScan', null, !dataCollectionFormData.dataCollected.facialScan)}
                                   className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.facialScan
-                                      ? 'bg-blue-500 text-white shadow-sm'
-                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                                    ? 'bg-blue-500 text-white shadow-sm'
+                                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
                                     }`}
                                 >
                                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.facialScan
-                                      ? 'border-white bg-white'
-                                      : 'border-gray-400 bg-transparent'
+                                    ? 'border-white bg-white'
+                                    : 'border-gray-400 bg-transparent'
                                     }`}>
                                     {dataCollectionFormData.dataCollected.facialScan && (
                                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -13655,13 +13665,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('jawRecords', 'upper', !dataCollectionFormData.dataCollected.jawRecords.upper)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.jawRecords.upper
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.jawRecords.upper
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.jawRecords.upper && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -13673,13 +13683,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('jawRecords', 'lower', !dataCollectionFormData.dataCollected.jawRecords.lower)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.jawRecords.lower
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.jawRecords.lower
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.jawRecords.lower && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -13701,13 +13711,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('tissueScan', 'upper', !dataCollectionFormData.dataCollected.tissueScan.upper)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.tissueScan.upper
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.tissueScan.upper
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.tissueScan.upper && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -13719,13 +13729,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('tissueScan', 'lower', !dataCollectionFormData.dataCollected.tissueScan.lower)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.tissueScan.lower
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.tissueScan.lower
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.tissueScan.lower && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -13746,13 +13756,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('photogrammetry', 'upper', !dataCollectionFormData.dataCollected.photogrammetry.upper)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.photogrammetry.upper
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.photogrammetry.upper
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.photogrammetry.upper && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -13764,13 +13774,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('photogrammetry', 'lower', !dataCollectionFormData.dataCollected.photogrammetry.lower)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.photogrammetry.lower
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.photogrammetry.lower
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.photogrammetry.lower && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -13792,13 +13802,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('dcRefScan', 'upper', !dataCollectionFormData.dataCollected.dcRefScan.upper)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.dcRefScan.upper
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.dcRefScan.upper
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.dcRefScan.upper && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -13810,13 +13820,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('dcRefScan', 'lower', !dataCollectionFormData.dataCollected.dcRefScan.lower)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.dcRefScan.lower
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.dcRefScan.lower
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.dcRefScan.lower && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -13838,13 +13848,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('appliance360', 'upper', !dataCollectionFormData.dataCollected.appliance360.upper)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.appliance360.upper
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.appliance360.upper
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.appliance360.upper && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -13856,13 +13866,13 @@ export function PatientProfilePage() {
                                     type="button"
                                     onClick={() => handleDataCollectionToggle('appliance360', 'lower', !dataCollectionFormData.dataCollected.appliance360.lower)}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${dataCollectionFormData.dataCollected.appliance360.lower
-                                        ? 'bg-green-500 text-white shadow-sm'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
+                                      ? 'bg-green-500 text-white shadow-sm'
+                                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 hover:border-green-400'
                                       }`}
                                   >
                                     <div className={`w-2.5 h-2.5 rounded-full border-2 flex items-center justify-center ${dataCollectionFormData.dataCollected.appliance360.lower
-                                        ? 'border-white bg-white'
-                                        : 'border-gray-400 bg-transparent'
+                                      ? 'border-white bg-white'
+                                      : 'border-gray-400 bg-transparent'
                                       }`}>
                                       {dataCollectionFormData.dataCollected.appliance360.lower && (
                                         <div className="w-1 h-1 bg-green-500 rounded-full"></div>
@@ -14081,8 +14091,8 @@ export function PatientProfilePage() {
                               <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.pre_surgical_pictures ? 'bg-green-500' : 'bg-red-500'
                                 }`}></div>
                               <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.pre_surgical_pictures
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
                                 }`}>
                                 {selectedDataCollectionSheet.pre_surgical_pictures ? 'Collected' : 'Not Collected'}
                               </span>
@@ -14096,8 +14106,8 @@ export function PatientProfilePage() {
                               <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.surgical_pictures ? 'bg-green-500' : 'bg-red-500'
                                 }`}></div>
                               <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.surgical_pictures
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
                                 }`}>
                                 {selectedDataCollectionSheet.surgical_pictures ? 'Collected' : 'Not Collected'}
                               </span>
@@ -14111,8 +14121,8 @@ export function PatientProfilePage() {
                               <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.follow_up_pictures ? 'bg-green-500' : 'bg-red-500'
                                 }`}></div>
                               <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.follow_up_pictures
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
                                 }`}>
                                 {selectedDataCollectionSheet.follow_up_pictures ? 'Collected' : 'Not Collected'}
                               </span>
@@ -14126,8 +14136,8 @@ export function PatientProfilePage() {
                               <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.fractured_appliance_pictures ? 'bg-green-500' : 'bg-red-500'
                                 }`}></div>
                               <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.fractured_appliance_pictures
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
                                 }`}>
                                 {selectedDataCollectionSheet.fractured_appliance_pictures ? 'Collected' : 'Not Collected'}
                               </span>
@@ -14141,8 +14151,8 @@ export function PatientProfilePage() {
                               <div className={`w-2 h-2 rounded-full ${selectedDataCollectionSheet.cbct_taken ? 'bg-green-500' : 'bg-red-500'
                                 }`}></div>
                               <span className={`text-xs px-3 py-1 rounded-full font-semibold ${selectedDataCollectionSheet.cbct_taken
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
                                 }`}>
                                 {selectedDataCollectionSheet.cbct_taken ? 'Yes' : 'No'}
                               </span>
@@ -14525,8 +14535,8 @@ export function PatientProfilePage() {
                                 <button
                                   type="button"
                                   className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${ivSedationFormData.upperSurgeryType === "Surgery"
-                                      ? 'bg-blue-600 text-white shadow-md'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
                                     }`}
                                   onClick={() => updateIVSedationFormField('upperSurgeryType', 'Surgery')}
                                 >
@@ -14535,8 +14545,8 @@ export function PatientProfilePage() {
                                 <button
                                   type="button"
                                   className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${ivSedationFormData.upperSurgeryType === "Surgical Revision"
-                                      ? 'bg-blue-600 text-white shadow-md'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
                                     }`}
                                   onClick={() => updateIVSedationFormField('upperSurgeryType', 'Surgical Revision')}
                                 >
@@ -14583,8 +14593,8 @@ export function PatientProfilePage() {
                                 <button
                                   type="button"
                                   className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${ivSedationFormData.lowerSurgeryType === "Surgery"
-                                      ? 'bg-blue-600 text-white shadow-md'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
                                     }`}
                                   onClick={() => updateIVSedationFormField('lowerSurgeryType', 'Surgery')}
                                 >
@@ -14593,8 +14603,8 @@ export function PatientProfilePage() {
                                 <button
                                   type="button"
                                   className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${ivSedationFormData.lowerSurgeryType === "Surgical Revision"
-                                      ? 'bg-blue-600 text-white shadow-md'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400'
                                     }`}
                                   onClick={() => updateIVSedationFormField('lowerSurgeryType', 'Surgical Revision')}
                                 >
@@ -14760,9 +14770,9 @@ export function PatientProfilePage() {
                                       BMI (kg/m²)
                                     </div>
                                     <div className={`mt-2 px-2 py-1 rounded text-xs font-medium ${bmi < 18.5 ? 'bg-blue-100 text-blue-700' :
-                                        bmi < 25 ? 'bg-green-100 text-green-700' :
-                                          bmi < 30 ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-red-100 text-red-700'
+                                      bmi < 25 ? 'bg-green-100 text-green-700' :
+                                        bmi < 30 ? 'bg-yellow-100 text-yellow-700' :
+                                          'bg-red-100 text-red-700'
                                       }`}>
                                       {bmi < 18.5 ? 'Underweight' :
                                         bmi < 25 ? 'Normal' :
@@ -14810,8 +14820,8 @@ export function PatientProfilePage() {
 
                                   return (
                                     <div className={`px-4 py-2 rounded-lg font-bold text-lg ${isObese
-                                        ? 'bg-red-600 text-white'
-                                        : 'bg-green-600 text-white'
+                                      ? 'bg-red-600 text-white'
+                                      : 'bg-green-600 text-white'
                                       }`}>
                                       {isObese ? 'YES' : 'NO'}
                                     </div>
@@ -14845,8 +14855,8 @@ export function PatientProfilePage() {
                             <button
                               type="button"
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.npoStatus === 'yes'
-                                  ? 'bg-green-600 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
                               onClick={() => updateIVSedationFormField('npoStatus', 'yes')}
                             >
@@ -14855,8 +14865,8 @@ export function PatientProfilePage() {
                             <button
                               type="button"
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.npoStatus === 'no'
-                                  ? 'bg-red-600 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
                               onClick={() => updateIVSedationFormField('npoStatus', 'no')}
                             >
@@ -14871,8 +14881,8 @@ export function PatientProfilePage() {
                             <button
                               type="button"
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.morningMedications && ivSedationFormData.morningMedications !== 'no'
-                                  ? 'bg-red-600 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
                               onClick={() => updateIVSedationFormField('morningMedications', 'yes')}
                             >
@@ -14881,8 +14891,8 @@ export function PatientProfilePage() {
                             <button
                               type="button"
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.morningMedications === 'no'
-                                  ? 'bg-green-600 text-white'
-                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
                               onClick={() => updateIVSedationFormField('morningMedications', 'no')}
                             >
@@ -14928,10 +14938,10 @@ export function PatientProfilePage() {
                               type="button"
                               disabled={isDisabled}
                               className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.allergies?.includes(allergy)
-                                  ? 'bg-red-600 text-white'
-                                  : isDisabled
-                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                ? 'bg-red-600 text-white'
+                                : isDisabled
+                                  ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
                               onClick={() => {
                                 const currentAllergies = ivSedationFormData.allergies || [];
@@ -14989,8 +14999,8 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.pregnancyRisk === 'yes'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                   }`}
                                 onClick={() => updateIVSedationFormField('pregnancyRisk', 'yes')}
                               >
@@ -14999,8 +15009,8 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.pregnancyRisk === 'no'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                   }`}
                                 onClick={() => updateIVSedationFormField('pregnancyRisk', 'no')}
                               >
@@ -15040,8 +15050,8 @@ export function PatientProfilePage() {
                               key={option}
                               type="button"
                               className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.anesthesiaHistory === option
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
                               onClick={() => {
                                 updateIVSedationFormField('anesthesiaHistory', option);
@@ -15089,10 +15099,10 @@ export function PatientProfilePage() {
                                 type="button"
                                 disabled={isDisabled}
                                 className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.respiratoryProblems?.includes(problem)
-                                    ? 'bg-blue-600 text-white'
-                                    : isDisabled
-                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                  ? 'bg-blue-600 text-white'
+                                  : isDisabled
+                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                   }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.respiratoryProblems || [];
@@ -15154,10 +15164,10 @@ export function PatientProfilePage() {
                                 type="button"
                                 disabled={isDisabled}
                                 className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.cardiovascularProblems?.includes(problem)
-                                    ? 'bg-blue-600 text-white'
-                                    : isDisabled
-                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                  ? 'bg-blue-600 text-white'
+                                  : isDisabled
+                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                   }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.cardiovascularProblems || [];
@@ -15218,10 +15228,10 @@ export function PatientProfilePage() {
                                 type="button"
                                 disabled={isDisabled}
                                 className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.gastrointestinalProblems?.includes(problem)
-                                    ? 'bg-blue-600 text-white'
-                                    : isDisabled
-                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                  ? 'bg-blue-600 text-white'
+                                  : isDisabled
+                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                   }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.gastrointestinalProblems || [];
@@ -15285,10 +15295,10 @@ export function PatientProfilePage() {
                                 type="button"
                                 disabled={isDisabled}
                                 className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.neurologicProblems?.includes(problem)
-                                    ? 'bg-blue-600 text-white'
-                                    : isDisabled
-                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                  ? 'bg-blue-600 text-white'
+                                  : isDisabled
+                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                   }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.neurologicProblems || [];
@@ -15349,10 +15359,10 @@ export function PatientProfilePage() {
                                 type="button"
                                 disabled={isDisabled}
                                 className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.endocrineRenalProblems?.includes(problem)
-                                    ? 'bg-blue-600 text-white'
-                                    : isDisabled
-                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                  ? 'bg-blue-600 text-white'
+                                  : isDisabled
+                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                   }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.endocrineRenalProblems || [];
@@ -15443,10 +15453,10 @@ export function PatientProfilePage() {
                               type="button"
                               disabled={isDisabled}
                               className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.miscellaneous?.includes(condition)
-                                  ? 'bg-blue-600 text-white'
-                                  : isDisabled
-                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                ? 'bg-blue-600 text-white'
+                                : isDisabled
+                                  ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
                               onClick={() => {
                                 const current = ivSedationFormData.miscellaneous || [];
@@ -15509,10 +15519,10 @@ export function PatientProfilePage() {
                                 type="button"
                                 disabled={isDisabled}
                                 className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${ivSedationFormData.socialHistory?.includes(habit)
-                                    ? 'bg-blue-600 text-white'
-                                    : isDisabled
-                                      ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
-                                      : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                  ? 'bg-blue-600 text-white'
+                                  : isDisabled
+                                    ? 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                   }`}
                                 onClick={() => {
                                   const current = ivSedationFormData.socialHistory || [];
@@ -15567,8 +15577,8 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.wellDevelopedNourished === 'yes'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                   }`}
                                 onClick={() => updateIVSedationFormField('wellDevelopedNourished', 'yes')}
                               >
@@ -15577,8 +15587,8 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.wellDevelopedNourished === 'no'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                   }`}
                                 onClick={() => updateIVSedationFormField('wellDevelopedNourished', 'no')}
                               >
@@ -15593,8 +15603,8 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.patientAnxious === 'yes'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                   }`}
                                 onClick={() => updateIVSedationFormField('patientAnxious', 'yes')}
                               >
@@ -15603,8 +15613,8 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${ivSedationFormData.patientAnxious === 'no'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                   }`}
                                 onClick={() => updateIVSedationFormField('patientAnxious', 'no')}
                               >
@@ -15629,8 +15639,8 @@ export function PatientProfilePage() {
                                 key={classification}
                                 type="button"
                                 className={`px-3 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.asaClassification === classification
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                   }`}
                                 onClick={() => updateIVSedationFormField('asaClassification', classification)}
                               >
@@ -15655,8 +15665,8 @@ export function PatientProfilePage() {
                               key={evaluation}
                               type="button"
                               className={`px-3 py-2 rounded text-xs font-medium transition-colors text-left ${ivSedationFormData.airwayEvaluation?.includes(evaluation)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
                               onClick={() => {
                                 const current = ivSedationFormData.airwayEvaluation || [];
@@ -15704,8 +15714,8 @@ export function PatientProfilePage() {
                               key={score}
                               type="button"
                               className={`px-3 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.mallampatiScore === score
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
                               onClick={() => updateIVSedationFormField('mallampatiScore', score)}
                             >
@@ -15729,8 +15739,8 @@ export function PatientProfilePage() {
                               key={evaluation}
                               type="button"
                               className={`px-3 py-2 rounded text-xs font-medium transition-colors text-left ${ivSedationFormData.heartLungEvaluation?.includes(evaluation)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
                               onClick={() => {
                                 const current = ivSedationFormData.heartLungEvaluation || [];
@@ -15798,8 +15808,8 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key)
-                                    ? 'bg-green-500 border-green-500 text-white'
-                                    : 'border-gray-300 hover:border-green-400'
+                                  ? 'bg-green-500 border-green-500 text-white'
+                                  : 'border-gray-300 hover:border-green-400'
                                   }`}
                                 onClick={() => {
                                   const current = Array.isArray(ivSedationFormData.instrumentsChecklist) ? ivSedationFormData.instrumentsChecklist : [];
@@ -15818,8 +15828,8 @@ export function PatientProfilePage() {
                               </button>
                             </div>
                             <div className={`text-xs mt-2 transition-colors ${Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key)
-                                ? 'text-green-600 font-medium'
-                                : 'text-gray-500'
+                              ? 'text-green-600 font-medium'
+                              : 'text-gray-500'
                               }`}>
                               {Array.isArray(ivSedationFormData.instrumentsChecklist) && ivSedationFormData.instrumentsChecklist.includes(instrument.key) ? 'Checked' : 'Not Checked'}
                             </div>
@@ -15844,8 +15854,8 @@ export function PatientProfilePage() {
                               key={type}
                               type="button"
                               className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.sedationType === type
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
                               onClick={() => updateIVSedationFormField('sedationType', type)}
                             >
@@ -15871,8 +15881,8 @@ export function PatientProfilePage() {
                               key={medication}
                               type="button"
                               className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.medicationsPlanned?.includes(medication)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
                               onClick={() => {
                                 const current = ivSedationFormData.medicationsPlanned || [];
@@ -15925,8 +15935,8 @@ export function PatientProfilePage() {
                               key={route}
                               type="button"
                               className={`px-3 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.administrationRoute?.includes(route)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                                 }`}
                               onClick={() => {
                                 const current = ivSedationFormData.administrationRoute || [];
@@ -15957,8 +15967,8 @@ export function PatientProfilePage() {
                               <button
                                 type="button"
                                 className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${Array.isArray(ivSedationFormData.emergencyProtocols) && ivSedationFormData.emergencyProtocols.includes(protocol)
-                                    ? 'bg-green-500 border-green-500 text-white'
-                                    : 'border-gray-300 hover:border-green-400'
+                                  ? 'bg-green-500 border-green-500 text-white'
+                                  : 'border-gray-300 hover:border-green-400'
                                   }`}
                                 onClick={() => {
                                   const current = Array.isArray(ivSedationFormData.emergencyProtocols) ? ivSedationFormData.emergencyProtocols : [];
@@ -16476,15 +16486,15 @@ export function PatientProfilePage() {
                             key={level.id}
                             type="button"
                             className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${ivSedationFormData.levelOfSedation === level.id
-                                ? level.color + ' ring-2 ring-offset-2 ring-indigo-500'
-                                : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
+                              ? level.color + ' ring-2 ring-offset-2 ring-indigo-500'
+                              : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50'
                               }`}
                             onClick={() => updateIVSedationFormField('levelOfSedation', level.id)}
                           >
                             <div className="flex items-center gap-2 mb-2">
                               <div className={`w-3 h-3 rounded-full ${ivSedationFormData.levelOfSedation === level.id
-                                  ? 'bg-indigo-600'
-                                  : 'bg-gray-300'
+                                ? 'bg-indigo-600'
+                                : 'bg-gray-300'
                                 }`}></div>
                               <span className="font-semibold text-sm">{level.label}</span>
                             </div>
@@ -16530,8 +16540,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.alertOriented === 'yes'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('alertOriented', 'yes')}
                           >
@@ -16540,8 +16550,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.alertOriented === 'no'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('alertOriented', 'no')}
                           >
@@ -16557,8 +16567,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.protectiveReflexes === 'yes'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('protectiveReflexes', 'yes')}
                           >
@@ -16567,8 +16577,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.protectiveReflexes === 'no'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('protectiveReflexes', 'no')}
                           >
@@ -16584,8 +16594,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.breathingSpontaneously === 'yes'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('breathingSpontaneously', 'yes')}
                           >
@@ -16594,8 +16604,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.breathingSpontaneously === 'no'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('breathingSpontaneously', 'no')}
                           >
@@ -16611,8 +16621,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.postOpNausea === 'yes'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('postOpNausea', 'yes')}
                           >
@@ -16621,8 +16631,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.postOpNausea === 'no'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('postOpNausea', 'no')}
                           >
@@ -16638,8 +16648,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.caregiverPresent === 'yes'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('caregiverPresent', 'yes')}
                           >
@@ -16648,8 +16658,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.caregiverPresent === 'no'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('caregiverPresent', 'no')}
                           >
@@ -16665,8 +16675,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.baselineMentalStatus === 'yes'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('baselineMentalStatus', 'yes')}
                           >
@@ -16675,8 +16685,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.baselineMentalStatus === 'no'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('baselineMentalStatus', 'no')}
                           >
@@ -16695,8 +16705,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.responsiveVerbalCommands === 'yes'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('responsiveVerbalCommands', 'yes')}
                           >
@@ -16705,8 +16715,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.responsiveVerbalCommands === 'no'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('responsiveVerbalCommands', 'no')}
                           >
@@ -16722,8 +16732,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.saturatingRoomAir === 'yes'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('saturatingRoomAir', 'yes')}
                           >
@@ -16732,8 +16742,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.saturatingRoomAir === 'no'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('saturatingRoomAir', 'no')}
                           >
@@ -16749,8 +16759,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.vitalSignsBaseline === 'yes'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('vitalSignsBaseline', 'yes')}
                           >
@@ -16759,8 +16769,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.vitalSignsBaseline === 'no'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('vitalSignsBaseline', 'no')}
                           >
@@ -16776,8 +16786,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.painDuringRecovery === 'yes'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('painDuringRecovery', 'yes')}
                           >
@@ -16786,8 +16796,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${ivSedationFormData.painDuringRecovery === 'no'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                               }`}
                             onClick={() => updateIVSedationFormField('painDuringRecovery', 'no')}
                           >
@@ -16806,8 +16816,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.postOpInstructionsGivenTo === 'Patient and Escort'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
                             onClick={() => updateIVSedationFormField('postOpInstructionsGivenTo', 'Patient and Escort')}
                           >
@@ -16816,8 +16826,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.postOpInstructionsGivenTo === 'Patient'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
                             onClick={() => updateIVSedationFormField('postOpInstructionsGivenTo', 'Patient')}
                           >
@@ -16826,8 +16836,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.postOpInstructionsGivenTo === 'Escort'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
                             onClick={() => updateIVSedationFormField('postOpInstructionsGivenTo', 'Escort')}
                           >
@@ -16843,8 +16853,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.followUpInstructionsGivenTo === 'Patient and Escort'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
                             onClick={() => updateIVSedationFormField('followUpInstructionsGivenTo', 'Patient and Escort')}
                           >
@@ -16853,8 +16863,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.followUpInstructionsGivenTo === 'Patient'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
                             onClick={() => updateIVSedationFormField('followUpInstructionsGivenTo', 'Patient')}
                           >
@@ -16863,8 +16873,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.followUpInstructionsGivenTo === 'Escort'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
                             onClick={() => updateIVSedationFormField('followUpInstructionsGivenTo', 'Escort')}
                           >
@@ -16880,8 +16890,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.dischargedTo === 'Home'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
                             onClick={() => updateIVSedationFormField('dischargedTo', 'Home')}
                           >
@@ -16890,8 +16900,8 @@ export function PatientProfilePage() {
                           <button
                             type="button"
                             className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors text-left ${ivSedationFormData.dischargedTo === 'Office'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border border-blue-300 text-blue-700 hover:bg-blue-100'
                               }`}
                             onClick={() => updateIVSedationFormField('dischargedTo', 'Office')}
                           >
@@ -17571,12 +17581,12 @@ export function PatientProfilePage() {
       {showToast && formMessage.type && (
         <div className="fixed bottom-6 right-6 z-[9999] w-96 animate-in slide-in-from-right-full duration-300">
           <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${formMessage.type === 'error'
-              ? 'bg-red-50/80 border-red-200/60 text-red-800'
-              : 'bg-green-50/80 border-green-200/60 text-green-800'
+            ? 'bg-red-50/80 border-red-200/60 text-red-800'
+            : 'bg-green-50/80 border-green-200/60 text-green-800'
             }`}>
             <div className={`p-2 rounded-lg flex-shrink-0 ${formMessage.type === 'error'
-                ? 'bg-red-100/80 text-red-600'
-                : 'bg-green-100/80 text-green-600'
+              ? 'bg-red-100/80 text-red-600'
+              : 'bg-green-100/80 text-green-600'
               }`}>
               {formMessage.type === 'error' ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -17594,8 +17604,8 @@ export function PatientProfilePage() {
             <button
               onClick={() => setShowToast(false)}
               className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${formMessage.type === 'error'
-                  ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
-                  : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
+                ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
+                : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
                 }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -17610,16 +17620,16 @@ export function PatientProfilePage() {
       {showIVSedationToast && ivSedationFormMessage.type && (
         <div className="fixed bottom-6 right-6 z-[9999] w-96 animate-in slide-in-from-right-full duration-300">
           <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${ivSedationFormMessage.type === 'error'
-              ? 'bg-red-50/80 border-red-200/60 text-red-800'
-              : ivSedationFormMessage.type === 'info'
-                ? 'bg-blue-50/80 border-blue-200/60 text-blue-800'
-                : 'bg-green-50/80 border-green-200/60 text-green-800'
+            ? 'bg-red-50/80 border-red-200/60 text-red-800'
+            : ivSedationFormMessage.type === 'info'
+              ? 'bg-blue-50/80 border-blue-200/60 text-blue-800'
+              : 'bg-green-50/80 border-green-200/60 text-green-800'
             }`}>
             <div className={`p-2 rounded-lg flex-shrink-0 ${ivSedationFormMessage.type === 'error'
-                ? 'bg-red-100/80 text-red-600'
-                : ivSedationFormMessage.type === 'info'
-                  ? 'bg-blue-100/80 text-blue-600'
-                  : 'bg-green-100/80 text-green-600'
+              ? 'bg-red-100/80 text-red-600'
+              : ivSedationFormMessage.type === 'info'
+                ? 'bg-blue-100/80 text-blue-600'
+                : 'bg-green-100/80 text-green-600'
               }`}>
               {ivSedationFormMessage.type === 'error' ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -17641,10 +17651,10 @@ export function PatientProfilePage() {
             <button
               onClick={() => setShowIVSedationToast(false)}
               className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${ivSedationFormMessage.type === 'error'
-                  ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
-                  : ivSedationFormMessage.type === 'info'
-                    ? 'text-blue-400 hover:bg-blue-100/60 hover:text-blue-600'
-                    : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
+                ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
+                : ivSedationFormMessage.type === 'info'
+                  ? 'text-blue-400 hover:bg-blue-100/60 hover:text-blue-600'
+                  : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
                 }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18443,12 +18453,12 @@ export function PatientProfilePage() {
                           <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-2">{criterion.label}</div>
                           <div className="flex items-center gap-2">
                             <div className={`w-3 h-3 rounded-full ${isPositive ? 'bg-green-500' :
-                                isNegative ? 'bg-red-500' :
-                                  'bg-gray-300'
+                              isNegative ? 'bg-red-500' :
+                                'bg-gray-300'
                               }`}></div>
                             <span className={`text-sm font-semibold ${isPositive ? 'text-green-600' :
-                                isNegative ? 'text-red-600' :
-                                  'text-gray-500'
+                              isNegative ? 'text-red-600' :
+                                'text-gray-500'
                               }`}>
                               {value?.toUpperCase() || 'N/A'}
                             </span>
@@ -19336,12 +19346,12 @@ export function PatientProfilePage() {
                             <div className="text-xs font-medium text-red-600 uppercase tracking-wide mb-2">{criterion.label}</div>
                             <div className="flex items-center gap-2">
                               <div className={`w-3 h-3 rounded-full ${isPositive ? 'bg-green-500' :
-                                  isNegative ? 'bg-red-500' :
-                                    'bg-gray-300'
+                                isNegative ? 'bg-red-500' :
+                                  'bg-gray-300'
                                 }`}></div>
                               <span className={`text-sm font-semibold ${isPositive ? 'text-green-600' :
-                                  isNegative ? 'text-red-600' :
-                                    'text-gray-500'
+                                isNegative ? 'text-red-600' :
+                                  'text-gray-500'
                                 }`}>
                                 {value?.toUpperCase() || 'N/A'}
                               </span>
@@ -20677,20 +20687,20 @@ export function PatientProfilePage() {
           <div className="space-y-4 py-4">
             {/* Current Status Display */}
             <div className={`rounded-lg p-3 border ${patient?.status === 'ACTIVE'
-                ? 'bg-green-50 border-green-200'
-                : patient?.status === 'INACTIVE'
-                  ? 'bg-red-50 border-red-200'
-                  : 'bg-blue-50 border-blue-200'
+              ? 'bg-green-50 border-green-200'
+              : patient?.status === 'INACTIVE'
+                ? 'bg-red-50 border-red-200'
+                : 'bg-blue-50 border-blue-200'
               }`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">Current Status:</span>
                 <Badge
                   variant="outline"
                   className={`bg-white font-semibold ${patient?.status === 'ACTIVE'
-                      ? 'border-green-300 text-green-700'
-                      : patient?.status === 'INACTIVE'
-                        ? 'border-red-300 text-red-700'
-                        : 'border-blue-300 text-blue-700'
+                    ? 'border-green-300 text-green-700'
+                    : patient?.status === 'INACTIVE'
+                      ? 'border-red-300 text-red-700'
+                      : 'border-blue-300 text-blue-700'
                     }`}
                 >
                   {patient?.status || 'Not Set'}
@@ -20740,32 +20750,32 @@ export function PatientProfilePage() {
           <div className="space-y-4 py-4">
             {/* Current Treatment Status Display */}
             <div className={`rounded-lg p-3 border ${patient?.treatment_status === 'Treatment Not Started'
-                ? 'bg-gray-50 border-gray-200'
-                : patient?.treatment_status === 'Treatment In Progress'
-                  ? 'bg-blue-50 border-blue-200'
-                  : patient?.treatment_status === 'Treatment Completed'
-                    ? 'bg-green-50 border-green-200'
-                    : patient?.treatment_status === 'Patient Deceased'
-                      ? 'bg-gray-900 border-gray-800'
-                      : patient?.treatment_status === 'Dismissed DNC'
-                        ? 'bg-red-50 border-red-200'
-                        : 'bg-gray-50 border-gray-200'
+              ? 'bg-gray-50 border-gray-200'
+              : patient?.treatment_status === 'Treatment In Progress'
+                ? 'bg-blue-50 border-blue-200'
+                : patient?.treatment_status === 'Treatment Completed'
+                  ? 'bg-green-50 border-green-200'
+                  : patient?.treatment_status === 'Patient Deceased'
+                    ? 'bg-gray-900 border-gray-800'
+                    : patient?.treatment_status === 'Dismissed DNC'
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-gray-50 border-gray-200'
               }`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">Current Treatment Status:</span>
                 <Badge
                   variant="outline"
                   className={`bg-white font-semibold ${patient?.treatment_status === 'Treatment Not Started'
-                      ? 'border-gray-300 text-gray-700'
-                      : patient?.treatment_status === 'Treatment In Progress'
-                        ? 'border-blue-300 text-blue-700'
-                        : patient?.treatment_status === 'Treatment Completed'
-                          ? 'border-green-300 text-green-700'
-                          : patient?.treatment_status === 'Patient Deceased'
-                            ? 'border-gray-800 text-gray-900'
-                            : patient?.treatment_status === 'Dismissed DNC'
-                              ? 'border-red-300 text-red-700'
-                              : 'border-gray-300 text-gray-700'
+                    ? 'border-gray-300 text-gray-700'
+                    : patient?.treatment_status === 'Treatment In Progress'
+                      ? 'border-blue-300 text-blue-700'
+                      : patient?.treatment_status === 'Treatment Completed'
+                        ? 'border-green-300 text-green-700'
+                        : patient?.treatment_status === 'Patient Deceased'
+                          ? 'border-gray-800 text-gray-900'
+                          : patient?.treatment_status === 'Dismissed DNC'
+                            ? 'border-red-300 text-red-700'
+                            : 'border-gray-300 text-gray-700'
                     }`}
                 >
                   {patient?.treatment_status || 'Not Set'}
@@ -20900,14 +20910,14 @@ export function PatientProfilePage() {
               <div
                 key={index}
                 className={`text-sm p-2 rounded ${message.startsWith('✓')
-                    ? 'bg-green-50 text-green-700'
-                    : message.startsWith('⚠️')
-                      ? 'bg-yellow-50 text-yellow-700'
-                      : message.startsWith('❌')
-                        ? 'bg-red-50 text-red-700'
-                        : message.startsWith('✅')
-                          ? 'bg-green-100 text-green-800 font-semibold'
-                          : 'bg-gray-50 text-gray-700'
+                  ? 'bg-green-50 text-green-700'
+                  : message.startsWith('⚠️')
+                    ? 'bg-yellow-50 text-yellow-700'
+                    : message.startsWith('❌')
+                      ? 'bg-red-50 text-red-700'
+                      : message.startsWith('✅')
+                        ? 'bg-green-100 text-green-800 font-semibold'
+                        : 'bg-gray-50 text-gray-700'
                   }`}
               >
                 {message}
