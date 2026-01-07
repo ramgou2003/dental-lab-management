@@ -112,7 +112,8 @@ export function AddConsultationDialog({
       assignedUserId: formData.assignedUserId,
       patientType: patientType,
       selectedPatient: selectedPatient,
-      searchTerm: searchTerm
+      searchTerm: searchTerm,
+      type: 'consultation'
     };
   };
 
@@ -125,9 +126,9 @@ export function AddConsultationDialog({
           lastName: initialValues.lastName || '',
           dateOfBirth: initialValues.dateOfBirth || '',
           gender: initialValues.gender || 'prefer-not-to-answer',
-          consultationDate: initialValues.consultationDate || new Date(),
-          consultationTime: initialValues.consultationTime || '',
-          consultationEndTime: initialValues.consultationEndTime || '',
+          consultationDate: initialDate || initialValues.consultationDate || new Date(),
+          consultationTime: initialTime || initialValues.consultationTime || '',
+          consultationEndTime: initialEndTime || initialValues.consultationEndTime || '',
           assignedUserId: initialValues.assignedUserId
         });
         if (initialValues.patientType) setPatientType(initialValues.patientType);
@@ -264,16 +265,18 @@ export function AddConsultationDialog({
     setSearchResults([]);
     setSelectedPatient(null);
 
-    // Reset form data when switching types
-    setFormData({
+    // Reset form data when switching types but preserve scheduling info
+    setFormData(prev => ({
+      ...prev,
       firstName: '',
       lastName: '',
       dateOfBirth: '',
       gender: 'prefer-not-to-answer',
-      consultationDate: new Date(),
-      consultationTime: '',
-      consultationEndTime: ''
-    });
+      // Preserve scheduling info
+      consultationDate: prev.consultationDate,
+      consultationTime: prev.consultationTime,
+      consultationEndTime: prev.consultationEndTime
+    }));
   };
 
   // Handle patient selection
@@ -282,16 +285,18 @@ export function AddConsultationDialog({
     setSearchTerm(`${patient.first_name} ${patient.last_name}`);
     setSearchResults([]);
 
-    // Pre-fill form data with selected patient info
-    setFormData({
+    // Pre-fill form data with selected patient info but preserve scheduling info
+    setFormData(prev => ({
+      ...prev,
       firstName: (patient as ConsultationPatient).first_name || '',
       lastName: (patient as ConsultationPatient).last_name || '',
       dateOfBirth: (patient as ConsultationPatient).date_of_birth || '',
       gender: (patient as ConsultationPatient).gender as any || 'prefer-not-to-answer',
-      consultationDate: new Date(),
-      consultationTime: '',
-      consultationEndTime: ''
-    });
+      // Preserve scheduling info (explicitly stated here for clarity, though ...prev handles it if we didn't overwrite)
+      consultationDate: prev.consultationDate,
+      consultationTime: prev.consultationTime,
+      consultationEndTime: prev.consultationEndTime
+    }));
   };
 
   const validateForm = () => {
@@ -943,14 +948,22 @@ export function AddConsultationDialog({
                           <Clock className="h-4 w-4 text-green-600 flex-shrink-0" />
                           <span className="font-medium text-green-800 text-sm truncate flex-1 leading-none">
                             {(() => {
-                              const formatTime = (time: string) => {
+                              const formatTime = (time: string | undefined) => {
+                                if (!time) return '';
                                 const [hours, minutes] = time.split(':');
                                 const hour = parseInt(hours);
                                 const ampm = hour >= 12 ? 'PM' : 'AM';
                                 const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
                                 return `${displayHour}:${minutes} ${ampm}`;
                               };
-                              return formatTime(formData.consultationTime);
+
+                              let timeDisplay = formatTime(formData.consultationTime);
+
+                              if (formData.consultationEndTime) {
+                                timeDisplay += ` - ${formatTime(formData.consultationEndTime)}`;
+                              }
+
+                              return timeDisplay;
                             })()}
                           </span>
                           <Button

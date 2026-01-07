@@ -197,7 +197,7 @@ export function AppointmentsPage() {
     // Prepare data for AddConsultationDialog
     const consultationData: any = {
       consultationDate: formData.date || new Date(),
-      consultationTime: formData.startTime || '09:00',
+      consultationTime: formData.startTime || '',
       consultationEndTime: formData.endTime,
       assignedUserId: formData.assignedUserId
     };
@@ -425,6 +425,7 @@ export function AppointmentsPage() {
           // handleSaveAppointment already calls add/update, but here the dialog 
           // has likely already saved to DB. Let's just refresh.
         }}
+        initialValues={draftAppointmentData}
         initialDate={initialFormDate}
         initialTime={initialFormTime}
         initialEndTime={initialFormEndTime}

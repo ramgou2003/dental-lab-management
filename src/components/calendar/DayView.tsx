@@ -1715,6 +1715,11 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
 
     e.preventDefault();
 
+    // Check if column is allowed
+    if (allowedAppointmentTypes && allowedAppointmentTypes.length > 0 && !allowedAppointmentTypes.includes(column)) {
+      return;
+    }
+
     // Since we support overlapping appointments, we allow creating new ones even in occupied slots
     // if (hasAppointmentInSlot(hour, minute, column)) {
     //   return; 
@@ -1854,6 +1859,11 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     // Prevent default touch behaviors
     e.preventDefault();
     e.stopPropagation();
+
+    // Check if column is allowed
+    if (allowedAppointmentTypes && allowedAppointmentTypes.length > 0 && !allowedAppointmentTypes.includes(column)) {
+      return;
+    }
 
     // Check if there's already an appointment in this slot
     if (hasAppointmentInSlot(hour, minute, column)) {
