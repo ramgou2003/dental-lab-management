@@ -98,6 +98,23 @@ export function EncounterFormDialog({
   // Clinical notes
   const [clinicalNotes, setClinicalNotes] = useState<string>('');
 
+  // New section: Pictures/data collected
+  const [picturesDataCollected, setPicturesDataCollected] = useState<string>('');
+  // Consultation specific Pictures/data collected
+  const [preSurgicalPictures, setPreSurgicalPictures] = useState<string>('');
+  const [preSurgicalJawRecords, setPreSurgicalJawRecords] = useState<string>('');
+  const [cbctData, setCbctData] = useState<string>('');
+
+  // Surgery specific Pictures/data collected
+  const [surgicalPictures, setSurgicalPictures] = useState<string>('');
+  const [preSurgeryMarkerScan, setPreSurgeryMarkerScan] = useState<string>('');
+  const [postSurgeryTissueScan, setPostSurgeryTissueScan] = useState<string>('');
+  const [icamData, setIcamData] = useState<string>('');
+  // Follow-up, Data Collection, Appliance Delivery specific Pictures/data collected
+  const [postHealingJawRecords, setPostHealingJawRecords] = useState<string>('');
+  const [postHealingTissueScan, setPostHealingTissueScan] = useState<string>('');
+  const [modjawData, setModjawData] = useState<string>('');
+
   // Form status
   const [formStatus, setFormStatus] = useState<'draft' | 'complete'>('draft');
   const [consultationData, setConsultationData] = useState<any>(null);
@@ -254,6 +271,30 @@ export function EncounterFormDialog({
         setSmokerConsentDeclined(data.smoker_consent_declined || false);
         setSmokerSignature(data.smoker_signature || '');
         setSmokerSignatureDate(data.smoker_signature_date || new Date().toISOString().split('T')[0]);
+        // Pictures/data collected
+        setPicturesDataCollected(data.pictures_data_collected || '');
+        setPreSurgicalPictures(data.pre_surgical_pictures || '');
+        setPreSurgicalJawRecords(data.pre_surgical_jaw_records || '');
+        setCbctData(data.cbct_data || '');
+        setSurgicalPictures(data.surgical_pictures || '');
+        setPreSurgeryMarkerScan(data.pre_surgery_marker_scan || '');
+        setPostSurgeryTissueScan(data.post_surgery_tissue_scan || '');
+        setIcamData(data.icam_data || '');
+        setPostHealingJawRecords(data.post_healing_jaw_records || '');
+        setPostHealingTissueScan(data.post_healing_tissue_scan || '');
+        setModjawData(data.modjaw_data || '');
+        // Note: facial_scan is already handled in the 75-day block below, but we can rely on it being loaded there
+        // or ensure it's loaded here if it wasn't already. It's safe to set it here if the logic below doesn't overwrite it with empty string unnecessarily 
+        // if the type matches. The logic below sets it for 75-day/final.
+        // Let's ensure it's set if it exists, regardless of subtype logic, since we share the field.
+        // Actually, looking at the code below: 
+        // setFacialScan(data.facial_scan || ''); is inside the fetch block, so it's already loading whatever is in there. 
+        // Wait, the existing code:
+        // setFacialScan(data.facial_scan || '');
+        // is ALREADY in the fetch block (lines 247 in original file). I don't need to add it again, just need to make sure I don't accidentally clear it differently.
+        // The existing fetch block loads ALL fields from `data` regardless of type.
+        // So I just need to add my new fields.
+
         // Clinical notes
         setClinicalNotes(data.clinical_notes || '');
         // Form status
@@ -293,6 +334,18 @@ export function EncounterFormDialog({
         setSmokerConsentDeclined(false);
         setSmokerSignature('');
         setSmokerSignatureDate(new Date().toISOString().split('T')[0]);
+        // Pictures/data collected
+        setPicturesDataCollected('');
+        setPreSurgicalPictures('');
+        setPreSurgicalJawRecords('');
+        setCbctData('');
+        setSurgicalPictures('');
+        setPreSurgeryMarkerScan('');
+        setPostSurgeryTissueScan('');
+        setIcamData('');
+        setPostHealingJawRecords('');
+        setPostHealingTissueScan('');
+        setModjawData('');
         // Clinical notes
         setClinicalNotes('');
       }
@@ -350,7 +403,8 @@ export function EncounterFormDialog({
         smoker_disclaimer_acknowledged: smokerDisclaimerAcknowledged,
         smoker_consent_declined: smokerConsentDeclined,
         smoker_signature: smokerSignature,
-        smoker_signature_date: smokerSignatureDate
+        smoker_signature_date: smokerSignatureDate,
+        pictures_data_collected: picturesDataCollected
       };
 
       // Add assessment/encounter details if NOT surgery and NOT consultation (where they aren't visible or needed)
@@ -380,12 +434,30 @@ export function EncounterFormDialog({
           encounterData.record_collection_done = null;
           encounterData.administrative_forms_done = null;
         }
+
+        // Add Consultation Pictures/Data Collected fields
+        if (picturesDataCollected === 'Yes') {
+          encounterData.pre_surgical_pictures = preSurgicalPictures;
+          encounterData.pre_surgical_jaw_records = preSurgicalJawRecords;
+          encounterData.cbct_data = cbctData;
+          encounterData.facial_scan = facialScan; // Reusing existing field
+        } else {
+          encounterData.pre_surgical_pictures = null;
+          encounterData.pre_surgical_jaw_records = null;
+          encounterData.cbct_data = null;
+          // Be careful not to wipe facial_scan if it's used by other logic, but usually only one form type is active at a time.
+          // Since this block is exclusively `if (appointmentDetails?.appointment_type === 'consultation')`, it is safe to nullify it for this encounter.
+          encounterData.facial_scan = null;
+        }
       }
 
       console.log('📝 Encounter data to save:', encounterData);
 
-      // Add 7-day-followup and 30-day-followup specific fields if applicable
-      if (appointmentDetails?.appointment_type === 'follow-up') {
+      // Add Follow-up Assessment fields for relevant appointment types
+      if (appointmentDetails?.appointment_type === 'follow-up' ||
+        appointmentDetails?.appointment_type === 'data-collection' ||
+        appointmentDetails?.appointment_type === 'printed-try-in' ||
+        appointmentDetails?.appointment_type === 'Appliance-delivery') {
         encounterData.how_is_the_bite = howIsTheBite;
         encounterData.speech_issue = speechIssue;
         encounterData.intaglio_gap = intaglioGap;
@@ -399,17 +471,58 @@ export function EncounterFormDialog({
         encounterData.surgery_iv_sedation_flow_chart = surgeryIvSedationFlowChart;
         encounterData.surgery_surgical_recall_sheet = surgerySurgicalRecallSheet;
         encounterData.surgery_lab_script = surgeryLabScript;
+
+        // Add Surgery Pictures/Data Collected fields
+        if (picturesDataCollected === 'Yes') {
+          encounterData.surgical_pictures = surgicalPictures;
+          encounterData.pre_surgery_marker_scan = preSurgeryMarkerScan;
+          encounterData.post_surgery_tissue_scan = postSurgeryTissueScan;
+          encounterData.icam_data = icamData;
+          encounterData.cbct_data = cbctData;
+          encounterData.facial_scan = facialScan;
+        } else {
+          encounterData.surgical_pictures = null;
+          encounterData.pre_surgery_marker_scan = null;
+          encounterData.post_surgery_tissue_scan = null;
+          encounterData.icam_data = null;
+          encounterData.cbct_data = null;
+          encounterData.facial_scan = null;
+        }
       }
 
-      // Add 75-day-data-collection, final-data-collection, and data-collection-printed-try-in staff checklist fields if applicable
-      if (appointmentDetails?.subtype === '75-day-data-collection' ||
-        appointmentDetails?.subtype === 'final-data-collection' ||
-        appointmentDetails?.subtype === 'data-collection-printed-try-in') {
+      // Add Staff Checklist fields for specific subtype
+      if (appointmentDetails?.subtype === 'data-collection-printed-try-in') {
         encounterData.extra_intra_oral_pictures = extraIntraOralPictures;
         encounterData.facial_scan = facialScan;
         encounterData.post_surgery_jaw_records = postSurgeryJawRecords;
         encounterData.tissue_scan = tissueScan;
         encounterData.icam_required = icamRequired;
+      }
+
+      // Add Pictures/Data Collected fields for Follow-up, Data Collection, and Appliance Delivery
+      if (picturesDataCollected === 'Yes' &&
+        (appointmentDetails?.appointment_type === 'follow-up' ||
+          appointmentDetails?.appointment_type === 'data-collection' ||
+          appointmentDetails?.appointment_type === 'printed-try-in' ||
+          appointmentDetails?.appointment_type === 'Appliance-delivery')) {
+        encounterData.post_healing_jaw_records = postHealingJawRecords;
+        encounterData.post_healing_tissue_scan = postHealingTissueScan;
+        encounterData.modjaw_data = modjawData;
+        encounterData.icam_data = icamData;
+        encounterData.cbct_data = cbctData;
+        encounterData.facial_scan = facialScan;
+        // follow_up_pictures_taken is already saved in the generic block logic
+      } else if (appointmentDetails?.appointment_type === 'follow-up' ||
+        appointmentDetails?.appointment_type === 'data-collection' ||
+        appointmentDetails?.appointment_type === 'printed-try-in' ||
+        appointmentDetails?.appointment_type === 'Appliance-delivery') {
+        encounterData.post_healing_jaw_records = null;
+        encounterData.post_healing_tissue_scan = null;
+        encounterData.modjaw_data = null;
+        encounterData.icam_data = null;
+        encounterData.cbct_data = null;
+        // Don't null facial_scan or follow_up_pictures aggressively if used elsewhere, 
+        // but here they are part of this conditional set.
       }
 
       if (encounterId) {
@@ -736,6 +849,789 @@ export function EncounterFormDialog({
                     </div>
                   </div>
                 </div>
+
+                {/* Pictures/Data Collected Section */}
+                {/* Pictures/Data Collected Section */}
+                {appointmentDetails?.appointment_type !== 'consultation' && (
+                  <div className="bg-indigo-50 p-6 rounded-lg border border-indigo-200 mb-6 transition-all animate-in fade-in slide-in-from-top-2">
+                    <h3 className="text-lg font-bold mb-4 text-indigo-900">Pictures/Data Collected</h3>
+
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-sm font-semibold text-indigo-900">
+                          Pictures/data collected?
+                        </Label>
+                        <RadioGroup value={picturesDataCollected} onValueChange={setPicturesDataCollected}>
+                          <div className="flex items-center gap-1.5 max-w-xs">
+                            <Label
+                              htmlFor="pictures-yes"
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${picturesDataCollected === 'Yes'
+                                ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                : 'bg-white border-gray-200 hover:border-indigo-300'
+                                }`}
+                            >
+                              <RadioGroupItem
+                                value="Yes"
+                                id="pictures-yes"
+                                className={`h-3.5 w-3.5 ${picturesDataCollected === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                              />
+                              <span className={`text-xs font-medium ${picturesDataCollected === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                Yes
+                              </span>
+                            </Label>
+                            <Label
+                              htmlFor="pictures-no"
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${picturesDataCollected === 'No'
+                                ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                : 'bg-white border-gray-200 hover:border-gray-300'
+                                }`}
+                            >
+                              <RadioGroupItem
+                                value="No"
+                                id="pictures-no"
+                                className={`h-3.5 w-3.5 ${picturesDataCollected === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                              />
+                              <span className={`text-xs font-medium ${picturesDataCollected === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                No
+                              </span>
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+
+                      {/* Consultation Specific Questions */}
+                      {picturesDataCollected === 'Yes' && appointmentDetails?.appointment_type === 'consultation' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in pt-2">
+                          {/* 1. Pre surgical Pictures */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">1. Pre surgical Pictures</Label>
+                            <RadioGroup value={preSurgicalPictures} onValueChange={setPreSurgicalPictures}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="pre-pics-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgicalPictures === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="pre-pics-yes"
+                                    className={`h-3.5 w-3.5 ${preSurgicalPictures === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${preSurgicalPictures === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="pre-pics-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgicalPictures === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="pre-pics-no"
+                                    className={`h-3.5 w-3.5 ${preSurgicalPictures === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${preSurgicalPictures === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {/* 2. Pre surgical jaw records */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">2. Pre surgical jaw records</Label>
+                            <RadioGroup value={preSurgicalJawRecords} onValueChange={setPreSurgicalJawRecords}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="pre-jaw-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgicalJawRecords === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="pre-jaw-yes"
+                                    className={`h-3.5 w-3.5 ${preSurgicalJawRecords === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${preSurgicalJawRecords === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="pre-jaw-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgicalJawRecords === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="pre-jaw-no"
+                                    className={`h-3.5 w-3.5 ${preSurgicalJawRecords === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${preSurgicalJawRecords === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {/* 3. Facial scan */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">3. Facial scan</Label>
+                            <RadioGroup value={facialScan} onValueChange={setFacialScan}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="consult-facial-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="consult-facial-yes"
+                                    className={`h-3.5 w-3.5 ${facialScan === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${facialScan === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="consult-facial-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="consult-facial-no"
+                                    className={`h-3.5 w-3.5 ${facialScan === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${facialScan === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {/* 4. CBCT data */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">4. CBCT data</Label>
+                            <RadioGroup value={cbctData} onValueChange={setCbctData}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="cbct-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${cbctData === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="cbct-yes"
+                                    className={`h-3.5 w-3.5 ${cbctData === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${cbctData === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="cbct-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${cbctData === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="cbct-no"
+                                    className={`h-3.5 w-3.5 ${cbctData === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${cbctData === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Surgery Specific Questions */}
+                      {picturesDataCollected === 'Yes' && (appointmentDetails?.appointment_type === 'surgery' || appointmentDetails?.appointment_type === 'surgical-revision') && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in pt-2">
+                          {/* 1. Surgical Pictures */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">1. Surgical Pictures</Label>
+                            <RadioGroup value={surgicalPictures} onValueChange={setSurgicalPictures}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="surgical-pics-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgicalPictures === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="surgical-pics-yes"
+                                    className={`h-3.5 w-3.5 ${surgicalPictures === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgicalPictures === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="surgical-pics-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgicalPictures === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="surgical-pics-no"
+                                    className={`h-3.5 w-3.5 ${surgicalPictures === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgicalPictures === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {/* 2. Pre surgery marker scan */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">2. Pre surgery marker scan</Label>
+                            <RadioGroup value={preSurgeryMarkerScan} onValueChange={setPreSurgeryMarkerScan}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="marker-scan-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgeryMarkerScan === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="marker-scan-yes"
+                                    className={`h-3.5 w-3.5 ${preSurgeryMarkerScan === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${preSurgeryMarkerScan === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="marker-scan-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgeryMarkerScan === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="marker-scan-no"
+                                    className={`h-3.5 w-3.5 ${preSurgeryMarkerScan === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${preSurgeryMarkerScan === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {/* 3. Post surgery tissue scan */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">3. Post surgery tissue scan</Label>
+                            <RadioGroup value={postSurgeryTissueScan} onValueChange={setPostSurgeryTissueScan}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="tissue-scan-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${postSurgeryTissueScan === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="tissue-scan-yes"
+                                    className={`h-3.5 w-3.5 ${postSurgeryTissueScan === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${postSurgeryTissueScan === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="tissue-scan-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${postSurgeryTissueScan === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="tissue-scan-no"
+                                    className={`h-3.5 w-3.5 ${postSurgeryTissueScan === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${postSurgeryTissueScan === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {/* 4. ICAM */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">4. ICAM</Label>
+                            <RadioGroup value={icamData} onValueChange={setIcamData}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="icam-data-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${icamData === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="icam-data-yes"
+                                    className={`h-3.5 w-3.5 ${icamData === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${icamData === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="icam-data-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${icamData === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="icam-data-no"
+                                    className={`h-3.5 w-3.5 ${icamData === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${icamData === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {/* 5. CBCT */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">5. CBCT</Label>
+                            <RadioGroup value={cbctData} onValueChange={setCbctData}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="surgery-cbct-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${cbctData === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="surgery-cbct-yes"
+                                    className={`h-3.5 w-3.5 ${cbctData === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${cbctData === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="surgery-cbct-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${cbctData === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="surgery-cbct-no"
+                                    className={`h-3.5 w-3.5 ${cbctData === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${cbctData === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+                          {/* 6. Facial scan */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                            <Label className="text-sm font-medium text-indigo-900">6. Facial scan</Label>
+                            <RadioGroup value={facialScan} onValueChange={setFacialScan}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="surgery-facial-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'Yes'
+                                    ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="surgery-facial-yes"
+                                    className={`h-3.5 w-3.5 ${facialScan === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${facialScan === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="surgery-facial-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'No'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="surgery-facial-no"
+                                    className={`h-3.5 w-3.5 ${facialScan === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${facialScan === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+                        </div>
+                      )}
+
+                      {picturesDataCollected === 'Yes' &&
+                        (appointmentDetails?.appointment_type === 'follow-up' ||
+                          appointmentDetails?.appointment_type === 'data-collection' ||
+                          appointmentDetails?.appointment_type === 'printed-try-in' ||
+                          appointmentDetails?.appointment_type === 'Appliance-delivery') && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+
+                            {/* 1. Follow-up pictures */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">1. Follow-up pictures</Label>
+                              <RadioGroup value={followUpPictures} onValueChange={setFollowUpPictures}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="fu-pics-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${followUpPictures === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="fu-pics-yes"
+                                      className={`h-3.5 w-3.5 ${followUpPictures === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${followUpPictures === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="fu-pics-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${followUpPictures === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="fu-pics-no"
+                                      className={`h-3.5 w-3.5 ${followUpPictures === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${followUpPictures === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                            {/* 2. Post healing jaw records */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">2. Post healing jaw records</Label>
+                              <RadioGroup value={postHealingJawRecords} onValueChange={setPostHealingJawRecords}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="ph-jaw-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${postHealingJawRecords === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="ph-jaw-yes"
+                                      className={`h-3.5 w-3.5 ${postHealingJawRecords === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${postHealingJawRecords === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="ph-jaw-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${postHealingJawRecords === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="ph-jaw-no"
+                                      className={`h-3.5 w-3.5 ${postHealingJawRecords === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${postHealingJawRecords === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                            {/* 3. Post healing Tissue scan */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">3. Post healing Tissue scan</Label>
+                              <RadioGroup value={postHealingTissueScan} onValueChange={setPostHealingTissueScan}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="ph-tissue-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${postHealingTissueScan === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="ph-tissue-yes"
+                                      className={`h-3.5 w-3.5 ${postHealingTissueScan === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${postHealingTissueScan === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="ph-tissue-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${postHealingTissueScan === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="ph-tissue-no"
+                                      className={`h-3.5 w-3.5 ${postHealingTissueScan === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${postHealingTissueScan === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                            {/* 4. ICAM data */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">4. ICAM data</Label>
+                              <RadioGroup value={icamData} onValueChange={setIcamData}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="fu-icam-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${icamData === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="fu-icam-yes"
+                                      className={`h-3.5 w-3.5 ${icamData === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${icamData === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="fu-icam-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${icamData === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="fu-icam-no"
+                                      className={`h-3.5 w-3.5 ${icamData === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${icamData === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                            {/* 5. CBCT */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">5. CBCT</Label>
+                              <RadioGroup value={cbctData} onValueChange={setCbctData}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="fu-cbct-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${cbctData === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="fu-cbct-yes"
+                                      className={`h-3.5 w-3.5 ${cbctData === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${cbctData === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="fu-cbct-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${cbctData === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="fu-cbct-no"
+                                      className={`h-3.5 w-3.5 ${cbctData === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${cbctData === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                            {/* 6. Facial Scan */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">6. Facial scan</Label>
+                              <RadioGroup value={facialScan} onValueChange={setFacialScan}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="fu-facial-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="fu-facial-yes"
+                                      className={`h-3.5 w-3.5 ${facialScan === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${facialScan === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="fu-facial-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="fu-facial-no"
+                                      className={`h-3.5 w-3.5 ${facialScan === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${facialScan === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                            {/* 7. Modjaw */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">7. Modjaw</Label>
+                              <RadioGroup value={modjawData} onValueChange={setModjawData}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="modjaw-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${modjawData === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="modjaw-yes"
+                                      className={`h-3.5 w-3.5 ${modjawData === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${modjawData === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="modjaw-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${modjawData === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="modjaw-no"
+                                      className={`h-3.5 w-3.5 ${modjawData === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${modjawData === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                          </div>
+                        )}
+
+                      {/* Placeholder for future Yes logic for OTHER types */}
+                      {picturesDataCollected === 'Yes' &&
+                        appointmentDetails?.appointment_type !== 'consultation' &&
+                        appointmentDetails?.appointment_type !== 'surgery' &&
+                        appointmentDetails?.appointment_type !== 'surgical-revision' &&
+                        appointmentDetails?.appointment_type !== 'follow-up' &&
+                        appointmentDetails?.appointment_type !== 'data-collection' &&
+                        appointmentDetails?.appointment_type !== 'printed-try-in' &&
+                        appointmentDetails?.appointment_type !== 'Appliance-delivery' && (
+                          <div className="text-sm text-indigo-600 italic animate-in fade-in">
+                            Additional questions for this encounter type will appear here...
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Smoking Status Section - Show for ALL encounters EXCEPT surgery and consultation */}
                 {appointmentDetails?.appointment_type !== 'surgery' &&
@@ -1096,6 +1992,226 @@ export function EncounterFormDialog({
                     </div>
                   )}
 
+                  {/* Pictures/Data Collected Section - Shown for Consultation after Treatment Acceptance */}
+                  {appointmentDetails?.appointment_type === 'consultation' && consultationData?.treatment_decision === 'accepted' && (
+                    <div className="bg-indigo-50 p-6 rounded-lg border border-indigo-200 mb-6 transition-all animate-in fade-in slide-in-from-top-2">
+                      <h3 className="text-lg font-bold mb-4 text-indigo-900">Pictures/Data Collected</h3>
+
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-semibold text-indigo-900">
+                            Pictures/data collected?
+                          </Label>
+                          <RadioGroup value={picturesDataCollected} onValueChange={setPicturesDataCollected}>
+                            <div className="flex items-center gap-1.5 max-w-xs">
+                              <Label
+                                htmlFor="consult-pictures-yes"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${picturesDataCollected === 'Yes'
+                                  ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                  : 'bg-white border-gray-200 hover:border-indigo-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="Yes"
+                                  id="consult-pictures-yes"
+                                  className={`h-3.5 w-3.5 ${picturesDataCollected === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${picturesDataCollected === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                  Yes
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="consult-pictures-no"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${picturesDataCollected === 'No'
+                                  ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                  : 'bg-white border-gray-200 hover:border-gray-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="No"
+                                  id="consult-pictures-no"
+                                  className={`h-3.5 w-3.5 ${picturesDataCollected === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${picturesDataCollected === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                  No
+                                </span>
+                              </Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+
+                        {/* Consultation Specific Questions */}
+                        {picturesDataCollected === 'Yes' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in pt-2">
+                            {/* 1. Pre surgical Pictures */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">1. Pre surgical Pictures</Label>
+                              <RadioGroup value={preSurgicalPictures} onValueChange={setPreSurgicalPictures}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="pre-pics-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgicalPictures === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="pre-pics-yes"
+                                      className={`h-3.5 w-3.5 ${preSurgicalPictures === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${preSurgicalPictures === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="pre-pics-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgicalPictures === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="pre-pics-no"
+                                      className={`h-3.5 w-3.5 ${preSurgicalPictures === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${preSurgicalPictures === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                            {/* 2. Pre surgical jaw records */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">2. Pre surgical jaw records</Label>
+                              <RadioGroup value={preSurgicalJawRecords} onValueChange={setPreSurgicalJawRecords}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="pre-jaw-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgicalJawRecords === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="pre-jaw-yes"
+                                      className={`h-3.5 w-3.5 ${preSurgicalJawRecords === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${preSurgicalJawRecords === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="pre-jaw-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${preSurgicalJawRecords === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="pre-jaw-no"
+                                      className={`h-3.5 w-3.5 ${preSurgicalJawRecords === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${preSurgicalJawRecords === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                            {/* 3. Facial scan */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">3. Facial scan</Label>
+                              <RadioGroup value={facialScan} onValueChange={setFacialScan}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="consult-facial-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="consult-facial-yes"
+                                      className={`h-3.5 w-3.5 ${facialScan === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${facialScan === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="consult-facial-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="consult-facial-no"
+                                      className={`h-3.5 w-3.5 ${facialScan === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${facialScan === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+
+                            {/* 4. CBCT data */}
+                            <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-indigo-100">
+                              <Label className="text-sm font-medium text-indigo-900">4. CBCT data</Label>
+                              <RadioGroup value={cbctData} onValueChange={setCbctData}>
+                                <div className="flex items-center gap-1.5">
+                                  <Label
+                                    htmlFor="cbct-yes"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${cbctData === 'Yes'
+                                      ? 'bg-indigo-100 border-indigo-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-indigo-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="Yes"
+                                      id="cbct-yes"
+                                      className={`h-3.5 w-3.5 ${cbctData === 'Yes' ? 'text-indigo-600 border-indigo-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${cbctData === 'Yes' ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                      Yes
+                                    </span>
+                                  </Label>
+                                  <Label
+                                    htmlFor="cbct-no"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${cbctData === 'No'
+                                      ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                      : 'bg-white border-gray-200 hover:border-gray-300'
+                                      }`}
+                                  >
+                                    <RadioGroupItem
+                                      value="No"
+                                      id="cbct-no"
+                                      className={`h-3.5 w-3.5 ${cbctData === 'No' ? 'text-gray-600 border-gray-600' : ''}`}
+                                    />
+                                    <span className={`text-xs font-medium ${cbctData === 'No' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                      No
+                                    </span>
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Treatment Accepted Checklist - New Section */}
                   {appointmentDetails?.appointment_type === 'consultation' && (consultationData?.treatment_decision === 'accepted' || patientAcceptedTreatment === 'Yes') && (
                     <div className="bg-blue-50/50 p-6 rounded-lg border border-blue-200 mb-6 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -1103,284 +2219,443 @@ export function EncounterFormDialog({
                         Treatment Accepted Checklist
                       </h3>
 
-                      <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[
-                          { label: 'IV sedation consult', value: ivSedationConsult, setter: setIvSedationConsult },
-                          { label: 'Head and neck examination', value: headAndNeckExam, setter: setHeadAndNeckExam },
-                          { label: 'Record collection (Data collection sheet)', value: recordCollection, setter: setRecordCollection },
-                          { label: 'Administrative forms', value: administrativeForms, setter: setAdministrativeForms },
-                        ].map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-between pb-4 border-b border-blue-100 last:border-0 last:pb-0">
-                            <Label className="text-base font-medium text-blue-900 leading-tight pr-4">
-                              {item.label}
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={item.value === option ? 'default' : 'outline'}
-                                  onClick={() => {
-                                    if (item.value === option) {
-                                      // Unselect if already selected
-                                      item.setter('');
-                                    } else {
-                                      // Select
-                                      item.setter(option);
-                                    }
-                                  }}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${item.value === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                          { label: 'IV sedation consult', value: ivSedationConsult, setter: setIvSedationConsult, id: 'iv-sedation' },
+                          { label: 'Head and neck examination', value: headAndNeckExam, setter: setHeadAndNeckExam, id: 'hn-exam' },
+                          { label: 'Record collection (Data collection sheet)', value: recordCollection, setter: setRecordCollection, id: 'rec-col' },
+                          { label: 'Administrative forms', value: administrativeForms, setter: setAdministrativeForms, id: 'admin-forms' },
+                        ].map((item) => (
+                          <div key={item.id} className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-blue-100">
+                            <Label className="text-sm font-medium text-blue-900">{item.label}</Label>
+                            <RadioGroup value={item.value} onValueChange={item.setter}>
+                              <div className="flex items-center gap-1.5">
+                                {/* Yes Option */}
+                                <Label
+                                  htmlFor={`${item.id}-yes`}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${item.value === 'Yes'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-green-300'
                                     }`}
                                 >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id={`${item.id}-yes`}
+                                    className={`h-3.5 w-3.5 ${item.value === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${item.value === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+
+                                {/* No Option */}
+                                <Label
+                                  htmlFor={`${item.id}-no`}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${item.value === 'No'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id={`${item.id}-no`}
+                                    className={`h-3.5 w-3.5 ${item.value === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${item.value === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+
+                                {/* N/A Option */}
+                                <Label
+                                  htmlFor={`${item.id}-na`}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${item.value === 'N/A'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="N/A"
+                                    id={`${item.id}-na`}
+                                    className={`h-3.5 w-3.5 ${item.value === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${item.value === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    N/A
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
+
+
                   {/* Encounter Form Fields - Left Column - Hide for surgery and consultation appointments */}
                   {appointmentDetails?.appointment_type !== 'surgery' &&
                     appointmentDetails?.appointment_type !== 'surgical-revision' &&
                     appointmentDetails?.appointment_type !== 'consultation' && (
-                      <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                      <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 md:col-span-2">
                         <h3 className="text-lg font-semibold mb-6 text-blue-900">Encounter Details</h3>
 
                         <div className="space-y-3">
                           {/* Bite Adjustment */}
-                          <div className="flex items-center justify-between py-2 border-b border-blue-100/50">
-                            <Label className="text-base font-medium text-blue-900 leading-tight pr-4">
-                              Is bite adjustment made?
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={biteAdjustment === option ? 'default' : 'outline'}
-                                  onClick={() => biteAdjustment === option ? setBiteAdjustment('') : setBiteAdjustment(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${biteAdjustment === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-blue-100">
+                            <Label className="text-sm font-medium text-blue-900">Is bite adjustment made?</Label>
+                            <RadioGroup value={biteAdjustment} onValueChange={setBiteAdjustment}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="bite-adj-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${biteAdjustment === 'Yes'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-green-300'
                                     }`}
                                 >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Follow-up Pictures */}
-                          <div className="flex items-center justify-between py-2 border-b border-blue-100/50">
-                            <Label className="text-base font-medium text-blue-900 leading-tight pr-4">
-                              Are follow-up pictures taken?
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={followUpPictures === option ? 'default' : 'outline'}
-                                  onClick={() => followUpPictures === option ? setFollowUpPictures('') : setFollowUpPictures(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${followUpPictures === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="bite-adj-yes"
+                                    className={`h-3.5 w-3.5 ${biteAdjustment === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${biteAdjustment === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="bite-adj-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${biteAdjustment === 'No'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-red-300'
                                     }`}
                                 >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="bite-adj-no"
+                                    className={`h-3.5 w-3.5 ${biteAdjustment === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${biteAdjustment === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="bite-adj-na"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${biteAdjustment === 'N/A'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="N/A"
+                                    id="bite-adj-na"
+                                    className={`h-3.5 w-3.5 ${biteAdjustment === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${biteAdjustment === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    N/A
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
 
                           {/* Data Collection */}
-                          <div className="flex items-center justify-between py-2 border-b border-blue-100/50">
-                            <Label className="text-base font-medium text-blue-900 leading-tight pr-4">
-                              Data collection
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={dataCollection === option ? 'default' : 'outline'}
-                                  onClick={() => dataCollection === option ? setDataCollection('') : setDataCollection(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${dataCollection === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-blue-100">
+                            <Label className="text-sm font-medium text-blue-900">Data collection sheet</Label>
+                            <RadioGroup value={dataCollection} onValueChange={setDataCollection}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="data-col-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${dataCollection === 'Yes'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-green-300'
                                     }`}
                                 >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="data-col-yes"
+                                    className={`h-3.5 w-3.5 ${dataCollection === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${dataCollection === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="data-col-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${dataCollection === 'No'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="data-col-no"
+                                    className={`h-3.5 w-3.5 ${dataCollection === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${dataCollection === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="data-col-na"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${dataCollection === 'N/A'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="N/A"
+                                    id="data-col-na"
+                                    className={`h-3.5 w-3.5 ${dataCollection === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${dataCollection === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    N/A
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
 
                           {/* Is New Design Required */}
-                          <div className="flex items-center justify-between py-2 border-b border-blue-100/50">
-                            <Label className="text-base font-medium text-blue-900 leading-tight pr-4">
-                              Is New Design Required?
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={newDesignRequired === option ? 'default' : 'outline'}
-                                  onClick={() => newDesignRequired === option ? setNewDesignRequired('') : setNewDesignRequired(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${newDesignRequired === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      'bg-red-600 border-red-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300'
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-blue-100">
+                            <Label className="text-sm font-medium text-blue-900">Is New Design Required?</Label>
+                            <RadioGroup value={newDesignRequired} onValueChange={setNewDesignRequired}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="new-design-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${newDesignRequired === 'Yes'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-green-300'
                                     }`}
                                 >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="new-design-yes"
+                                    className={`h-3.5 w-3.5 ${newDesignRequired === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${newDesignRequired === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="new-design-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${newDesignRequired === 'No'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="new-design-no"
+                                    className={`h-3.5 w-3.5 ${newDesignRequired === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${newDesignRequired === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
                         </div>
                       </div>
                     )}
 
                   {/* Follow-up Specific Questions - Right Column */}
-                  {(appointmentDetails?.appointment_type === 'follow-up') && (
-                    <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                      <h3 className="text-lg font-semibold mb-6 text-blue-900">
-                        {appointmentDetails?.subtype === '7-day-followup'
-                          ? '7-Day Follow-up Assessment'
-                          : appointmentDetails?.subtype === '30-day-followup'
-                            ? '30-Day Follow-up Assessment'
-                            : 'Follow-up Assessment'}
-                      </h3>
+                  {(appointmentDetails?.appointment_type === 'follow-up' ||
+                    appointmentDetails?.appointment_type === 'data-collection' ||
+                    appointmentDetails?.appointment_type === 'printed-try-in' ||
+                    appointmentDetails?.appointment_type === 'Appliance-delivery') && (
+                      <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 md:col-span-2">
+                        <h3 className="text-lg font-semibold mb-6 text-blue-900">
+                          {appointmentDetails?.subtype === '7-day-followup'
+                            ? '7-Day Follow-up Assessment'
+                            : appointmentDetails?.subtype === '30-day-followup'
+                              ? '30-Day Follow-up Assessment'
+                              : 'Follow-up Assessment'}
+                        </h3>
 
-                      <div className="space-y-3">
-                        {/* How is the Bite */}
-                        <div className="flex items-center justify-between py-2 border-b border-blue-100/50">
-                          <Label className="text-base font-medium text-blue-900 leading-tight pr-4">
-                            How is the Bite?
-                          </Label>
-                          <div className="flex gap-2 shrink-0">
-                            {['Good', 'Fair', 'Poor'].map((option) => (
-                              <Button
-                                key={option}
-                                type="button"
-                                variant={howIsTheBite === option ? 'default' : 'outline'}
-                                onClick={() => howIsTheBite === option ? setHowIsTheBite('') : setHowIsTheBite(option)}
-                                className={`w-16 h-10 text-sm font-medium transition-all border-2 ${howIsTheBite === option
-                                  ? option === 'Good' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                    option === 'Fair' ? 'bg-yellow-600 border-yellow-600 text-white shadow-md' :
-                                      'bg-red-600 border-red-600 text-white shadow-md'
-                                  : option === 'Good' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                    option === 'Fair' ? 'bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100 hover:border-yellow-300' :
-                                      'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300'
-                                  }`}
-                              >
-                                {option}
-                              </Button>
-                            ))}
+                        <div className="space-y-3">
+                          {/* How is the Bite */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-blue-100">
+                            <Label className="text-sm font-medium text-blue-900">How is the Bite?</Label>
+                            <RadioGroup value={howIsTheBite} onValueChange={setHowIsTheBite}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="bite-good"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${howIsTheBite === 'Good'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-green-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Good"
+                                    id="bite-good"
+                                    className={`h-3.5 w-3.5 ${howIsTheBite === 'Good' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${howIsTheBite === 'Good' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    Good
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="bite-fair"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${howIsTheBite === 'Fair'
+                                    ? 'bg-yellow-50 border-yellow-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-yellow-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Fair"
+                                    id="bite-fair"
+                                    className={`h-3.5 w-3.5 ${howIsTheBite === 'Fair' ? 'text-yellow-600 border-yellow-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${howIsTheBite === 'Fair' ? 'text-yellow-700' : 'text-gray-700'}`}>
+                                    Fair
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="bite-poor"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${howIsTheBite === 'Poor'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Poor"
+                                    id="bite-poor"
+                                    className={`h-3.5 w-3.5 ${howIsTheBite === 'Poor' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${howIsTheBite === 'Poor' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    Poor
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
-                        </div>
 
-                        {/* Speech Issue */}
-                        <div className="flex items-center justify-between py-2 border-b border-blue-100/50">
-                          <Label className="text-base font-medium text-blue-900 leading-tight pr-4">
-                            Does the patient have any speech issue?
-                          </Label>
-                          <div className="flex gap-2 shrink-0">
-                            {['Yes', 'No'].map((option) => (
-                              <Button
-                                key={option}
-                                type="button"
-                                variant={speechIssue === option ? 'default' : 'outline'}
-                                onClick={() => speechIssue === option ? setSpeechIssue('') : setSpeechIssue(option)}
-                                className={`w-16 h-10 text-sm font-medium transition-all border-2 ${speechIssue === option
-                                  ? option === 'Yes' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                    'bg-green-600 border-green-600 text-white shadow-md'
-                                  : option === 'Yes' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                    'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300'
-                                  }`}
-                              >
-                                {option}
-                              </Button>
-                            ))}
+                          {/* Speech Issue */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-blue-100">
+                            <Label className="text-sm font-medium text-blue-900">Does the patient have any speech issue?</Label>
+                            <RadioGroup value={speechIssue} onValueChange={setSpeechIssue}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="speech-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${speechIssue === 'Yes'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="speech-yes"
+                                    className={`h-3.5 w-3.5 ${speechIssue === 'Yes' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${speechIssue === 'Yes' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="speech-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${speechIssue === 'No'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-green-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="speech-no"
+                                    className={`h-3.5 w-3.5 ${speechIssue === 'No' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${speechIssue === 'No' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
-                        </div>
 
-                        {/* Intaglio Gap */}
-                        <div className="flex items-center justify-between py-2 border-b border-blue-100/50">
-                          <Label className="text-base font-medium text-blue-900 leading-tight pr-4">
-                            Is there an intaglio gap?
-                          </Label>
-                          <div className="flex gap-2 shrink-0">
-                            {['Yes', 'No'].map((option) => (
-                              <Button
-                                key={option}
-                                type="button"
-                                variant={intaglioGap === option ? 'default' : 'outline'}
-                                onClick={() => intaglioGap === option ? setIntaglioGap('') : setIntaglioGap(option)}
-                                className={`w-16 h-10 text-sm font-medium transition-all border-2 ${intaglioGap === option
-                                  ? option === 'Yes' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                    'bg-green-600 border-green-600 text-white shadow-md'
-                                  : option === 'Yes' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                    'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300'
-                                  }`}
-                              >
-                                {option}
-                              </Button>
-                            ))}
+                          {/* Intaglio Gap */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-blue-100">
+                            <Label className="text-sm font-medium text-blue-900">Is there an intaglio gap?</Label>
+                            <RadioGroup value={intaglioGap} onValueChange={setIntaglioGap}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="intaglio-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${intaglioGap === 'Yes'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="intaglio-yes"
+                                    className={`h-3.5 w-3.5 ${intaglioGap === 'Yes' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${intaglioGap === 'Yes' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="intaglio-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${intaglioGap === 'No'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-green-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="intaglio-no"
+                                    className={`h-3.5 w-3.5 ${intaglioGap === 'No' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${intaglioGap === 'No' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
-                        </div>
 
-                        {/* Functional Issue */}
-                        <div className="flex items-center justify-between py-2 border-b border-blue-100/50">
-                          <Label className="text-base font-medium text-blue-900 leading-tight pr-4">
-                            Does the patient have any functional issue?
-                          </Label>
-                          <div className="flex gap-2 shrink-0">
-                            {['Yes', 'No'].map((option) => (
-                              <Button
-                                key={option}
-                                type="button"
-                                variant={functionalIssue === option ? 'default' : 'outline'}
-                                onClick={() => functionalIssue === option ? setFunctionalIssue('') : setFunctionalIssue(option)}
-                                className={`w-16 h-10 text-sm font-medium transition-all border-2 ${functionalIssue === option
-                                  ? option === 'Yes' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                    'bg-green-600 border-green-600 text-white shadow-md'
-                                  : option === 'Yes' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                    'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300'
-                                  }`}
-                              >
-                                {option}
-                              </Button>
-                            ))}
+                          {/* Functional Issue */}
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-blue-100">
+                            <Label className="text-sm font-medium text-blue-900">Does the patient have any functional issue?</Label>
+                            <RadioGroup value={functionalIssue} onValueChange={setFunctionalIssue}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="functional-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${functionalIssue === 'Yes'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="functional-yes"
+                                    className={`h-3.5 w-3.5 ${functionalIssue === 'Yes' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${functionalIssue === 'Yes' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="functional-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${functionalIssue === 'No'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-blue-200 hover:border-green-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="functional-no"
+                                    className={`h-3.5 w-3.5 ${functionalIssue === 'No' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${functionalIssue === 'No' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Surgery Document Checklist - Show only for surgery and surgical-revision */}
                   {(appointmentDetails?.appointment_type === 'surgery' ||
@@ -1392,263 +2667,531 @@ export function EncounterFormDialog({
                           <p className="text-xs text-green-700 mb-4">Are the following forms completed?</p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Data Collection Sheet */}
-                          <div className="flex items-center justify-between py-2 border-b border-green-100/50">
-                            <Label className="text-xs font-semibold text-green-900 pr-4">
-                              1. Data Collection sheet
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={surgeryDataCollectionSheet === option ? 'default' : 'outline'}
-                                  onClick={() => surgeryDataCollectionSheet === option ? setSurgeryDataCollectionSheet('') : setSurgeryDataCollectionSheet(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${surgeryDataCollectionSheet === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-green-100">
+                            <Label className="text-sm font-medium text-green-900">1. Data Collection sheet</Label>
+                            <RadioGroup value={surgeryDataCollectionSheet} onValueChange={setSurgeryDataCollectionSheet}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="data-sheet-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgeryDataCollectionSheet === 'Yes'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-green-200 hover:border-green-300'
                                     }`}
                                 >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="data-sheet-yes"
+                                    className={`h-3.5 w-3.5 ${surgeryDataCollectionSheet === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgeryDataCollectionSheet === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="data-sheet-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgeryDataCollectionSheet === 'No'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="data-sheet-no"
+                                    className={`h-3.5 w-3.5 ${surgeryDataCollectionSheet === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgeryDataCollectionSheet === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="data-sheet-na"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgeryDataCollectionSheet === 'N/A'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="N/A"
+                                    id="data-sheet-na"
+                                    className={`h-3.5 w-3.5 ${surgeryDataCollectionSheet === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgeryDataCollectionSheet === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    N/A
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
 
                           {/* IV Sedation Flow Chart */}
-                          <div className="flex items-center justify-between py-2 border-b border-green-100/50">
-                            <Label className="text-xs font-semibold text-green-900 pr-4">
-                              2. IV Sedation flow chart
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={surgeryIvSedationFlowChart === option ? 'default' : 'outline'}
-                                  onClick={() => surgeryIvSedationFlowChart === option ? setSurgeryIvSedationFlowChart('') : setSurgeryIvSedationFlowChart(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${surgeryIvSedationFlowChart === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-green-100">
+                            <Label className="text-sm font-medium text-green-900">2. IV Sedation flow chart</Label>
+                            <RadioGroup value={surgeryIvSedationFlowChart} onValueChange={setSurgeryIvSedationFlowChart}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="iv-flow-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgeryIvSedationFlowChart === 'Yes'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-green-200 hover:border-green-300'
                                     }`}
                                 >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="iv-flow-yes"
+                                    className={`h-3.5 w-3.5 ${surgeryIvSedationFlowChart === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgeryIvSedationFlowChart === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="iv-flow-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgeryIvSedationFlowChart === 'No'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="iv-flow-no"
+                                    className={`h-3.5 w-3.5 ${surgeryIvSedationFlowChart === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgeryIvSedationFlowChart === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="iv-flow-na"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgeryIvSedationFlowChart === 'N/A'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="N/A"
+                                    id="iv-flow-na"
+                                    className={`h-3.5 w-3.5 ${surgeryIvSedationFlowChart === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgeryIvSedationFlowChart === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    N/A
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
 
                           {/* Surgical Recall Sheet */}
-                          <div className="flex items-center justify-between py-2 border-b border-green-100/50">
-                            <Label className="text-xs font-semibold text-green-900 pr-4">
-                              3. Surgical recall Sheet
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={surgerySurgicalRecallSheet === option ? 'default' : 'outline'}
-                                  onClick={() => surgerySurgicalRecallSheet === option ? setSurgerySurgicalRecallSheet('') : setSurgerySurgicalRecallSheet(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${surgerySurgicalRecallSheet === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-green-100">
+                            <Label className="text-sm font-medium text-green-900">3. Surgical recall Sheet</Label>
+                            <RadioGroup value={surgerySurgicalRecallSheet} onValueChange={setSurgerySurgicalRecallSheet}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="recall-sheet-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgerySurgicalRecallSheet === 'Yes'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-green-200 hover:border-green-300'
                                     }`}
                                 >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="recall-sheet-yes"
+                                    className={`h-3.5 w-3.5 ${surgerySurgicalRecallSheet === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgerySurgicalRecallSheet === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="recall-sheet-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgerySurgicalRecallSheet === 'No'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="recall-sheet-no"
+                                    className={`h-3.5 w-3.5 ${surgerySurgicalRecallSheet === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgerySurgicalRecallSheet === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="recall-sheet-na"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgerySurgicalRecallSheet === 'N/A'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="N/A"
+                                    id="recall-sheet-na"
+                                    className={`h-3.5 w-3.5 ${surgerySurgicalRecallSheet === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgerySurgicalRecallSheet === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    N/A
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
 
                           {/* Lab Script */}
-                          <div className="flex items-center justify-between py-2 border-b border-green-100/50">
-                            <Label className="text-xs font-semibold text-green-900 pr-4">
-                              4. Lab script
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={surgeryLabScript === option ? 'default' : 'outline'}
-                                  onClick={() => surgeryLabScript === option ? setSurgeryLabScript('') : setSurgeryLabScript(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${surgeryLabScript === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                          <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-green-100">
+                            <Label className="text-sm font-medium text-green-900">4. Lab script</Label>
+                            <RadioGroup value={surgeryLabScript} onValueChange={setSurgeryLabScript}>
+                              <div className="flex items-center gap-1.5">
+                                <Label
+                                  htmlFor="lab-script-yes"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgeryLabScript === 'Yes'
+                                    ? 'bg-green-100 border-green-500 shadow-sm'
+                                    : 'bg-white border-green-200 hover:border-green-300'
                                     }`}
                                 >
-                                  {option}
-                                </Button>
-                              ))}
-                            </div>
+                                  <RadioGroupItem
+                                    value="Yes"
+                                    id="lab-script-yes"
+                                    className={`h-3.5 w-3.5 ${surgeryLabScript === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgeryLabScript === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                    Yes
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="lab-script-no"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgeryLabScript === 'No'
+                                    ? 'bg-red-50 border-red-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-red-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="No"
+                                    id="lab-script-no"
+                                    className={`h-3.5 w-3.5 ${surgeryLabScript === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgeryLabScript === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                    No
+                                  </span>
+                                </Label>
+                                <Label
+                                  htmlFor="lab-script-na"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${surgeryLabScript === 'N/A'
+                                    ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
+                                >
+                                  <RadioGroupItem
+                                    value="N/A"
+                                    id="lab-script-na"
+                                    className={`h-3.5 w-3.5 ${surgeryLabScript === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                  />
+                                  <span className={`text-xs font-medium ${surgeryLabScript === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                    N/A
+                                  </span>
+                                </Label>
+                              </div>
+                            </RadioGroup>
                           </div>
                         </div>
                       </div>
                     )}
 
-                  {/* Staff Checklist - Show only for 75-day-data-collection, final-data-collection, and data-collection-printed-try-in */}
-                  {(appointmentDetails?.subtype === '75-day-data-collection' ||
-                    appointmentDetails?.subtype === 'final-data-collection' ||
-                    appointmentDetails?.subtype === 'data-collection-printed-try-in') && (
-                      <div className="bg-orange-50 p-6 rounded-lg border border-orange-300">
-                        <h3 className="text-lg font-semibold mb-6 text-amber-900">Staff Checklist</h3>
+                  {/* Staff Checklist - Show only for printed-try-in (removed for data-collection per user request) */}
+                  {(appointmentDetails?.subtype === 'data-collection-printed-try-in') && (
+                    <div className="bg-orange-50 p-6 rounded-lg border border-orange-300">
+                      <h3 className="text-lg font-semibold mb-6 text-amber-900">Staff Checklist</h3>
 
-                        <div className="space-y-3">
-                          {/* Extra Intra Oral Pictures */}
-                          <div className="flex items-center justify-between py-2 border-b border-orange-200">
-                            <Label className="text-sm font-medium text-amber-900 pr-4">
-                              Extra Intra Oral Pictures
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={extraIntraOralPictures === option ? 'default' : 'outline'}
-                                  onClick={() => extraIntraOralPictures === option ? setExtraIntraOralPictures('') : setExtraIntraOralPictures(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${extraIntraOralPictures === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
-                                    }`}
-                                >
-                                  {option}
-                                </Button>
-                              ))}
+                      <div className="space-y-3">
+                        {/* Extra Intra Oral Pictures */}
+                        <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-orange-100">
+                          <Label className="text-sm font-medium text-amber-900">Extra Intra Oral Pictures</Label>
+                          <RadioGroup value={extraIntraOralPictures} onValueChange={setExtraIntraOralPictures}>
+                            <div className="flex items-center gap-1.5">
+                              <Label
+                                htmlFor="extra-pics-yes"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${extraIntraOralPictures === 'Yes'
+                                  ? 'bg-green-100 border-green-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-green-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="Yes"
+                                  id="extra-pics-yes"
+                                  className={`h-3.5 w-3.5 ${extraIntraOralPictures === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${extraIntraOralPictures === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                  Yes
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="extra-pics-no"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${extraIntraOralPictures === 'No'
+                                  ? 'bg-red-50 border-red-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-red-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="No"
+                                  id="extra-pics-no"
+                                  className={`h-3.5 w-3.5 ${extraIntraOralPictures === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${extraIntraOralPictures === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                  No
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="extra-pics-na"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${extraIntraOralPictures === 'N/A'
+                                  ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-gray-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="N/A"
+                                  id="extra-pics-na"
+                                  className={`h-3.5 w-3.5 ${extraIntraOralPictures === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${extraIntraOralPictures === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                  N/A
+                                </span>
+                              </Label>
                             </div>
-                          </div>
+                          </RadioGroup>
+                        </div>
 
-                          {/* Facial Scan */}
-                          <div className="flex items-center justify-between py-2 border-b border-orange-200">
-                            <Label className="text-sm font-medium text-amber-900 pr-4">
-                              Facial Scan
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={facialScan === option ? 'default' : 'outline'}
-                                  onClick={() => facialScan === option ? setFacialScan('') : setFacialScan(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${facialScan === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
-                                    }`}
-                                >
-                                  {option}
-                                </Button>
-                              ))}
+                        {/* Facial Scan */}
+                        <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-orange-100">
+                          <Label className="text-sm font-medium text-amber-900">Facial Scan</Label>
+                          <RadioGroup value={facialScan} onValueChange={setFacialScan}>
+                            <div className="flex items-center gap-1.5">
+                              <Label
+                                htmlFor="facial-yes"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'Yes'
+                                  ? 'bg-green-100 border-green-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-green-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="Yes"
+                                  id="facial-yes"
+                                  className={`h-3.5 w-3.5 ${facialScan === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${facialScan === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                  Yes
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="facial-no"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'No'
+                                  ? 'bg-red-50 border-red-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-red-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="No"
+                                  id="facial-no"
+                                  className={`h-3.5 w-3.5 ${facialScan === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${facialScan === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                  No
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="facial-na"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${facialScan === 'N/A'
+                                  ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-gray-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="N/A"
+                                  id="facial-na"
+                                  className={`h-3.5 w-3.5 ${facialScan === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${facialScan === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                  N/A
+                                </span>
+                              </Label>
                             </div>
-                          </div>
+                          </RadioGroup>
+                        </div>
 
-                          {/* Post Surgery Jaw Records */}
-                          <div className="flex items-center justify-between py-2 border-b border-orange-200">
-                            <Label className="text-sm font-medium text-amber-900 pr-4">
-                              Post Surgery Jaw Records
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={postSurgeryJawRecords === option ? 'default' : 'outline'}
-                                  onClick={() => postSurgeryJawRecords === option ? setPostSurgeryJawRecords('') : setPostSurgeryJawRecords(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${postSurgeryJawRecords === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
-                                    }`}
-                                >
-                                  {option}
-                                </Button>
-                              ))}
+                        {/* Post Surgery Jaw Records */}
+                        <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-orange-100">
+                          <Label className="text-sm font-medium text-amber-900">Post Surgery Jaw Records</Label>
+                          <RadioGroup value={postSurgeryJawRecords} onValueChange={setPostSurgeryJawRecords}>
+                            <div className="flex items-center gap-1.5">
+                              <Label
+                                htmlFor="jaw-yes"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${postSurgeryJawRecords === 'Yes'
+                                  ? 'bg-green-100 border-green-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-green-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="Yes"
+                                  id="jaw-yes"
+                                  className={`h-3.5 w-3.5 ${postSurgeryJawRecords === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${postSurgeryJawRecords === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                  Yes
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="jaw-no"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${postSurgeryJawRecords === 'No'
+                                  ? 'bg-red-50 border-red-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-red-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="No"
+                                  id="jaw-no"
+                                  className={`h-3.5 w-3.5 ${postSurgeryJawRecords === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${postSurgeryJawRecords === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                  No
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="jaw-na"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${postSurgeryJawRecords === 'N/A'
+                                  ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-gray-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="N/A"
+                                  id="jaw-na"
+                                  className={`h-3.5 w-3.5 ${postSurgeryJawRecords === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${postSurgeryJawRecords === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                  N/A
+                                </span>
+                              </Label>
                             </div>
-                          </div>
+                          </RadioGroup>
+                        </div>
 
-                          {/* Tissue Scan */}
-                          <div className="flex items-center justify-between py-2 border-b border-orange-200">
-                            <Label className="text-sm font-medium text-amber-900 pr-4">
-                              Tissue Scan
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={tissueScan === option ? 'default' : 'outline'}
-                                  onClick={() => tissueScan === option ? setTissueScan('') : setTissueScan(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${tissueScan === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
-                                    }`}
-                                >
-                                  {option}
-                                </Button>
-                              ))}
+                        {/* Tissue Scan */}
+                        <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-orange-100">
+                          <Label className="text-sm font-medium text-amber-900">Tissue Scan</Label>
+                          <RadioGroup value={tissueScan} onValueChange={setTissueScan}>
+                            <div className="flex items-center gap-1.5">
+                              <Label
+                                htmlFor="tissue-yes"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${tissueScan === 'Yes'
+                                  ? 'bg-green-100 border-green-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-green-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="Yes"
+                                  id="tissue-yes"
+                                  className={`h-3.5 w-3.5 ${tissueScan === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${tissueScan === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                  Yes
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="tissue-no"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${tissueScan === 'No'
+                                  ? 'bg-red-50 border-red-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-red-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="No"
+                                  id="tissue-no"
+                                  className={`h-3.5 w-3.5 ${tissueScan === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${tissueScan === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                  No
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="tissue-na"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${tissueScan === 'N/A'
+                                  ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-gray-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="N/A"
+                                  id="tissue-na"
+                                  className={`h-3.5 w-3.5 ${tissueScan === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${tissueScan === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                  N/A
+                                </span>
+                              </Label>
                             </div>
-                          </div>
+                          </RadioGroup>
+                        </div>
 
-                          {/* ICAM Required */}
-                          <div className="flex items-center justify-between py-2 border-b border-orange-200">
-                            <Label className="text-sm font-medium text-amber-900 pr-4">
-                              ICAM Required
-                            </Label>
-                            <div className="flex gap-2 shrink-0">
-                              {['Yes', 'No', 'N/A'].map((option) => (
-                                <Button
-                                  key={option}
-                                  type="button"
-                                  variant={icamRequired === option ? 'default' : 'outline'}
-                                  onClick={() => icamRequired === option ? setIcamRequired('') : setIcamRequired(option)}
-                                  className={`w-16 h-10 text-sm font-medium transition-all border-2 ${icamRequired === option
-                                    ? option === 'Yes' ? 'bg-green-600 border-green-600 text-white shadow-md' :
-                                      option === 'No' ? 'bg-red-600 border-red-600 text-white shadow-md' :
-                                        'bg-gray-600 border-gray-600 text-white shadow-md'
-                                    : option === 'Yes' ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300' :
-                                      option === 'No' ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300' :
-                                        'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
-                                    }`}
-                                >
-                                  {option}
-                                </Button>
-                              ))}
+                        {/* ICAM Required */}
+                        <div className="flex items-center justify-between bg-white/50 p-3 rounded-md border border-orange-100">
+                          <Label className="text-sm font-medium text-amber-900">ICAM Required</Label>
+                          <RadioGroup value={icamRequired} onValueChange={setIcamRequired}>
+                            <div className="flex items-center gap-1.5">
+                              <Label
+                                htmlFor="icam-req-yes"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${icamRequired === 'Yes'
+                                  ? 'bg-green-100 border-green-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-green-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="Yes"
+                                  id="icam-req-yes"
+                                  className={`h-3.5 w-3.5 ${icamRequired === 'Yes' ? 'text-green-600 border-green-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${icamRequired === 'Yes' ? 'text-green-700' : 'text-gray-700'}`}>
+                                  Yes
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="icam-req-no"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${icamRequired === 'No'
+                                  ? 'bg-red-50 border-red-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-red-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="No"
+                                  id="icam-req-no"
+                                  className={`h-3.5 w-3.5 ${icamRequired === 'No' ? 'text-red-600 border-red-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${icamRequired === 'No' ? 'text-red-700' : 'text-gray-700'}`}>
+                                  No
+                                </span>
+                              </Label>
+                              <Label
+                                htmlFor="icam-req-na"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded border-2 cursor-pointer transition-all ${icamRequired === 'N/A'
+                                  ? 'bg-gray-100 border-gray-500 shadow-sm'
+                                  : 'bg-white border-orange-200 hover:border-gray-300'
+                                  }`}
+                              >
+                                <RadioGroupItem
+                                  value="N/A"
+                                  id="icam-req-na"
+                                  className={`h-3.5 w-3.5 ${icamRequired === 'N/A' ? 'text-gray-600 border-gray-600' : ''}`}
+                                />
+                                <span className={`text-xs font-medium ${icamRequired === 'N/A' ? 'text-gray-700' : 'text-gray-700'}`}>
+                                  N/A
+                                </span>
+                              </Label>
                             </div>
-                          </div>
+                          </RadioGroup>
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
                 </div>
 
 
