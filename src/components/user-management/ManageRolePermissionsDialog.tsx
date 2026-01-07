@@ -29,11 +29,11 @@ interface ManageRolePermissionsDialogProps {
   onPermissionsUpdated: () => void;
 }
 
-export function ManageRolePermissionsDialog({ 
-  role, 
-  open, 
-  onOpenChange, 
-  onPermissionsUpdated 
+export function ManageRolePermissionsDialog({
+  role,
+  open,
+  onOpenChange,
+  onPermissionsUpdated
 }: ManageRolePermissionsDialogProps) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,7 +51,7 @@ export function ManageRolePermissionsDialog({
     try {
       // Fetch all permissions
       const { data: allPermissions, error: permError } = await supabase
-        .from('permissions')
+        .from('permissions' as any)
         .select('*')
         .order('module', { ascending: true })
         .order('action', { ascending: true });
@@ -62,11 +62,11 @@ export function ManageRolePermissionsDialog({
         return;
       }
 
-      setPermissions(allPermissions || []);
+      setPermissions((allPermissions as any) || []);
 
       // Fetch current role permissions
       const { data: rolePerms, error: rolePermError } = await supabase
-        .from('role_permissions')
+        .from('role_permissions' as any)
         .select('permission_id')
         .eq('role_id', role.id);
 
@@ -76,7 +76,7 @@ export function ManageRolePermissionsDialog({
         return;
       }
 
-      setSelectedPermissions(rolePerms?.map(rp => rp.permission_id) || []);
+      setSelectedPermissions((rolePerms as any)?.map((rp: any) => rp.permission_id) || []);
     } catch (error) {
       console.error('Error:', error);
       toast.error('An unexpected error occurred');
@@ -96,7 +96,7 @@ export function ManageRolePermissionsDialog({
   const handleSelectAll = (module: string) => {
     const modulePermIds = permissions.filter(p => p.module === module).map(p => p.id);
     const allSelected = modulePermIds.every(id => selectedPermissions.includes(id));
-    
+
     if (allSelected) {
       setSelectedPermissions(prev => prev.filter(id => !modulePermIds.includes(id)));
     } else {
@@ -109,7 +109,7 @@ export function ManageRolePermissionsDialog({
     try {
       // Delete existing role permissions
       const { error: deleteError } = await supabase
-        .from('role_permissions')
+        .from('role_permissions' as any)
         .delete()
         .eq('role_id', role.id);
 
@@ -127,7 +127,7 @@ export function ManageRolePermissionsDialog({
         }));
 
         const { error: insertError } = await supabase
-          .from('role_permissions')
+          .from('role_permissions' as any)
           .insert(newPermissions);
 
         if (insertError) {
@@ -157,18 +157,26 @@ export function ManageRolePermissionsDialog({
     return acc;
   }, {} as Record<string, Permission[]>);
 
+
   const moduleDisplayNames: Record<string, string> = {
     dashboard: 'Dashboard',
+    leads: 'Lead-in',
     patients: 'Patients',
     appointments: 'Appointments',
     consultation: 'Consultation',
     lab_scripts: 'Lab Scripts',
-    cad: 'CAD/CAM',
+    manufacturing: 'Manufacturing',
+
+    delivery: 'Appliance Delivery',
+    report_cards: 'Report Cards',
+    // cad: 'CAD/CAM',
     reports: 'Reports',
+
     users: 'User Management',
     roles: 'Role Management',
     system: 'System'
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

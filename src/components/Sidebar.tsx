@@ -36,14 +36,17 @@ const navigation: NavigationItem[] = [
     section: "dashboard",
     icon: House,
     featureFlag: "dashboard",
-    pageKey: "dashboard"
+    pageKey: "dashboard",
+    permission: "dashboard.access",
+
   }, {
     name: "Lead-in",
     href: "/lead-in",
     section: "lead-in",
     icon: UserPlus,
     featureFlag: "leadIn",
-    pageKey: "leadIn"
+    pageKey: "leadIn",
+    permission: "leads.read"
   }, {
     name: "Appointments",
     href: "/appointments",
@@ -66,7 +69,8 @@ const navigation: NavigationItem[] = [
     section: "patients",
     icon: Users,
     featureFlag: "patients",
-    pageKey: "patients"
+    pageKey: "patients",
+    permission: "patients.read"
   }, {
     name: "Lab",
     href: "/lab",
@@ -81,7 +85,8 @@ const navigation: NavigationItem[] = [
         section: "lab-scripts",
         icon: FlaskConical,
         featureFlag: "lab",
-        pageKey: "lab"
+        pageKey: "lab",
+        permission: "lab_scripts.read"
       },
       {
         name: "Manufacturing",
@@ -89,7 +94,8 @@ const navigation: NavigationItem[] = [
         section: "manufacturing",
         icon: Factory,
         featureFlag: "manufacturing",
-        pageKey: "manufacturing"
+        pageKey: "manufacturing",
+        permission: "manufacturing.read"
       },
       {
         name: "Appliance Delivery",
@@ -97,7 +103,8 @@ const navigation: NavigationItem[] = [
         section: "appliance-delivery",
         icon: Package,
         featureFlag: "applianceDelivery",
-        pageKey: "applianceDelivery"
+        pageKey: "applianceDelivery",
+        permission: "delivery.read"
       },
       {
         name: "Report Cards",
@@ -105,9 +112,11 @@ const navigation: NavigationItem[] = [
         section: "report-cards",
         icon: FileText,
         featureFlag: "reportCards",
-        pageKey: "reportCards"
+        pageKey: "reportCards",
+        permission: "report_cards.read"
       }
     ]
+
   }, {
     name: "User Management",
     href: "/user-management",
@@ -370,6 +379,9 @@ export function Sidebar({
 
         // Filter visible submenu items
         const visibleSubmenuItems = hasSubmenu ? item.submenu!.filter(subItem => {
+          if (subItem.adminOnly && !isAdminUser()) {
+            return false;
+          }
           if (subItem.permission && !hasPermission(subItem.permission)) {
             return false;
           }
@@ -381,6 +393,11 @@ export function Sidebar({
           }
           return true;
         }) : [];
+
+        // If item has a submenu but no visible items in it, hide the parent item
+        if (hasSubmenu && visibleSubmenuItems.length === 0) {
+          return null;
+        }
 
         return <div key={item.section} className="relative">
           <button

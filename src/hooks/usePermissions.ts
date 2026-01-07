@@ -64,7 +64,11 @@ export function usePermissions() {
   const canManagePatients = () => canCreatePatients() || canUpdatePatients() || canDeletePatients();
   const canManageLabScripts = () => canCreateLabScripts() || canUpdateLabScripts() || canDeleteLabScripts();
   const canManageAppointments = () => canCreateAppointments() || canUpdateAppointments() || canDeleteAppointments();
-  const canManageCAD = () => canCreateCAD() || canUpdateCAD() || canDeleteCAD() || canApproveCAD();
+
+
+  // const canManageCAD = () => canCreateCAD() || canUpdateCAD() || canDeleteCAD() || canApproveCAD();
+
+
 
   // Check if user has admin privileges
   const isAdminUser = () => isSuperAdmin() || isAdmin();
@@ -101,18 +105,34 @@ export function usePermissions() {
     canUpdatePatients,
     canDeletePatients,
 
-    // Lab script permissions
+
+    // Lab permissions
     canCreateLabScripts,
     canReadLabScripts,
     canUpdateLabScripts,
     canDeleteLabScripts,
     canChangeLabScriptStatus,
 
+    // Manufacturing & Delivery permissions
+    canAccessManufacturing: () => hasPermission('manufacturing.read'),
+    canManageManufacturing: () => hasPermission('manufacturing.manage'),
+    canAccessDelivery: () => hasPermission('delivery.read'),
+    canManageDelivery: () => hasPermission('delivery.manage'),
+
     // Report permissions
     canCreateLabReports,
     canReadLabReports,
     canCreateClinicalReports,
     canReadClinicalReports,
+    canAccessReportCards: () => hasPermission('report_cards.read'),
+    canCreateReportCards: () => hasPermission('report_cards.create'),
+
+    // Lead permissions
+    canAccessLeads: () => hasPermission('leads.read'),
+    canCreateLeads: () => hasPermission('leads.create'),
+    canUpdateLeads: () => hasPermission('leads.update'),
+    canDeleteLeads: () => hasPermission('leads.delete'),
+
 
     // Appointment permissions
     canCreateAppointments,
@@ -120,13 +140,15 @@ export function usePermissions() {
     canUpdateAppointments,
     canDeleteAppointments,
 
-    // CAD permissions
-    canCreateCAD,
-    canReadCAD,
-    canUpdateCAD,
-    canDeleteCAD,
-    canExportCAD,
-    canApproveCAD,
+
+    // CAD permissions - REMOVED
+    // canCreateCAD,
+    // canReadCAD,
+    // canUpdateCAD,
+    // canDeleteCAD,
+    // canExportCAD,
+    // canApproveCAD,
+
 
     // System permissions
     canAccessDashboard,
@@ -147,9 +169,11 @@ export function usePermissions() {
     canManageRoles,
     canManagePatients,
     canManageLabScripts,
+
     canManageAppointments,
-    canManageCAD,
+    // canManageCAD,
     isAdminUser,
+
     canAccessUserManagement,
     canAccessRoleManagement,
   };

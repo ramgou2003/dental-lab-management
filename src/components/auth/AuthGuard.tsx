@@ -55,20 +55,22 @@ export function AuthGuard({
   return <>{children}</>;
 }
 
+import { AccessRestricted } from './AccessRestricted';
+
 interface PermissionGuardProps {
   children: React.ReactNode;
-  permission?: string;
-  role?: string;
+  permission?: string | string[];
+  role?: string | string[];
   fallback?: React.ReactNode;
   requireAll?: boolean; // If true, user must have ALL specified permissions/roles
 }
 
-export function PermissionGuard({ 
-  children, 
-  permission, 
-  role, 
-  fallback = null,
-  requireAll = false 
+export function PermissionGuard({
+  children,
+  permission,
+  role,
+  fallback,
+  requireAll = false
 }: PermissionGuardProps) {
   const { hasPermission, hasRole, loading } = useAuth();
 
@@ -104,7 +106,13 @@ export function PermissionGuard({
   }
 
   if (!hasAccess) {
-    return <>{fallback}</>;
+    // If explicit fallback provided, use it. Otherwise use generic AccessRestricted page.
+    // Note: If explicit fallback is null, we assume they want nothing rendered.
+    // But if fallback is undefined check.
+    if (fallback !== undefined) {
+      return <>{fallback}</>;
+    }
+    return <AccessRestricted />;
   }
 
   return <>{children}</>;
@@ -122,23 +130,14 @@ export function withAuthGuard<P extends object>(
 ) {
   return function AuthGuardedComponent(props: P) {
     return (
-      <AuthGuard 
-        requireAuth={options.requireAuth} 
+      <AuthGuard
+        requireAuth={options.requireAuth}
         redirectTo={options.redirectTo}
       >
-        <PermissionGuard 
-          permission={options.permission} 
+        <PermissionGuard
+          permission={options.permission}
           role={options.role}
-          fallback={
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-              <div className="text-center">
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                  <strong className="font-bold">Access Denied</strong>
-                  <span className="block sm:inline"> You don't have permission to access this page.</span>
-                </div>
-              </div>
-            </div>
-          }
+          fallback={<AccessRestricted />}
         >
           <Component {...props} />
         </PermissionGuard>
@@ -146,3 +145,4 @@ export function withAuthGuard<P extends object>(
     );
   };
 }
+

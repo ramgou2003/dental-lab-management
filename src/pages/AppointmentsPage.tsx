@@ -190,9 +190,43 @@ export function AppointmentsPage() {
     }
   };
 
+  const handleSwitchToConsultation = (formData: any, patientData?: any) => {
+    console.log('Switching to consultation dialog with:', { formData, patientData });
+    setShowAppointmentForm(false);
 
+    // Prepare data for AddConsultationDialog
+    const consultationData: any = {
+      consultationDate: formData.date || new Date(),
+      consultationTime: formData.startTime || '09:00',
+      consultationEndTime: formData.endTime,
+      assignedUserId: formData.assignedUserId
+    };
 
+    if (patientData) {
+      consultationData.patientType = 'active';
+      consultationData.selectedPatient = {
+        id: patientData.id,
+        first_name: patientData.first_name,
+        last_name: patientData.last_name,
+        date_of_birth: patientData.date_of_birth,
+        gender: patientData.gender,
+        full_name: patientData.full_name,
+        phone: patientData.phone
+      };
+      consultationData.searchTerm = patientData.full_name;
+      consultationData.firstName = patientData.first_name;
+      consultationData.lastName = patientData.last_name;
+      consultationData.dateOfBirth = patientData.date_of_birth;
+      consultationData.gender = patientData.gender || 'prefer-not-to-answer';
+    }
 
+    setDraftAppointmentData(consultationData);
+    setInitialFormDate(consultationData.consultationDate);
+    setInitialFormTime(consultationData.consultationTime);
+    setInitialFormEndTime(consultationData.consultationEndTime);
+
+    setShowAddConsultationDialog(true);
+  };
 
   const filteredAppointments = getFilteredAppointments();
 
@@ -267,8 +301,8 @@ export function AppointmentsPage() {
             onClearSelection={handleClearSelection}
             clearSelectionTrigger={clearSelectionTrigger}
             onStatusChange={handleStatusChange}
-            onEdit={handleEditAppointment}
-            onDelete={handleDeleteAppointment}
+            onEdit={canUpdateAppointments() ? handleEditAppointment : undefined}
+            onDelete={canDeleteAppointments() ? handleDeleteAppointment : undefined}
             ref={dayViewRef}
           />
         </div>
@@ -299,6 +333,7 @@ export function AppointmentsPage() {
           }
           setShowSchedulerDialog(true);
         }}
+        onSwitchToConsultation={handleSwitchToConsultation}
       />
 
       {/* Appointment Scheduler Dialog */}
@@ -354,8 +389,10 @@ export function AppointmentsPage() {
         }}
         appointment={selectedAppointment}
         onEdit={handleEditAppointment}
-        onDelete={handleDeleteAppointment}
+        onDelete={canDeleteAppointments() ? handleDeleteAppointment : undefined}
         onStatusChange={handleStatusChange}
+        canUpdateAppointments={canUpdateAppointments()}
+        canDeleteAppointments={canDeleteAppointments()}
         onViewProfile={(patientId) => {
           // Navigate to patient profile
           window.location.href = `/patients/${patientId}`;

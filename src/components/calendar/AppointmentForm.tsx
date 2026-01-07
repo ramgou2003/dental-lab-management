@@ -16,6 +16,9 @@ interface Patient {
   full_name: string;
   first_name: string;
   last_name: string;
+  date_of_birth?: string;
+  gender?: string;
+  phone?: string;
 }
 
 interface User {
@@ -38,6 +41,7 @@ interface AppointmentFormProps {
   initialPatientName?: string;
   initialPatientId?: string;
   editingAppointment?: any;
+  onSwitchToConsultation?: (formData: any, patientData?: any) => void;
 }
 
 export function AppointmentForm({
@@ -53,7 +57,8 @@ export function AppointmentForm({
   initialPatientId,
   editingAppointment,
   initialValues,
-  onOpenCalendar
+  onOpenCalendar,
+  onSwitchToConsultation
 }: AppointmentFormProps) {
   const [selectedPatient, setSelectedPatient] = useState(''); // Patient name for display
   const [selectedPatientId, setSelectedPatientId] = useState(''); // Patient ID for database
@@ -174,20 +179,23 @@ export function AppointmentForm({
         const [regularPatientsResult, consultationPatientsResult] = await Promise.all([
           supabase
             .from('patients')
-            .select('id, full_name, first_name, last_name')
+            .select('id, full_name, first_name, last_name, date_of_birth, gender, phone')
             .order('full_name', { ascending: true }),
           supabase
-            .from('consultation_patients')
-            .select('id, first_name, last_name')
+            .from('consultation_patients' as any)
+            .select('id, first_name, last_name, date_of_birth, gender')
             .order('first_name', { ascending: true })
         ]);
 
-        const regularPatients = regularPatientsResult.data || [];
-        const consultationPatients = (consultationPatientsResult.data || []).map(cp => ({
+        const regularPatients = (regularPatientsResult.data || []) as Patient[];
+        const consultationPatients = (consultationPatientsResult.data || []).map((cp: any) => ({
           id: cp.id,
           first_name: cp.first_name,
           last_name: cp.last_name,
-          full_name: `${cp.first_name} ${cp.last_name}`.trim()
+          full_name: `${cp.first_name} ${cp.last_name}`.trim(),
+          date_of_birth: cp.date_of_birth,
+          gender: cp.gender,
+          phone: '' // Consultation patients might not have phone in this table easily accessible or structure differs
         }));
 
         // Combine both lists, removing duplicates by ID
@@ -201,7 +209,7 @@ export function AppointmentForm({
         // For non-consultation appointments, only fetch from patients table
         const { data, error } = await supabase
           .from('patients')
-          .select('id, full_name, first_name, last_name')
+          .select('id, full_name, first_name, last_name, date_of_birth, gender, phone')
           .order('full_name', { ascending: true });
 
         if (error) {
@@ -210,7 +218,7 @@ export function AppointmentForm({
         }
 
         if (data) {
-          setPatients(data);
+          setPatients(data as Patient[]);
         }
       }
     } catch (error) {
@@ -225,7 +233,7 @@ export function AppointmentForm({
     setLoadingUsers(true);
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('user_profiles' as any)
         .select('id, full_name, email')
         .eq('status', 'active')
         .order('full_name', { ascending: true });
@@ -236,12 +244,12 @@ export function AppointmentForm({
       }
 
       if (data) {
-        setUsers(data);
+        setUsers(data as User[]);
 
         // Set DC as default assigned user for new consultation appointments
         const isConsultation = selectedAppointmentType === 'consultation' || appointmentType === 'consultation';
         if (isConsultation && !editingAppointment && !selectedUserId) {
-          const dcUser = data.find(user => user.full_name.trim().toLowerCase() === 'dc');
+          const dcUser = (data as User[]).find(user => user.full_name.trim().toLowerCase() === 'dc');
           if (dcUser) {
             setSelectedUserId(dcUser.id);
           }
@@ -749,7 +757,20 @@ export function AppointmentForm({
               <label className="text-sm font-medium text-blue-700">
                 Appointment Type *
               </label>
-              <Select value={selectedAppointmentType || undefined} onValueChange={setSelectedAppointmentType}>
+              <Select
+                value={selectedAppointmentType || undefined}
+                onValueChange={(value) => {
+                  setSelectedAppointmentType(value);
+
+                  // Handle automatic switch to consultation form
+                  if (value === 'consultation' && onSwitchToConsultation) {
+                    const currentData = getCurrentFormData();
+                    const patientData = patients.find(p => p.id === selectedPatientId);
+                    // Pass the newly selected type 'consultation' explicitly as it won't be in getCurrentFormData yet due to closure
+                    onSwitchToConsultation({ ...currentData, type: 'consultation' }, patientData);
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select appointment type" />
                 </SelectTrigger>

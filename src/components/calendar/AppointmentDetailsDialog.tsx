@@ -474,7 +474,7 @@ export function AppointmentDetailsDialog({
             {/* Next Appointment */}
             <div className="flex items-center space-x-3">
               <div className={`p-2 rounded-lg ${(appointment.nextAppointmentStatus === 'scheduled' || appointment.nextAppointmentScheduled) ? 'bg-purple-100' :
-                  appointment.nextAppointmentStatus === 'not_required' ? 'bg-slate-100' : 'bg-gray-100'
+                appointment.nextAppointmentStatus === 'not_required' ? 'bg-slate-100' : 'bg-gray-100'
                 }`}>
                 {appointment.nextAppointmentStatus === 'not_required' ? (
                   <XCircle className="h-5 w-5 text-slate-500" />
@@ -486,7 +486,7 @@ export function AppointmentDetailsDialog({
               </div>
               <div>
                 <p className={`text-sm ${(appointment.nextAppointmentStatus === 'scheduled' || appointment.nextAppointmentScheduled) ? 'text-purple-600' :
-                    appointment.nextAppointmentStatus === 'not_required' ? 'text-slate-600' : 'text-gray-600'
+                  appointment.nextAppointmentStatus === 'not_required' ? 'text-slate-600' : 'text-gray-600'
                   }`}>Next Appointment</p>
 
                 {(appointment.nextAppointmentStatus === 'scheduled' || appointment.nextAppointmentScheduled) && appointment.nextAppointmentDate ? (
@@ -521,7 +521,7 @@ export function AppointmentDetailsDialog({
 
         {/* Actions */}
         {(canUpdateAppointments || canDeleteAppointments) && (
-          <div className="flex justify-between pt-6 border-t">
+          <div className="flex items-center pt-6 border-t">
             {canDeleteAppointments && (
               <Button
                 variant="outline"
@@ -536,7 +536,7 @@ export function AppointmentDetailsDialog({
             {canUpdateAppointments && appointment.statusCode !== 'CMPLT' && (
               <Button
                 onClick={handleEdit}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white ml-auto"
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Edit

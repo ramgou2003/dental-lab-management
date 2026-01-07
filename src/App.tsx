@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 // import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import OrientationGuard from "@/components/OrientationGuard";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -176,7 +176,10 @@ const App = () => {
                       <Route
                         index
                         element={
-                          <PermissionGuard permission="dashboard.access">
+                          <PermissionGuard
+                            permission="dashboard.access"
+                            fallback={<Navigate to="/appointments" replace />}
+                          >
                             <DashboardPage />
                           </PermissionGuard>
                         }
@@ -192,10 +195,25 @@ const App = () => {
                         }
                       />
                     )}
+
                     {isFeatureEnabled('leadIn') && (
                       <>
-                        <Route path="lead-in" element={<LeadInPage />} />
-                        <Route path="lead-in/:leadId" element={<LeadDetailsPage />} />
+                        <Route
+                          path="lead-in"
+                          element={
+                            <PermissionGuard permission="leads.read">
+                              <LeadInPage />
+                            </PermissionGuard>
+                          }
+                        />
+                        <Route
+                          path="lead-in/:leadId"
+                          element={
+                            <PermissionGuard permission="leads.read">
+                              <LeadDetailsPage />
+                            </PermissionGuard>
+                          }
+                        />
                       </>
                     )}
                     {isFeatureEnabled('appointments') && (
@@ -270,16 +288,38 @@ const App = () => {
                           }
                         />
                         {isFeatureEnabled('reportCards') && (
-                          <Route path="lab/report-cards" element={<ReportCardsPage />} />
+                          <Route
+                            path="lab/report-cards"
+                            element={
+                              <PermissionGuard permission="report_cards.read">
+                                <ReportCardsPage />
+                              </PermissionGuard>
+                            }
+                          />
                         )}
                         {isFeatureEnabled('manufacturing') && (
-                          <Route path="lab/manufacturing" element={<ManufacturingPage />} />
+                          <Route
+                            path="lab/manufacturing"
+                            element={
+                              <PermissionGuard permission="manufacturing.read">
+                                <ManufacturingPage />
+                              </PermissionGuard>
+                            }
+                          />
                         )}
                         {isFeatureEnabled('applianceDelivery') && (
-                          <Route path="lab/appliance-delivery" element={<ApplianceDeliveryPage />} />
+                          <Route
+                            path="lab/appliance-delivery"
+                            element={
+                              <PermissionGuard permission="delivery.read">
+                                <ApplianceDeliveryPage />
+                              </PermissionGuard>
+                            }
+                          />
                         )}
                       </>
                     )}
+
                     {isFeatureEnabled('userManagement') && (
                       <Route
                         path="user-management"

@@ -2802,13 +2802,15 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                           Edit Appointment
                                         </DropdownMenuItem>
                                       )}
-                                      <DropdownMenuItem
-                                        className="text-red-600 focus:text-red-600"
-                                        {...handleSafeMenuItemClick(() => onDelete && onDelete(appointment.id))}
-                                      >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Delete Appointment
-                                      </DropdownMenuItem>
+                                      {onDelete && (
+                                        <DropdownMenuItem
+                                          className="text-red-600 focus:text-red-600"
+                                          {...handleSafeMenuItemClick(() => onDelete && onDelete(appointment.id))}
+                                        >
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Delete Appointment
+                                        </DropdownMenuItem>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 )}
@@ -3164,10 +3166,12 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                               Edit Appointment
                             </ContextMenuItem>
                           )}
-                          <ContextMenuItem {...handleMenuItemAction(() => handleDeleteFromMenu(appointment.id))} className="text-red-600 focus:text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Appointment
-                          </ContextMenuItem>
+                          {onDelete && (
+                            <ContextMenuItem {...handleMenuItemAction(() => handleDeleteFromMenu(appointment.id))} className="text-red-600 focus:text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Appointment
+                            </ContextMenuItem>
+                          )}
                         </ContextMenuContent>
                       </ContextMenu>
                     </React.Fragment>
