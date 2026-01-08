@@ -647,11 +647,7 @@ export function ApplianceDeliveryPage() {
                               <div className="flex items-center space-x-2 mt-1">
                                 <CalendarIcon className="h-3 w-3 text-blue-600" />
                                 <span className="text-xs font-medium text-blue-700">
-                                  {new Date(item.appointments?.date || item.scheduled_delivery_date || '').toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                    year: 'numeric'
-                                  })}
+                                  {formatDateStr(item.appointments?.date || item.scheduled_delivery_date || '')}
                                   {(item.appointments?.start_time || item.scheduled_delivery_time) && (
                                     <span className="ml-2">
                                       at {formatTime(item.appointments?.start_time || item.scheduled_delivery_time || '')}
