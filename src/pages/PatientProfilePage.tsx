@@ -3186,14 +3186,16 @@ export function PatientProfilePage() {
     );
 
     // Clear form state first
-    setShowIVSedationForm(false);
-    setIVSedationCurrentStep(1);
-    setIsIVSedationEditMode(false);
-    setEditingIVSedationSheet(null);
-    setCurrentIVSedationId(null);
-    setAutoSaveStatus('idle');
-    setAutoSaveMessage('');
-    setLastSavedTime('');
+    if (!showFlowEntryDialog) {
+      setShowIVSedationForm(false);
+      setIVSedationCurrentStep(1);
+      setIsIVSedationEditMode(false);
+      setEditingIVSedationSheet(null);
+      setCurrentIVSedationId(null);
+      setAutoSaveStatus('idle');
+      setAutoSaveMessage('');
+      setLastSavedTime('');
+    }
 
     // Show draft toast if applicable (after clearing state)
     if (shouldShowDraftToast) {
@@ -14295,7 +14297,7 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* IV Sedation Flow Chart Form Dialog */}
-      <Dialog open={showIVSedationForm} onOpenChange={handleIVSedationFormClose}>
+      <Dialog open={showIVSedationForm} onOpenChange={(open) => !open && !showFlowEntryDialog && handleIVSedationFormClose()}>
         <DialogContent className="max-w-4xl h-[85vh] flex flex-col overflow-hidden p-0">
           <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3 relative">
             <div className="flex items-center justify-between">
