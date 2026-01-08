@@ -692,7 +692,7 @@ export function SurgicalRecallSheetForm({
       } else if (isOnBottomEdge) {
         setIsResizing('s');
       } else if (pos.x >= cropArea.x && pos.x <= cropArea.x + cropArea.width &&
-                 pos.y >= cropArea.y && pos.y <= cropArea.y + cropArea.height) {
+        pos.y >= cropArea.y && pos.y <= cropArea.y + cropArea.height) {
         setIsDragging(true);
         setDragStart({ x: pos.x - cropArea.x, y: pos.y - cropArea.y });
       }
@@ -938,7 +938,7 @@ export function SurgicalRecallSheetForm({
               <div className="flex items-center gap-2 pb-2">
                 <div className={`text-sm font-medium ${currentStep === 2 ? 'text-blue-600' : currentStep > 2 ? 'text-blue-600' : 'text-gray-400'}`}>
                   {formData.arch_type === 'upper' ? 'Upper Implants' :
-                   formData.arch_type === 'lower' ? 'Lower Implants' : 'Upper Implants'}
+                    formData.arch_type === 'lower' ? 'Lower Implants' : 'Upper Implants'}
                 </div>
                 {isStep2Complete() && currentStep > 2 && (
                   <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
@@ -1028,11 +1028,10 @@ export function SurgicalRecallSheetForm({
                     <button
                       type="button"
                       onClick={() => handleInputChange('arch_type', 'upper')}
-                      className={`px-4 py-3 rounded-lg border-2 text-center transition-all duration-200 ${
-                        formData.arch_type === 'upper'
-                          ? 'bg-blue-50 border-blue-500 text-blue-700'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
+                      className={`px-4 py-3 rounded-lg border-2 text-center transition-all duration-200 ${formData.arch_type === 'upper'
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
                     >
                       <div>
                         <p className="font-medium">Upper</p>
@@ -1043,11 +1042,10 @@ export function SurgicalRecallSheetForm({
                     <button
                       type="button"
                       onClick={() => handleInputChange('arch_type', 'lower')}
-                      className={`px-4 py-3 rounded-lg border-2 text-center transition-all duration-200 ${
-                        formData.arch_type === 'lower'
-                          ? 'bg-blue-50 border-blue-500 text-blue-700'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
+                      className={`px-4 py-3 rounded-lg border-2 text-center transition-all duration-200 ${formData.arch_type === 'lower'
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
                     >
                       <div>
                         <p className="font-medium">Lower</p>
@@ -1058,11 +1056,10 @@ export function SurgicalRecallSheetForm({
                     <button
                       type="button"
                       onClick={() => handleInputChange('arch_type', 'dual')}
-                      className={`px-4 py-3 rounded-lg border-2 text-center transition-all duration-200 ${
-                        formData.arch_type === 'dual'
-                          ? 'bg-blue-50 border-blue-500 text-blue-700'
-                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
+                      className={`px-4 py-3 rounded-lg border-2 text-center transition-all duration-200 ${formData.arch_type === 'dual'
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
                     >
                       <div>
                         <p className="font-medium">Dual</p>
@@ -1087,22 +1084,20 @@ export function SurgicalRecallSheetForm({
                             <button
                               type="button"
                               onClick={() => handleInputChange('upper_surgery_type', 'surgery')}
-                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${
-                                formData.upper_surgery_type === 'surgery'
-                                  ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                              }`}
+                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${formData.upper_surgery_type === 'surgery'
+                                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
                             >
                               Surgery
                             </button>
                             <button
                               type="button"
                               onClick={() => handleInputChange('upper_surgery_type', 'surgical_revision')}
-                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${
-                                formData.upper_surgery_type === 'surgical_revision'
-                                  ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                              }`}
+                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${formData.upper_surgery_type === 'surgical_revision'
+                                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
                             >
                               Surgical Revision
                             </button>
@@ -1118,22 +1113,20 @@ export function SurgicalRecallSheetForm({
                             <button
                               type="button"
                               onClick={() => handleInputChange('lower_surgery_type', 'surgery')}
-                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${
-                                formData.lower_surgery_type === 'surgery'
-                                  ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                              }`}
+                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${formData.lower_surgery_type === 'surgery'
+                                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
                             >
                               Surgery
                             </button>
                             <button
                               type="button"
                               onClick={() => handleInputChange('lower_surgery_type', 'surgical_revision')}
-                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${
-                                formData.lower_surgery_type === 'surgical_revision'
-                                  ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                              }`}
+                              className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-left ${formData.lower_surgery_type === 'surgical_revision'
+                                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
                             >
                               Surgical Revision
                             </button>
@@ -1152,22 +1145,20 @@ export function SurgicalRecallSheetForm({
                           <button
                             type="button"
                             onClick={() => handleInputChange('upper_surgery_type', 'surgery')}
-                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${
-                              formData.upper_surgery_type === 'surgery'
-                                ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
+                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${formData.upper_surgery_type === 'surgery'
+                              ? 'bg-blue-50 border-blue-500 text-blue-700'
+                              : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                              }`}
                           >
                             Surgery
                           </button>
                           <button
                             type="button"
                             onClick={() => handleInputChange('upper_surgery_type', 'surgical_revision')}
-                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${
-                              formData.upper_surgery_type === 'surgical_revision'
-                                ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
+                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${formData.upper_surgery_type === 'surgical_revision'
+                              ? 'bg-blue-50 border-blue-500 text-blue-700'
+                              : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                              }`}
                           >
                             Surgical Revision
                           </button>
@@ -1184,22 +1175,20 @@ export function SurgicalRecallSheetForm({
                           <button
                             type="button"
                             onClick={() => handleInputChange('lower_surgery_type', 'surgery')}
-                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${
-                              formData.lower_surgery_type === 'surgery'
-                                ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
+                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${formData.lower_surgery_type === 'surgery'
+                              ? 'bg-blue-50 border-blue-500 text-blue-700'
+                              : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                              }`}
                           >
                             Surgery
                           </button>
                           <button
                             type="button"
                             onClick={() => handleInputChange('lower_surgery_type', 'surgical_revision')}
-                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${
-                              formData.lower_surgery_type === 'surgical_revision'
-                                ? 'bg-blue-50 border-blue-500 text-blue-700'
-                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
+                            className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors text-center ${formData.lower_surgery_type === 'surgical_revision'
+                              ? 'bg-blue-50 border-blue-500 text-blue-700'
+                              : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                              }`}
                           >
                             Surgical Revision
                           </button>
@@ -1742,9 +1731,9 @@ export function SurgicalRecallSheetForm({
             >
               {currentStep === totalSteps
                 ? (isSubmitting
-                    ? (editingSheet ? 'Updating...' : 'Saving...')
-                    : (editingSheet ? 'Update' : 'Submit')
-                  )
+                  ? (editingSheet ? 'Updating...' : 'Saving...')
+                  : (editingSheet ? 'Update' : 'Submit')
+                )
                 : 'Next'
               }
             </Button>
@@ -1754,7 +1743,11 @@ export function SurgicalRecallSheetForm({
 
       {/* Add Implant Dialog */}
       <Dialog open={showImplantDialog} onOpenChange={setShowImplantDialog}>
-        <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-2xl max-h-[75vh] overflow-y-auto"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {editingImplant ? (
@@ -1877,121 +1870,121 @@ export function SurgicalRecallSheetForm({
                         <SelectValue placeholder={`Select ${implantData.subtype} size`} />
                       </SelectTrigger>
                       <SelectContent className="max-h-60 overflow-y-auto">
-                    {implantData.subtype === 'GM HELIX ACQUA' && (
-                      <>
-                        <SelectItem value="3.5 X 8">3.5 X 8</SelectItem>
-                        <SelectItem value="3.5 X 10">3.5 X 10</SelectItem>
-                        <SelectItem value="3.5 X 11.5">3.5 X 11.5</SelectItem>
-                        <SelectItem value="3.5 X 13">3.5 X 13</SelectItem>
-                        <SelectItem value="3.5 X 16">3.5 X 16</SelectItem>
-                        <SelectItem value="3.5 X 18">3.5 X 18</SelectItem>
-                        <SelectItem value="3.75 X 8">3.75 X 8</SelectItem>
-                        <SelectItem value="3.75 X 10">3.75 X 10</SelectItem>
-                        <SelectItem value="3.75 X 11.5">3.75 X 11.5</SelectItem>
-                        <SelectItem value="3.75 X 13">3.75 X 13</SelectItem>
-                        <SelectItem value="3.75 X 16">3.75 X 16</SelectItem>
-                        <SelectItem value="3.75 X 18">3.75 X 18</SelectItem>
-                        <SelectItem value="3.75 X 20">3.75 X 20</SelectItem>
-                        <SelectItem value="3.75 X 22.5">3.75 X 22.5</SelectItem>
-                        <SelectItem value="3.75 X 25">3.75 X 25</SelectItem>
-                        <SelectItem value="4 X 8">4 X 8</SelectItem>
-                        <SelectItem value="4 X 10">4 X 10</SelectItem>
-                        <SelectItem value="4 X 11.5">4 X 11.5</SelectItem>
-                        <SelectItem value="4 X 13">4 X 13</SelectItem>
-                        <SelectItem value="4 X 16">4 X 16</SelectItem>
-                        <SelectItem value="4 X 18">4 X 18</SelectItem>
-                        <SelectItem value="4 X 20">4 X 20</SelectItem>
-                        <SelectItem value="4 X 22.5">4 X 22.5</SelectItem>
-                        <SelectItem value="4 X 25">4 X 25</SelectItem>
-                        <SelectItem value="4.3 X 8">4.3 X 8</SelectItem>
-                        <SelectItem value="4.3 X 10">4.3 X 10</SelectItem>
-                        <SelectItem value="4.3 X 11.5">4.3 X 11.5</SelectItem>
-                        <SelectItem value="4.3 X 13">4.3 X 13</SelectItem>
-                        <SelectItem value="4.3 X 16">4.3 X 16</SelectItem>
-                        <SelectItem value="4.3 X 18">4.3 X 18</SelectItem>
-                        <SelectItem value="5.0 X 8">5.0 X 8</SelectItem>
-                        <SelectItem value="5.0 X 10">5.0 X 10</SelectItem>
-                        <SelectItem value="5.0 X 11.5">5.0 X 11.5</SelectItem>
-                        <SelectItem value="5.0 X 13">5.0 X 13</SelectItem>
-                        <SelectItem value="5.0 X 16">5.0 X 16</SelectItem>
-                        <SelectItem value="5.0 X 18">5.0 X 18</SelectItem>
-                        <SelectItem value="6.0 X 8">6.0 X 8</SelectItem>
-                        <SelectItem value="6.0 X 10">6.0 X 10</SelectItem>
-                        <SelectItem value="6.0 X 11.5">6.0 X 11.5</SelectItem>
-                        <SelectItem value="6.0 X 13">6.0 X 13</SelectItem>
-                        <SelectItem value="7.0 X 8">7.0 X 8</SelectItem>
-                        <SelectItem value="7.0 X 10">7.0 X 10</SelectItem>
-                        <SelectItem value="7.0 X 11.5">7.0 X 11.5</SelectItem>
-                        <SelectItem value="7.0 X 13">7.0 X 13</SelectItem>
-                      </>
-                    )}
+                        {implantData.subtype === 'GM HELIX ACQUA' && (
+                          <>
+                            <SelectItem value="3.5 X 8">3.5 X 8</SelectItem>
+                            <SelectItem value="3.5 X 10">3.5 X 10</SelectItem>
+                            <SelectItem value="3.5 X 11.5">3.5 X 11.5</SelectItem>
+                            <SelectItem value="3.5 X 13">3.5 X 13</SelectItem>
+                            <SelectItem value="3.5 X 16">3.5 X 16</SelectItem>
+                            <SelectItem value="3.5 X 18">3.5 X 18</SelectItem>
+                            <SelectItem value="3.75 X 8">3.75 X 8</SelectItem>
+                            <SelectItem value="3.75 X 10">3.75 X 10</SelectItem>
+                            <SelectItem value="3.75 X 11.5">3.75 X 11.5</SelectItem>
+                            <SelectItem value="3.75 X 13">3.75 X 13</SelectItem>
+                            <SelectItem value="3.75 X 16">3.75 X 16</SelectItem>
+                            <SelectItem value="3.75 X 18">3.75 X 18</SelectItem>
+                            <SelectItem value="3.75 X 20">3.75 X 20</SelectItem>
+                            <SelectItem value="3.75 X 22.5">3.75 X 22.5</SelectItem>
+                            <SelectItem value="3.75 X 25">3.75 X 25</SelectItem>
+                            <SelectItem value="4 X 8">4 X 8</SelectItem>
+                            <SelectItem value="4 X 10">4 X 10</SelectItem>
+                            <SelectItem value="4 X 11.5">4 X 11.5</SelectItem>
+                            <SelectItem value="4 X 13">4 X 13</SelectItem>
+                            <SelectItem value="4 X 16">4 X 16</SelectItem>
+                            <SelectItem value="4 X 18">4 X 18</SelectItem>
+                            <SelectItem value="4 X 20">4 X 20</SelectItem>
+                            <SelectItem value="4 X 22.5">4 X 22.5</SelectItem>
+                            <SelectItem value="4 X 25">4 X 25</SelectItem>
+                            <SelectItem value="4.3 X 8">4.3 X 8</SelectItem>
+                            <SelectItem value="4.3 X 10">4.3 X 10</SelectItem>
+                            <SelectItem value="4.3 X 11.5">4.3 X 11.5</SelectItem>
+                            <SelectItem value="4.3 X 13">4.3 X 13</SelectItem>
+                            <SelectItem value="4.3 X 16">4.3 X 16</SelectItem>
+                            <SelectItem value="4.3 X 18">4.3 X 18</SelectItem>
+                            <SelectItem value="5.0 X 8">5.0 X 8</SelectItem>
+                            <SelectItem value="5.0 X 10">5.0 X 10</SelectItem>
+                            <SelectItem value="5.0 X 11.5">5.0 X 11.5</SelectItem>
+                            <SelectItem value="5.0 X 13">5.0 X 13</SelectItem>
+                            <SelectItem value="5.0 X 16">5.0 X 16</SelectItem>
+                            <SelectItem value="5.0 X 18">5.0 X 18</SelectItem>
+                            <SelectItem value="6.0 X 8">6.0 X 8</SelectItem>
+                            <SelectItem value="6.0 X 10">6.0 X 10</SelectItem>
+                            <SelectItem value="6.0 X 11.5">6.0 X 11.5</SelectItem>
+                            <SelectItem value="6.0 X 13">6.0 X 13</SelectItem>
+                            <SelectItem value="7.0 X 8">7.0 X 8</SelectItem>
+                            <SelectItem value="7.0 X 10">7.0 X 10</SelectItem>
+                            <SelectItem value="7.0 X 11.5">7.0 X 11.5</SelectItem>
+                            <SelectItem value="7.0 X 13">7.0 X 13</SelectItem>
+                          </>
+                        )}
 
-                    {implantData.subtype === 'GM ZYGOMA' && (
-                      <>
-                        <SelectItem value="4 X 30">4 X 30</SelectItem>
-                        <SelectItem value="4 X 35">4 X 35</SelectItem>
-                        <SelectItem value="4 X 37.5">4 X 37.5</SelectItem>
-                        <SelectItem value="4 X 40">4 X 40</SelectItem>
-                        <SelectItem value="4 X 42.5">4 X 42.5</SelectItem>
-                        <SelectItem value="4 X 45">4 X 45</SelectItem>
-                        <SelectItem value="4 X 47.5">4 X 47.5</SelectItem>
-                        <SelectItem value="4 X 50">4 X 50</SelectItem>
-                        <SelectItem value="4 X 52.5">4 X 52.5</SelectItem>
-                        <SelectItem value="4 X 55">4 X 55</SelectItem>
-                      </>
-                    )}
+                        {implantData.subtype === 'GM ZYGOMA' && (
+                          <>
+                            <SelectItem value="4 X 30">4 X 30</SelectItem>
+                            <SelectItem value="4 X 35">4 X 35</SelectItem>
+                            <SelectItem value="4 X 37.5">4 X 37.5</SelectItem>
+                            <SelectItem value="4 X 40">4 X 40</SelectItem>
+                            <SelectItem value="4 X 42.5">4 X 42.5</SelectItem>
+                            <SelectItem value="4 X 45">4 X 45</SelectItem>
+                            <SelectItem value="4 X 47.5">4 X 47.5</SelectItem>
+                            <SelectItem value="4 X 50">4 X 50</SelectItem>
+                            <SelectItem value="4 X 52.5">4 X 52.5</SelectItem>
+                            <SelectItem value="4 X 55">4 X 55</SelectItem>
+                          </>
+                        )}
 
-                    {implantData.subtype === 'GM ZYGOMA S' && (
-                      <>
-                        <SelectItem value="3.5 X 30">3.5 X 30</SelectItem>
-                        <SelectItem value="3.5 X 35">3.5 X 35</SelectItem>
-                        <SelectItem value="3.5 X 37.5">3.5 X 37.5</SelectItem>
-                        <SelectItem value="3.5 X 40">3.5 X 40</SelectItem>
-                        <SelectItem value="3.5 X 42.5">3.5 X 42.5</SelectItem>
-                        <SelectItem value="3.5 X 45">3.5 X 45</SelectItem>
-                        <SelectItem value="3.5 X 47.5">3.5 X 47.5</SelectItem>
-                        <SelectItem value="3.5 X 50">3.5 X 50</SelectItem>
-                        <SelectItem value="3.5 X 52.5">3.5 X 52.5</SelectItem>
-                        <SelectItem value="3.5 X 55">3.5 X 55</SelectItem>
-                        <SelectItem value="3.75 X 30">3.75 X 30</SelectItem>
-                        <SelectItem value="3.75 X 35">3.75 X 35</SelectItem>
-                        <SelectItem value="3.75 X 37.5">3.75 X 37.5</SelectItem>
-                        <SelectItem value="3.75 X 40">3.75 X 40</SelectItem>
-                        <SelectItem value="3.75 X 42.5">3.75 X 42.5</SelectItem>
-                        <SelectItem value="3.75 X 45">3.75 X 45</SelectItem>
-                        <SelectItem value="3.75 X 47.5">3.75 X 47.5</SelectItem>
-                        <SelectItem value="3.75 X 50">3.75 X 50</SelectItem>
-                        <SelectItem value="3.75 X 52.5">3.75 X 52.5</SelectItem>
-                        <SelectItem value="3.75 X 55">3.75 X 55</SelectItem>
-                      </>
-                    )}
+                        {implantData.subtype === 'GM ZYGOMA S' && (
+                          <>
+                            <SelectItem value="3.5 X 30">3.5 X 30</SelectItem>
+                            <SelectItem value="3.5 X 35">3.5 X 35</SelectItem>
+                            <SelectItem value="3.5 X 37.5">3.5 X 37.5</SelectItem>
+                            <SelectItem value="3.5 X 40">3.5 X 40</SelectItem>
+                            <SelectItem value="3.5 X 42.5">3.5 X 42.5</SelectItem>
+                            <SelectItem value="3.5 X 45">3.5 X 45</SelectItem>
+                            <SelectItem value="3.5 X 47.5">3.5 X 47.5</SelectItem>
+                            <SelectItem value="3.5 X 50">3.5 X 50</SelectItem>
+                            <SelectItem value="3.5 X 52.5">3.5 X 52.5</SelectItem>
+                            <SelectItem value="3.5 X 55">3.5 X 55</SelectItem>
+                            <SelectItem value="3.75 X 30">3.75 X 30</SelectItem>
+                            <SelectItem value="3.75 X 35">3.75 X 35</SelectItem>
+                            <SelectItem value="3.75 X 37.5">3.75 X 37.5</SelectItem>
+                            <SelectItem value="3.75 X 40">3.75 X 40</SelectItem>
+                            <SelectItem value="3.75 X 42.5">3.75 X 42.5</SelectItem>
+                            <SelectItem value="3.75 X 45">3.75 X 45</SelectItem>
+                            <SelectItem value="3.75 X 47.5">3.75 X 47.5</SelectItem>
+                            <SelectItem value="3.75 X 50">3.75 X 50</SelectItem>
+                            <SelectItem value="3.75 X 52.5">3.75 X 52.5</SelectItem>
+                            <SelectItem value="3.75 X 55">3.75 X 55</SelectItem>
+                          </>
+                        )}
 
-                    {implantData.subtype === 'Epikut Plus' && (
-                      <>
-                        <SelectItem value="3.5 X 8.5">3.5 X 8.5</SelectItem>
-                        <SelectItem value="3.5 X 10">3.5 X 10</SelectItem>
-                        <SelectItem value="3.5 X 11.5">3.5 X 11.5</SelectItem>
-                        <SelectItem value="3.5 X 13">3.5 X 13</SelectItem>
-                        <SelectItem value="3.5 X 15">3.5 X 15</SelectItem>
-                        <SelectItem value="3.8 X 8.5">3.8 X 8.5</SelectItem>
-                        <SelectItem value="3.8 X 10">3.8 X 10</SelectItem>
-                        <SelectItem value="3.8 X 11.5">3.8 X 11.5</SelectItem>
-                        <SelectItem value="3.8 X 13">3.8 X 13</SelectItem>
-                        <SelectItem value="3.8 X 15">3.8 X 15</SelectItem>
-                        <SelectItem value="4.5 X 8.5">4.5 X 8.5</SelectItem>
-                        <SelectItem value="4.5 X 10">4.5 X 10</SelectItem>
-                        <SelectItem value="4.5 X 11.5">4.5 X 11.5</SelectItem>
-                        <SelectItem value="4.5 X 13">4.5 X 13</SelectItem>
-                        <SelectItem value="4.5 X 15">4.5 X 15</SelectItem>
-                        <SelectItem value="5 X 8.5">5 X 8.5</SelectItem>
-                        <SelectItem value="5 X 10">5 X 10</SelectItem>
-                        <SelectItem value="5 X 11.5">5 X 11.5</SelectItem>
-                        <SelectItem value="5 X 13">5 X 13</SelectItem>
-                        <SelectItem value="5 X 15">5 X 15</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
+                        {implantData.subtype === 'Epikut Plus' && (
+                          <>
+                            <SelectItem value="3.5 X 8.5">3.5 X 8.5</SelectItem>
+                            <SelectItem value="3.5 X 10">3.5 X 10</SelectItem>
+                            <SelectItem value="3.5 X 11.5">3.5 X 11.5</SelectItem>
+                            <SelectItem value="3.5 X 13">3.5 X 13</SelectItem>
+                            <SelectItem value="3.5 X 15">3.5 X 15</SelectItem>
+                            <SelectItem value="3.8 X 8.5">3.8 X 8.5</SelectItem>
+                            <SelectItem value="3.8 X 10">3.8 X 10</SelectItem>
+                            <SelectItem value="3.8 X 11.5">3.8 X 11.5</SelectItem>
+                            <SelectItem value="3.8 X 13">3.8 X 13</SelectItem>
+                            <SelectItem value="3.8 X 15">3.8 X 15</SelectItem>
+                            <SelectItem value="4.5 X 8.5">4.5 X 8.5</SelectItem>
+                            <SelectItem value="4.5 X 10">4.5 X 10</SelectItem>
+                            <SelectItem value="4.5 X 11.5">4.5 X 11.5</SelectItem>
+                            <SelectItem value="4.5 X 13">4.5 X 13</SelectItem>
+                            <SelectItem value="4.5 X 15">4.5 X 15</SelectItem>
+                            <SelectItem value="5 X 8.5">5 X 8.5</SelectItem>
+                            <SelectItem value="5 X 10">5 X 10</SelectItem>
+                            <SelectItem value="5 X 11.5">5 X 11.5</SelectItem>
+                            <SelectItem value="5 X 13">5 X 13</SelectItem>
+                            <SelectItem value="5 X 15">5 X 15</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
                   ) : (
                     <Input
                       id="implant_size"
@@ -2396,7 +2389,11 @@ export function SurgicalRecallSheetForm({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setZoom(Math.max(0.5, zoom - 0.1));
+                      }}
                       className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                     >
                       <ZoomOut className="h-4 w-4 text-gray-600" />
@@ -2406,7 +2403,11 @@ export function SurgicalRecallSheetForm({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setZoom(Math.min(3, zoom + 0.1))}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setZoom(Math.min(3, zoom + 0.1));
+                      }}
                       className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                     >
                       <ZoomIn className="h-4 w-4 text-gray-600" />
@@ -2417,7 +2418,11 @@ export function SurgicalRecallSheetForm({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setRotation((rotation - 90) % 360)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setRotation((rotation - 90) % 360);
+                      }}
                       className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                     >
                       <RotateCcw className="h-4 w-4 text-gray-600" />
@@ -2427,7 +2432,11 @@ export function SurgicalRecallSheetForm({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setRotation((rotation + 90) % 360)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setRotation((rotation + 90) % 360);
+                      }}
                       className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                     >
                       <RotateCw className="h-4 w-4 text-gray-600" />
@@ -2440,7 +2449,11 @@ export function SurgicalRecallSheetForm({
                     <>
                       <button
                         type="button"
-                        onClick={startCropping}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          startCropping();
+                        }}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
                       >
                         <Crop className="h-4 w-4" />
@@ -2448,7 +2461,9 @@ export function SurgicalRecallSheetForm({
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           // Close the preview dialog
                           closePreview();
                         }}
@@ -2461,7 +2476,11 @@ export function SurgicalRecallSheetForm({
                   ) : (
                     <button
                       type="button"
-                      onClick={applyCrop}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        applyCrop();
+                      }}
                       disabled={!cropArea}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
                     >
@@ -2556,7 +2575,11 @@ export function SurgicalRecallSheetForm({
           <div className="flex justify-end">
             <Button
               type="button"
-              onClick={closeStickerPreview}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeStickerPreview();
+              }}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               Close

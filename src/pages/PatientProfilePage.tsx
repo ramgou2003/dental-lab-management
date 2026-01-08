@@ -19430,7 +19430,11 @@ export function PatientProfilePage() {
 
       {/* Surgical Recall Sheet Form Dialog */}
       <Dialog open={showSurgicalRecallForm} onOpenChange={setShowSurgicalRecallForm}>
-        <DialogContent className="max-w-4xl h-[85vh] flex flex-col overflow-hidden p-0">
+        <DialogContent
+          className="max-w-4xl h-[85vh] flex flex-col overflow-hidden p-0"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           {patient && (
             <SurgicalRecallSheetForm
               key={editingSurgicalRecallSheet ? `edit-${editingSurgicalRecallSheet.id}` : 'new'}
