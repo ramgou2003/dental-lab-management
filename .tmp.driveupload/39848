@@ -1,0 +1,28 @@
+0000000000000000000000000000000000000000 c254f336bd171d79ab5fe7673ce62aa583b9bcb8 ramgou2003 <ramgou2003@gmail.com> 1752623243 -0400	commit (initial): Add Financial Agreement form with signature functionality and selectable buttons
+c254f336bd171d79ab5fe7673ce62aa583b9bcb8 c254f336bd171d79ab5fe7673ce62aa583b9bcb8 ramgou2003 <ramgou2003@gmail.com> 1752623345 -0400	Branch: renamed refs/heads/master to refs/heads/main
+c254f336bd171d79ab5fe7673ce62aa583b9bcb8 5f309d8b83ca238804628eb0e1f13f7a2508816f ramgou2003 <ramgou2003@gmail.com> 1752624142 -0400	commit: Update vercel.json to trigger deployment with Financial Agreement form
+5f309d8b83ca238804628eb0e1f13f7a2508816f 74a1944d35e86c72c21012ad755808f53e732282 ramgou2003 <ramgou2003@gmail.com> 1752624938 -0400	commit: Fix vercel.json - remove invalid functions configuration
+74a1944d35e86c72c21012ad755808f53e732282 84e1296d5d2375b067f52efa0da7a677a7303f75 ramgou2003 <ramgou2003@gmail.com> 1752794700 -0400	commit: Update ConsentFullArchForm: Remove scroll bars from treatment tab and add blue color theme to sedation, financial, media, and opioid tabs
+84e1296d5d2375b067f52efa0da7a677a7303f75 c63dae6508778c0012db5d6142606076afc02c27 ramgou2003 <ramgou2003@gmail.com> 1752850495 -0400	commit: Add Final Design Approval Form with complete functionality
+c63dae6508778c0012db5d6142606076afc02c27 533a0eec8e8035e45dcb94bb5dbcdb823b47705c ramgou2003 <ramgou2003@gmail.com> 1753045380 -0400	commit: Add Medical Records Release Form and improve lifestyle forms
+533a0eec8e8035e45dcb94bb5dbcdb823b47705c 056da6b333c0048e3e082779341d238e32d331da ramgou2003 <ramgou2003@gmail.com> 1753045627 -0400	commit: Fix deployment build error - increase PWA cache limit and add code splitting
+056da6b333c0048e3e082779341d238e32d331da 879d62e0bb0f7d39a990386bb26a904d3e36eef1 ramgou2003 <ramgou2003@gmail.com> 1753129926 -0400	commit: feat: Add 3-Year Care Package Enrollment Form and remove dark mode
+879d62e0bb0f7d39a990386bb26a904d3e36eef1 e158296bf874310b143bfbf1180818d4e4dda4df R V <developer@dentallab.com> 1754342899 +0530	commit: Add consultation page with tabs and scheduled leads table
+e158296bf874310b143bfbf1180818d4e4dda4df 7861ebc5a707cd55fb8151d5adf7f836a8ed7447 R V <developer@dentallab.com> 1754564892 +0530	commit: feat: Add comprehensive consultation table and forms
+7861ebc5a707cd55fb8151d5adf7f836a8ed7447 69e6dd96ec4efb95bdb8c70cc45245eb01629c82 R V <developer@dentallab.com> 1754929193 +0530	commit: feat: Enhanced A4 print system with comprehensive form data display
+69e6dd96ec4efb95bdb8c70cc45245eb01629c82 41caf7aa1f491c27cc7cc098cd4ddacbc855fbfa ramgou2003 <ramgou2003@gmail.com> 1755467970 -0400	commit: feat: Enhanced consultation management and patient packet workflow
+41caf7aa1f491c27cc7cc098cd4ddacbc855fbfa 4379da6c90ee6639756953b365fa615d3024c140 R V <developer@dentallab.com> 1755692104 +0530	commit: feat: Enhanced consultation form with arch-based treatment recommendations and preview functionality
+4379da6c90ee6639756953b365fa615d3024c140 a6a7151348c2bb26a06498585a00175e932d4b65 R V <developer@dentallab.com> 1755694557 +0530	commit: feat: Enhanced user profile with real data from database
+a6a7151348c2bb26a06498585a00175e932d4b65 56aba30dc2bd17bb26c01c052bf5685e0ef84c0f R V <developer@dentallab.com> 1755695100 +0530	commit: feat: Show real user data and conditional Dr. title based on roles
+56aba30dc2bd17bb26c01c052bf5685e0ef84c0f a53c26a51669d81e4ea4c0dcc93567b9a7be7465 R V <developer@dentallab.com> 1757505634 +0530	merge testing: Fast-forward
+a53c26a51669d81e4ea4c0dcc93567b9a7be7465 e5fd2429603cf83db4b0cd8e5704f30c22f70965 Dental Lab Dev <dev@dental-lab.com> 1767565408 -0500	merge testing: Fast-forward
+e5fd2429603cf83db4b0cd8e5704f30c22f70965 c87de15448c863e95e72ddcad0a64d303e6a5fc2 Dental Lab Dev <dev@dental-lab.com> 1767652365 -0500	merge testing: Fast-forward
+c87de15448c863e95e72ddcad0a64d303e6a5fc2 0be824a4b65ea77e039dca0c36712c454234427e Dental Lab Dev <dev@dental-lab.com> 1767733250 -0500	merge testing: Fast-forward
+0be824a4b65ea77e039dca0c36712c454234427e 2a3473249199f9dfb2f95b573f97cb5475f6e5ca Dental Lab Dev <dev@dental-lab.com> 1767798381 -0500	merge testing: Fast-forward
+2a3473249199f9dfb2f95b573f97cb5475f6e5ca 4cbf1097cdf2c041a96dfe54a30fa24663e5d892 Dental Lab Dev <dev@dental-lab.com> 1767799956 -0500	merge testing: Fast-forward
+4cbf1097cdf2c041a96dfe54a30fa24663e5d892 5a74cace0a5e3d618995faa051b767b76c101ef4 Dental Lab Dev <dev@dental-lab.com> 1767813474 -0500	merge testing: Fast-forward
+5a74cace0a5e3d618995faa051b767b76c101ef4 c062a9156cf3cfb6c2a0f2d961ed058aa78005fe Dental Lab Dev <dev@dental-lab.com> 1767879976 -0500	merge testing: Fast-forward
+c062a9156cf3cfb6c2a0f2d961ed058aa78005fe 6a92d4d6a73fc9648f39f4b17c680823d5b845ac Dental Lab Dev <dev@dental-lab.com> 1767892222 -0500	commit: Fix Surgical Recall Sheet and Add Implant Dialogs closing on outside click
+6a92d4d6a73fc9648f39f4b17c680823d5b845ac 70cb82557f7173f3a9d509fe83afb8932333c3b0 Dental Lab Dev <dev@dental-lab.com> 1767905146 -0500	commit: Fix Appliance Delivery scheduled date timezone discrepancy by using local date helper
+70cb82557f7173f3a9d509fe83afb8932333c3b0 021d40746eb06e71648b655c778abe8b5a4294d1 Dental Lab Dev <dev@dental-lab.com> 1767959764 -0500	commit: Switch entire application to Black Dark Mode by updating CSS variables and adding global utility overrides
+021d40746eb06e71648b655c778abe8b5a4294d1 ed0a6c0b0e8d616d69a75c44b50ad8fdddfc91ed Dental Lab Dev <dev@dental-lab.com> 1767960029 -0500	commit: Aggressively enforce black dark mode globally by overriding all light background, dialog, and input styles
