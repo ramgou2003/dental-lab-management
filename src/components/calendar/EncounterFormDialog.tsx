@@ -412,7 +412,14 @@ export function EncounterFormDialog({
         appointmentDetails?.appointment_type !== 'surgical-revision' &&
         appointmentDetails?.appointment_type !== 'consultation') {
         encounterData.bite_adjustment = biteAdjustment;
-        encounterData.follow_up_pictures_taken = followUpPictures;
+
+        // Ensure follow_up_pictures_taken is 'No' if picturesDataCollected is 'No', to satisfy DB constraint
+        if (picturesDataCollected === 'No') {
+          encounterData.follow_up_pictures_taken = 'No';
+        } else {
+          encounterData.follow_up_pictures_taken = followUpPictures;
+        }
+
         encounterData.data_collection = dataCollection;
         encounterData.new_design_required = newDesignRequired;
       }
