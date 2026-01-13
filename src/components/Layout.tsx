@@ -89,7 +89,7 @@ const Layout = () => {
   };
 
   return (
-    <div className={`min-h-screen flex w-full bg-gray-50 dark:bg-background ${isResizing ? 'resize-active' : ''}`}>
+    <div className={`min-h-screen flex w-full bg-gray-50 ${isResizing ? 'resize-active' : ''}`}>
       <Sidebar
         activeSection={getCurrentSection()}
         collapsed={sidebarCollapsed}
@@ -100,7 +100,7 @@ const Layout = () => {
         onResizeEnd={handleResizeEnd}
       />
       <main
-        className="flex-1 bg-background overflow-auto"
+        className="flex-1 bg-white overflow-auto"
         style={{
           marginLeft: `${mainMarginLeft}px`,
           transition: 'none' // Remove all transitions for smooth real-time resizing

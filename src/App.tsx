@@ -45,8 +45,6 @@ const queryClient = new QueryClient({
   },
 });
 
-import { ThemeProvider } from "@/components/ThemeProvider";
-
 const App = () => {
   // Handle chunk loading errors
   useEffect(() => {
@@ -75,242 +73,282 @@ const App = () => {
     };
   }, []);
 
+  // Force light mode by removing any dark class and clearing theme-related localStorage
+  useEffect(() => {
+    // Remove dark class from html and body elements
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+
+    // Clear any theme-related localStorage items
+    localStorage.removeItem('theme');
+    localStorage.removeItem('vite-ui-theme');
+    localStorage.removeItem('ui-theme');
+    localStorage.removeItem('darkMode');
+    localStorage.removeItem('color-theme');
+
+    // Set light mode attributes
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.style.colorScheme = 'light';
+
+    // Force light mode on all elements
+    document.documentElement.classList.add('light');
+    document.body.style.backgroundColor = 'white';
+    document.body.style.color = '#0f172a';
+
+    // Remove any dark mode classes that might be added dynamically
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const target = mutation.target as Element;
+          if (target.classList.contains('dark')) {
+            target.classList.remove('dark');
+          }
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-        <TooltipProvider>
-          <AuthProvider>
-            <Sonner />
-            {/* <PWAInstallPrompt /> */}
-            <OrientationGuard>
-              <BrowserRouter>
-                <ErrorBoundary>
-                  <Routes>
-                    {/* Public routes */}
+      <TooltipProvider>
+        <AuthProvider>
+          <Sonner />
+          {/* <PWAInstallPrompt /> */}
+          <OrientationGuard>
+            <BrowserRouter>
+              <ErrorBoundary>
+                <Routes>
+                  {/* Public routes */}
+                  <Route
+                    path="/login"
+                    element={
+                      <AuthGuard requireAuth={false}>
+                        <LoginForm />
+                      </AuthGuard>
+                    }
+                  />
+                  <Route
+                    path="/contact-admin"
+                    element={
+                      <AuthGuard requireAuth={false}>
+                        <ContactAdminPage />
+                      </AuthGuard>
+                    }
+                  />
+                  {isFeatureEnabled('publicPatientForm') && (
                     <Route
-                      path="/login"
+                      path="/new-patient"
                       element={
                         <AuthGuard requireAuth={false}>
-                          <LoginForm />
+                          <NewPatientLeadPage />
                         </AuthGuard>
                       }
                     />
+                  )}
+                  {isFeatureEnabled('publicPatientPacket') && (
                     <Route
-                      path="/contact-admin"
+                      path="/patient-packet/:token"
                       element={
                         <AuthGuard requireAuth={false}>
-                          <ContactAdminPage />
+                          <PublicPatientPacketPage />
                         </AuthGuard>
                       }
                     />
-                    {isFeatureEnabled('publicPatientForm') && (
+                  )}
+
+                  {/* Protected routes */}
+                  <Route
+                    path="/"
+                    element={
+                      <AuthGuard requireAuth={true}>
+                        <Layout />
+                      </AuthGuard>
+                    }
+                  >
+                    {isFeatureEnabled('dashboard') && (
                       <Route
-                        path="/new-patient"
+                        index
                         element={
-                          <AuthGuard requireAuth={false}>
-                            <NewPatientLeadPage />
-                          </AuthGuard>
+                          <PermissionGuard
+                            permission="dashboard.access"
+                            fallback={<Navigate to="/appointments" replace />}
+                          >
+                            <DashboardPage />
+                          </PermissionGuard>
                         }
                       />
                     )}
-                    {isFeatureEnabled('publicPatientPacket') && (
+                    {isFeatureEnabled('dashboard') && (
                       <Route
-                        path="/patient-packet/:token"
+                        path="dashboard"
                         element={
-                          <AuthGuard requireAuth={false}>
-                            <PublicPatientPacketPage />
-                          </AuthGuard>
+                          <PermissionGuard permission="dashboard.access">
+                            <DashboardPage />
+                          </PermissionGuard>
                         }
                       />
                     )}
 
-                    {/* Protected routes */}
-                    <Route
-                      path="/"
-                      element={
-                        <AuthGuard requireAuth={true}>
-                          <Layout />
-                        </AuthGuard>
-                      }
-                    >
-                      {isFeatureEnabled('dashboard') && (
+                    {isFeatureEnabled('leadIn') && (
+                      <>
                         <Route
-                          index
+                          path="lead-in"
                           element={
-                            <PermissionGuard
-                              permission="dashboard.access"
-                              fallback={<Navigate to="/appointments" replace />}
-                            >
-                              <DashboardPage />
+                            <PermissionGuard permission="leads.read">
+                              <LeadInPage />
                             </PermissionGuard>
                           }
                         />
-                      )}
-                      {isFeatureEnabled('dashboard') && (
                         <Route
-                          path="dashboard"
+                          path="lead-in/:leadId"
                           element={
-                            <PermissionGuard permission="dashboard.access">
-                              <DashboardPage />
+                            <PermissionGuard permission="leads.read">
+                              <LeadDetailsPage />
                             </PermissionGuard>
                           }
                         />
-                      )}
-
-                      {isFeatureEnabled('leadIn') && (
-                        <>
-                          <Route
-                            path="lead-in"
-                            element={
-                              <PermissionGuard permission="leads.read">
-                                <LeadInPage />
-                              </PermissionGuard>
-                            }
-                          />
-                          <Route
-                            path="lead-in/:leadId"
-                            element={
-                              <PermissionGuard permission="leads.read">
-                                <LeadDetailsPage />
-                              </PermissionGuard>
-                            }
-                          />
-                        </>
-                      )}
-                      {isFeatureEnabled('appointments') && (
-                        <>
-                          <Route
-                            path="appointments"
-                            element={
-                              <PermissionGuard permission="appointments.read">
-                                <AppointmentsPage />
-                              </PermissionGuard>
-                            }
-                          />
-                          <Route
-                            path="appointments/unscheduled"
-                            element={
-                              <PermissionGuard permission="appointments.read">
-                                <NextAppointmentsPage />
-                              </PermissionGuard>
-                            }
-                          />
-                        </>
-                      )}
-                      {isFeatureEnabled('consultation') && (
-                        <>
-                          <Route
-                            path="consultation"
-                            element={
-                              <PermissionGuard permission="consultation.read">
-                                <ConsultationPage />
-                              </PermissionGuard>
-                            }
-                          />
-                          <Route
-                            path="consultation/:appointmentId"
-                            element={
-                              <PermissionGuard permission="consultation.read">
-                                <ConsultationSessionPage />
-                              </PermissionGuard>
-                            }
-                          />
-                        </>
-                      )}
-                      {isFeatureEnabled('patients') && (
-                        <>
-                          <Route
-                            path="patients"
-                            element={
-                              <PermissionGuard permission="patients.read">
-                                <PatientsPage />
-                              </PermissionGuard>
-                            }
-                          />
-                          <Route
-                            path="patients/:patientId"
-                            element={
-                              <PermissionGuard permission="patients.read">
-                                <PatientProfilePage />
-                              </PermissionGuard>
-                            }
-                          />
-                        </>
-                      )}
-                      {isFeatureEnabled('lab') && (
-                        <>
-                          <Route path="lab" element={<LabMainPage />} />
-                          <Route
-                            path="lab/lab-scripts"
-                            element={
-                              <PermissionGuard permission="lab_scripts.read">
-                                <LabPage />
-                              </PermissionGuard>
-                            }
-                          />
-                          {isFeatureEnabled('reportCards') && (
-                            <Route
-                              path="lab/report-cards"
-                              element={
-                                <PermissionGuard permission="report_cards.read">
-                                  <ReportCardsPage />
-                                </PermissionGuard>
-                              }
-                            />
-                          )}
-                          {isFeatureEnabled('manufacturing') && (
-                            <Route
-                              path="lab/manufacturing"
-                              element={
-                                <PermissionGuard permission="manufacturing.read">
-                                  <ManufacturingPage />
-                                </PermissionGuard>
-                              }
-                            />
-                          )}
-                          {isFeatureEnabled('applianceDelivery') && (
-                            <Route
-                              path="lab/appliance-delivery"
-                              element={
-                                <PermissionGuard permission="delivery.read">
-                                  <ApplianceDeliveryPage />
-                                </PermissionGuard>
-                              }
-                            />
-                          )}
-                        </>
-                      )}
-
-                      {isFeatureEnabled('userManagement') && (
+                      </>
+                    )}
+                    {isFeatureEnabled('appointments') && (
+                      <>
                         <Route
-                          path="user-management"
+                          path="appointments"
                           element={
-                            <PermissionGuard
-                              permission="users.read"
-                              fallback={<UserManagementAccessDenied />}
-                            >
-                              <UserManagementPage />
+                            <PermissionGuard permission="appointments.read">
+                              <AppointmentsPage />
                             </PermissionGuard>
                           }
                         />
-                      )}
-                      {isFeatureEnabled('settings') && (
-                        <Route path="settings" element={<SettingsPage />} />
-                      )}
-                      {isFeatureEnabled('profile') && (
-                        <Route path="profile" element={<ProfilePage />} />
-                      )}
-                    </Route>
+                        <Route
+                          path="appointments/unscheduled"
+                          element={
+                            <PermissionGuard permission="appointments.read">
+                              <NextAppointmentsPage />
+                            </PermissionGuard>
+                          }
+                        />
+                      </>
+                    )}
+                    {isFeatureEnabled('consultation') && (
+                      <>
+                        <Route
+                          path="consultation"
+                          element={
+                            <PermissionGuard permission="consultation.read">
+                              <ConsultationPage />
+                            </PermissionGuard>
+                          }
+                        />
+                        <Route
+                          path="consultation/:appointmentId"
+                          element={
+                            <PermissionGuard permission="consultation.read">
+                              <ConsultationSessionPage />
+                            </PermissionGuard>
+                          }
+                        />
+                      </>
+                    )}
+                    {isFeatureEnabled('patients') && (
+                      <>
+                        <Route
+                          path="patients"
+                          element={
+                            <PermissionGuard permission="patients.read">
+                              <PatientsPage />
+                            </PermissionGuard>
+                          }
+                        />
+                        <Route
+                          path="patients/:patientId"
+                          element={
+                            <PermissionGuard permission="patients.read">
+                              <PatientProfilePage />
+                            </PermissionGuard>
+                          }
+                        />
+                      </>
+                    )}
+                    {isFeatureEnabled('lab') && (
+                      <>
+                        <Route path="lab" element={<LabMainPage />} />
+                        <Route
+                          path="lab/lab-scripts"
+                          element={
+                            <PermissionGuard permission="lab_scripts.read">
+                              <LabPage />
+                            </PermissionGuard>
+                          }
+                        />
+                        {isFeatureEnabled('reportCards') && (
+                          <Route
+                            path="lab/report-cards"
+                            element={
+                              <PermissionGuard permission="report_cards.read">
+                                <ReportCardsPage />
+                              </PermissionGuard>
+                            }
+                          />
+                        )}
+                        {isFeatureEnabled('manufacturing') && (
+                          <Route
+                            path="lab/manufacturing"
+                            element={
+                              <PermissionGuard permission="manufacturing.read">
+                                <ManufacturingPage />
+                              </PermissionGuard>
+                            }
+                          />
+                        )}
+                        {isFeatureEnabled('applianceDelivery') && (
+                          <Route
+                            path="lab/appliance-delivery"
+                            element={
+                              <PermissionGuard permission="delivery.read">
+                                <ApplianceDeliveryPage />
+                              </PermissionGuard>
+                            }
+                          />
+                        )}
+                      </>
+                    )}
 
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </ErrorBoundary>
-              </BrowserRouter>
-            </OrientationGuard>
-          </AuthProvider>
-        </TooltipProvider>
-      </ThemeProvider>
+                    {isFeatureEnabled('userManagement') && (
+                      <Route
+                        path="user-management"
+                        element={
+                          <PermissionGuard
+                            permission="users.read"
+                            fallback={<UserManagementAccessDenied />}
+                          >
+                            <UserManagementPage />
+                          </PermissionGuard>
+                        }
+                      />
+                    )}
+                    {isFeatureEnabled('settings') && (
+                      <Route path="settings" element={<SettingsPage />} />
+                    )}
+                    {isFeatureEnabled('profile') && (
+                      <Route path="profile" element={<ProfilePage />} />
+                    )}
+                  </Route>
+
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </ErrorBoundary>
+            </BrowserRouter>
+          </OrientationGuard>
+        </AuthProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 };

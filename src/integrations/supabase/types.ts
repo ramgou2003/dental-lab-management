@@ -7,49 +7,128 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
+      additional_treatments: {
+        Row: {
+          arch_type: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          surgery_date: string | null
+          treatment_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          arch_type: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          surgery_date?: string | null
+          treatment_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          arch_type?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          surgery_date?: string | null
+          treatment_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "additional_treatments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appliance_types: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
-          id: string
-          patient_name: string
-          patient_id: string | null
-          title: string
-          start_time: string
-          end_time: string
           appointment_type: string
-          status: string
-          date: string
-          notes: string | null
           created_at: string
+          date: string
+          end_time: string
+          id: string
+          notes: string | null
+          patient_id: string | null
+          patient_name: string
+          start_time: string
+          status: string
+          status_code: string | null
+          title: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          patient_name: string
-          patient_id?: string | null
-          title: string
-          start_time: string
-          end_time: string
           appointment_type: string
-          status?: string
-          date: string
-          notes?: string | null
           created_at?: string
+          date: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          patient_name: string
+          start_time: string
+          status: string
+          status_code?: string | null
+          title: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          patient_name?: string
-          patient_id?: string | null
-          title?: string
-          start_time?: string
-          end_time?: string
           appointment_type?: string
-          status?: string
-          date?: string
-          notes?: string | null
           created_at?: string
+          date?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          patient_name?: string
+          start_time?: string
+          status?: string
+          status_code?: string | null
+          title?: string
           updated_at?: string
         }
         Relationships: [
@@ -59,102 +138,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
-          }
+          },
+        ]
+      }
+      clinical_notes: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          encounter_id: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          encounter_id?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          encounter_id?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_notes_encounter_id_fkey"
+            columns: ["encounter_id"]
+            isOneToOne: false
+            referencedRelation: "encounters"
+            referencedColumns: ["id"]
+          },
         ]
       }
       data_collection_sheets: {
         Row: {
+          created_at: string
+          created_by: string
+          data: Json
           id: string
-          patient_id: string | null
-          patient_name: string
-          collection_date: string
-          reasons_for_collection: string[]
-          custom_reason: string | null
-          current_upper_appliance: string | null
-          current_lower_appliance: string | null
-          pre_surgical_pictures: boolean | null
-          surgical_pictures: boolean | null
-          follow_up_pictures: boolean | null
-          fractured_appliance_pictures: boolean | null
-          cbct_taken: boolean | null
-          pre_surgical_jaw_records_upper: boolean | null
-          pre_surgical_jaw_records_lower: boolean | null
-          facial_scan: boolean | null
-          jaw_records_upper: boolean | null
-          jaw_records_lower: boolean | null
-          tissue_scan_upper: boolean | null
-          tissue_scan_lower: boolean | null
-          photogrammetry_upper: boolean | null
-          photogrammetry_lower: boolean | null
-          dc_ref_scan_upper: boolean | null
-          dc_ref_scan_lower: boolean | null
-          appliance_360_upper: boolean | null
-          appliance_360_lower: boolean | null
-          additional_notes: string | null
-          created_at: string | null
-          updated_at: string | null
+          patient_id: string
+          status: string
+          type: string
+          updated_at: string
         }
         Insert: {
+          created_at?: string
+          created_by: string
+          data?: Json
           id?: string
-          patient_id?: string | null
-          patient_name: string
-          collection_date: string
-          reasons_for_collection: string[]
-          custom_reason?: string | null
-          current_upper_appliance?: string | null
-          current_lower_appliance?: string | null
-          pre_surgical_pictures?: boolean | null
-          surgical_pictures?: boolean | null
-          follow_up_pictures?: boolean | null
-          fractured_appliance_pictures?: boolean | null
-          cbct_taken?: boolean | null
-          pre_surgical_jaw_records_upper?: boolean | null
-          pre_surgical_jaw_records_lower?: boolean | null
-          facial_scan?: boolean | null
-          jaw_records_upper?: boolean | null
-          jaw_records_lower?: boolean | null
-          tissue_scan_upper?: boolean | null
-          tissue_scan_lower?: boolean | null
-          photogrammetry_upper?: boolean | null
-          photogrammetry_lower?: boolean | null
-          dc_ref_scan_upper?: boolean | null
-          dc_ref_scan_lower?: boolean | null
-          appliance_360_upper?: boolean | null
-          appliance_360_lower?: boolean | null
-          additional_notes?: string | null
-          created_at?: string | null
-          updated_at?: string | null
+          patient_id: string
+          status?: string
+          type: string
+          updated_at?: string
         }
         Update: {
+          created_at?: string
+          created_by?: string
+          data?: Json
           id?: string
-          patient_id?: string | null
-          patient_name?: string
-          collection_date?: string
-          reasons_for_collection?: string[]
-          custom_reason?: string | null
-          current_upper_appliance?: string | null
-          current_lower_appliance?: string | null
-          pre_surgical_pictures?: boolean | null
-          surgical_pictures?: boolean | null
-          follow_up_pictures?: boolean | null
-          fractured_appliance_pictures?: boolean | null
-          cbct_taken?: boolean | null
-          pre_surgical_jaw_records_upper?: boolean | null
-          pre_surgical_jaw_records_lower?: boolean | null
-          facial_scan?: boolean | null
-          jaw_records_upper?: boolean | null
-          jaw_records_lower?: boolean | null
-          tissue_scan_upper?: boolean | null
-          tissue_scan_lower?: boolean | null
-          photogrammetry_upper?: boolean | null
-          photogrammetry_lower?: boolean | null
-          dc_ref_scan_upper?: boolean | null
-          dc_ref_scan_lower?: boolean | null
-          appliance_360_upper?: boolean | null
-          appliance_360_lower?: boolean | null
-          additional_notes?: string | null
-          created_at?: string | null
-          updated_at?: string | null
+          patient_id?: string
+          status?: string
+          type?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -163,429 +214,267 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       delivery_items: {
         Row: {
-          id: string
-          lab_script_id: string | null
-          patient_name: string
-          delivery_status: string
+          appliance_type: string
           created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          lab_script_id?: string | null
-          patient_name: string
-          delivery_status: string
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          lab_script_id?: string | null
-          patient_name?: string
-          delivery_status?: string
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      manufacturing_items: {
-        Row: {
+          delivery_date: string | null
           id: string
-          lab_script_id: string | null
-          patient_name: string
-          status: string
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          lab_script_id?: string | null
-          patient_name: string
-          status: string
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          lab_script_id?: string | null
-          patient_name?: string
-          status?: string
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      lab_report_cards: {
-        Row: {
-          id: string
-          lab_script_id: string | null
-          patient_name: string
-          arch_type: string
-          upper_appliance_type: string | null
-          lower_appliance_type: string | null
-          screw: string
-          shade: string
-          implant_on_upper: string | null
-          implant_on_lower: string | null
-          tooth_library_upper: string | null
-          tooth_library_lower: string | null
-          upper_appliance_number: string | null
-          lower_appliance_number: string | null
-          notes_and_remarks: string
-          status: string
-          submitted_at: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          lab_script_id?: string | null
-          patient_name: string
-          arch_type: string
-          upper_appliance_type?: string | null
-          lower_appliance_type?: string | null
-          screw: string
-          shade: string
-          implant_on_upper?: string | null
-          implant_on_lower?: string | null
-          tooth_library_upper?: string | null
-          tooth_library_lower?: string | null
-          upper_appliance_number?: string | null
-          lower_appliance_number?: string | null
-          notes_and_remarks: string
-          status?: string
-          submitted_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          lab_script_id?: string | null
-          patient_name?: string
-          arch_type?: string
-          upper_appliance_type?: string | null
-          lower_appliance_type?: string | null
-          screw?: string
-          shade?: string
-          implant_on_upper?: string | null
-          implant_on_lower?: string | null
-          tooth_library_upper?: string | null
-          tooth_library_lower?: string | null
-          upper_appliance_number?: string | null
-          lower_appliance_number?: string | null
-          notes_and_remarks?: string
-          status?: string
-          submitted_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lab_report_cards_lab_script_id_fkey"
-            columns: ["lab_script_id"]
-            isOneToOne: false
-            referencedRelation: "lab_scripts"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      lab_scripts: {
-        Row: {
-          id: string
-          patient_id: string | null
-          patient_name: string
-          arch_type: string
-          upper_appliance_type: string | null
-          lower_appliance_type: string | null
-          upper_treatment_type: string | null
-          lower_treatment_type: string | null
-          screw_type: string | null
-          custom_screw_type: string | null
-          material: string | null
-          shade: string | null
-          vdo_details: string | null
-          is_nightguard_needed: string | null
-          requested_date: string
-          due_date: string | null
-          completion_date: string | null
-          completed_by: string | null
-          completed_by_name: string | null
-          created_by: string | null
-          created_by_name: string | null
-          instructions: string | null
           notes: string | null
-          status: string
-          created_at: string
-          updated_at: string
+          patient_id: string
+          updated_at: string | null
         }
         Insert: {
+          appliance_type: string
+          created_at?: string | null
+          delivery_date?: string | null
           id?: string
-          patient_id?: string | null
-          patient_name: string
-          arch_type: string
-          upper_appliance_type?: string | null
-          lower_appliance_type?: string | null
-          upper_treatment_type?: string | null
-          lower_treatment_type?: string | null
-          screw_type?: string | null
-          custom_screw_type?: string | null
-          material?: string | null
-          shade?: string | null
-          vdo_details?: string | null
-          is_nightguard_needed?: string | null
-          requested_date: string
-          due_date?: string | null
-          completion_date?: string | null
-          completed_by?: string | null
-          completed_by_name?: string | null
-          created_by?: string | null
-          created_by_name?: string | null
-          instructions?: string | null
           notes?: string | null
-          status?: string
-          created_at?: string
-          updated_at?: string
+          patient_id: string
+          updated_at?: string | null
         }
         Update: {
+          appliance_type?: string
+          created_at?: string | null
+          delivery_date?: string | null
           id?: string
-          patient_id?: string | null
-          patient_name?: string
-          arch_type?: string
-          upper_appliance_type?: string | null
-          lower_appliance_type?: string | null
-          upper_treatment_type?: string | null
-          lower_treatment_type?: string | null
-          screw_type?: string | null
-          custom_screw_type?: string | null
-          material?: string | null
-          shade?: string | null
-          vdo_details?: string | null
-          is_nightguard_needed?: string | null
-          requested_date?: string
-          due_date?: string | null
-          completion_date?: string | null
-          completed_by?: string | null
-          completed_by_name?: string | null
-          created_by?: string | null
-          created_by_name?: string | null
-          instructions?: string | null
           notes?: string | null
-          status?: string
-          created_at?: string
-          updated_at?: string
+          patient_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "lab_scripts_patient_id_fkey"
+            foreignKeyName: "delivery_items_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
-          }
+          },
+        ]
+      }
+      encounters: {
+        Row: {
+          appointment_id: string | null
+          created_at: string | null
+          form_status: Database["public"]["Enums"]["encounter_form_status"] | null
+          id: string
+          next_appointment_scheduled: boolean | null
+          notes: string | null
+          patient_id: string
+          status: string
+          updated_at: string | null
+          visit_date: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string | null
+          form_status?: Database["public"]["Enums"]["encounter_form_status"] | null
+          id?: string
+          next_appointment_scheduled?: boolean | null
+          notes?: string | null
+          patient_id: string
+          status?: string
+          updated_at?: string | null
+          visit_date?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string | null
+          form_status?: Database["public"]["Enums"]["encounter_form_status"] | null
+          id?: string
+          next_appointment_scheduled?: boolean | null
+          notes?: string | null
+          patient_id?: string
+          status?: string
+          updated_at?: string | null
+          visit_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encounters_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encounters_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      head_neck_examinations: {
+        Row: {
+          airway_evaluation: string | null
+          chief_complaints: Json | null
+          clinical_observation: Json | null
+          created_at: string | null
+          dental_classification: Json | null
+          evaluation_notes: string | null
+          extra_oral_examination: Json | null
+          functional_presentation: Json | null
+          guideline_questions: Json | null
+          id: string
+          intra_oral_examination: Json | null
+          maxillary_sinuses_evaluation: Json | null
+          medical_history: Json | null
+          patient_id: string | null
+          radiographic_presentation: Json | null
+          skeletal_presentation: Json | null
+          status: string | null
+          tactile_observation: Json | null
+          tomography_data: Json | null
+          updated_at: string | null
+          vital_signs: Json | null
+        }
+        Insert: {
+          airway_evaluation?: string | null
+          chief_complaints?: Json | null
+          clinical_observation?: Json | null
+          created_at?: string | null
+          dental_classification?: Json | null
+          evaluation_notes?: string | null
+          extra_oral_examination?: Json | null
+          functional_presentation?: Json | null
+          guideline_questions?: Json | null
+          id?: string
+          intra_oral_examination?: Json | null
+          maxillary_sinuses_evaluation?: Json | null
+          medical_history?: Json | null
+          patient_id?: string | null
+          radiographic_presentation?: Json | null
+          skeletal_presentation?: Json | null
+          status?: string | null
+          tactile_observation?: Json | null
+          tomography_data?: Json | null
+          updated_at?: string | null
+          vital_signs?: Json | null
+        }
+        Update: {
+          airway_evaluation?: string | null
+          chief_complaints?: Json | null
+          clinical_observation?: Json | null
+          created_at?: string | null
+          dental_classification?: Json | null
+          evaluation_notes?: string | null
+          extra_oral_examination?: Json | null
+          functional_presentation?: Json | null
+          guideline_questions?: Json | null
+          id?: string
+          intra_oral_examination?: Json | null
+          maxillary_sinuses_evaluation?: Json | null
+          medical_history?: Json | null
+          patient_id?: string | null
+          radiographic_presentation?: Json | null
+          skeletal_presentation?: Json | null
+          status?: string | null
+          tactile_observation?: Json | null
+          tomography_data?: Json | null
+          updated_at?: string | null
+          vital_signs?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "head_neck_examinations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
         ]
       }
       iv_sedation_forms: {
         Row: {
-          id: string
-          patient_id: string | null
-          patient_name: string
-          sedation_date: string
-          status: string
-          upper_treatment: string | null
-          lower_treatment: string | null
-          upper_surgery_type: string | null
-          lower_surgery_type: string | null
-          height_feet: number | null
-          height_inches: number | null
-          weight: number | null
-          npo_status: string | null
-          morning_medications: string | null
-          allergies: string[] | null
-          allergies_other: string | null
-          pregnancy_risk: string | null
-          last_menstrual_cycle: string | null
-          anesthesia_history: string | null
-          anesthesia_history_other: string | null
-          respiratory_problems: string[] | null
-          respiratory_problems_other: string | null
-          cardiovascular_problems: string[] | null
-          cardiovascular_problems_other: string | null
-          gastrointestinal_problems: string[] | null
-          gastrointestinal_problems_other: string | null
-          neurologic_problems: string[] | null
-          neurologic_problems_other: string | null
-          endocrine_renal_problems: string[] | null
-          endocrine_renal_problems_other: string | null
-          last_a1c_level: string | null
-          miscellaneous: string[] | null
-          miscellaneous_other: string | null
-          social_history: string[] | null
-          social_history_other: string | null
-          well_developed_nourished: string | null
-          patient_anxious: string | null
-          asa_classification: string | null
-          airway_evaluation: string[] | null
-          airway_evaluation_other: string | null
-          mallampati_score: string | null
-          heart_lung_evaluation: string[] | null
-          heart_lung_evaluation_other: string | null
-          instruments_checklist: Json | null
-          sedation_type: string | null
-          medications_planned: string[] | null
-          medications_other: string | null
-          administration_route: string[] | null
-          emergency_protocols: Json | null
-          level_of_sedation: string | null
-          time_in_room: string | null
-          sedation_start_time: string | null
-          monitoring_log: Json | null
-          sedation_end_time: string | null
-          out_of_room_time: string | null
-          post_procedure_notes: string | null
-          discharge_criteria_met: Json | null
-          follow_up_instructions: string | null
-          follow_up_instructions_given_to: string | null
-          discharged_to: string | null
-          pain_level_discharge: string | null
-          other_remarks: string | null
+          access_site: string | null
+          asa_class: number | null
           created_at: string | null
+          equipment_check: boolean | null
+          fluid_type: string | null
+          id: string
+          mallampati_score: number | null
+          medications_administered: Json | null
+          monitor_records: Json | null
+          mp_class: number | null
+          npo_status: string | null
+          patient_id: string
+          post_op_instructions: string | null
+          pre_op_bp: string | null
+          pre_op_hr: number | null
+          pre_op_o2: number | null
+          pre_op_rr: number | null
+          pre_op_weight: number | null
+          procedure_date: string | null
+          procedure_end_time: string | null
+          procedure_start_time: string | null
+          recovery_bp: string | null
+          recovery_hr: number | null
+          recovery_o2: number | null
+          recovery_rr: number | null
+          start_time: string | null
           updated_at: string | null
         }
         Insert: {
-          id?: string
-          patient_id?: string | null
-          patient_name: string
-          sedation_date: string
-          status?: string
-          upper_treatment?: string | null
-          lower_treatment?: string | null
-          upper_surgery_type?: string | null
-          lower_surgery_type?: string | null
-          height_feet?: number | null
-          height_inches?: number | null
-          weight?: number | null
-          npo_status?: string | null
-          morning_medications?: string | null
-          allergies?: string[] | null
-          allergies_other?: string | null
-          pregnancy_risk?: string | null
-          last_menstrual_cycle?: string | null
-          anesthesia_history?: string | null
-          anesthesia_history_other?: string | null
-          respiratory_problems?: string[] | null
-          respiratory_problems_other?: string | null
-          cardiovascular_problems?: string[] | null
-          cardiovascular_problems_other?: string | null
-          gastrointestinal_problems?: string[] | null
-          gastrointestinal_problems_other?: string | null
-          neurologic_problems?: string[] | null
-          neurologic_problems_other?: string | null
-          endocrine_renal_problems?: string[] | null
-          endocrine_renal_problems_other?: string | null
-          last_a1c_level?: string | null
-          miscellaneous?: string[] | null
-          miscellaneous_other?: string | null
-          social_history?: string[] | null
-          social_history_other?: string | null
-          well_developed_nourished?: string | null
-          patient_anxious?: string | null
-          asa_classification?: string | null
-          airway_evaluation?: string[] | null
-          airway_evaluation_other?: string | null
-          mallampati_score?: string | null
-          heart_lung_evaluation?: string[] | null
-          heart_lung_evaluation_other?: string | null
-          instruments_checklist?: Json | null
-          sedation_type?: string | null
-          medications_planned?: string[] | null
-          medications_other?: string | null
-          administration_route?: string[] | null
-          emergency_protocols?: Json | null
-          level_of_sedation?: string | null
-          time_in_room?: string | null
-          sedation_start_time?: string | null
-          monitoring_log?: Json | null
-          sedation_end_time?: string | null
-          out_of_room_time?: string | null
-          post_procedure_notes?: string | null
-          discharge_criteria_met?: Json | null
-          follow_up_instructions?: string | null
-          follow_up_instructions_given_to?: string | null
-          discharged_to?: string | null
-          pain_level_discharge?: string | null
-          other_remarks?: string | null
+          access_site?: string | null
+          asa_class?: number | null
           created_at?: string | null
+          equipment_check?: boolean | null
+          fluid_type?: string | null
+          id?: string
+          mallampati_score?: number | null
+          medications_administered?: Json | null
+          monitor_records?: Json | null
+          mp_class?: number | null
+          npo_status?: string | null
+          patient_id: string
+          post_op_instructions?: string | null
+          pre_op_bp?: string | null
+          pre_op_hr?: number | null
+          pre_op_o2?: number | null
+          pre_op_rr?: number | null
+          pre_op_weight?: number | null
+          procedure_date?: string | null
+          procedure_end_time?: string | null
+          procedure_start_time?: string | null
+          recovery_bp?: string | null
+          recovery_hr?: number | null
+          recovery_o2?: number | null
+          recovery_rr?: number | null
+          start_time?: string | null
           updated_at?: string | null
         }
         Update: {
-          id?: string
-          patient_id?: string | null
-          patient_name?: string
-          sedation_date?: string
-          status?: string
-          upper_treatment?: string | null
-          lower_treatment?: string | null
-          upper_surgery_type?: string | null
-          lower_surgery_type?: string | null
-          height_feet?: number | null
-          height_inches?: number | null
-          weight?: number | null
-          npo_status?: string | null
-          morning_medications?: string | null
-          allergies?: string[] | null
-          allergies_other?: string | null
-          pregnancy_risk?: string | null
-          last_menstrual_cycle?: string | null
-          anesthesia_history?: string | null
-          anesthesia_history_other?: string | null
-          respiratory_problems?: string[] | null
-          respiratory_problems_other?: string | null
-          cardiovascular_problems?: string[] | null
-          cardiovascular_problems_other?: string | null
-          gastrointestinal_problems?: string[] | null
-          gastrointestinal_problems_other?: string | null
-          neurologic_problems?: string[] | null
-          neurologic_problems_other?: string | null
-          endocrine_renal_problems?: string[] | null
-          endocrine_renal_problems_other?: string | null
-          last_a1c_level?: string | null
-          miscellaneous?: string[] | null
-          miscellaneous_other?: string | null
-          social_history?: string[] | null
-          social_history_other?: string | null
-          well_developed_nourished?: string | null
-          patient_anxious?: string | null
-          asa_classification?: string | null
-          airway_evaluation?: string[] | null
-          airway_evaluation_other?: string | null
-          mallampati_score?: string | null
-          heart_lung_evaluation?: string[] | null
-          heart_lung_evaluation_other?: string | null
-          instruments_checklist?: Json | null
-          sedation_type?: string | null
-          medications_planned?: string[] | null
-          medications_other?: string | null
-          administration_route?: string[] | null
-          emergency_protocols?: Json | null
-          level_of_sedation?: string | null
-          time_in_room?: string | null
-          sedation_start_time?: string | null
-          monitoring_log?: Json | null
-          sedation_end_time?: string | null
-          out_of_room_time?: string | null
-          post_procedure_notes?: string | null
-          discharge_criteria_met?: Json | null
-          follow_up_instructions?: string | null
-          follow_up_instructions_given_to?: string | null
-          discharged_to?: string | null
-          pain_level_discharge?: string | null
-          other_remarks?: string | null
+          access_site?: string | null
+          asa_class?: number | null
           created_at?: string | null
+          equipment_check?: boolean | null
+          fluid_type?: string | null
+          id?: string
+          mallampati_score?: number | null
+          medications_administered?: Json | null
+          monitor_records?: Json | null
+          mp_class?: number | null
+          npo_status?: string | null
+          patient_id?: string
+          post_op_instructions?: string | null
+          pre_op_bp?: string | null
+          pre_op_hr?: number | null
+          pre_op_o2?: number | null
+          pre_op_rr?: number | null
+          pre_op_weight?: number | null
+          procedure_date?: string | null
+          procedure_end_time?: string | null
+          procedure_start_time?: string | null
+          recovery_bp?: string | null
+          recovery_hr?: number | null
+          recovery_o2?: number | null
+          recovery_rr?: number | null
+          start_time?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -595,208 +484,240 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
-      patients: {
+      lab_report_cards: {
         Row: {
+          created_at: string | null
+          design_feedback: string | null
+          design_rating: number | null
+          final_product_feedback: string | null
+          final_product_rating: number | null
+          fit_feedback: string | null
+          fit_rating: number | null
           id: string
-          first_name: string
-          last_name: string
-          full_name: string
-          date_of_birth: string
-          phone: string | null
-          gender: string | null
-          street: string | null
-          city: string | null
-          state: string | null
-          zip_code: string | null
-          status: string | null
-          treatment_type: string | null
-          upper_arch: boolean | null
-          lower_arch: boolean | null
-          upper_treatment: string | null
-          lower_treatment: string | null
-          upper_surgery_date: string | null
-          lower_surgery_date: string | null
-          created_at: string
-          updated_at: string
+          impression_quality: string | null
+          overall_comments: string | null
+          patient_id: string
+          updated_at: string | null
         }
         Insert: {
+          created_at?: string | null
+          design_feedback?: string | null
+          design_rating?: number | null
+          final_product_feedback?: string | null
+          final_product_rating?: number | null
+          fit_feedback?: string | null
+          fit_rating?: number | null
           id?: string
-          first_name: string
-          last_name: string
-          date_of_birth: string
-          phone?: string | null
-          gender?: string | null
-          street?: string | null
-          city?: string | null
-          state?: string | null
-          zip_code?: string | null
-          status?: string | null
-          treatment_type?: string | null
-          upper_arch?: boolean | null
-          lower_arch?: boolean | null
-          upper_treatment?: string | null
-          lower_treatment?: string | null
-          upper_surgery_date?: string | null
-          lower_surgery_date?: string | null
-          created_at?: string
-          updated_at?: string
+          impression_quality?: string | null
+          overall_comments?: string | null
+          patient_id: string
+          updated_at?: string | null
         }
         Update: {
+          created_at?: string | null
+          design_feedback?: string | null
+          design_rating?: number | null
+          final_product_feedback?: string | null
+          final_product_rating?: number | null
+          fit_feedback?: string | null
+          fit_rating?: number | null
           id?: string
-          first_name?: string
-          last_name?: string
-          date_of_birth?: string
-          phone?: string | null
-          gender?: string | null
-          street?: string | null
-          city?: string | null
-          state?: string | null
-          zip_code?: string | null
-          status?: string | null
-          treatment_type?: string | null
-          upper_arch?: boolean | null
-          lower_arch?: boolean | null
-          upper_treatment?: string | null
-          lower_treatment?: string | null
-          upper_surgery_date?: string | null
-          lower_surgery_date?: string | null
-          created_at?: string
-          updated_at?: string
+          impression_quality?: string | null
+          overall_comments?: string | null
+          patient_id?: string
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lab_report_cards_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_scripts: {
+        Row: {
+          appliance_type: string
+          case_id: string | null
+          created_at: string | null
+          doctor_name: string
+          due_date: string | null
+          id: string
+          instructions: string | null
+          pan_number: string | null
+          patient_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          appliance_type: string
+          case_id?: string | null
+          created_at?: string | null
+          doctor_name: string
+          due_date?: string | null
+          id?: string
+          instructions?: string | null
+          pan_number?: string | null
+          patient_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          appliance_type?: string
+          case_id?: string | null
+          created_at?: string | null
+          doctor_name?: string
+          due_date?: string | null
+          id?: string
+          instructions?: string | null
+          pan_number?: string | null
+          patient_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_scripts_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manufacturing_items: {
+        Row: {
+          action_required: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          stage: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_required: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          stage: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_required?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          stage?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manufacturing_items_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       new_patient_leads: {
         Row: {
-          id: string
           created_at: string | null
-          updated_at: string | null
-          reason_for_visit: string | null
-          dental_problems: string[] | null
-          immediate_needs: string[] | null
-          need_loved_one_help: string | null
-          use_financing: string | null
-          credit_score: string | null
-          barriers: string[] | null
-          personal_first_name: string | null
-          personal_last_name: string | null
-          personal_phone: string | null
-          personal_email: string | null
-          home_address: string | null
-          street_address: string | null
-          city: string | null
-          state: string | null
-          zip_code: string | null
-          medical_conditions: string[] | null
-          has_medical_insurance: string | null
-          best_contact_time: string | null
-          phone_call_preference: string | null
-          implant_type: string | null
-          urgency: string | null
-          preferred_contact: string | null
-          best_time_to_call: string | null
-          hear_about_us: string | null
-          additional_notes: string | null
-          agree_to_terms: boolean | null
-          first_name: string | null
-          last_name: string | null
           email: string | null
+          first_name: string
+          id: string
+          last_name: string
+          message: string | null
           phone: string | null
-          date_of_birth: string | null
-          address: string | null
-          city: string | null
-          state: string | null
-          zip_code: string | null
-          gender: string | null
+          source: string | null
           status: string | null
+          updated_at: string | null
         }
         Insert: {
-          id?: string
           created_at?: string | null
-          updated_at?: string | null
-          reason_for_visit?: string | null
-          dental_problems?: string[] | null
-          immediate_needs?: string[] | null
-          need_loved_one_help?: string | null
-          use_financing?: string | null
-          credit_score?: string | null
-          barriers?: string[] | null
-          personal_first_name?: string | null
-          personal_last_name?: string | null
-          personal_phone?: string | null
-          personal_email?: string | null
-          home_address?: string | null
-          street_address?: string | null
-          city?: string | null
-          state?: string | null
-          zip_code?: string | null
-          medical_conditions?: string[] | null
-          has_medical_insurance?: string | null
-          best_contact_time?: string | null
-          phone_call_preference?: string | null
-          implant_type?: string | null
-          urgency?: string | null
-          preferred_contact?: string | null
-          best_time_to_call?: string | null
-          hear_about_us?: string | null
-          additional_notes?: string | null
-          agree_to_terms?: boolean | null
-          first_name?: string | null
-          last_name?: string | null
           email?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          message?: string | null
           phone?: string | null
-          date_of_birth?: string | null
-          address?: string | null
-          city?: string | null
-          state?: string | null
-          zip_code?: string | null
-          gender?: string | null
+          source?: string | null
           status?: string | null
+          updated_at?: string | null
         }
         Update: {
-          id?: string
           created_at?: string | null
-          updated_at?: string | null
-          reason_for_visit?: string | null
-          dental_problems?: string[] | null
-          immediate_needs?: string[] | null
-          need_loved_one_help?: string | null
-          use_financing?: string | null
-          credit_score?: string | null
-          barriers?: string[] | null
-          personal_first_name?: string | null
-          personal_last_name?: string | null
-          personal_phone?: string | null
-          personal_email?: string | null
-          home_address?: string | null
-          street_address?: string | null
-          city?: string | null
-          state?: string | null
-          zip_code?: string | null
-          medical_conditions?: string[] | null
-          has_medical_insurance?: string | null
-          best_contact_time?: string | null
-          phone_call_preference?: string | null
-          implant_type?: string | null
-          urgency?: string | null
-          preferred_contact?: string | null
-          best_time_to_call?: string | null
-          hear_about_us?: string | null
-          additional_notes?: string | null
-          agree_to_terms?: boolean | null
-          first_name?: string | null
-          last_name?: string | null
           email?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          message?: string | null
           phone?: string | null
-          date_of_birth?: string | null
-          address?: string | null
-          city?: string | null
-          state?: string | null
-          zip_code?: string | null
-          gender?: string | null
+          source?: string | null
           status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      patients: {
+        Row: {
+          address: string | null
+          allergies: string | null
+          archived: boolean | null
+          created_at: string
+          date_of_birth: string | null
+          email: string | null
+          emergency_contact: string | null
+          first_name: string
+          gender: string | null
+          id: string
+          last_name: string
+          medical_history: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          allergies?: string | null
+          archived?: boolean | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          emergency_contact?: string | null
+          first_name: string
+          gender?: string | null
+          id?: string
+          last_name: string
+          medical_history?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          allergies?: string | null
+          archived?: boolean | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          emergency_contact?: string | null
+          first_name?: string
+          gender?: string | null
+          id?: string
+          last_name?: string
+          medical_history?: string | null
+          phone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -808,7 +729,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      encounter_form_status: "draft" | "complete"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -816,29 +737,27 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-  | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+  PublicTableNameOrOptions extends
+  | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
   | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
-  }
-  ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-    Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+  ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+    Database[PublicTableNameOrOptions["schema"]]["Views"])
   : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-    Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+    Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
   ? R
   : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-    DefaultSchema["Views"])
-  ? (DefaultSchema["Tables"] &
-    DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
+    PublicSchema["Views"])
+  ? (PublicSchema["Tables"] &
+    PublicSchema["Views"])[PublicTableNameOrOptions] extends {
       Row: infer R
     }
   ? R
@@ -846,22 +765,20 @@ export type Tables<
   : never
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema["Tables"]
+  PublicTableNameOrOptions extends
+  | keyof PublicSchema["Tables"]
   | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
-  }
-  ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+  ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
   : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
     Insert: infer I
   }
   ? I
   : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
     Insert: infer I
   }
   ? I
@@ -869,22 +786,20 @@ export type TablesInsert<
   : never
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema["Tables"]
+  PublicTableNameOrOptions extends
+  | keyof PublicSchema["Tables"]
   | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
-  }
-  ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+  ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
   : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
     Update: infer U
   }
   ? U
   : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
     Update: infer U
   }
   ? U
@@ -892,23 +807,21 @@ export type TablesUpdate<
   : never
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-  | keyof DefaultSchema["Enums"]
+  PublicEnumNameOrOptions extends
+  | keyof PublicSchema["Enums"]
   | { schema: keyof Database },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
-  }
-  ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
   : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+> = PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
+  ? PublicSchema["Enums"][PublicEnumNameOrOptions]
   : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-  | keyof DefaultSchema["CompositeTypes"]
+  | keyof PublicSchema["CompositeTypes"]
   | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
@@ -917,12 +830,6 @@ export type CompositeTypes<
   : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
+  ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
   : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const

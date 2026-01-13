@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,7 @@ import { FiveYearWarrantyDialog } from "@/components/FiveYearWarrantyDialog";
 import { PartialPaymentAgreementDialog } from "@/components/PartialPaymentAgreementDialog";
 import { TreatmentPlanDialog } from "@/components/TreatmentPlanDialog";
 import { saveTreatmentPlanForm, updateTreatmentPlanForm, getTreatmentPlanFormsByPatientId, deleteTreatmentPlanForm, getTreatmentPlanForm, TreatmentPlanFormDB } from "@/services/treatmentPlanFormService";
+import { HeadNeckExaminationForm } from "@/components/HeadNeckExaminationForm";
 import { ConsultationViewer } from "@/components/ConsultationViewer";
 import { usePatientLabScripts } from "@/hooks/usePatientLabScripts";
 import { usePatientManufacturingItems } from "@/hooks/usePatientManufacturingItems";
@@ -212,6 +213,7 @@ export function PatientProfilePage() {
     'Final Design Approval Form',
     'Thank You and Pre-Surgery Form',
     'Create Treatment Plan',
+    'Head Neck Examination Form',
     'Custom'
   ];
   const [patientConsultations, setPatientConsultations] = useState<any[]>([]);
@@ -566,6 +568,14 @@ export function PatientProfilePage() {
   const [showFiveYearWarrantyForm, setShowFiveYearWarrantyForm] = useState(false);
   const [showPartialPaymentAgreementForm, setShowPartialPaymentAgreementForm] = useState(false);
   const [showTreatmentPlanForm, setShowTreatmentPlanForm] = useState(false);
+  const [showHeadNeckExamForm, setShowHeadNeckExamForm] = useState(false);
+  const [headNeckExamForms, setHeadNeckExamForms] = useState<any[]>([]);
+  const [loadingHeadNeckExamForms, setLoadingHeadNeckExamForms] = useState(false);
+  const [selectedHeadNeckExamForm, setSelectedHeadNeckExamForm] = useState<any | null>(null);
+  const [isEditingHeadNeckExamForm, setIsEditingHeadNeckExamForm] = useState(false);
+  const [isViewingHeadNeckExamForm, setIsViewingHeadNeckExamForm] = useState(false);
+  const [showDeleteHeadNeckExamFormConfirm, setShowDeleteHeadNeckExamFormConfirm] = useState(false);
+  const [headNeckExamFormToDelete, setHeadNeckExamFormToDelete] = useState<any | null>(null);
   const [selectedAdminFormType, setSelectedAdminFormType] = useState<string>("");
 
   // State for 3-Year Care Package Forms
@@ -1307,6 +1317,7 @@ export function PatientProfilePage() {
       fetchFiveYearWarrantyForms();
       fetchPartialPaymentAgreementForms();
       fetchTreatmentPlanForms();
+      fetchHeadNeckExamForms();
     } else {
       // Use mock data if no patientId provided
       setPatient({
@@ -1745,6 +1756,37 @@ export function PatientProfilePage() {
       setTreatmentPlanForms([]);
     } finally {
       setLoadingTreatmentPlanForms(false);
+    }
+  };
+
+  const fetchHeadNeckExamForms = async () => {
+    if (!patientId) {
+      console.log('⚠️ No patientId provided to fetchHeadNeckExamForms');
+      return;
+    }
+
+    try {
+      console.log('🔄 Fetching Head Neck Examination forms for patient:', patientId);
+      setLoadingHeadNeckExamForms(true);
+
+      const { data, error } = await supabase
+        .from('head_neck_examinations')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error fetching Head Neck Examination forms:', error);
+        setHeadNeckExamForms([]);
+      } else {
+        console.log('✅ Successfully fetched Head Neck Examination forms:', data?.length || 0);
+        setHeadNeckExamForms(data || []);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Head Neck Examination forms:', error);
+      setHeadNeckExamForms([]);
+    } finally {
+      setLoadingHeadNeckExamForms(false);
     }
   };
 
@@ -10357,6 +10399,7 @@ export function PatientProfilePage() {
                                 <SelectItem value="final-design-approval">Final Design Approval Form</SelectItem>
                                 <SelectItem value="thank-you-pre-surgery">Thank You and Pre-Surgery Form</SelectItem>
                                 <SelectItem value="create-treatment-plan">Create Treatment Plan</SelectItem>
+                                <SelectItem value="head-neck-examination">Head and Neck Examination</SelectItem>
                               </SelectContent>
                             </Select>
 
@@ -10391,6 +10434,8 @@ export function PatientProfilePage() {
                                   setShowPartialPaymentAgreementForm(true);
                                 } else if (selectedAdminFormType === 'create-treatment-plan') {
                                   setShowTreatmentPlanForm(true);
+                                } else if (selectedAdminFormType === 'head-neck-examination') {
+                                  setShowHeadNeckExamForm(true);
                                 } else {
                                   // Handle other form types here
                                   alert(`Opening ${selectedAdminFormType} form - Not implemented yet`);
@@ -10402,12 +10447,12 @@ export function PatientProfilePage() {
                           </div>
 
                           {/* Administrative Forms List */}
-                          {(loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms || loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms || loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms || loadingFiveYearWarrantyForms || loadingPartialPaymentAgreementForms || loadingTreatmentPlanForms) ? (
+                          {(loadingPatientPackets || loadingFinancialAgreements || loadingConsentForms || loadingMedicalRecordsReleaseForms || loadingInformedConsentSmokingForms || loadingFinalDesignApprovalForms || loadingThankYouPreSurgeryForms || loadingThreeYearCarePackageForms || loadingFiveYearWarrantyForms || loadingPartialPaymentAgreementForms || loadingTreatmentPlanForms || loadingHeadNeckExamForms) ? (
                             <div className="text-center py-6">
                               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                               <p className="text-sm text-gray-500">Loading administrative forms...</p>
                             </div>
-                          ) : (patientPackets.length > 0 || financialAgreements.length > 0 || consentForms.length > 0 || medicalRecordsReleaseForms.length > 0 || informedConsentSmokingForms.length > 0 || finalDesignApprovalForms.length > 0 || thankYouPreSurgeryForms.length > 0 || threeYearCarePackageForms.length > 0 || fiveYearWarrantyForms.length > 0 || partialPaymentAgreementForms.length > 0 || treatmentPlanForms.length > 0) ? (
+                          ) : (patientPackets.length > 0 || financialAgreements.length > 0 || consentForms.length > 0 || medicalRecordsReleaseForms.length > 0 || informedConsentSmokingForms.length > 0 || finalDesignApprovalForms.length > 0 || thankYouPreSurgeryForms.length > 0 || threeYearCarePackageForms.length > 0 || fiveYearWarrantyForms.length > 0 || partialPaymentAgreementForms.length > 0 || treatmentPlanForms.length > 0 || headNeckExamForms.length > 0) ? (
                             <div className="space-y-2">
                               {patientPackets.map((packet) => (
                                 <div
@@ -12064,6 +12109,104 @@ export function PatientProfilePage() {
                                                 e.stopPropagation();
                                                 setTreatmentPlanFormToDelete(form);
                                                 setShowDeleteTreatmentPlanFormConfirm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Delete form"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-600" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </>
+                              )}
+
+                              {/* Head and Neck Examination Forms Section */}
+                              {headNeckExamForms.length > 0 && (
+                                <>
+                                  {headNeckExamForms.map((form) => (
+                                    <div
+                                      key={form.id}
+                                      className="bg-white rounded-lg p-3 border border-gray-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02] hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative"
+                                      onClick={() => {
+                                        setSelectedHeadNeckExamForm(form);
+                                        setIsViewingHeadNeckExamForm(true);
+                                        setShowHeadNeckExamForm(true);
+                                      }}
+                                    >
+                                      {/* Header with form name and status */}
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className={`w-2 h-2 rounded-full ${form.status === 'completed' || form.status === 'signed' ? 'bg-green-500' : 'bg-orange-500'
+                                            }`}></div>
+                                          <span className="text-sm font-semibold text-gray-900">
+                                            Head & Neck Exam
+                                          </span>
+                                        </div>
+                                        {/* Status Badge */}
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${form.status === 'completed' || form.status === 'signed'
+                                          ? 'bg-green-100 text-green-800 border border-green-200'
+                                          : 'bg-orange-100 text-orange-800 border border-orange-200'
+                                          }`}>
+                                          {form.status === 'completed' ? 'Completed' :
+                                            form.status === 'signed' ? 'Signed' : 'Draft'}
+                                        </span>
+                                      </div>
+
+                                      {/* Created Date */}
+                                      <div className="mb-3">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-500">Created:</span>
+                                          <span className="font-medium text-gray-700">
+                                            {form.created_at ?
+                                              new Date(form.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                              }) : 'Unknown'
+                                            }
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          <Clock className="h-3 w-3" />
+                                          <span>{form.updated_at ? new Date(form.updated_at).toLocaleDateString() : 'Unknown'}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          {/* Edit button */}
+                                          {/* PDF Download - Placeholder if needed, or omit for now */}
+
+                                          {(form.status === 'draft' || isAdminUser()) && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.preventDefault(); // Add preventDefault for safety
+                                                e.stopPropagation();
+                                                console.log("Opening Head and Neck Exam for editing:", form);
+                                                setSelectedHeadNeckExamForm(form);
+                                                setIsEditingHeadNeckExamForm(true);
+                                                setIsViewingHeadNeckExamForm(false);
+                                                setShowHeadNeckExamForm(true);
+                                              }}
+                                              className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                              title="Edit form"
+                                            >
+                                              <Edit2 className="h-3.5 w-3.5 text-gray-400 hover:text-blue-600" />
+                                            </button>
+                                          )}
+
+                                          {/* Delete button - only visible to admins */}
+                                          {isAdminUser() && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setHeadNeckExamFormToDelete(form);
+                                                setShowDeleteHeadNeckExamFormConfirm(true);
                                               }}
                                               className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
                                               title="Delete form"
@@ -19791,6 +19934,41 @@ export function PatientProfilePage() {
         </DialogContent>
       </Dialog>
 
+      {/* Head and Neck Examination Form Dialog */}
+      <Dialog open={showHeadNeckExamForm} onOpenChange={setShowHeadNeckExamForm}>
+        <DialogContent className="max-w-6xl h-[90vh] p-0 flex flex-col overflow-hidden">
+          {patient && (
+            <HeadNeckExaminationForm
+              patientId={patient.id}
+              patientData={patient}
+              onSubmit={(formData) => {
+                console.log("Head and Neck Examination Form Data Submitted:", formData);
+                toast({
+                  title: "Success",
+                  description: "Head and Neck Examination saved successfully!",
+                });
+                setShowHeadNeckExamForm(false);
+                setSelectedAdminFormType("");
+              }}
+              onCancel={() => {
+                setShowHeadNeckExamForm(false);
+                setSelectedAdminFormType("");
+              }}
+              onSuccess={() => {
+                toast({
+                  title: "Success",
+                  description: "Head and Neck Examination saved successfully!",
+                });
+                setShowHeadNeckExamForm(false);
+                setSelectedAdminFormType("");
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* New Patient Packet Preview Dialog */}
+
       {/* New Patient Packet Preview Dialog */}
       <Dialog open={showNewPatientPacketPreview} onOpenChange={setShowNewPatientPacketPreview}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -20563,6 +20741,66 @@ export function PatientProfilePage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Delete Head Neck Exam Form Confirmation Dialog */}
+      <AlertDialog open={showDeleteHeadNeckExamFormConfirm} onOpenChange={setShowDeleteHeadNeckExamFormConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Head and Neck Examination
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this examination record? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteHeadNeckExamFormConfirm(false);
+              setHeadNeckExamFormToDelete(null);
+            }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!headNeckExamFormToDelete) return;
+                try {
+                  const { error } = await supabase
+                    .from('head_neck_examinations')
+                    .delete()
+                    .eq('id', headNeckExamFormToDelete.id);
+
+                  if (error) {
+                    console.error('Error deleting examination:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to delete examination record.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  setHeadNeckExamForms(prev => prev.filter(form => form.id !== headNeckExamFormToDelete.id));
+                  setShowDeleteHeadNeckExamFormConfirm(false);
+                  setHeadNeckExamFormToDelete(null);
+                  toast({
+                    title: "Success",
+                    description: "Examination record deleted successfully!",
+                  });
+                } catch (error) {
+                  console.error('Error deleting examination:', error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to delete examination record.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Treatment Plan Dialog */}
       {patient && (
         <TreatmentPlanDialog
@@ -20683,6 +20921,46 @@ export function PatientProfilePage() {
         isOpen={showConsultationViewer}
         onClose={handleCloseConsultationViewer}
       />
+
+      {/* Head and Neck Examination Form Dialog */}
+      <Dialog open={showHeadNeckExamForm} onOpenChange={(open) => {
+        setShowHeadNeckExamForm(open);
+        if (!open) {
+          setSelectedHeadNeckExamForm(null);
+          setIsEditingHeadNeckExamForm(false);
+          setIsViewingHeadNeckExamForm(false);
+          setSelectedAdminFormType("");
+        }
+      }}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-full">
+          <DialogHeader>
+            <DialogTitle>Head and Neck Examination Form</DialogTitle>
+            <DialogDescription>
+              Fill out or edit the head and neck examination form for the patient.
+            </DialogDescription>
+          </DialogHeader>
+          {patient && (
+            <HeadNeckExaminationForm
+              patientId={patient.id}
+              patientData={patient}
+              existingData={selectedHeadNeckExamForm}
+              onSuccess={() => {
+                setShowHeadNeckExamForm(false);
+                fetchHeadNeckExamForms();
+                setSelectedHeadNeckExamForm(null);
+                setIsEditingHeadNeckExamForm(false);
+                setIsViewingHeadNeckExamForm(false);
+                setSelectedAdminFormType("");
+
+                toast({
+                  title: "Success",
+                  description: "Head and Neck Examination saved successfully",
+                });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Patient Status Edit Dialog */}
       <Dialog open={showStatusEditDialog} onOpenChange={setShowStatusEditDialog}>

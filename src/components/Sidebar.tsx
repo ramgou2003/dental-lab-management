@@ -1,5 +1,4 @@
 import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, ChevronDown, GripVertical, Shield, UserPlus, Stethoscope, Microscope, Loader2 } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -296,17 +295,17 @@ export function Sidebar({
 
   return <div
     ref={sidebarRef}
-    className="fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col z-10 shadow-sm"
+    className="fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col z-10 shadow-sm"
     style={{
       width: `${sidebarWidth}px`,
       transition: isResizing ? 'none' : 'width 0.3s ease-in-out'
     }}
   >
     {/* Header - Clinic Logo */}
-    <div className="border-b border-sidebar-border py-1.5 px-[4px]">
+    <div className="border-b border-gray-200 py-1.5 px-[4px]">
       <button
         onClick={() => navigate('/dashboard')}
-        className="flex items-center justify-start w-full p-2 pl-3 h-14 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg transition-colors duration-200"
+        className="flex items-center justify-start w-full p-2 pl-3 h-14 hover:bg-gray-50 rounded-lg transition-colors duration-200"
         title="Go to Dashboard"
       >
         <div className="relative flex items-center">
@@ -406,8 +405,8 @@ export function Sidebar({
             className={cn(
               "flex items-center justify-between w-full text-left px-3 py-3.5 rounded-lg transition-colors duration-200 relative h-12 border",
               isActive || isSubmenuActive
-                ? "bg-sidebar-accent text-sidebar-accent-foreground border-sidebar-border shadow-sm"
-                : "text-sidebar-foreground/70 border-sidebar-border/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:border-sidebar-border"
+                ? "bg-blue-50 text-blue-700 border-blue-400 shadow-sm"
+                : "text-gray-600 border-blue-200/60 hover:bg-gray-50 hover:text-gray-900 hover:border-blue-400"
             )}
             title={collapsed ? item.name : undefined}
           >
@@ -452,8 +451,8 @@ export function Sidebar({
                           ? "w-10 h-10 justify-center"
                           : "w-full px-3 py-2.5 text-sm",
                         isSubActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground border-sidebar-border font-medium shadow-sm"
-                          : "text-sidebar-foreground/70 border-sidebar-border/50 hover:bg-sidebar-accent hover:border-sidebar-border"
+                          ? "bg-blue-50 text-blue-700 border-blue-500 font-medium shadow-sm"
+                          : "text-gray-600 border-blue-200/50 hover:bg-gray-50 hover:border-blue-400"
                       )}
                       title={collapsed ? subItem.name : undefined}
                     >
@@ -473,9 +472,9 @@ export function Sidebar({
     </nav>
 
     {/* Footer */}
-    <div className="p-4 border-t border-sidebar-border space-y-1 px-[11px]">
+    <div className="p-4 border-t border-gray-100 space-y-1 px-[11px]">
 
-      <button onClick={onToggleCollapse} className="flex items-center w-full text-left px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200" title={collapsed ? "Expand" : "Collapse"}>
+      <button onClick={onToggleCollapse} className="flex items-center w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200" title={collapsed ? "Expand" : "Collapse"}>
         {collapsed ? <ChevronRight className="h-5 w-5 flex-shrink-0" /> : <ChevronLeft className="h-5 w-5 flex-shrink-0" />}
         <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
           {collapsed ? "Expand" : "Collapse"}
@@ -503,25 +502,20 @@ export function Sidebar({
         </span>
       </button>
 
-      {/* Theme Toggle */}
-      <div className="pt-1">
-        <ThemeToggle collapsed={collapsed} />
-      </div>
-
       {/* Profile Section - Moved from header */}
-      <div className="border-t border-sidebar-border pt-3 mt-3">
-        <button onClick={() => navigate('/profile')} className="flex items-center justify-start w-full text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg py-1.5 pl-0.5 pr-1 transition-colors duration-200">
+      <div className="border-t border-gray-100 pt-3 mt-3">
+        <button onClick={() => navigate('/profile')} className="flex items-center justify-start w-full text-left hover:bg-gray-50 rounded-lg py-1.5 pl-0.5 pr-1 transition-colors duration-200">
           <div className="bg-blue-600 text-white rounded-full size-9 flex-shrink-0 flex items-center justify-center font-semibold text-sm">
             {userProfile ? getInitials(userProfile.first_name, userProfile.last_name) : "U"}
           </div>
           <div className={`transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden pointer-events-none' : 'opacity-100 ml-3'}`}>
-            <h1 className="text-sidebar-foreground text-sm font-semibold whitespace-nowrap">
+            <h1 className="text-gray-900 text-sm font-semibold whitespace-nowrap">
               {userProfile ?
                 `${isDentist ? 'Dr. ' : ''}${userProfile.first_name} ${userProfile.last_name}` :
                 "User"
               }
             </h1>
-            <p className="text-sidebar-foreground/70 text-xs whitespace-nowrap">
+            <p className="text-gray-500 text-xs whitespace-nowrap">
               {userProfile ? userProfile.email : ""}
             </p>
           </div>
@@ -532,7 +526,7 @@ export function Sidebar({
     {/* Resize Handle - Only visible when expanded */}
     {!collapsed && (
       <div
-        className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 cursor-col-resize bg-sidebar hover:bg-sidebar-accent rounded-md px-1 py-3 transition-colors duration-200 shadow-sm border border-sidebar-border touch-none"
+        className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2 cursor-col-resize bg-gray-100 hover:bg-gray-200 rounded-md px-1 py-3 transition-colors duration-200 shadow-sm border border-gray-300 touch-none"
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         title="Drag to resize sidebar"
