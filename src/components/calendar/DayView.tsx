@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperat
 import { isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Clock, User, MapPin, MoreHorizontal, MoreVertical, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit, Trash2, ClipboardList, Calendar, FileEdit, Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
   ContextMenu,
@@ -55,7 +55,6 @@ import { ComfortPreferenceDialog } from "@/components/ComfortPreferenceDialog";
 import { EncounterFormDialog } from "@/components/calendar/EncounterFormDialog";
 import { AppointmentSchedulerDialog } from "@/components/calendar/AppointmentSchedulerDialog";
 import { NewLabScriptForm } from "@/components/NewLabScriptForm";
-import { supabase as supabaseClient } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
 
 export interface Appointment {
@@ -418,7 +417,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       console.log('No Patient ID, searching for patient in database by name:', appointment.patient);
 
       // Search for patient by full name
-      const { data: patients, error } = await supabase
+      const { data: patients, error } = await supabaseClient
         .from('patients')
         .select('id, full_name')
         .eq('full_name', appointment.patient)
@@ -520,6 +519,23 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
         onStatusChange(appointmentId, statusToApply);
       }
 
+      // If this is a consultation, update the consultation status as well
+      const appointment = appointments.find(a => a.id === appointmentId);
+      if (appointment?.type === 'consultation') {
+        const consultStatus = statusToApply === 'CANCL' ? 'cancelled' : 'no_show';
+
+        const { error: consultError } = await (supabaseClient as any)
+          .from('consultations' as any)
+          .update({ consultation_status: consultStatus })
+          .eq('appointment_id', appointmentId);
+
+        if (consultError) {
+          console.error('Error updating consultation status:', consultError);
+        } else {
+          console.log(`Updated consultation status to ${consultStatus}`);
+        }
+      }
+
     } catch (err) {
       console.error(`Error updating appointment to ${statusLabel}:`, err);
       toast.error("Failed to update appointment");
@@ -595,7 +611,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
 
     try {
       // Search for patient by full name
-      const { data: patients, error } = await supabase
+      const { data: patients, error } = await supabaseClient
         .from('patients')
         .select('id, full_name')
         .eq('full_name', appointment.patient)
@@ -622,7 +638,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     setOpenContextMenuId(null);
 
     try {
-      const { data: patients, error } = await supabase
+      const { data: patients, error } = await supabaseClient
         .from('patients')
         .select('id, full_name')
         .eq('full_name', appointment.patient)
@@ -651,7 +667,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     setOpenContextMenuId(null);
 
     try {
-      const { data: patients, error } = await supabase
+      const { data: patients, error } = await supabaseClient
         .from('patients')
         .select('id, full_name')
         .eq('full_name', appointment.patient)
@@ -1291,7 +1307,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
 
   const handleReschedule = (appointment: Appointment) => {
     setOpenContextMenuId(null);
-    if (!appointment.patientId) {
+    if (!appointment.patientId && appointment.type !== 'consultation') {
       toast.error("Cannot reschedule: Patient ID missing");
       return;
     }
@@ -1324,10 +1340,10 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       }
 
       // 2. Create new appointment
-      const { error: createError } = await (supabaseClient as any)
+      const { data: newAppointment, error: createError } = await (supabaseClient as any)
         .from('appointments')
         .insert({
-          patient_id: rescheduleDialog.appointment.patientId,
+          patient_id: rescheduleDialog.appointment.patientId || null,
           patient_name: rescheduleDialog.appointment.patient,
           title: rescheduleDialog.appointment.title,
           appointment_type: appointmentData.type,
@@ -1339,12 +1355,68 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
           status: 'Not Confirmed',
           status_code: '?????',
           assigned_user_id: rescheduleDialog.appointment.assignedUserId
-        });
+        })
+        .select()
+        .single();
 
       if (createError) {
         console.error('Error creating new appointment:', createError);
         toast.error('Failed to create new appointment');
       } else {
+        // 3. If consultation, update the consultation_patients link and manage consultation records
+        if (rescheduleDialog.appointment.type === 'consultation') {
+          try {
+            // A. Update OLD consultation status in 'consultations' table
+            const { data: oldConsultation, error: fetchOldError } = await (supabaseClient as any)
+              .from('consultations' as any)
+              .select('*')
+              .eq('appointment_id', rescheduleDialog.appointment.id)
+              .maybeSingle();
+
+            if (oldConsultation) {
+              await (supabaseClient as any)
+                .from('consultations' as any)
+                .update({ consultation_status: 'rescheduled' })
+                .eq('id', oldConsultation.id);
+
+              // B. Create NEW consultation record linking to new appointment
+              await (supabaseClient as any)
+                .from('consultations' as any)
+                .insert({
+                  appointment_id: newAppointment.id,
+                  consultation_patient_id: oldConsultation.consultation_patient_id,
+                  new_patient_packet_id: oldConsultation.new_patient_packet_id,
+                  patient_name: oldConsultation.patient_name,
+                  consultation_date: appointmentData.date,
+                  consultation_status: 'draft' // Changed from 'scheduled' to 'draft' to match DB constraints
+                });
+            } else {
+              // Fallback if no consultation record found?
+              console.log("No existing consultation record found to reschedule.");
+            }
+
+            // C. Update 'consultation_patients' link (existing logic)
+            const { data: cpData } = await (supabaseClient as any)
+              .from('consultation_patients' as any)
+              .select('id')
+              .eq('appointment_id', rescheduleDialog.appointment.id)
+              .maybeSingle();
+
+            if (cpData) {
+              await (supabaseClient as any)
+                .from('consultation_patients' as any)
+                .update({
+                  appointment_id: newAppointment.id,
+                  consultation_date: appointmentData.date,
+                  consultation_time: appointmentData.startTime
+                })
+                .eq('id', cpData.id);
+            }
+          } catch (cpError) {
+            console.error('Error updating consultation records:', cpError);
+          }
+        }
+
         toast.success('Appointment rescheduled successfully');
         setRescheduleDialog(null);
         window.location.reload(); // Force refresh to show changes

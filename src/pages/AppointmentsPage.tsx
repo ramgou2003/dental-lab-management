@@ -135,13 +135,20 @@ export function AppointmentsPage() {
       return;
     }
     setEditingAppointment(appointment);
+    setDraftAppointmentData(null);
+
     // Parse date correctly: date string is YYYY-MM-DD
     setInitialFormDate(new Date(appointment.date + 'T00:00:00'));
     setInitialFormTime(appointment.startTime);
     setInitialFormEndTime(appointment.endTime);
     // Note: appointment interface has date, startTime, endTime
     setShowAppointmentDetails(false);
-    setShowAppointmentForm(true);
+
+    if (appointment.type === 'consultation') {
+      setShowAddConsultationDialog(true);
+    } else {
+      setShowAppointmentForm(true);
+    }
   };
 
   const handleClearSelection = () => {
@@ -418,17 +425,20 @@ export function AppointmentsPage() {
         onClose={() => {
           setShowAddConsultationDialog(false);
           handleClearSelection();
+          setEditingAppointment(null);
         }}
         onSuccess={() => {
           setShowAddConsultationDialog(false);
           // Refresh appointments or handle as needed
           // handleSaveAppointment already calls add/update, but here the dialog 
           // has likely already saved to DB. Let's just refresh.
+          setEditingAppointment(null);
         }}
         initialValues={draftAppointmentData}
         initialDate={initialFormDate}
         initialTime={initialFormTime}
         initialEndTime={initialFormEndTime}
+        editingAppointment={editingAppointment}
         onOpenCalendar={(data) => {
           setDraftAppointmentData(data);
           if (data.consultationDate) {

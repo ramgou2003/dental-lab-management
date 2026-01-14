@@ -29,6 +29,7 @@ interface AddConsultationDialogProps {
   initialEndTime?: string;
   initialValues?: any;
   onOpenCalendar?: (data: any) => void;
+  editingAppointment?: any; // Allow passing the full appointment object for editing
 }
 
 type PatientType = 'new' | 'consultation' | 'active';
@@ -80,7 +81,8 @@ export function AddConsultationDialog({
   initialTime,
   initialEndTime,
   initialValues,
-  onOpenCalendar
+  onOpenCalendar,
+  editingAppointment
 }: AddConsultationDialogProps) {
   const [patientType, setPatientType] = useState<PatientType>('new');
   const [searchTerm, setSearchTerm] = useState('');
@@ -134,6 +136,34 @@ export function AddConsultationDialog({
         if (initialValues.patientType) setPatientType(initialValues.patientType);
         if (initialValues.selectedPatient) setSelectedPatient(initialValues.selectedPatient);
         if (initialValues.searchTerm) setSearchTerm(initialValues.searchTerm);
+
+      } else if (editingAppointment) {
+        // Pre-fill from editing appointment
+        const names = editingAppointment.patient.split(' ');
+        const lastName = names.length > 1 ? names.pop() || '' : '';
+        const firstName = names.join(' ');
+
+        setFormData({
+          firstName: firstName,
+          lastName: lastName,
+          dateOfBirth: '', // We might not have this in the appointment object
+          gender: 'prefer-not-to-answer',
+          consultationDate: new Date(editingAppointment.date + 'T00:00:00'),
+          consultationTime: editingAppointment.startTime,
+          consultationEndTime: editingAppointment.endTime,
+          assignedUserId: editingAppointment.assignedUserId
+        });
+
+        // Determine patient type for editing
+        if (editingAppointment.patientId) {
+          setPatientType('active');
+        } else if (editingAppointment.notes && editingAppointment.notes.indexOf('Follow-up') !== -1) {
+          // Check for "Follow-up" in notes to identify consultation patients
+          setPatientType('consultation');
+        } else {
+          setPatientType('new');
+        }
+
       } else {
         // Individual props fallback
         setFormData(prev => ({
@@ -144,7 +174,7 @@ export function AddConsultationDialog({
         }));
       }
     }
-  }, [isOpen, initialValues, initialDate, initialTime]);
+  }, [isOpen, initialValues, initialDate, initialTime, editingAppointment]);
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -232,7 +262,7 @@ export function AddConsultationDialog({
         .limit(10);
 
       if (error) throw error;
-      setSearchResults(data || []);
+      setSearchResults((data as any) || []);
     } catch (error) {
       console.error('Error searching active patients:', error);
       setSearchResults([]);
@@ -300,23 +330,22 @@ export function AddConsultationDialog({
   };
 
   const validateForm = () => {
-    const newErrors: Record<string, boolean> = {
-      consultationDate: !formData.consultationDate,
-      consultationTime: !formData.consultationTime
-    };
+    const newErrors: Record<string, boolean> = {};
 
-    // For new patients, validate all fields
+    if (!formData.consultationDate) newErrors.consultationDate = true;
+    if (!formData.consultationTime) newErrors.consultationTime = true;
+
+    // Validate fields based on type
     if (patientType === 'new') {
-      newErrors.firstName = !formData.firstName.trim();
-      newErrors.lastName = !formData.lastName.trim();
-      newErrors.dateOfBirth = !formData.dateOfBirth;
-    } else {
-      // For existing patients, ensure one is selected
-      newErrors.selectedPatient = !selectedPatient;
+      if (!formData.firstName.trim()) newErrors.firstName = true;
+      if (!formData.lastName.trim()) newErrors.lastName = true;
+      if (!editingAppointment && !formData.dateOfBirth) newErrors.dateOfBirth = true;
+    } else if (!selectedPatient && !editingAppointment) {
+      newErrors.selectedPatient = true;
     }
 
     setErrors(newErrors);
-    return !Object.values(newErrors).some(error => error);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleInputChange = (field: keyof ConsultationFormData, value: any) => {
@@ -363,6 +392,28 @@ export function AddConsultationDialog({
         const startTime = new Date(`2000-01-01T${formData.consultationTime}:00`);
         const endTime = new Date(startTime.getTime() + 30 * 60000); // Add 30 minutes
         endTimeStr = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`;
+      }
+
+      if (editingAppointment) {
+        // Update existing appointment
+        const { error: updateError } = await supabase
+          .from('appointments')
+          .update({
+            date: consultationDateStr,
+            start_time: formData.consultationTime,
+            end_time: endTimeStr,
+            assigned_user_id: formData.assignedUserId || null,
+            title: `Consultation - ${formData.firstName} ${formData.lastName}`,
+            patient_name: `${formData.firstName} ${formData.lastName}`
+          })
+          .eq('id', editingAppointment.id);
+
+        if (updateError) throw updateError;
+
+        toast.success('Consultation appointment updated successfully');
+        onSuccess?.();
+        onClose();
+        return;
       }
 
       // Determine patient_id based on patient type
@@ -565,7 +616,7 @@ export function AddConsultationDialog({
             console.log('No consultation_patient_id found for active patient, creating new one...');
 
             const { data: newCP, error: cpError } = await (supabase
-              .from('consultation_patients')
+              .from('consultation_patients' as any)
               .insert([{
                 first_name: formData.firstName,
                 last_name: formData.lastName,
@@ -658,7 +709,11 @@ export function AddConsultationDialog({
     }
   };
 
+
+
   const timeSlots = generateTimeSlots();
+
+
 
   return (
     <Dialog open={isOpen} onOpenChange={() => { }}>
@@ -666,7 +721,7 @@ export function AddConsultationDialog({
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-indigo-600 flex items-center gap-2">
             <UserCheck className="h-6 w-6" />
-            Add Consultation Appointment
+            {editingAppointment ? 'Edit Consultation Appointment' : 'Add Consultation Appointment'}
           </DialogTitle>
         </DialogHeader>
 
@@ -679,7 +734,7 @@ export function AddConsultationDialog({
             </h3>
             <div className="grid grid-cols-3 gap-4">
               <Card
-                className={`cursor-pointer transition-all ${patientType === 'new' ? 'ring-2 ring-indigo-500 bg-indigo-50' : 'hover:bg-gray-50'}`}
+                className={`cursor-pointer transition-all ${patientType === 'new' ? 'ring-2 ring-indigo-500 bg-indigo-50' : 'hover:bg-gray-50'} ${editingAppointment ? 'pointer-events-none opacity-50' : ''}`}
                 onClick={() => handlePatientTypeChange('new')}
               >
                 <CardContent className="p-4 text-center">
@@ -690,7 +745,7 @@ export function AddConsultationDialog({
               </Card>
 
               <Card
-                className={`cursor-pointer transition-all ${patientType === 'consultation' ? 'ring-2 ring-indigo-500 bg-indigo-50' : 'hover:bg-gray-50'}`}
+                className={`cursor-pointer transition-all ${patientType === 'consultation' ? 'ring-2 ring-indigo-500 bg-indigo-50' : 'hover:bg-gray-50'} ${editingAppointment ? 'pointer-events-none opacity-50' : ''}`}
                 onClick={() => handlePatientTypeChange('consultation')}
               >
                 <CardContent className="p-4 text-center">
@@ -701,7 +756,7 @@ export function AddConsultationDialog({
               </Card>
 
               <Card
-                className={`cursor-pointer transition-all ${patientType === 'active' ? 'ring-2 ring-indigo-500 bg-indigo-50' : 'hover:bg-gray-50'}`}
+                className={`cursor-pointer transition-all ${patientType === 'active' ? 'ring-2 ring-indigo-500 bg-indigo-50' : 'hover:bg-gray-50'} ${editingAppointment ? 'pointer-events-none opacity-50' : ''}`}
                 onClick={() => handlePatientTypeChange('active')}
               >
                 <CardContent className="p-4 text-center">
@@ -814,7 +869,7 @@ export function AddConsultationDialog({
                       onChange={(e) => handleInputChange('firstName', e.target.value)}
                       className={errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}
                       placeholder="Enter first name"
-                      disabled={patientType !== 'new' && selectedPatient !== null}
+                      disabled={patientType !== 'new'}
                     />
                   </div>
 
@@ -828,7 +883,7 @@ export function AddConsultationDialog({
                       onChange={(e) => handleInputChange('lastName', e.target.value)}
                       className={errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}
                       placeholder="Enter last name"
-                      disabled={patientType !== 'new' && selectedPatient !== null}
+                      disabled={patientType !== 'new'}
                     />
                   </div>
 
@@ -842,7 +897,7 @@ export function AddConsultationDialog({
                       value={formData.dateOfBirth}
                       onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                       className={errors.dateOfBirth ? "border-red-500 focus-visible:ring-red-500" : ""}
-                      disabled={patientType !== 'new' && selectedPatient !== null}
+                      disabled={patientType !== 'new'}
                     />
                   </div>
 
@@ -852,11 +907,11 @@ export function AddConsultationDialog({
                       <button
                         type="button"
                         onClick={() => handleInputChange('gender', 'male')}
-                        disabled={patientType !== 'new' && selectedPatient !== null}
+                        disabled={patientType !== 'new'}
                         className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium ${formData.gender === 'male'
                           ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-25'
-                          } ${patientType !== 'new' && selectedPatient !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          } ${patientType !== 'new' ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <Users className="h-4 w-4" />
                         Male
@@ -864,11 +919,11 @@ export function AddConsultationDialog({
                       <button
                         type="button"
                         onClick={() => handleInputChange('gender', 'female')}
-                        disabled={patientType !== 'new' && selectedPatient !== null}
+                        disabled={patientType !== 'new'}
                         className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium ${formData.gender === 'female'
                           ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-25'
-                          } ${patientType !== 'new' && selectedPatient !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          } ${patientType !== 'new' ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <Users className="h-4 w-4" />
                         Female
@@ -876,11 +931,11 @@ export function AddConsultationDialog({
                       <button
                         type="button"
                         onClick={() => handleInputChange('gender', 'prefer-not-to-answer')}
-                        disabled={patientType !== 'new' && selectedPatient !== null}
+                        disabled={patientType !== 'new'}
                         className={`p-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium ${formData.gender === 'prefer-not-to-answer'
                           ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300 hover:bg-indigo-25'
-                          } ${patientType !== 'new' && selectedPatient !== null ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          } ${patientType !== 'new' ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <User className="h-4 w-4" />
                         Prefer not to say
@@ -1043,7 +1098,7 @@ export function AddConsultationDialog({
               disabled={isSubmitting}
               className="bg-indigo-600 hover:bg-indigo-700"
             >
-              {isSubmitting ? 'Creating...' : 'Create Consultation'}
+              {isSubmitting ? (editingAppointment ? 'Updating...' : 'Creating...') : (editingAppointment ? 'Update Consultation' : 'Create Consultation')}
             </Button>
           </div>
         </form>

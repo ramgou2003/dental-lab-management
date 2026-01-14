@@ -18,6 +18,8 @@ interface ConsultationAppointment {
   appointment_time: string;
   appointment_end_time: string;
   appointment_status: string;
+  // Status code from appointments table (matches DayView)
+  status_code?: string;
   appointment_type: string;
   appointment_notes: string | null;
   created_at: string;
@@ -143,7 +145,10 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
           date,
           start_time,
           end_time,
+          start_time,
+          end_time,
           status,
+          status_code,
           appointment_type,
           notes,
           created_at,
@@ -242,6 +247,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
             appointment_time: appointment.start_time,
             appointment_end_time: appointment.end_time,
             appointment_status: appointment.status,
+            status_code: appointment.status_code,
             appointment_type: appointment.appointment_type,
             appointment_notes: appointment.notes,
             created_at: appointment.created_at,
@@ -349,18 +355,98 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getAppointmentStatus = (status: string) => {
     switch (status?.toLowerCase()) {
+      // Confirmed: FIRM (Green)
+      case 'firm':
       case 'confirmed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800';
+      case 'appointment confirmed':
+        return { text: 'FIRM', color: 'bg-green-500 text-white hover:bg-green-600' };
+
+      // Electronically Confirmed: EFIRM (Emerald)
+      case 'efirm':
+      case 'electronically confirmed':
+        return { text: 'EFIRM', color: 'bg-emerald-500 text-white hover:bg-emerald-600' };
+
+      // Arrived: HERE (Blue)
+      case 'here':
+      case 'arrived':
+      case 'patient has arrived':
+        return { text: 'HERE', color: 'bg-blue-500 text-white hover:bg-blue-600' };
+
+      // Ready: READY (Purple)
+      case 'ready':
+      case 'ready for operatory':
+        return { text: 'READY', color: 'bg-purple-500 text-white hover:bg-purple-600' };
+
+      // Messages: LM1 (Yellow)
+      case 'lm1':
+      case 'left 1st message':
+      case 'left_1st_message':
+        return { text: 'LM1', color: 'bg-yellow-500 text-white hover:bg-yellow-600' };
+
+      // Messages: LM2 (Orange)
+      case 'lm2':
+      case 'left 2nd message':
+      case 'left_2nd_message':
+        return { text: 'LM2', color: 'bg-orange-500 text-white hover:bg-orange-600' };
+
+      // Emergency: EMER (Red)
+      case 'emer':
+      case 'emergency':
+      case 'emergency patient':
+        return { text: 'EMER', color: 'bg-red-600 text-white hover:bg-red-700' };
+
+      // Multi-Appointment: MULTI (Indigo)
+      case 'multi':
+      case 'multi-appointment':
+        return { text: 'MULTI', color: 'bg-indigo-500 text-white hover:bg-indigo-600' };
+
+      // 2 Week Calls: 2wk (Pink)
+      case '2wk':
+      case '2 week calls':
+      case '2_week_calls':
+        return { text: '2wk', color: 'bg-pink-500 text-white hover:bg-pink-600' };
+
+      // No Show: NSHOW (Red)
+      case 'nshow':
+      case 'no show':
+      case 'no_show':
+        return { text: 'NSHOW', color: 'bg-red-700 text-white hover:bg-red-800' };
+
+      // Rescheduled: RESCH (Amber)
+      case 'resch':
+      case 'rescheduled':
+      case 'reschedule appointment':
+        return { text: 'RESCH', color: 'bg-amber-500 text-white hover:bg-amber-600' };
+
+      // Cancelled: CANCL (Slate)
+      case 'cancl':
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+      case 'cancel appointment':
+        return { text: 'CANCL', color: 'bg-slate-600 text-white hover:bg-slate-700' };
+
+      // Not Confirmed: ????? (Gray)
+      case '?????':
+      case 'not confirmed':
+      case 'not_confirmed':
+        return { text: '?????', color: 'bg-gray-400 text-white hover:bg-gray-500' };
+
+      case 'pending':
+      case 'pnd':
+        return { text: 'PND', color: 'bg-yellow-500 text-white hover:bg-yellow-600' };
+
+      case 'cmplt':
+      case 'completed':
+      case 'complete appointment':
+        return { text: 'CMPLT', color: 'bg-green-600 text-white hover:bg-green-700' };
+
       default:
-        return 'bg-gray-100 text-gray-800';
+        // Parse any status containing "confirm" as FIRM
+        if (status?.toLowerCase().includes('confirm')) return { text: 'FIRM', color: 'bg-green-500 text-white' };
+
+        // Treat "Appointment" or unknown statuses as "Not Confirmed" (?????)
+        return { text: '?????', color: 'bg-gray-400 text-white hover:bg-gray-500' };
     }
   };
 
@@ -372,6 +458,12 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
     switch (consultationStatus.toLowerCase()) {
       case 'completed':
         return { text: 'Completed', color: 'bg-green-100 text-green-800' };
+      case 'rescheduled':
+        return { text: 'Rescheduled', color: 'bg-orange-100 text-orange-800' };
+      case 'cancelled':
+        return { text: 'Cancelled', color: 'bg-red-100 text-red-800' };
+      case 'no_show':
+        return { text: 'No Show', color: 'bg-red-100 text-red-800' };
       case 'draft':
         return { text: 'Pending', color: 'bg-yellow-100 text-yellow-800' };
       default:
@@ -432,6 +524,10 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                 <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
               </th>
               <th className="px-6 py-4 text-center text-sm font-medium text-slate-900 uppercase tracking-wider relative">
+                Appointment Status
+                <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+              </th>
+              <th className="px-6 py-4 text-center text-sm font-medium text-slate-900 uppercase tracking-wider relative">
                 Status
                 <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
               </th>
@@ -449,7 +545,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredAppointments.length === 0 ? (
               <tr>
-                <td colSpan={showScheduledLeads ? 5 : 4} className="px-6 py-12 text-center">
+                <td colSpan={showScheduledLeads ? 6 : 5} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center">
                     <Calendar className="h-12 w-12 text-gray-400 mb-4" />
                     <h3 className="text-sm font-medium text-gray-900 mb-2">
@@ -502,6 +598,20 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                           <Clock className="h-3 w-3 mr-1" />
                           {formatTime(patient.consultation_time)}
                         </div>
+                      </div>
+                      <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap relative text-center">
+                      <div className="flex justify-center">
+                        {(() => {
+                          const status = getAppointmentStatus(patient.status);
+                          return (
+                            <Badge className={status.color}>
+                              {status.text}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
                     </td>
@@ -596,6 +706,21 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                           <Clock className="h-3 w-3 mr-1" />
                           {formatTime(appointment.appointment_time)} - {formatTime(appointment.appointment_end_time)}
                         </div>
+                      </div>
+                      <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap relative text-center">
+                      <div className="flex justify-center">
+                        {(() => {
+                          // Prefer status_code if available, otherwise fallback to appointment_status description
+                          const status = getAppointmentStatus(appointment.status_code || appointment.appointment_status);
+                          return (
+                            <Badge className={status.color}>
+                              {status.text}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <div className="absolute right-0 top-2 bottom-2 w-px bg-slate-300"></div>
                     </td>
