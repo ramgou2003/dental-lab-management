@@ -228,6 +228,10 @@ export function AppointmentDetailsDialog({
       '75-day-data-collection': '75 Days Data Collection for PTI',
       'final-data-collection': 'Final Data Collection',
       'data-collection-printed-try-in': 'Data collection for Printed-try-in',
+      'pre-surgery-data-collection': 'Pre-Surgery data collection',
+      'surgical-day-appliance': 'Surgical day appliance',
+      'nightguard': 'Nightguard',
+      'administrative-documents': 'Administrative documents',
       // Surgery subtypes
       'full-arch-fixed': 'Full Arch Fixed',
       'denture': 'Denture',

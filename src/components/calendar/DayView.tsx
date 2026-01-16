@@ -267,11 +267,15 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       { value: '12-month-followup', label: '12 Months Follow Up' }
     ],
     'data-collection': [
+      { value: 'pre-surgery-data-collection', label: 'Pre-Surgery data collection' },
+      { value: 'data-collection-printed-try-in', label: 'Data collection for Printed-try-in' },
       { value: '75-day-data-collection', label: '75 Days Data Collection for PTI' },
       { value: 'final-data-collection', label: 'Final Data Collection' },
-      { value: 'data-collection-printed-try-in', label: 'Data collection for Printed-try-in' }
+      { value: 'administrative-documents', label: 'Administrative documents' }
     ],
     'printed-try-in': [
+      { value: 'surgical-day-appliance', label: 'Surgical day appliance' },
+      { value: 'nightguard', label: 'Nightguard' },
       { value: 'printed-try-in-delivery', label: 'Printed Try-in Delivery' },
       { value: '82-day-appliance-delivery', label: '82 Days PTI Delivery' },
       { value: '120-day-final-delivery', label: '120 Days Final Delivery' }
@@ -358,6 +362,10 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       '75-day-data-collection': '75 Day PTI',
       'final-data-collection': 'Final',
       'data-collection-printed-try-in': 'DC PTI',
+      'pre-surgery-data-collection': 'Pre-Surgery',
+      'surgical-day-appliance': 'Surgical Day',
+      'nightguard': 'Nightguard',
+      'administrative-documents': 'Admin Docs',
       // Surgery subtypes
       'full-arch-fixed': 'Full Arch Fixed',
       'denture': 'Denture',

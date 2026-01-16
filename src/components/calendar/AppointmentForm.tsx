@@ -101,14 +101,18 @@ export function AppointmentForm({
       { value: '12-month-followup', label: '12 Months Follow Up' }
     ],
     'Appliance-delivery': [
+      { value: 'surgical-day-appliance', label: 'Surgical day appliance' },
+      { value: 'nightguard', label: 'Nightguard' },
       { value: 'printed-try-in-delivery', label: 'Printed Try-in Delivery' },
       { value: '82-day-appliance-delivery', label: '82 Days PTI Delivery' },
       { value: '120-day-final-delivery', label: '120 Days Final Delivery' }
     ],
     'data-collection': [
+      { value: 'pre-surgery-data-collection', label: 'Pre-Surgery data collection' },
+      { value: 'data-collection-printed-try-in', label: 'Data collection for Printed-try-in' },
       { value: '75-day-data-collection', label: '75 Days Data Collection for PTI' },
       { value: 'final-data-collection', label: 'Final Data Collection' },
-      { value: 'data-collection-printed-try-in', label: 'Data collection for Printed-try-in' }
+      { value: 'administrative-documents', label: 'Administrative documents' }
     ],
     'surgery': [
       { value: 'full-arch-fixed', label: 'Full Arch Fixed' },
