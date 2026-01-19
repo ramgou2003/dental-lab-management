@@ -46,7 +46,10 @@ export default defineConfig(({ mode }) => ({
         }
       }
     },
-    chunkSizeWarningLimit: 1000 // Increase warning limit to 1MB
+    chunkSizeWarningLimit: 1000, // Increase warning limit to 1MB
+    commonjsOptions: {
+      include: [/fix-webm-duration/, /node_modules/]
+    }
   },
   optimizeDeps: {
     include: ['fix-webm-duration']
