@@ -1,3 +1,4 @@
+// Force update
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -19,6 +20,7 @@ interface RecordingConsentDialogProps {
   onConsent: () => void;
   onRecordingStart: (mediaRecorder: MediaRecorder) => void;
   patientName?: string;
+  mode?: 'consultation' | 'encounter';
 }
 
 export function RecordingConsentDialog({
@@ -26,10 +28,16 @@ export function RecordingConsentDialog({
   onClose,
   onConsent,
   onRecordingStart,
-  patientName = "Patient"
+  patientName = "Patient",
+  mode = 'consultation'
 }: RecordingConsentDialogProps) {
   const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
+
+  const isEncounter = mode === 'encounter';
+  const typeLabel = isEncounter ? 'Encounter' : 'Consultation';
+  const typeLabelLower = isEncounter ? 'encounter' : 'consultation';
+  const durationLabel = isEncounter ? '30 minutes' : '90 minutes';
 
   const requestMicrophonePermission = async () => {
     setIsRequestingPermission(true);
@@ -73,7 +81,7 @@ export function RecordingConsentDialog({
 
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError') {
-          toast.error("Microphone permission denied. Please allow microphone access to record the consultation.");
+          toast.error(`Microphone permission denied. Please allow microphone access to record the ${typeLabelLower}.`);
         } else if (error.name === 'NotFoundError') {
           toast.error("No microphone found. Please connect a microphone and try again.");
         } else {
@@ -106,7 +114,7 @@ export function RecordingConsentDialog({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Recording Consent Required</h2>
-              <p className="text-sm text-gray-600">Consultation with {patientName}</p>
+              <p className="text-sm text-gray-600">{typeLabel} with {patientName}</p>
             </div>
           </div>
         </div>
@@ -120,7 +128,7 @@ export function RecordingConsentDialog({
             </div>
             <div>
               <p className="text-gray-900 font-medium mb-2">
-                This consultation will be recorded for quality and training purposes.
+                This {typeLabelLower} will be recorded for quality and training purposes.
               </p>
               <p className="text-sm text-gray-600">
                 The recording will help us improve our services and ensure the highest standard of care for all patients.
@@ -135,15 +143,15 @@ export function RecordingConsentDialog({
               <span className="text-sm font-medium text-blue-900">What we record:</span>
             </div>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Audio of the consultation conversation</li>
-              <li>• Duration: Up to 90 minutes</li>
+              <li>• Audio of the {typeLabelLower} conversation</li>
+              <li>• Duration: Up to {durationLabel}</li>
               <li>• Auto-saved every 5 minutes for reliability</li>
             </ul>
           </div>
 
           {/* Consent text */}
           <p className="text-xs text-gray-500 leading-relaxed">
-            By clicking "Accept & Start Recording", you consent to the recording of this consultation session.
+            By clicking "Accept & Start Recording", you consent to the recording of this {typeLabelLower} session.
             All recordings are stored securely and used only for authorized purposes.
           </p>
 
@@ -155,7 +163,7 @@ export function RecordingConsentDialog({
                 <span className="text-sm font-medium text-red-800">Microphone Permission Required</span>
               </div>
               <p className="text-sm text-red-700 mt-1">
-                Please allow microphone access in your browser to record the consultation.
+                Please allow microphone access in your browser to record the {typeLabelLower}.
                 You may need to click the microphone icon in your browser's address bar.
               </p>
             </div>
@@ -167,7 +175,7 @@ export function RecordingConsentDialog({
           <Button
             variant="outline"
             onClick={handleClose}
-            className="flex-1"
+            className="flex-1 rounded-full border-gray-300 hover:bg-gray-50 hover:text-gray-900"
             disabled={isRequestingPermission}
           >
             Decline
@@ -175,7 +183,7 @@ export function RecordingConsentDialog({
           <Button
             onClick={handleStartRecording}
             disabled={isRequestingPermission}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
             {isRequestingPermission ? (
               <>

@@ -15,10 +15,10 @@ function getSupabaseConfig() {
   // Determine which database to use based on environment
   const isProduction = import.meta.env.PROD
   const isTesting = import.meta.env.MODE === 'testing' ||
-                   (typeof window !== 'undefined' && (
-                     window.location.hostname.includes('staging') ||
-                     window.location.hostname.includes('test')
-                   ))
+    (typeof window !== 'undefined' && (
+      window.location.hostname.includes('staging') ||
+      window.location.hostname.includes('test')
+    ))
 
   let supabaseUrl: string | undefined
   let supabaseAnonKey: string | undefined
@@ -52,14 +52,14 @@ const { supabaseUrl, supabaseAnonKey, environment } = getSupabaseConfig()
 // Create a mock client if credentials are not configured
 const createMockClient = () => {
   const mockQueryBuilder = {
-    select: function() { return this; },
-    insert: function() { return this; },
-    update: function() { return this; },
-    delete: function() { return this; },
-    eq: function() { return this; },
-    order: function() { return this; },
-    single: function() { return Promise.resolve({ data: null, error: null }); },
-    then: function(resolve: any) {
+    select: function () { return this; },
+    insert: function () { return this; },
+    update: function () { return this; },
+    delete: function () { return this; },
+    eq: function () { return this; },
+    order: function () { return this; },
+    single: function () { return Promise.resolve({ data: null, error: null }); },
+    then: function (resolve: any) {
       return resolve({ data: null, error: null });
     }
   };
@@ -69,12 +69,14 @@ const createMockClient = () => {
     storage: {
       from: () => ({
         upload: () => Promise.resolve({ data: null, error: null }),
-        getPublicUrl: () => ({ data: { publicUrl: 'mock-url' } })
+        getPublicUrl: () => ({ data: { publicUrl: 'mock-url' } }),
+        list: () => Promise.resolve({ data: [], error: null }),
+        remove: () => Promise.resolve({ data: null, error: null })
       })
     },
     channel: () => ({
-      on: function() { return this; },
-      subscribe: () => ({ unsubscribe: () => {} })
+      on: function () { return this; },
+      subscribe: () => ({ unsubscribe: () => { } })
     })
   };
 };
@@ -84,12 +86,12 @@ export const supabase = (!supabaseUrl || !supabaseAnonKey ||
   supabaseAnonKey === 'your_supabase_anon_key_here')
   ? createMockClient()
   : createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      }
-    });
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  });
 
 // Export environment info for debugging
 export const supabaseEnvironment = {

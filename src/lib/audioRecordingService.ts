@@ -5,10 +5,12 @@ import { toast } from 'sonner';
 const ongoingUploads = new Set<string>();
 
 // Upload audio recording to Supabase Storage
+// Upload audio recording to Supabase Storage
 export async function uploadAudioRecording(
   audioBlob: Blob,
   appointmentId: string,
-  patientName?: string
+  patientName?: string,
+  type: 'consultation' | 'encounter' = 'encounter'
 ): Promise<string | null> {
   // Create a unique key for this upload to prevent duplicates
   const uploadKey = `${appointmentId}-${audioBlob.size}-${Date.now()}`;
@@ -41,18 +43,25 @@ export async function uploadAudioRecording(
       fileExt = 'wav';
     }
 
+    // Determine bucket based on type
+    const bucketName = type === 'consultation' ? 'consultation-recordings' : 'encounter-recordings';
+    const folderPrefix = type === 'consultation' ? 'consultations' : 'encounters';
+    const filePrefix = type === 'consultation' ? 'consultation' : 'encounter';
+
     // Create a unique filename with timestamp, appointment ID, and blob size for uniqueness
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const patientPrefix = patientName ? `${patientName.replace(/[^a-zA-Z0-9]/g, '_')}_` : '';
     const uniqueId = `${timestamp}_${audioBlob.size}_${Math.random().toString(36).substr(2, 9)}`;
-    const fileName = `${patientPrefix}consultation_${appointmentId}_${uniqueId}.${fileExt}`;
-    const filePath = `consultations/${appointmentId}/${fileName}`;
 
-    console.log('Uploading to path:', filePath);
+    const fileName = `${patientPrefix}${filePrefix}_${appointmentId}_${uniqueId}.${fileExt}`;
+    // Structure: [FolderPrefix]/[AppointmentID]/[FileName]
+    const filePath = `${folderPrefix}/${appointmentId}/${fileName}`;
 
-    // Upload to Supabase Storage - using dedicated audio bucket
+    console.log(`Uploading to ${bucketName} at path:`, filePath);
+
+    // Upload to Supabase Storage
     const { data, error } = await supabase.storage
-      .from('consultation-recordings')
+      .from(bucketName)
       .upload(filePath, audioBlob, {
         cacheControl: '3600',
         upsert: false,
@@ -74,7 +83,7 @@ export async function uploadAudioRecording(
 
     // Get public URL
     const { data: urlData } = supabase.storage
-      .from('consultation-recordings')
+      .from(bucketName)
       .getPublicUrl(filePath);
 
     console.log('Public URL generated:', urlData.publicUrl);
@@ -105,39 +114,9 @@ export async function saveRecordingMetadata(
       patientName
     });
 
-    // For now, we'll add a note to the appointment with the recording info
-    // In the future, you might want to create a dedicated recordings table
-    const recordingNote = `🎙️ Audio Recording: ${duration}s - ${new Date().toLocaleString()}`;
-
-    // First get the current notes
-    const { data: appointment, error: fetchError } = await supabase
-      .from('appointments')
-      .select('notes')
-      .eq('id', appointmentId)
-      .single();
-
-    if (fetchError) {
-      console.error('Error fetching appointment:', fetchError);
-      toast.error('Failed to save recording metadata');
-      return false;
-    }
-
-    // Append the new recording note
-    const currentNotes = appointment?.notes || '';
-    const updatedNotes = currentNotes ? `${currentNotes}\n${recordingNote}` : recordingNote;
-
-    const { error } = await supabase
-      .from('appointments')
-      .update({ notes: updatedNotes })
-      .eq('id', appointmentId);
-
-    if (error) {
-      console.error('Error saving recording metadata:', error);
-      toast.error('Failed to save recording metadata');
-      return false;
-    }
-
-    console.log('Recording metadata saved successfully');
+    // Logic to update appointment notes with recording info has been removed as per user request.
+    // The recording is already saved in storage and will be listed via file listing.
+    console.log('Recording uploaded successfully. Metadata note addition skipped.');
     return true;
   } catch (error) {
     console.error('Error saving recording metadata:', error);
@@ -147,37 +126,71 @@ export async function saveRecordingMetadata(
 }
 
 // List recordings for an appointment
-export async function listRecordingsForAppointment(appointmentId: string): Promise<string[]> {
+export async function listRecordingsForAppointment(
+  appointmentId: string,
+  type: 'consultation' | 'encounter' = 'encounter'
+): Promise<string[]> {
   try {
-    console.log('Listing recordings for appointment:', appointmentId);
+    console.log(`Listing ${type} recordings for appointment:`, appointmentId);
 
-    const { data, error } = await supabase.storage
-      .from('consultation-recordings')
-      .list(`consultations/${appointmentId}`, {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'desc' }
-      });
+    const bucketName = type === 'consultation' ? 'consultation-recordings' : 'encounter-recordings';
+    const folderPrefix = type === 'consultation' ? 'consultations' : 'encounters';
 
-    if (error) {
-      console.error('Error listing recordings:', error);
-      return [];
-    }
+    // Fetch from both new structure (root) and potential legacy structure (folderPrefix)
+    const [rootResult, legacyResult] = await Promise.all([
+      supabase.storage
+        .from(bucketName)
+        .list(`${appointmentId}`, {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        }),
+      supabase.storage
+        .from(bucketName)
+        .list(`${folderPrefix}/${appointmentId}`, {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        })
+    ]);
 
-    // Filter for audio files and get public URLs
-    const audioFiles = data?.filter(file =>
+    // Process root files
+    const rootFiles = (rootResult.data || []).filter(file =>
       file.name.endsWith('.webm') ||
       file.name.endsWith('.mp4') ||
       file.name.endsWith('.ogg') ||
       file.name.endsWith('.wav')
-    ) || [];
+    ).map(file => ({
+      ...file,
+      // Add a property to know where this file came from for URL generation
+      _sourcePath: `${appointmentId}/${file.name}`
+    }));
+
+    // Process legacy files
+    const legacyFiles = (legacyResult.data || []).filter(file =>
+      file.name.endsWith('.webm') ||
+      file.name.endsWith('.mp4') ||
+      file.name.endsWith('.ogg') ||
+      file.name.endsWith('.wav')
+    ).map(file => ({
+      ...file,
+      _sourcePath: `${folderPrefix}/${appointmentId}/${file.name}`
+    }));
+
+    // Combine all files
+    const allFiles = [...rootFiles, ...legacyFiles];
+
+    if (allFiles.length === 0) {
+      if (rootResult.error) console.error('Error listing root recordings:', rootResult.error);
+      if (legacyResult.error) console.error('Error listing legacy recordings:', legacyResult.error);
+      return [];
+    }
 
     // Remove duplicates based on file size and creation time proximity
-    const uniqueFiles = removeDuplicateFiles(audioFiles);
+    const uniqueFiles = removeDuplicateFiles(allFiles);
 
     const urls = uniqueFiles.map(file => {
       const { data: urlData } = supabase.storage
-        .from('consultation-recordings')
-        .getPublicUrl(`consultations/${appointmentId}/${file.name}`);
+        .from(bucketName)
+        .getPublicUrl(file._sourcePath);
       return urlData.publicUrl;
     });
 
@@ -219,18 +232,29 @@ export async function deleteRecording(recordingUrl: string): Promise<boolean> {
     // Extract file path from URL
     const url = new URL(recordingUrl);
     const pathParts = url.pathname.split('/').filter(part => part !== '');
-    const bucketIndex = pathParts.findIndex(part => part === 'consultation-recordings');
+
+    // Determine bucket from URL
+    let bucketName = '';
+    let bucketIndex = -1;
+
+    if (pathParts.includes('consultation-recordings')) {
+      bucketName = 'consultation-recordings';
+      bucketIndex = pathParts.indexOf('consultation-recordings');
+    } else if (pathParts.includes('encounter-recordings')) {
+      bucketName = 'encounter-recordings';
+      bucketIndex = pathParts.indexOf('encounter-recordings');
+    }
 
     if (bucketIndex === -1) {
-      console.error('Could not find bucket name in URL:', recordingUrl);
+      console.error('Could not find known bucket name (consultation-recordings or encounter-recordings) in URL:', recordingUrl);
       return false;
     }
 
     const filePath = pathParts.slice(bucketIndex + 1).join('/');
-    console.log('Extracted file path for deletion:', filePath);
+    console.log(`Extracted file path for deletion from ${bucketName}:`, filePath);
 
     const { error } = await supabase.storage
-      .from('consultation-recordings')
+      .from(bucketName)
       .remove([filePath]);
 
     if (error) {

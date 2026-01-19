@@ -52,15 +52,17 @@ interface ConsultationPatient {
   consultation_status?: string | null;
 }
 
+import { ConsultationFilters } from "@/components/ConsultationFilterDialog";
+
 interface ConsultationTableProps {
   searchTerm: string;
   selectedDate?: Date;
   showScheduledLeads?: boolean;
   refreshTrigger?: number;
-  treatmentStatusFilter?: string;
+  filters?: ConsultationFilters;
 }
 
-export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads = false, refreshTrigger, treatmentStatusFilter = "all" }: ConsultationTableProps) {
+export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads = false, refreshTrigger, filters }: ConsultationTableProps) {
   const [consultationAppointments, setConsultationAppointments] = useState<ConsultationAppointment[]>([]);
   const [consultationPatients, setConsultationPatients] = useState<ConsultationPatient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,28 +98,95 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
         // Get consultation patient IDs
         const patientIds = (consultationPatientsData || []).map(patient => patient.id);
 
-        // Get treatment decisions and consultation status for these patients
+        // Get treatment decisions, consultation status and latest appointment status
         let treatmentDecisions = new Map();
         let consultationStatuses = new Map();
+        let appointmentApptStatusMap = new Map();
+
         if (patientIds.length > 0) {
           const { data: consultationsData, error: consultationsError } = await supabase
             .from('consultations')
-            .select('consultation_patient_id, treatment_decision, consultation_status')
+            .select('consultation_patient_id, treatment_decision, consultation_status, appointment_id, created_at')
             .in('consultation_patient_id', patientIds);
 
           if (!consultationsError && consultationsData) {
+            // Collect all Appointment IDs
+            const appointmentIds = consultationsData
+              .map(c => c.appointment_id)
+              .filter(id => id); // Remove nulls
+
+            // Get Appointment Details (Status + Time for sorting)
+            let appointmentsMap = new Map();
+            if (appointmentIds.length > 0) {
+              const { data: appointmentData, error: aptError } = await supabase
+                .from('appointments')
+                .select('id, status, status_code, date, start_time')
+                .in('id', appointmentIds);
+
+              if (!aptError && appointmentData) {
+                appointmentData.forEach(apt => {
+                  appointmentsMap.set(apt.id, apt);
+                });
+              }
+            }
+
+            // Group appointments by consultation_patient_id
+            const patientAppointments = new Map<string, any[]>();
+
+            // Also store latest consultation info
+            // Group consultations by patient first to find the latest one appropriately
+            const patientConsultations = new Map<string, any[]>();
+
             consultationsData.forEach(consultation => {
-              treatmentDecisions.set(consultation.consultation_patient_id, consultation.treatment_decision);
-              consultationStatuses.set(consultation.consultation_patient_id, consultation.consultation_status);
+              if (!patientConsultations.has(consultation.consultation_patient_id)) {
+                patientConsultations.set(consultation.consultation_patient_id, []);
+              }
+              patientConsultations.get(consultation.consultation_patient_id)?.push(consultation);
+
+              if (consultation.appointment_id && appointmentsMap.has(consultation.appointment_id)) {
+                const apt = appointmentsMap.get(consultation.appointment_id);
+                if (!patientAppointments.has(consultation.consultation_patient_id)) {
+                  patientAppointments.set(consultation.consultation_patient_id, []);
+                }
+                patientAppointments.get(consultation.consultation_patient_id)?.push(apt);
+              }
+            });
+
+            // Process each patient's consultations to get latest treatment decision/status
+            patientConsultations.forEach((consultations, patientId) => {
+              // Sort consultations by created_at descending
+              consultations.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+              if (consultations.length > 0) {
+                const latest = consultations[0];
+                treatmentDecisions.set(patientId, latest.treatment_decision);
+                consultationStatuses.set(patientId, latest.consultation_status);
+              }
+            });
+
+            // Process each patient's appointments to get latest appointment status
+            patientAppointments.forEach((apts, patientId) => {
+              // Sort by date DESC, then time DESC
+              apts.sort((a, b) => {
+                const dateA = new Date(`${a.date}T${a.start_time || '00:00'}`);
+                const dateB = new Date(`${b.date}T${b.start_time || '00:00'}`);
+                return dateB.getTime() - dateA.getTime();
+              });
+
+              if (apts.length > 0) {
+                const latestApt = apts[0];
+                // Use status_code if available, else status
+                appointmentApptStatusMap.set(patientId, latestApt.status_code || latestApt.status);
+              }
             });
           }
         }
 
-        // Transform the data to include treatment decisions and consultation status
+        // Transform the data to include treatment decisions, consultation status, and appointment status
         const transformedPatients = (consultationPatientsData || []).map(patient => ({
           ...patient,
           treatment_decision: treatmentDecisions.get(patient.id) || null,
-          consultation_status: consultationStatuses.get(patient.id) || null
+          consultation_status: consultationStatuses.get(patient.id) || null,
+          status: appointmentApptStatusMap.get(patient.id) || patient.status // Use latest appointment status if found
         }));
 
         setConsultationPatients(transformedPatients);
@@ -290,13 +359,65 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
       const matchesSearch = fullName.includes(searchTerm.toLowerCase());
 
       // Apply treatment status filter
-      if (treatmentStatusFilter === "all") {
-        return matchesSearch;
-      } else if (treatmentStatusFilter === "not_set") {
-        return matchesSearch && !patient.treatment_decision;
-      } else {
-        return matchesSearch && patient.treatment_decision === treatmentStatusFilter;
+      let matchesTreatment = true;
+      if (filters?.treatmentStatus && filters.treatmentStatus.length > 0) {
+        const decisions = filters.treatmentStatus;
+        const patientDecision = patient.treatment_decision;
+
+        // Check if "Not Set" is selected and patient has no decision
+        const matchesNotSet = decisions.includes('not_set') && !patientDecision;
+        // Check if patient decision matches selected filters (handling nulls)
+        const matchesDecision = !!patientDecision && decisions.includes(patientDecision);
+
+        matchesTreatment = !!(matchesNotSet || matchesDecision);
       }
+
+      // Apply appointment status filter
+      let matchesAppointment = true;
+      if (filters?.appointmentStatus && filters.appointmentStatus.length > 0) {
+        const status = (patient.status || '').toLowerCase();
+
+        matchesAppointment = filters.appointmentStatus.some(filterStatus => {
+          const s = status.toLowerCase();
+
+          switch (filterStatus) {
+            case 'Complete Appointment':
+              return s.includes('complet') || s.includes('cmplt');
+            case 'Electronically Confirmed':
+              return s.includes('electronic');
+            case 'Not Confirmed':
+              return s.includes('not confirmed') || s.includes('?????') || s === '' || s === 'pending';
+            case 'Appointment Confirmed':
+              // Exclude electronic to keep distinct, or include all? 
+              // Usually if separated, they mean distinct.
+              return (s.includes('confirm') || s.includes('firm')) && !s.includes('electronic');
+            case 'Emergency Patient':
+              return s.includes('emergency');
+            case 'Patient has Arrived':
+              return s.includes('here') || s.includes('arriv');
+            case 'Ready for Operatory':
+              return s.includes('ready');
+            case 'Left 1st Message':
+              return s.includes('left 1st') || s.includes('lm');
+            case 'Left 2nd Message':
+              return s.includes('left 2nd');
+            case 'Multi-Appointment':
+              return s.includes('multi');
+            case '2 Week Calls':
+              return s.includes('2wk') || s.includes('2 week');
+            case 'No Show':
+              return s.includes('no show') || s.includes('nshow');
+            case 'Reschedule Appointment':
+              return s.includes('resch');
+            case 'Cancel Appointment':
+              return s.includes('cancel') || s.includes('cancl');
+            default:
+              return false;
+          }
+        });
+      }
+
+      return matchesSearch && matchesTreatment && matchesAppointment;
     })
     : consultationAppointments.filter(appointment => {
       const fullName = `${appointment.first_name || ''} ${appointment.last_name || ''}`.toLowerCase();

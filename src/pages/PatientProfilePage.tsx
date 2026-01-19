@@ -17,6 +17,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 import { EditPatientForm } from "@/components/EditPatientForm";
 import { EditEmergencyContactDialog } from "@/components/EditEmergencyContactDialog";
@@ -79,6 +89,11 @@ import {
   MoreVertical,
   Edit2,
   Trash2,
+  XCircle,
+  UserCheck,
+  UserCircle,
+  FileEdit,
+  Clock3,
   X,
   AlertTriangle,
   Download,
@@ -137,7 +152,65 @@ import { generateSurgicalRecallPdf } from "@/utils/surgicalRecallPdfGenerator";
 import { patientDocumentService, PatientDocument } from "@/services/patientDocumentService";
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { EncounterFormDialog } from "@/components/calendar/EncounterFormDialog";
+import { AppointmentRecordingsButton } from "@/components/AppointmentRecordingsButton";
+import { AppointmentDetailsDialog } from "@/components/calendar/AppointmentDetailsDialog";
 
+
+// Helper function to get status details
+const getAppointmentStatusDetails = (statusCode: string | undefined, fullStatus: string) => {
+  // If we have a valid status code, use it to get color and label
+  const code = statusCode || '?????';
+
+  switch (code) {
+    case 'FIRM': return { label: 'FIRM', color: 'bg-green-500', badgeInfo: 'bg-green-100 text-green-700' };
+    case 'EFIRM': return { label: 'EFIRM', color: 'bg-emerald-500', badgeInfo: 'bg-emerald-100 text-emerald-700' };
+    case 'HERE': return { label: 'HERE', color: 'bg-blue-500', badgeInfo: 'bg-blue-100 text-blue-700' };
+    case 'READY': return { label: 'READY', color: 'bg-purple-500', badgeInfo: 'bg-purple-100 text-purple-700' };
+    case 'LM1': return { label: 'LM1', color: 'bg-yellow-500', badgeInfo: 'bg-yellow-100 text-yellow-700' };
+    case 'LM2': return { label: 'LM2', color: 'bg-orange-500', badgeInfo: 'bg-orange-100 text-orange-700' };
+    case 'EMER': return { label: 'EMER', color: 'bg-red-600', badgeInfo: 'bg-red-100 text-red-700' };
+    case 'MULTI': return { label: 'MULTI', color: 'bg-indigo-500', badgeInfo: 'bg-indigo-100 text-indigo-700' };
+    case '2wk': return { label: '2wk', color: 'bg-pink-500', badgeInfo: 'bg-pink-100 text-pink-700' };
+    case 'NSHOW': return { label: 'NSHOW', color: 'bg-red-700', badgeInfo: 'bg-red-100 text-red-800' };
+    case 'RESCH': return { label: 'RESCH', color: 'bg-amber-500', badgeInfo: 'bg-amber-100 text-amber-700' };
+    case 'CANCL': return { label: 'CANCL', color: 'bg-slate-600', badgeInfo: 'bg-slate-100 text-slate-700' };
+    case 'CMPLT': return { label: 'CMPLT', color: 'bg-green-600', badgeInfo: 'bg-green-100 text-green-800' };
+    case '?????':
+    default: return { label: '?????', color: 'bg-gray-400', badgeInfo: 'bg-gray-100 text-gray-700' };
+  }
+};
+
+const formatAppointmentType = (type: string) => {
+  return type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
+
+const formatSubtype = (subtype: string | undefined) => {
+  if (!subtype) return '';
+  // Handle composite subtypes like "follow-up:7-day-followup"
+  const actualSubtype = subtype.includes(':') ? subtype.split(':')[1] : subtype;
+
+  // Custom mappings for specific subtypes
+  const mappings: Record<string, string> = {
+    'pre-surgery-data-collection': 'Pre-Surgery Data Collection',
+    'surgical-day-appliance': 'Surgical Day Appliance',
+    'nightguard': 'Nightguard',
+    '7-day-followup': '7 Day Follow-up',
+    '14-day-followup': '14 Day Follow-up',
+    '30-day-followup': '30 Day Follow-up',
+    'final-records': 'Final Records',
+    'try-in': 'Try-in',
+    'delivery': 'Delivery',
+    'adjustment': 'Adjustment',
+    'administrative-documents': 'Administrative Documents'
+  };
+
+  if (mappings[actualSubtype]) {
+    return mappings[actualSubtype];
+  }
+
+  return actualSubtype.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
 
 export function PatientProfilePage() {
   const { patientId } = useParams<{ patientId: string }>();
@@ -468,13 +541,13 @@ export function PatientProfilePage() {
   // Fetch patient-specific lab scripts and manufacturing items
   const { labScripts, loading: labScriptsLoading, updateLabScript } = usePatientLabScripts(patientId);
   const { manufacturingItems, loading: manufacturingLoading, updateManufacturingItemStatus } = usePatientManufacturingItems(patientId);
-  const { appointments: patientAppointments, loading: appointmentsLoading } = usePatientAppointments(patientId);
+  const { appointments: patientAppointments, loading: appointmentsLoading, updateAppointment, deleteAppointment } = usePatientAppointments(patientId);
   const { reportCards, loading: reportCardsLoading, updateLabReportStatus, updateClinicalReportStatus } = useReportCards();
   const { deliveryItems, loading: deliveryItemsLoading, updateDeliveryStatus } = useDeliveryItems();
   const { toast } = useToast();
 
   // Permission checks for admin functionality
-  const { isAdminUser, canDeletePatients } = usePermissions();
+  const { isAdminUser, canDeletePatients, canUpdateAppointments, canDeleteAppointments } = usePermissions();
 
   // Auth context for user information
   const { user, userProfile } = useAuth();
@@ -511,6 +584,22 @@ export function PatientProfilePage() {
   const [selectedDeliveryItem, setSelectedDeliveryItem] = useState<any | null>(null);
   const [showAppointmentScheduler, setShowAppointmentScheduler] = useState(false);
 
+  // Encounter Form Dialog State
+  const [showEncounterDialog, setShowEncounterDialog] = useState(false);
+
+  // Appointment Details Dialog State
+  const [selectedAppointmentDetails, setSelectedAppointmentDetails] = useState<any>(null);
+  const [showAppointmentDetailsValues, setShowAppointmentDetailsValues] = useState(false);
+  const [selectedEncounterAppointment, setSelectedEncounterAppointment] = useState<{ id: string, patientName: string } | null>(null);
+
+  const handleEncounterClick = (appointment: any) => {
+    setSelectedEncounterAppointment({
+      id: appointment.id,
+      patientName: patient?.full_name || `${patient?.first_name} ${patient?.last_name}` || 'Patient'
+    });
+    setShowEncounterDialog(true);
+  };
+
   // State for clinical forms
   const [showDataCollectionForm, setShowDataCollectionForm] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -525,6 +614,51 @@ export function PatientProfilePage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [sheetToDelete, setSheetToDelete] = useState<any | null>(null);
+
+  // Helper handlers for Context Menu
+  const handleUpdateStatus = async (appointmentId: string, newStatus: string) => {
+    try {
+      const appointment = patientAppointments.find(a => a.id === appointmentId);
+      if (!appointment) return;
+
+      // Optimistic update or refresh is handled by the hook
+      await updateAppointment({
+        ...appointment,
+        statusCode: newStatus
+      });
+
+      toast({
+        title: "Status Updated",
+        description: `Appointment status updated to ${newStatus}`,
+      });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAppointment = async (appointmentId: string) => {
+    if (confirm("Are you sure you want to delete this appointment?")) {
+      try {
+        await deleteAppointment(appointmentId);
+        toast({
+          title: "Appointment Deleted",
+          description: "Appointment has been successfully deleted.",
+        });
+      } catch (error) {
+        console.error("Error deleting appointment:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete appointment",
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   // State for IV Sedation Flow Chart
   const [showIVSedationForm, setShowIVSedationForm] = useState(false);
@@ -6119,9 +6253,9 @@ export function PatientProfilePage() {
             </TabsContent>
 
             <TabsContent value="appointments" className="flex-1 mt-2 overflow-hidden">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full mb-4 table-container-rounded">
+              <div className="flex flex-col h-full mb-4">
                 {appointmentsLoading ? (
-                  <div className="flex items-center justify-center h-full">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex items-center justify-center h-full">
                     <div className="text-center">
                       <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-pulse" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Appointments...</h3>
@@ -6129,75 +6263,313 @@ export function PatientProfilePage() {
                     </div>
                   </div>
                 ) : patientAppointments.length > 0 ? (
-                  <>
-                    {/* Header */}
-                    <div className="p-6 border-b border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-xl font-semibold text-gray-900">Patient Appointments</h2>
-                          <p className="text-sm text-gray-500 mt-1">
-                            {patientAppointments.length} appointment{patientAppointments.length !== 1 ? 's' : ''} found
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                  (() => {
+                    const now = new Date();
+                    const todayStr = now.toISOString().split('T')[0];
+                    const currentTimeStr = now.toLocaleTimeString('en-US', { hour12: false });
 
-                    {/* Appointments List */}
-                    <div className="flex-1 overflow-auto p-6">
-                      <div className="space-y-4">
-                        {patientAppointments.map((appointment) => (
-                          <div key={appointment.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-sm transition-shadow">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <div className={`w-3 h-3 rounded-full ${appointment.status === 'confirmed' ? 'bg-green-500' :
-                                    appointment.status === 'not-confirmed' ? 'bg-orange-500' :
-                                      appointment.status === 'cancelled' ? 'bg-red-500' :
-                                        appointment.status === 'pending' ? 'bg-yellow-500' :
-                                          'bg-gray-400'
-                                    }`}></div>
-                                  <h3 className="font-semibold text-gray-900">{appointment.type}</h3>
-                                  <Badge variant={
-                                    appointment.status === 'confirmed' ? 'default' :
-                                      appointment.status === 'not-confirmed' ? 'secondary' :
-                                        appointment.status === 'cancelled' ? 'destructive' :
-                                          'outline'
-                                  }>
-                                    {appointment.status}
-                                  </Badge>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4" />
-                                    <span>{(() => {
-                                      if (!appointment.date) return 'N/A';
-                                      // Fix: Parse date components to avoid timezone shift
-                                      const cleanDateStr = appointment.date.includes('T') ? appointment.date.split('T')[0] : appointment.date;
-                                      const [year, month, day] = cleanDateStr.split('-').map(Number);
-                                      return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-                                        day: 'numeric',
-                                        month: 'long',
-                                        year: 'numeric'
-                                      });
-                                    })()}</span>
+                    const upcomingAppointments = patientAppointments.filter(app => {
+                      if (app.date > todayStr) return true;
+                      if (app.date === todayStr) return app.startTime >= currentTimeStr;
+                      return false;
+                    }).sort((a, b) => {
+                      if (a.date === b.date) return a.startTime.localeCompare(b.startTime);
+                      return a.date.localeCompare(b.date);
+                    });
+
+                    const previousAppointments = patientAppointments.filter(app => {
+                      if (app.date < todayStr) return true;
+                      if (app.date === todayStr) return app.startTime < currentTimeStr;
+                      return false;
+                    }).sort((a, b) => {
+                      if (a.date === b.date) return b.startTime.localeCompare(a.startTime);
+                      return b.date.localeCompare(a.date);
+                    });
+
+                    const renderAppointmentCard = (appointment: any) => {
+                      const statusDetails = getAppointmentStatusDetails(appointment.statusCode, appointment.status);
+
+                      // Format date components
+                      const dateObj = (() => {
+                        if (!appointment.date) return null;
+                        const cleanDateStr = appointment.date.includes('T') ? appointment.date.split('T')[0] : appointment.date;
+                        const [year, month, day] = cleanDateStr.split('-').map(Number);
+                        return new Date(year, month - 1, day);
+                      })();
+
+                      const day = dateObj ? dateObj.getDate() : '--';
+                      const month = dateObj ? dateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() : '---';
+                      const year = dateObj ? dateObj.getFullYear() : '----';
+                      const fullDate = dateObj ? dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'No Date';
+
+                      return (
+                        <ContextMenu key={appointment.id}>
+                          <ContextMenuTrigger asChild>
+                            <div className="relative flex bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 group pl-8 min-h-[100px]">
+                              {/* Vertical Status Capsule (DayView Style) */}
+                              <div className={`absolute left-1.5 top-1.5 bottom-1.5 w-5 rounded-full ${statusDetails.color} flex flex-col items-center justify-center overflow-hidden z-10`}>
+                                <span
+                                  className="text-[9px] font-bold text-white whitespace-nowrap select-none tracking-widest"
+                                  style={{
+                                    writingMode: 'vertical-rl',
+                                    textOrientation: 'mixed',
+                                    transform: 'rotate(180deg)',
+                                  }}
+                                >
+                                  {statusDetails.label}
+                                </span>
+                              </div>
+
+                              <div className="flex-1 p-4 flex gap-4 items-center">
+                                {/* Date Box - Colorful based on status */}
+                                {(() => {
+                                  // Extract base color from the background class (e.g., 'bg-green-600' -> 'green-600')
+                                  // Fallback to gray if something is weird
+                                  const baseColorClass = statusDetails.color.replace('bg-', '');
+                                  // Create dynamic classes
+                                  const bgClass = `bg-${baseColorClass}/10`;
+                                  const borderClass = `border-${baseColorClass}/20`;
+                                  const textClass = `text-${baseColorClass}`;
+                                  const groupHoverBorderClass = `group-hover:border-${baseColorClass}/50`;
+                                  const groupHoverBgClass = `group-hover:bg-${baseColorClass}/20`;
+
+                                  return (
+                                    <div className="flex flex-col gap-2 shrink-0">
+                                      <div className={`flex flex-col items-center justify-center min-w-[70px] h-[75px] ${bgClass} rounded-lg border ${borderClass} ${groupHoverBorderClass} ${groupHoverBgClass} transition-colors shrink-0`}>
+                                        <span className={`text-xs font-bold ${textClass} uppercase leading-none mb-1 opacity-80`}>{month}</span>
+                                        <span className={`text-2xl font-bold ${textClass} leading-none mb-1`}>{day}</span>
+                                        <span className={`text-[10px] font-medium ${textClass} leading-none opacity-60`}>{year}</span>
+                                      </div>
+                                      <div className="flex items-center justify-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100 w-full min-w-[70px]">
+                                        <Clock className="h-3 w-3 text-gray-400" />
+                                        <span className="font-medium text-gray-700 text-[10px] whitespace-nowrap">
+                                          {appointment.startTime.split(':').slice(0, 2).join(':')} - {appointment.endTime.split(':').slice(0, 2).join(':')}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+
+                                <div className="flex-1 min-w-0 flex flex-col justify-between h-full">
+                                  <div className="flex justify-between items-start gap-4">
+                                    <div className="flex flex-col justify-center">
+                                      <h3 className="font-semibold text-gray-900 truncate text-lg">
+                                        {formatAppointmentType(appointment.type)}
+                                      </h3>
+                                      {appointment.subtype && (
+                                        <p className="text-sm text-gray-500 truncate mt-0.5 font-medium">
+                                          {formatSubtype(appointment.subtype)}
+                                        </p>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <Button
+                                        size="sm"
+                                        variant={appointment.encounterCompleted ? "outline" : "default"}
+                                        className={`h-8 px-3 text-xs font-medium ${appointment.encounterCompleted
+                                          ? "border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                                          : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                                          }`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEncounterClick(appointment);
+                                        }}
+                                      >
+                                        {appointment.encounterCompleted ? (
+                                          <>
+                                            <FileText className="h-3.5 w-3.5 mr-1.5" />
+                                            View Encounter
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Edit className="h-3.5 w-3.5 mr-1.5" />
+                                            Fill Encounter
+                                          </>
+                                        )}
+                                      </Button>
+
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-3 text-xs font-medium text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          // Ensure patient name is populated for the dialog
+                                          const aptWithPatient = {
+                                            ...appointment,
+                                            patient: patient?.full_name || patient?.patient_name || 'Patient',
+                                            patientId: patientId
+                                          };
+                                          setSelectedAppointmentDetails(aptWithPatient);
+                                          setShowAppointmentDetailsValues(true);
+                                        }}
+                                      >
+                                        <FileText className="h-3.5 w-3.5 mr-1.5" />
+                                        Details
+                                      </Button>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4" />
-                                    <span>{appointment.startTime.split(':').slice(0, 2).join(':')} - {appointment.endTime.split(':').slice(0, 2).join(':')}</span>
+
+                                  <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-500">
+
+
+                                    {appointment.assignedUserName && (
+                                      <div className="flex items-center gap-1.5 ml-auto">
+                                        <User className="h-3.5 w-3.5 text-gray-400" />
+                                        <span className="text-xs">{appointment.assignedUserName}</span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Audio Recordings Buttons & Details */}
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {appointment.type === 'consultation' && (
+                                      <AppointmentRecordingsButton
+                                        appointmentId={appointment.id}
+                                        patientName={patient?.full_name || patient?.patient_name}
+                                        type="consultation"
+                                      />
+                                    )}
+                                    <AppointmentRecordingsButton
+                                      appointmentId={appointment.id}
+                                      patientName={patient?.full_name || patient?.patient_name}
+                                      type="encounter"
+                                    />
+
                                   </div>
                                 </div>
-                                {appointment.notes && (
-                                  <p className="text-sm text-gray-600 mt-2">{appointment.notes}</p>
-                                )}
                               </div>
                             </div>
+                          </ContextMenuTrigger>
+                          <ContextMenuContent className="w-56">
+                            <ContextMenuItem onClick={() => handleEncounterClick(appointment)}>
+                              <ClipboardList className="mr-2 h-4 w-4" />
+                              {appointment.encounterCompleted ? 'View Encounter Form' : 'Encounter Form'}
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+
+                            <ContextMenuSub>
+                              <ContextMenuSubTrigger>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Change Status
+                              </ContextMenuSubTrigger>
+                              <ContextMenuSubContent className="w-52">
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'CMPL')}>
+                                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                  Complete Appointment
+                                </ContextMenuItem>
+                                <ContextMenuSeparator />
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, '?????')}>
+                                  <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
+                                  Not Confirmed
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'FIRM')}>
+                                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                  Confirmed
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'EFIRM')}>
+                                  <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                  Electronically Confirmed
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'EMER')}>
+                                  <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
+                                  Emergency Patient
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'HERE')}>
+                                  <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
+                                  Patient has Arrived
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'READY')}>
+                                  <UserCheck className="mr-2 h-4 w-4 text-indigo-600" />
+                                  Seated & Ready
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'LM1')}>
+                                  <Clock3 className="mr-2 h-4 w-4 text-orange-500" />
+                                  Left Message 1
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'LM2')}>
+                                  <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
+                                  Left Message 2
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'MULTI')}>
+                                  <UserCircle className="mr-2 h-4 w-4 text-purple-600" />
+                                  Multiple Appointments
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, '2wk')}>
+                                  <Calendar className="mr-2 h-4 w-4 text-blue-400" />
+                                  2 Week Check
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'NSHOW')}>
+                                  <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                                  No Show
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => handleUpdateStatus(appointment.id, 'CANCL')}>
+                                  <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                                  Cancelled
+                                </ContextMenuItem>
+                              </ContextMenuSubContent>
+                            </ContextMenuSub>
+
+
+                          </ContextMenuContent>
+                        </ContextMenu>
+                      );
+
+                    };
+
+                    return (
+                      <div className="flex h-full gap-4">
+                        {/* Upcoming Appointments */}
+                        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                              Upcoming Appointments
+                            </h3>
+                            <span className="text-xs font-medium text-gray-500 bg-white px-2 py-0.5 rounded border border-gray-200">
+                              {upcomingAppointments.length}
+                            </span>
                           </div>
-                        ))}
+                          <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-enhanced bg-gray-50/30">
+                            {upcomingAppointments.length > 0 ? (
+                              upcomingAppointments.map(renderAppointmentCard)
+                            ) : (
+                              <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                                <Calendar className="h-8 w-8 text-gray-300 mb-2" />
+                                <p className="text-sm font-medium">No upcoming appointments</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Previous Appointments */}
+                        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                              Previous Appointments
+                            </h3>
+                            <span className="text-xs font-medium text-gray-500 bg-white px-2 py-0.5 rounded border border-gray-200">
+                              {previousAppointments.length}
+                            </span>
+                          </div>
+                          <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-enhanced bg-gray-50/30">
+                            {previousAppointments.length > 0 ? (
+                              previousAppointments.map(renderAppointmentCard)
+                            ) : (
+                              <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                                <FileText className="h-8 w-8 text-gray-300 mb-2" />
+                                <p className="text-sm font-medium">No previous appointments</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </>
+                    );
+                  })()
                 ) : (
-                  <div className="flex items-center justify-center h-full">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex items-center justify-center h-full table-container-rounded">
                     <div className="text-center">
                       <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">No Appointments Found</h3>
@@ -12889,11 +13261,11 @@ export function PatientProfilePage() {
               </div>
             </TabsContent>
           </Tabs>
-        </div>
-      </div>
+        </div >
+      </div >
 
       {/* Edit Patient Dialog */}
-      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+      < Dialog open={showEditForm} onOpenChange={setShowEditForm} >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-blue-600">Edit Patient Profile</DialogTitle>
@@ -12907,19 +13279,21 @@ export function PatientProfilePage() {
             <div>Loading patient data...</div>
           )}
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Edit Emergency Contact Dialog */}
-      {patient && (
-        <EditEmergencyContactDialog
-          open={showEditEmergencyContact}
-          onOpenChange={setShowEditEmergencyContact}
-          patient={patient}
-          onSuccess={(updatedPatient) => {
-            setPatient(updatedPatient);
-          }}
-        />
-      )}
+      {
+        patient && (
+          <EditEmergencyContactDialog
+            open={showEditEmergencyContact}
+            onOpenChange={setShowEditEmergencyContact}
+            patient={patient}
+            onSuccess={(updatedPatient) => {
+              setPatient(updatedPatient);
+            }}
+          />
+        )
+      }
 
       {/* Lab Script Detail Dialog */}
       <LabScriptDetail
@@ -12955,181 +13329,145 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* Delivery Details Dialog */}
-      {selectedDeliveryItem && (
-        <Dialog open={showDeliveryDetails} onOpenChange={setShowDeliveryDetails}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
-                  <Package className="h-7 w-7 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Appliance Summary</h2>
-                  <p className="text-lg text-gray-600">{selectedDeliveryItem.patient_name}</p>
-                </div>
-                <div className="ml-auto">
-                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
-                    selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
-                      selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
-                        'bg-gray-100 text-gray-800'
-                    }`}>
-                    {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
-                      selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
-                        selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
-                          selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column */}
-                <div className="space-y-6">
-                  {/* Patient Information */}
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
-                    <div className="flex items-center gap-2 mb-4">
-                      <User className="h-5 w-5 text-blue-600" />
-                      <h3 className="text-lg font-semibold text-blue-900">Patient Information</h3>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-blue-800">Patient Name:</span>
-                        <span className="text-blue-900 font-semibold">{selectedDeliveryItem.patient_name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium text-blue-800">Arch Type:</span>
-                        <span className="text-blue-900 capitalize font-medium">{selectedDeliveryItem.arch_type}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-medium text-blue-800">Created:</span>
-                        <span className="text-blue-900">{new Date(selectedDeliveryItem.created_at).toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}</span>
-                      </div>
-                    </div>
+      {
+        selectedDeliveryItem && (
+          <Dialog open={showDeliveryDetails} onOpenChange={setShowDeliveryDetails}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
+                    <Package className="h-7 w-7 text-white" />
                   </div>
-
-                  {/* Appliance Specifications */}
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Settings className="h-5 w-5 text-purple-600" />
-                      <h3 className="text-lg font-semibold text-purple-900">Appliance Specifications</h3>
-                    </div>
-                    <div className="space-y-3">
-                      {selectedDeliveryItem.upper_appliance_type && (
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-purple-800">Upper Appliance:</span>
-                          <div className="text-right">
-                            <span className="text-purple-900 font-medium">{selectedDeliveryItem.upper_appliance_type}</span>
-                            {selectedDeliveryItem.upper_appliance_number && (
-                              <span className="block text-sm text-purple-700">#{selectedDeliveryItem.upper_appliance_number}</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {selectedDeliveryItem.lower_appliance_type && (
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-purple-800">Lower Appliance:</span>
-                          <div className="text-right">
-                            <span className="text-purple-900 font-medium">{selectedDeliveryItem.lower_appliance_type}</span>
-                            {selectedDeliveryItem.lower_appliance_number && (
-                              <span className="block text-sm text-purple-700">#{selectedDeliveryItem.lower_appliance_number}</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-purple-800">Shade:</span>
-                        <div className="flex items-center gap-2">
-                          <Palette className="h-4 w-4 text-purple-600" />
-                          <span className="text-purple-900 font-medium">{selectedDeliveryItem.shade}</span>
-                        </div>
-                      </div>
-                    </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Appliance Summary</h2>
+                    <p className="text-lg text-gray-600">{selectedDeliveryItem.patient_name}</p>
+                  </div>
+                  <div className="ml-auto">
+                    <span className={`px-4 py-2 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-100 text-green-800' :
+                      selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-100 text-blue-800' :
+                        selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-100 text-emerald-800' :
+                          'bg-gray-100 text-gray-800'
+                      }`}>
+                      {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
+                        selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                          selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
+                            selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </span>
                   </div>
                 </div>
 
-                {/* Right Column */}
-                <div className="space-y-6">
-                  {/* Delivery Status */}
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Truck className="h-5 w-5 text-green-600" />
-                      <h3 className="text-lg font-semibold text-green-900">Delivery Status</h3>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-green-800">Current Status:</span>
-                        <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-200 text-green-900' :
-                          selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-200 text-blue-900' :
-                            selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-200 text-emerald-900' :
-                              'bg-gray-200 text-gray-900'
-                          }`}>
-                          {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
-                            selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
-                              selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
-                                selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </span>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-6">
+                    {/* Patient Information */}
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <User className="h-5 w-5 text-blue-600" />
+                        <h3 className="text-lg font-semibold text-blue-900">Patient Information</h3>
                       </div>
-                      {selectedDeliveryItem.delivery_notes && (
-                        <div>
-                          <span className="font-medium text-green-800">Notes:</span>
-                          <p className="text-green-900 text-sm mt-1 bg-green-50 p-2 rounded border">{selectedDeliveryItem.delivery_notes}</p>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="font-medium text-blue-800">Patient Name:</span>
+                          <span className="text-blue-900 font-semibold">{selectedDeliveryItem.patient_name}</span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Timeline & Appointments */}
-                  <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-5 border border-amber-200">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Calendar className="h-5 w-5 text-amber-600" />
-                      <h3 className="text-lg font-semibold text-amber-900">Timeline & Appointments</h3>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-amber-800">Created:</span>
-                        <span className="text-amber-900 font-medium">
-                          {new Date(selectedDeliveryItem.created_at).toLocaleDateString('en-US', {
+                        <div className="flex justify-between">
+                          <span className="font-medium text-blue-800">Arch Type:</span>
+                          <span className="text-blue-900 capitalize font-medium">{selectedDeliveryItem.arch_type}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium text-blue-800">Created:</span>
+                          <span className="text-blue-900">{new Date(selectedDeliveryItem.created_at).toLocaleDateString('en-US', {
                             weekday: 'short',
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric'
-                          })}
-                        </span>
-                      </div>
-
-                      {selectedDeliveryItem.scheduled_delivery_date && (
-                        <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium text-amber-800">Appointment Date:</span>
-                            <span className="text-amber-900 font-semibold">
-                              {new Date(selectedDeliveryItem.scheduled_delivery_date).toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
-                            </span>
-                          </div>
-                          {selectedDeliveryItem.scheduled_delivery_time && (
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-amber-800">Appointment Time:</span>
-                              <span className="text-amber-900 font-medium">
-                                {formatTime(selectedDeliveryItem.scheduled_delivery_time)}
-                              </span>
-                            </div>
-                          )}
+                          })}</span>
                         </div>
-                      )}
+                      </div>
+                    </div>
 
-                      {selectedDeliveryItem.actual_delivery_date && (
+                    {/* Appliance Specifications */}
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Settings className="h-5 w-5 text-purple-600" />
+                        <h3 className="text-lg font-semibold text-purple-900">Appliance Specifications</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {selectedDeliveryItem.upper_appliance_type && (
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium text-purple-800">Upper Appliance:</span>
+                            <div className="text-right">
+                              <span className="text-purple-900 font-medium">{selectedDeliveryItem.upper_appliance_type}</span>
+                              {selectedDeliveryItem.upper_appliance_number && (
+                                <span className="block text-sm text-purple-700">#{selectedDeliveryItem.upper_appliance_number}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {selectedDeliveryItem.lower_appliance_type && (
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium text-purple-800">Lower Appliance:</span>
+                            <div className="text-right">
+                              <span className="text-purple-900 font-medium">{selectedDeliveryItem.lower_appliance_type}</span>
+                              {selectedDeliveryItem.lower_appliance_number && (
+                                <span className="block text-sm text-purple-700">#{selectedDeliveryItem.lower_appliance_number}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center">
-                          <span className="font-medium text-amber-800">Insertion Date:</span>
-                          <span className="text-amber-900 font-semibold">
-                            {new Date(selectedDeliveryItem.actual_delivery_date).toLocaleDateString('en-US', {
+                          <span className="font-medium text-purple-800">Shade:</span>
+                          <div className="flex items-center gap-2">
+                            <Palette className="h-4 w-4 text-purple-600" />
+                            <span className="text-purple-900 font-medium">{selectedDeliveryItem.shade}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-6">
+                    {/* Delivery Status */}
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Truck className="h-5 w-5 text-green-600" />
+                        <h3 className="text-lg font-semibold text-green-900">Delivery Status</h3>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-green-800">Current Status:</span>
+                          <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'bg-green-200 text-green-900' :
+                            selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'bg-blue-200 text-blue-900' :
+                              selectedDeliveryItem.delivery_status === 'inserted' ? 'bg-emerald-200 text-emerald-900' :
+                                'bg-gray-200 text-gray-900'
+                            }`}>
+                            {selectedDeliveryItem.delivery_status === 'ready-for-delivery' ? 'Ready to Insert' :
+                              selectedDeliveryItem.delivery_status === 'patient-scheduled' ? 'Scheduled' :
+                                selectedDeliveryItem.delivery_status === 'inserted' ? 'Inserted' :
+                                  selectedDeliveryItem.delivery_status.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                        </div>
+                        {selectedDeliveryItem.delivery_notes && (
+                          <div>
+                            <span className="font-medium text-green-800">Notes:</span>
+                            <p className="text-green-900 text-sm mt-1 bg-green-50 p-2 rounded border">{selectedDeliveryItem.delivery_notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Timeline & Appointments */}
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-5 border border-amber-200">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Calendar className="h-5 w-5 text-amber-600" />
+                        <h3 className="text-lg font-semibold text-amber-900">Timeline & Appointments</h3>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-amber-800">Created:</span>
+                          <span className="text-amber-900 font-medium">
+                            {new Date(selectedDeliveryItem.created_at).toLocaleDateString('en-US', {
                               weekday: 'short',
                               year: 'numeric',
                               month: 'short',
@@ -13137,61 +13475,99 @@ export function PatientProfilePage() {
                             })}
                           </span>
                         </div>
-                      )}
+
+                        {selectedDeliveryItem.scheduled_delivery_date && (
+                          <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-medium text-amber-800">Appointment Date:</span>
+                              <span className="text-amber-900 font-semibold">
+                                {new Date(selectedDeliveryItem.scheduled_delivery_date).toLocaleDateString('en-US', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                            {selectedDeliveryItem.scheduled_delivery_time && (
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium text-amber-800">Appointment Time:</span>
+                                <span className="text-amber-900 font-medium">
+                                  {formatTime(selectedDeliveryItem.scheduled_delivery_time)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {selectedDeliveryItem.actual_delivery_date && (
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium text-amber-800">Insertion Date:</span>
+                            <span className="text-amber-900 font-semibold">
+                              {new Date(selectedDeliveryItem.actual_delivery_date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-                <div className="text-sm text-gray-500">
-                  Last updated: {new Date(selectedDeliveryItem.updated_at).toLocaleString('en-US', {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </div>
-                <div className="flex gap-3">
-                  {selectedDeliveryItem.delivery_status === 'ready-for-delivery' && (
+                {/* Action Buttons */}
+                <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                  <div className="text-sm text-gray-500">
+                    Last updated: {new Date(selectedDeliveryItem.updated_at).toLocaleString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                  <div className="flex gap-3">
+                    {selectedDeliveryItem.delivery_status === 'ready-for-delivery' && (
+                      <Button
+                        onClick={() => {
+                          setShowDeliveryDetails(false);
+                          setShowAppointmentScheduler(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Schedule Appointment
+                      </Button>
+                    )}
+                    {selectedDeliveryItem.delivery_status === 'patient-scheduled' && (
+                      <Button
+                        onClick={() => {
+                          setShowDeliveryDetails(false);
+                          handleCompleteDelivery(selectedDeliveryItem);
+                        }}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Mark Inserted
+                      </Button>
+                    )}
                     <Button
-                      onClick={() => {
-                        setShowDeliveryDetails(false);
-                        setShowAppointmentScheduler(true);
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => setShowDeliveryDetails(false)}
+                      className="bg-gray-600 hover:bg-gray-700 text-white"
                     >
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Schedule Appointment
+                      Close Preview
                     </Button>
-                  )}
-                  {selectedDeliveryItem.delivery_status === 'patient-scheduled' && (
-                    <Button
-                      onClick={() => {
-                        setShowDeliveryDetails(false);
-                        handleCompleteDelivery(selectedDeliveryItem);
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Mark Inserted
-                    </Button>
-                  )}
-                  <Button
-                    onClick={() => setShowDeliveryDetails(false)}
-                    className="bg-gray-600 hover:bg-gray-700 text-white"
-                  >
-                    Close Preview
-                  </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+            </DialogContent>
+          </Dialog>
+        )
+      }
 
       {/* Clinical Report Card Form Dialog */}
       <Dialog open={showClinicalReportForm && !!selectedReportCard} onOpenChange={setShowClinicalReportForm}>
@@ -17723,92 +18099,96 @@ export function PatientProfilePage() {
       </Dialog>
 
       {/* Toast Notification */}
-      {showToast && formMessage.type && (
-        <div className="fixed bottom-6 right-6 z-[9999] w-96 animate-in slide-in-from-right-full duration-300">
-          <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${formMessage.type === 'error'
-            ? 'bg-red-50/80 border-red-200/60 text-red-800'
-            : 'bg-green-50/80 border-green-200/60 text-green-800'
-            }`}>
-            <div className={`p-2 rounded-lg flex-shrink-0 ${formMessage.type === 'error'
-              ? 'bg-red-100/80 text-red-600'
-              : 'bg-green-100/80 text-green-600'
+      {
+        showToast && formMessage.type && (
+          <div className="fixed bottom-6 right-6 z-[9999] w-96 animate-in slide-in-from-right-full duration-300">
+            <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${formMessage.type === 'error'
+              ? 'bg-red-50/80 border-red-200/60 text-red-800'
+              : 'bg-green-50/80 border-green-200/60 text-green-800'
               }`}>
-              {formMessage.type === 'error' ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className={`p-2 rounded-lg flex-shrink-0 ${formMessage.type === 'error'
+                ? 'bg-red-100/80 text-red-600'
+                : 'bg-green-100/80 text-green-600'
+                }`}>
+                {formMessage.type === 'error' ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1 min-h-[24px] flex items-center">
+                <p className="text-sm font-medium leading-relaxed">{formMessage.text}</p>
+              </div>
+              <button
+                onClick={() => setShowToast(false)}
+                className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${formMessage.type === 'error'
+                  ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
+                  : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              )}
+              </button>
             </div>
-            <div className="flex-1 min-h-[24px] flex items-center">
-              <p className="text-sm font-medium leading-relaxed">{formMessage.text}</p>
-            </div>
-            <button
-              onClick={() => setShowToast(false)}
-              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${formMessage.type === 'error'
-                ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
-                : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
-                }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* IV Sedation Toast Notification */}
-      {showIVSedationToast && ivSedationFormMessage.type && (
-        <div className="fixed bottom-6 right-6 z-[9999] w-96 animate-in slide-in-from-right-full duration-300">
-          <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${ivSedationFormMessage.type === 'error'
-            ? 'bg-red-50/80 border-red-200/60 text-red-800'
-            : ivSedationFormMessage.type === 'info'
-              ? 'bg-blue-50/80 border-blue-200/60 text-blue-800'
-              : 'bg-green-50/80 border-green-200/60 text-green-800'
-            }`}>
-            <div className={`p-2 rounded-lg flex-shrink-0 ${ivSedationFormMessage.type === 'error'
-              ? 'bg-red-100/80 text-red-600'
+      {
+        showIVSedationToast && ivSedationFormMessage.type && (
+          <div className="fixed bottom-6 right-6 z-[9999] w-96 animate-in slide-in-from-right-full duration-300">
+            <div className={`backdrop-blur-md rounded-xl border-2 shadow-2xl flex items-start gap-4 p-5 transition-all duration-300 hover:scale-[1.02] ${ivSedationFormMessage.type === 'error'
+              ? 'bg-red-50/80 border-red-200/60 text-red-800'
               : ivSedationFormMessage.type === 'info'
-                ? 'bg-blue-100/80 text-blue-600'
-                : 'bg-green-100/80 text-green-600'
+                ? 'bg-blue-50/80 border-blue-200/60 text-blue-800'
+                : 'bg-green-50/80 border-green-200/60 text-green-800'
               }`}>
-              {ivSedationFormMessage.type === 'error' ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : ivSedationFormMessage.type === 'info' ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </div>
-            <div className="flex-1 min-h-[24px] flex items-center">
-              <p className="text-sm font-medium leading-relaxed">{ivSedationFormMessage.text}</p>
-            </div>
-            <button
-              onClick={() => setShowIVSedationToast(false)}
-              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${ivSedationFormMessage.type === 'error'
-                ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
+              <div className={`p-2 rounded-lg flex-shrink-0 ${ivSedationFormMessage.type === 'error'
+                ? 'bg-red-100/80 text-red-600'
                 : ivSedationFormMessage.type === 'info'
-                  ? 'text-blue-400 hover:bg-blue-100/60 hover:text-blue-600'
-                  : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
-                }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+                  ? 'bg-blue-100/80 text-blue-600'
+                  : 'bg-green-100/80 text-green-600'
+                }`}>
+                {ivSedationFormMessage.type === 'error' ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : ivSedationFormMessage.type === 'info' ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1 min-h-[24px] flex items-center">
+                <p className="text-sm font-medium leading-relaxed">{ivSedationFormMessage.text}</p>
+              </div>
+              <button
+                onClick={() => setShowIVSedationToast(false)}
+                className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${ivSedationFormMessage.type === 'error'
+                  ? 'text-red-400 hover:bg-red-100/60 hover:text-red-600'
+                  : ivSedationFormMessage.type === 'info'
+                    ? 'text-blue-400 hover:bg-blue-100/60 hover:text-blue-600'
+                    : 'text-green-400 hover:bg-green-100/60 hover:text-green-600'
+                  }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* IV Sedation Summary Dialog */}
       <Dialog open={showIVSedationSummary} onOpenChange={handleCloseSummary}>
@@ -19613,59 +19993,61 @@ export function PatientProfilePage() {
       />
 
       {/* Consent Packet Dialog */}
-      {patient && (
-        <ConsentFullArchDialog
-          isOpen={showConsentFullArchForm}
-          onClose={() => {
-            setShowConsentFullArchForm(false);
-            setIsViewingConsentForm(false);
-            setIsEditingConsentForm(false);
-            setSelectedConsentForm(null);
-            setSelectedAdminFormType("");
-          }}
-          patientId={patient.id}
-          patientName={patient.full_name}
-          patientDateOfBirth={patient.date_of_birth}
-          initialData={selectedConsentForm}
-          isEditing={isEditingConsentForm}
-          isViewing={isViewingConsentForm}
-          onSubmit={async (formData) => {
-            try {
-              // Update local state (the dialog handles the actual saving)
-              if (isEditingConsentForm && selectedConsentForm) {
-                setConsentForms(prev =>
-                  prev.map(form => form.id === selectedConsentForm.id ? formData : form)
-                );
-              } else {
-                setConsentForms(prev => [formData, ...prev]);
-              }
-
-              toast({
-                title: "Success",
-                description: "Consent packet saved successfully!",
-              });
-
-              // Reset states and refresh forms
+      {
+        patient && (
+          <ConsentFullArchDialog
+            isOpen={showConsentFullArchForm}
+            onClose={() => {
               setShowConsentFullArchForm(false);
-              setIsEditingConsentForm(false);
               setIsViewingConsentForm(false);
+              setIsEditingConsentForm(false);
               setSelectedConsentForm(null);
               setSelectedAdminFormType("");
-              await fetchConsentForms();
+            }}
+            patientId={patient.id}
+            patientName={patient.full_name}
+            patientDateOfBirth={patient.date_of_birth}
+            initialData={selectedConsentForm}
+            isEditing={isEditingConsentForm}
+            isViewing={isViewingConsentForm}
+            onSubmit={async (formData) => {
+              try {
+                // Update local state (the dialog handles the actual saving)
+                if (isEditingConsentForm && selectedConsentForm) {
+                  setConsentForms(prev =>
+                    prev.map(form => form.id === selectedConsentForm.id ? formData : form)
+                  );
+                } else {
+                  setConsentForms(prev => [formData, ...prev]);
+                }
 
-              // Navigate to Forms section
-              setActiveTab("forms");
-            } catch (error) {
-              console.error('Error in onSubmit:', error);
-              toast({
-                title: "Error",
-                description: "Failed to save form. Please try again.",
-                variant: "destructive",
-              });
-            }
-          }}
-        />
-      )}
+                toast({
+                  title: "Success",
+                  description: "Consent packet saved successfully!",
+                });
+
+                // Reset states and refresh forms
+                setShowConsentFullArchForm(false);
+                setIsEditingConsentForm(false);
+                setIsViewingConsentForm(false);
+                setSelectedConsentForm(null);
+                setSelectedAdminFormType("");
+                await fetchConsentForms();
+
+                // Navigate to Forms section
+                setActiveTab("forms");
+              } catch (error) {
+                console.error('Error in onSubmit:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to save form. Please try again.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          />
+        )
+      }
 
       {/* Financial Agreement Form Dialog */}
       <FinancialAgreementDialog
@@ -19723,116 +20105,120 @@ export function PatientProfilePage() {
       />
 
       {/* Final Design Approval Form Dialog */}
-      {patient && (
-        <FinalDesignApprovalDialog
-          isOpen={showFinalDesignApprovalForm}
-          onClose={() => {
-            setShowFinalDesignApprovalForm(false);
-            setIsViewingFinalDesignApprovalForm(false);
-            setIsEditingFinalDesignApprovalForm(false);
-            setSelectedFinalDesignApprovalForm(null);
-            setSelectedAdminFormType("");
-          }}
-          patientId={patient.id}
-          patientName={patient.full_name}
-          patientDateOfBirth={patient.date_of_birth}
-          initialData={selectedFinalDesignApprovalForm}
-          isEditing={isEditingFinalDesignApprovalForm}
-          isViewing={isViewingFinalDesignApprovalForm}
-          onSubmit={async (formData) => {
-            try {
-              // Update local state (the dialog handles the actual saving)
-              if (isEditingFinalDesignApprovalForm && selectedFinalDesignApprovalForm) {
-                setFinalDesignApprovalForms(prev =>
-                  prev.map(form => form.id === selectedFinalDesignApprovalForm.id ? formData : form)
-                );
-              } else {
-                setFinalDesignApprovalForms(prev => [formData, ...prev]);
-              }
-
-              toast({
-                title: "Success",
-                description: "Final Design Approval form saved successfully!",
-              });
-
-              // Reset states and refresh forms
+      {
+        patient && (
+          <FinalDesignApprovalDialog
+            isOpen={showFinalDesignApprovalForm}
+            onClose={() => {
               setShowFinalDesignApprovalForm(false);
-              setIsEditingFinalDesignApprovalForm(false);
               setIsViewingFinalDesignApprovalForm(false);
+              setIsEditingFinalDesignApprovalForm(false);
               setSelectedFinalDesignApprovalForm(null);
               setSelectedAdminFormType("");
-              await fetchFinalDesignApprovalForms();
+            }}
+            patientId={patient.id}
+            patientName={patient.full_name}
+            patientDateOfBirth={patient.date_of_birth}
+            initialData={selectedFinalDesignApprovalForm}
+            isEditing={isEditingFinalDesignApprovalForm}
+            isViewing={isViewingFinalDesignApprovalForm}
+            onSubmit={async (formData) => {
+              try {
+                // Update local state (the dialog handles the actual saving)
+                if (isEditingFinalDesignApprovalForm && selectedFinalDesignApprovalForm) {
+                  setFinalDesignApprovalForms(prev =>
+                    prev.map(form => form.id === selectedFinalDesignApprovalForm.id ? formData : form)
+                  );
+                } else {
+                  setFinalDesignApprovalForms(prev => [formData, ...prev]);
+                }
 
-              // Navigate to Forms section
-              setActiveTab("forms");
-            } catch (error) {
-              console.error('Error in onSubmit:', error);
-              toast({
-                title: "Error",
-                description: "Failed to save form. Please try again.",
-                variant: "destructive",
-              });
-            }
-          }}
-        />
-      )}
+                toast({
+                  title: "Success",
+                  description: "Final Design Approval form saved successfully!",
+                });
+
+                // Reset states and refresh forms
+                setShowFinalDesignApprovalForm(false);
+                setIsEditingFinalDesignApprovalForm(false);
+                setIsViewingFinalDesignApprovalForm(false);
+                setSelectedFinalDesignApprovalForm(null);
+                setSelectedAdminFormType("");
+                await fetchFinalDesignApprovalForms();
+
+                // Navigate to Forms section
+                setActiveTab("forms");
+              } catch (error) {
+                console.error('Error in onSubmit:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to save form. Please try again.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          />
+        )
+      }
 
       {/* Medical Records Release Form Dialog */}
-      {patient && (
-        <MedicalRecordsReleaseDialog
-          isOpen={showMedicalRecordsReleaseForm}
-          onClose={() => {
-            setShowMedicalRecordsReleaseForm(false);
-            setSelectedAdminFormType("");
-            setEditingMedicalRecordsReleaseForm(null);
-            setIsEditingMedicalRecordsReleaseForm(false);
-            setIsViewingMedicalRecordsReleaseForm(false);
-          }}
-          onSubmit={async (formData) => {
-            try {
-              // The MedicalRecordsReleaseDialog already handles the submission logic correctly
-              // including updating existing auto-saved drafts. The formData passed here
-              // is already the result of that process, so we just need to refresh our list.
-
-              console.log('✅ Medical records release form saved successfully via dialog');
+      {
+        patient && (
+          <MedicalRecordsReleaseDialog
+            isOpen={showMedicalRecordsReleaseForm}
+            onClose={() => {
               setShowMedicalRecordsReleaseForm(false);
               setSelectedAdminFormType("");
               setEditingMedicalRecordsReleaseForm(null);
               setIsEditingMedicalRecordsReleaseForm(false);
               setIsViewingMedicalRecordsReleaseForm(false);
+            }}
+            onSubmit={async (formData) => {
+              try {
+                // The MedicalRecordsReleaseDialog already handles the submission logic correctly
+                // including updating existing auto-saved drafts. The formData passed here
+                // is already the result of that process, so we just need to refresh our list.
 
-              // Refresh the forms list
-              await fetchMedicalRecordsReleaseForms();
+                console.log('✅ Medical records release form saved successfully via dialog');
+                setShowMedicalRecordsReleaseForm(false);
+                setSelectedAdminFormType("");
+                setEditingMedicalRecordsReleaseForm(null);
+                setIsEditingMedicalRecordsReleaseForm(false);
+                setIsViewingMedicalRecordsReleaseForm(false);
 
-              // Show success message
-              toast({
-                title: "Success",
-                description: `Medical records release form ${isEditingMedicalRecordsReleaseForm ? 'updated' : 'saved'} successfully!`,
-              });
-            } catch (error) {
-              console.error('❌ Error in medical records release form submission handler:', error);
-              toast({
-                title: "Error",
-                description: "Failed to process medical records release form submission",
-                variant: "destructive",
-              });
-            }
-          }}
-          patientName={patient.full_name}
-          patientDateOfBirth={patient.date_of_birth}
-          patientId={patient.id}
-          initialData={editingMedicalRecordsReleaseForm ? {
-            ...editingMedicalRecordsReleaseForm,
-            first_name: editingMedicalRecordsReleaseForm.first_name || patient.first_name,
-            last_name: editingMedicalRecordsReleaseForm.last_name || patient.last_name
-          } : {
-            first_name: patient.first_name,
-            last_name: patient.last_name
-          }}
-          isEditing={isEditingMedicalRecordsReleaseForm}
-          isViewing={isViewingMedicalRecordsReleaseForm}
-        />
-      )}
+                // Refresh the forms list
+                await fetchMedicalRecordsReleaseForms();
+
+                // Show success message
+                toast({
+                  title: "Success",
+                  description: `Medical records release form ${isEditingMedicalRecordsReleaseForm ? 'updated' : 'saved'} successfully!`,
+                });
+              } catch (error) {
+                console.error('❌ Error in medical records release form submission handler:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to process medical records release form submission",
+                  variant: "destructive",
+                });
+              }
+            }}
+            patientName={patient.full_name}
+            patientDateOfBirth={patient.date_of_birth}
+            patientId={patient.id}
+            initialData={editingMedicalRecordsReleaseForm ? {
+              ...editingMedicalRecordsReleaseForm,
+              first_name: editingMedicalRecordsReleaseForm.first_name || patient.first_name,
+              last_name: editingMedicalRecordsReleaseForm.last_name || patient.last_name
+            } : {
+              first_name: patient.first_name,
+              last_name: patient.last_name
+            }}
+            isEditing={isEditingMedicalRecordsReleaseForm}
+            isViewing={isViewingMedicalRecordsReleaseForm}
+          />
+        )
+      }
 
       {/* New Patient Packet Form Dialog */}
       <Dialog open={showNewPatientPacketForm} onOpenChange={(open) => {
@@ -20107,59 +20493,61 @@ export function PatientProfilePage() {
       />
 
       {/* Thank You and Pre-Surgery Form Dialog */}
-      {patient && (
-        <ThankYouPreSurgeryDialog
-          isOpen={showThankYouPreSurgeryForm}
-          onClose={() => {
-            setShowThankYouPreSurgeryForm(false);
-            setIsViewingThankYouPreSurgeryForm(false);
-            setIsEditingThankYouPreSurgeryForm(false);
-            setSelectedThankYouPreSurgeryForm(null);
-            setSelectedAdminFormType("");
-          }}
-          patientId={patient.id}
-          patientName={patient.full_name}
-          patientDateOfBirth={patient.date_of_birth}
-          initialData={selectedThankYouPreSurgeryForm}
-          isEditing={isEditingThankYouPreSurgeryForm}
-          isViewing={isViewingThankYouPreSurgeryForm}
-          onSubmit={async (formData) => {
-            try {
-              // Update local state (the dialog handles the actual saving)
-              if (isEditingThankYouPreSurgeryForm && selectedThankYouPreSurgeryForm) {
-                setThankYouPreSurgeryForms(prev =>
-                  prev.map(form => form.id === selectedThankYouPreSurgeryForm.id ? formData : form)
-                );
-              } else {
-                setThankYouPreSurgeryForms(prev => [formData, ...prev]);
-              }
-
-              toast({
-                title: "Success",
-                description: "Thank You and Pre-Surgery Instructions form saved successfully!",
-              });
-
-              // Reset states and refresh forms
+      {
+        patient && (
+          <ThankYouPreSurgeryDialog
+            isOpen={showThankYouPreSurgeryForm}
+            onClose={() => {
               setShowThankYouPreSurgeryForm(false);
-              setIsEditingThankYouPreSurgeryForm(false);
               setIsViewingThankYouPreSurgeryForm(false);
+              setIsEditingThankYouPreSurgeryForm(false);
               setSelectedThankYouPreSurgeryForm(null);
               setSelectedAdminFormType("");
-              await fetchThankYouPreSurgeryForms();
+            }}
+            patientId={patient.id}
+            patientName={patient.full_name}
+            patientDateOfBirth={patient.date_of_birth}
+            initialData={selectedThankYouPreSurgeryForm}
+            isEditing={isEditingThankYouPreSurgeryForm}
+            isViewing={isViewingThankYouPreSurgeryForm}
+            onSubmit={async (formData) => {
+              try {
+                // Update local state (the dialog handles the actual saving)
+                if (isEditingThankYouPreSurgeryForm && selectedThankYouPreSurgeryForm) {
+                  setThankYouPreSurgeryForms(prev =>
+                    prev.map(form => form.id === selectedThankYouPreSurgeryForm.id ? formData : form)
+                  );
+                } else {
+                  setThankYouPreSurgeryForms(prev => [formData, ...prev]);
+                }
 
-              // Navigate to Forms section
-              setActiveTab("forms");
-            } catch (error) {
-              console.error('Error in onSubmit:', error);
-              toast({
-                title: "Error",
-                description: "Failed to save form. Please try again.",
-                variant: "destructive",
-              });
-            }
-          }}
-        />
-      )}
+                toast({
+                  title: "Success",
+                  description: "Thank You and Pre-Surgery Instructions form saved successfully!",
+                });
+
+                // Reset states and refresh forms
+                setShowThankYouPreSurgeryForm(false);
+                setIsEditingThankYouPreSurgeryForm(false);
+                setIsViewingThankYouPreSurgeryForm(false);
+                setSelectedThankYouPreSurgeryForm(null);
+                setSelectedAdminFormType("");
+                await fetchThankYouPreSurgeryForms();
+
+                // Navigate to Forms section
+                setActiveTab("forms");
+              } catch (error) {
+                console.error('Error in onSubmit:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to save form. Please try again.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          />
+        )
+      }
 
       {/* 3-Year Care Package Enrollment Form Dialog */}
       <ThreeYearCarePackageDialog
@@ -20217,126 +20605,130 @@ export function PatientProfilePage() {
       />
 
       {/* 5-Year Extended Warranty Form Dialog */}
-      {patient && (
-        <FiveYearWarrantyDialog
-          isOpen={showFiveYearWarrantyForm}
-          onClose={() => {
-            setShowFiveYearWarrantyForm(false);
-            setSelectedAdminFormType("");
-            setSelectedFiveYearWarrantyForm(null);
-            setIsEditingFiveYearWarrantyForm(false);
-            setIsViewingFiveYearWarrantyForm(false);
-            // Refresh forms to show any auto-saved drafts
-            fetchFiveYearWarrantyForms();
-          }}
-          patientId={patientId}
-          patientName={patient.full_name}
-          patientDateOfBirth={patient.date_of_birth}
-          initialData={(() => {
-            const formattedData = selectedFiveYearWarrantyForm ? formatFiveYearWarrantyFormForDisplay(selectedFiveYearWarrantyForm) : null;
-            console.log('🔍 PatientProfilePage - selectedFiveYearWarrantyForm:', selectedFiveYearWarrantyForm);
-            console.log('🔍 PatientProfilePage - formattedData:', formattedData);
-            return formattedData;
-          })()}
-          isEditing={isEditingFiveYearWarrantyForm}
-          isViewing={isViewingFiveYearWarrantyForm}
-          onSubmit={async (formData) => {
-            try {
-              // Update local state
-              if (isEditingFiveYearWarrantyForm && selectedFiveYearWarrantyForm) {
-                setFiveYearWarrantyForms(prev =>
-                  prev.map(form => form.id === selectedFiveYearWarrantyForm.id ? formData : form)
-                );
-              } else {
-                setFiveYearWarrantyForms(prev => [formData, ...prev]);
-              }
-
-              toast({
-                title: "Success",
-                description: "5-Year Extended Warranty form saved successfully!",
-              });
-
-              // Reset states and refresh forms
+      {
+        patient && (
+          <FiveYearWarrantyDialog
+            isOpen={showFiveYearWarrantyForm}
+            onClose={() => {
               setShowFiveYearWarrantyForm(false);
               setSelectedAdminFormType("");
               setSelectedFiveYearWarrantyForm(null);
               setIsEditingFiveYearWarrantyForm(false);
               setIsViewingFiveYearWarrantyForm(false);
-
-              // Navigate to forms section
-              handleTabChange('clinical');
-
-              // Refresh the forms list
+              // Refresh forms to show any auto-saved drafts
               fetchFiveYearWarrantyForms();
-            } catch (error) {
-              console.error('Unexpected error saving 5-Year Warranty form:', error);
-              toast({
-                title: "Error",
-                description: "An unexpected error occurred. Please try again.",
-                variant: "destructive"
-              });
-            }
-          }}
-        />
-      )}
+            }}
+            patientId={patientId}
+            patientName={patient.full_name}
+            patientDateOfBirth={patient.date_of_birth}
+            initialData={(() => {
+              const formattedData = selectedFiveYearWarrantyForm ? formatFiveYearWarrantyFormForDisplay(selectedFiveYearWarrantyForm) : null;
+              console.log('🔍 PatientProfilePage - selectedFiveYearWarrantyForm:', selectedFiveYearWarrantyForm);
+              console.log('🔍 PatientProfilePage - formattedData:', formattedData);
+              return formattedData;
+            })()}
+            isEditing={isEditingFiveYearWarrantyForm}
+            isViewing={isViewingFiveYearWarrantyForm}
+            onSubmit={async (formData) => {
+              try {
+                // Update local state
+                if (isEditingFiveYearWarrantyForm && selectedFiveYearWarrantyForm) {
+                  setFiveYearWarrantyForms(prev =>
+                    prev.map(form => form.id === selectedFiveYearWarrantyForm.id ? formData : form)
+                  );
+                } else {
+                  setFiveYearWarrantyForms(prev => [formData, ...prev]);
+                }
+
+                toast({
+                  title: "Success",
+                  description: "5-Year Extended Warranty form saved successfully!",
+                });
+
+                // Reset states and refresh forms
+                setShowFiveYearWarrantyForm(false);
+                setSelectedAdminFormType("");
+                setSelectedFiveYearWarrantyForm(null);
+                setIsEditingFiveYearWarrantyForm(false);
+                setIsViewingFiveYearWarrantyForm(false);
+
+                // Navigate to forms section
+                handleTabChange('clinical');
+
+                // Refresh the forms list
+                fetchFiveYearWarrantyForms();
+              } catch (error) {
+                console.error('Unexpected error saving 5-Year Warranty form:', error);
+                toast({
+                  title: "Error",
+                  description: "An unexpected error occurred. Please try again.",
+                  variant: "destructive"
+                });
+              }
+            }}
+          />
+        )
+      }
 
       {/* Partial Payment Agreement Form Dialog */}
-      {patient && (
-        <PartialPaymentAgreementDialog
-          isOpen={showPartialPaymentAgreementForm}
-          onClose={() => {
-            setShowPartialPaymentAgreementForm(false);
-            setIsViewingPartialPaymentAgreementForm(false);
-            setIsEditingPartialPaymentAgreementForm(false);
-            setSelectedPartialPaymentAgreementForm(null);
-            setSelectedAdminFormType("");
-          }}
-          patientId={patient.id}
-          patientName={patient.full_name}
-          patientDateOfBirth={patient.date_of_birth}
-          patientAddress={`${patient.street || ''}${patient.street && (patient.city || patient.state || patient.zip_code) ? ', ' : ''}${patient.city || ''}${patient.city && (patient.state || patient.zip_code) ? ', ' : ''}${patient.state || ''}${patient.state && patient.zip_code ? ' ' : ''}${patient.zip_code || ''}`.trim()}
-          patientEmail={patient.email}
-          patientPhone={patient.phone}
-          initialData={selectedPartialPaymentAgreementForm}
-          isEditing={isEditingPartialPaymentAgreementForm}
-          isViewing={isViewingPartialPaymentAgreementForm}
-          onSubmit={async (formData) => {
-            try {
-              // Update local state (the dialog handles the actual saving)
-              if (isEditingPartialPaymentAgreementForm && selectedPartialPaymentAgreementForm) {
-                setPartialPaymentAgreementForms(prev =>
-                  prev.map(form => form.id === selectedPartialPaymentAgreementForm.id ? formData : form)
-                );
-              } else {
-                setPartialPaymentAgreementForms(prev => [formData, ...prev]);
-              }
-
-              toast({
-                title: "Success",
-                description: "Partial Payment Agreement form saved successfully!",
-              });
-
-              // Reset states and refresh forms
+      {
+        patient && (
+          <PartialPaymentAgreementDialog
+            isOpen={showPartialPaymentAgreementForm}
+            onClose={() => {
               setShowPartialPaymentAgreementForm(false);
-              setIsEditingPartialPaymentAgreementForm(false);
               setIsViewingPartialPaymentAgreementForm(false);
+              setIsEditingPartialPaymentAgreementForm(false);
               setSelectedPartialPaymentAgreementForm(null);
               setSelectedAdminFormType("");
-              await fetchPartialPaymentAgreementForms();
+            }}
+            patientId={patient.id}
+            patientName={patient.full_name}
+            patientDateOfBirth={patient.date_of_birth}
+            patientAddress={`${patient.street || ''}${patient.street && (patient.city || patient.state || patient.zip_code) ? ', ' : ''}${patient.city || ''}${patient.city && (patient.state || patient.zip_code) ? ', ' : ''}${patient.state || ''}${patient.state && patient.zip_code ? ' ' : ''}${patient.zip_code || ''}`.trim()}
+            patientEmail={patient.email}
+            patientPhone={patient.phone}
+            initialData={selectedPartialPaymentAgreementForm}
+            isEditing={isEditingPartialPaymentAgreementForm}
+            isViewing={isViewingPartialPaymentAgreementForm}
+            onSubmit={async (formData) => {
+              try {
+                // Update local state (the dialog handles the actual saving)
+                if (isEditingPartialPaymentAgreementForm && selectedPartialPaymentAgreementForm) {
+                  setPartialPaymentAgreementForms(prev =>
+                    prev.map(form => form.id === selectedPartialPaymentAgreementForm.id ? formData : form)
+                  );
+                } else {
+                  setPartialPaymentAgreementForms(prev => [formData, ...prev]);
+                }
 
-              // Navigate to Forms section
-              setActiveTab("forms");
-            } catch (error) {
-              console.error('Error handling Partial Payment Agreement form submission:', error);
-              toast({
-                title: "Error",
-                description: "Failed to process form submission. Please try again.",
-                variant: "destructive"
-              });
-            }
-          }}
-        />
-      )}
+                toast({
+                  title: "Success",
+                  description: "Partial Payment Agreement form saved successfully!",
+                });
+
+                // Reset states and refresh forms
+                setShowPartialPaymentAgreementForm(false);
+                setIsEditingPartialPaymentAgreementForm(false);
+                setIsViewingPartialPaymentAgreementForm(false);
+                setSelectedPartialPaymentAgreementForm(null);
+                setSelectedAdminFormType("");
+                await fetchPartialPaymentAgreementForms();
+
+                // Navigate to Forms section
+                setActiveTab("forms");
+              } catch (error) {
+                console.error('Error handling Partial Payment Agreement form submission:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to process form submission. Please try again.",
+                  variant: "destructive"
+                });
+              }
+            }}
+          />
+        )
+      }
 
       {/* Delete Treatment Confirmation Dialog */}
       <Dialog open={showDeleteTreatmentConfirmation} onOpenChange={setShowDeleteTreatmentConfirmation}>
@@ -20802,118 +21194,120 @@ export function PatientProfilePage() {
       </AlertDialog>
 
       {/* Treatment Plan Dialog */}
-      {patient && (
-        <TreatmentPlanDialog
-          isOpen={showTreatmentPlanForm}
-          onClose={() => {
-            setShowTreatmentPlanForm(false);
-            setSelectedAdminFormType("");
-            setSelectedTreatmentPlanForm(null);
-            setIsEditingTreatmentPlanForm(false);
-            setIsViewingTreatmentPlanForm(false);
-            // Refresh forms to show any auto-saved drafts
-            fetchTreatmentPlanForms();
-          }}
-          patientId={patient.id}
-          patientName={patient.full_name}
-          patientDateOfBirth={patient.date_of_birth}
-          userId={user?.id}
-          initialData={(() => {
-            if (selectedTreatmentPlanForm && (isEditingTreatmentPlanForm || isViewingTreatmentPlanForm)) {
-              return {
-                firstName: selectedTreatmentPlanForm.first_name,
-                lastName: selectedTreatmentPlanForm.last_name,
-                dateOfBirth: selectedTreatmentPlanForm.date_of_birth,
-                treatments: selectedTreatmentPlanForm.treatments || [],
-                procedures: selectedTreatmentPlanForm.procedures || [],
-                planDate: selectedTreatmentPlanForm.plan_date || '',
-                discount: selectedTreatmentPlanForm.discount || 0,
-                formStatus: selectedTreatmentPlanForm.form_status
-              };
-            }
-            return undefined;
-          })()}
-          isEditing={isEditingTreatmentPlanForm}
-          isViewing={isViewingTreatmentPlanForm}
-          formId={selectedTreatmentPlanForm?.id}
-          onSubmit={async (formData) => {
-            try {
-              console.log('Treatment plan submitted:', formData);
-
-              // Prepare data for saving to Supabase
-              const treatmentPlanData = {
-                patient_id: patient.id,
-                first_name: formData.firstName,
-                last_name: formData.lastName,
-                date_of_birth: formData.dateOfBirth,
-                treatments: formData.treatments,
-                procedures: formData.procedures || [],
-                plan_date: formData.planDate,
-                discount: formData.discount || 0,
-                form_status: 'completed' as const
-              };
-
-              let data, error;
-
-              if (isEditingTreatmentPlanForm && selectedTreatmentPlanForm?.id) {
-                // Update existing treatment plan
-                console.log('Updating existing treatment plan with ID:', selectedTreatmentPlanForm.id);
-                const result = await updateTreatmentPlanForm(
-                  selectedTreatmentPlanForm.id,
-                  treatmentPlanData,
-                  user?.id
-                );
-                data = result.data;
-                error = result.error;
-              } else {
-                // Create new treatment plan
-                console.log('Creating new treatment plan');
-                const result = await saveTreatmentPlanForm(
-                  treatmentPlanData,
-                  user?.id
-                );
-                data = result.data;
-                error = result.error;
+      {
+        patient && (
+          <TreatmentPlanDialog
+            isOpen={showTreatmentPlanForm}
+            onClose={() => {
+              setShowTreatmentPlanForm(false);
+              setSelectedAdminFormType("");
+              setSelectedTreatmentPlanForm(null);
+              setIsEditingTreatmentPlanForm(false);
+              setIsViewingTreatmentPlanForm(false);
+              // Refresh forms to show any auto-saved drafts
+              fetchTreatmentPlanForms();
+            }}
+            patientId={patient.id}
+            patientName={patient.full_name}
+            patientDateOfBirth={patient.date_of_birth}
+            userId={user?.id}
+            initialData={(() => {
+              if (selectedTreatmentPlanForm && (isEditingTreatmentPlanForm || isViewingTreatmentPlanForm)) {
+                return {
+                  firstName: selectedTreatmentPlanForm.first_name,
+                  lastName: selectedTreatmentPlanForm.last_name,
+                  dateOfBirth: selectedTreatmentPlanForm.date_of_birth,
+                  treatments: selectedTreatmentPlanForm.treatments || [],
+                  procedures: selectedTreatmentPlanForm.procedures || [],
+                  planDate: selectedTreatmentPlanForm.plan_date || '',
+                  discount: selectedTreatmentPlanForm.discount || 0,
+                  formStatus: selectedTreatmentPlanForm.form_status
+                };
               }
+              return undefined;
+            })()}
+            isEditing={isEditingTreatmentPlanForm}
+            isViewing={isViewingTreatmentPlanForm}
+            formId={selectedTreatmentPlanForm?.id}
+            onSubmit={async (formData) => {
+              try {
+                console.log('Treatment plan submitted:', formData);
 
-              if (error) {
+                // Prepare data for saving to Supabase
+                const treatmentPlanData = {
+                  patient_id: patient.id,
+                  first_name: formData.firstName,
+                  last_name: formData.lastName,
+                  date_of_birth: formData.dateOfBirth,
+                  treatments: formData.treatments,
+                  procedures: formData.procedures || [],
+                  plan_date: formData.planDate,
+                  discount: formData.discount || 0,
+                  form_status: 'completed' as const
+                };
+
+                let data, error;
+
+                if (isEditingTreatmentPlanForm && selectedTreatmentPlanForm?.id) {
+                  // Update existing treatment plan
+                  console.log('Updating existing treatment plan with ID:', selectedTreatmentPlanForm.id);
+                  const result = await updateTreatmentPlanForm(
+                    selectedTreatmentPlanForm.id,
+                    treatmentPlanData,
+                    user?.id
+                  );
+                  data = result.data;
+                  error = result.error;
+                } else {
+                  // Create new treatment plan
+                  console.log('Creating new treatment plan');
+                  const result = await saveTreatmentPlanForm(
+                    treatmentPlanData,
+                    user?.id
+                  );
+                  data = result.data;
+                  error = result.error;
+                }
+
+                if (error) {
+                  console.error('Error saving treatment plan:', error);
+                  toast({
+                    title: "Error",
+                    description: `Failed to ${isEditingTreatmentPlanForm ? 'update' : 'save'} treatment plan. Please try again.`,
+                    variant: "destructive",
+                  });
+                  return;
+                }
+
+                console.log('Treatment plan saved successfully:', data);
+                toast({
+                  title: "Success",
+                  description: `Treatment plan ${isEditingTreatmentPlanForm ? 'updated' : 'created'} successfully!`,
+                });
+
+                setShowTreatmentPlanForm(false);
+                setSelectedAdminFormType("");
+                setSelectedTreatmentPlanForm(null);
+                setIsEditingTreatmentPlanForm(false);
+                setIsViewingTreatmentPlanForm(false);
+
+                // Refresh the forms list
+                fetchTreatmentPlanForms();
+
+                // Navigate to Forms section
+                setActiveTab("clinical");
+              } catch (error) {
                 console.error('Error saving treatment plan:', error);
                 toast({
                   title: "Error",
                   description: `Failed to ${isEditingTreatmentPlanForm ? 'update' : 'save'} treatment plan. Please try again.`,
                   variant: "destructive",
                 });
-                return;
               }
-
-              console.log('Treatment plan saved successfully:', data);
-              toast({
-                title: "Success",
-                description: `Treatment plan ${isEditingTreatmentPlanForm ? 'updated' : 'created'} successfully!`,
-              });
-
-              setShowTreatmentPlanForm(false);
-              setSelectedAdminFormType("");
-              setSelectedTreatmentPlanForm(null);
-              setIsEditingTreatmentPlanForm(false);
-              setIsViewingTreatmentPlanForm(false);
-
-              // Refresh the forms list
-              fetchTreatmentPlanForms();
-
-              // Navigate to Forms section
-              setActiveTab("clinical");
-            } catch (error) {
-              console.error('Error saving treatment plan:', error);
-              toast({
-                title: "Error",
-                description: `Failed to ${isEditingTreatmentPlanForm ? 'update' : 'save'} treatment plan. Please try again.`,
-                variant: "destructive",
-              });
-            }
-          }}
-        />
-      )}
+            }}
+          />
+        )
+      }
 
       {/* Consultation Viewer */}
       <ConsultationViewer
@@ -21118,15 +21512,30 @@ export function PatientProfilePage() {
         }}
       />
 
+      {/* Encounter Form Dialog */}
+      <EncounterFormDialog
+        open={showEncounterDialog}
+        onOpenChange={setShowEncounterDialog}
+        patientName={selectedEncounterAppointment?.patientName || ''}
+        appointmentId={selectedEncounterAppointment?.id || ''}
+        isViewMode={!!selectedEncounterAppointment?.encounterCompleted}
+        onEncounterSaved={() => {
+          setShowEncounterDialog(false);
+          // Optional: Refresh appointments here if needed, but the state should update via subscription or reload
+        }}
+      />
+
       {/* Patient Status Dialog */}
-      {patient && (
-        <PatientStatusDialog
-          open={showPatientStatusDialog}
-          onOpenChange={setShowPatientStatusDialog}
-          patientId={patientId || ''}
-          patientName={patient.full_name || `${patient.first_name} ${patient.last_name}`}
-        />
-      )}
+      {
+        patient && (
+          <PatientStatusDialog
+            open={showPatientStatusDialog}
+            onOpenChange={setShowPatientStatusDialog}
+            patientId={patientId || ''}
+            patientName={patient.full_name || `${patient.first_name} ${patient.last_name}`}
+          />
+        )
+      }
 
       {/* Delete Patient Confirmation Dialog */}
       <AlertDialog open={showDeletePatientDialog} onOpenChange={setShowDeletePatientDialog}>
@@ -21210,6 +21619,49 @@ export function PatientProfilePage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+
+      {/* Appointment Details Dialog */}
+      <AppointmentDetailsDialog
+        isOpen={showAppointmentDetailsValues}
+        onClose={() => {
+          setShowAppointmentDetailsValues(false);
+          setSelectedAppointmentDetails(null);
+        }}
+        appointment={selectedAppointmentDetails}
+        onEdit={(apt) => {
+          setShowAppointmentDetailsValues(false);
+          navigate(`/appointments?date=${apt.date}`);
+          toast({
+            title: "Redirecting to Calendar",
+            description: "Please edit the appointment from the calendar view.",
+          });
+        }}
+        onDelete={async (id) => {
+          try {
+            await deleteAppointment(id);
+            setShowAppointmentDetailsValues(false);
+            toast({ title: "Appointment deleted successfully" });
+          } catch (error) {
+            console.error(error);
+            toast({ title: "Failed to delete appointment", variant: "destructive" });
+          }
+        }}
+        onStatusChange={async (id, status) => {
+          try {
+            await updateAppointment(id, { statusCode: status });
+            toast({ title: "Status updated successfully" });
+          } catch (error) {
+            console.error(error);
+            toast({ title: "Failed to update status", variant: "destructive" });
+          }
+        }}
+        onOpenEncounter={(apt) => {
+          handleEncounterClick(apt);
+          setShowAppointmentDetailsValues(false);
+        }}
+        canUpdateAppointments={canUpdateAppointments}
+        canDeleteAppointments={canDeleteAppointments}
+      />
+    </div >
   );
 }

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import fixWebmDuration from "fix-webm-duration";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,8 +9,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SignaturePad } from "@/components/SignaturePad";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Edit } from "lucide-react";
+import { Loader2, Edit, Mic, FileAudio, RefreshCw, Play, Square, Pause } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { RecordingConsentDialog } from "@/components/RecordingConsentDialog";
+import { RecordingControlDialog } from "@/components/RecordingControlDialog";
+import { RecordingsList } from "@/components/RecordingsList";
+import { uploadAudioRecording, saveRecordingMetadata } from "@/lib/audioRecordingService";
+import { toast } from "sonner"; // Using sonner toast as used in recording service
+import { CheckCircle2, XCircle, AlertCircle, CloudUpload, Check } from "lucide-react"; // Icons for status dialog
 
 interface PatientDetails {
   full_name: string;
@@ -54,7 +61,12 @@ export function EncounterFormDialog({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const { toast } = useToast();
+  // const { toast } = useToast(); // Use sonner toast instead to match recording service, or alias it. 
+  // Accessing toast from use-toast hook for general form stuff, and sonner for recording stuff. 
+  // Ideally should unify, but for minimal friction I'll keep both if namespaces don't collide.
+  // The import 'toast' from "sonner" collides with 'useToast'.
+  // I will rename the hook usage.
+  const { toast: formToast } = useToast();
 
   // Encounter form fields - General
   const [biteAdjustment, setBiteAdjustment] = useState<string>('');
@@ -119,6 +131,28 @@ export function EncounterFormDialog({
   const [formStatus, setFormStatus] = useState<'draft' | 'complete'>('draft');
   const [consultationData, setConsultationData] = useState<any>(null);
 
+  // Recording State
+  const [showRecordingConsentDialog, setShowRecordingConsentDialog] = useState(false);
+  const [showRecordingControlDialog, setShowRecordingControlDialog] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  // Recording Status Dialog State
+  const [showRecordingStatusDialog, setShowRecordingStatusDialog] = useState(false);
+  const [recordingStatusState, setRecordingStatusState] = useState<'uploading' | 'success' | 'error'>('uploading');
+  const [recordingStatusMessage, setRecordingStatusMessage] = useState('');
+  const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null);
+
+  const recordingChunksRef = useRef<Blob[]>([]); // Use Ref for chunks to ensure latest data is accessed
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const [audioLevel, setAudioLevel] = useState<number>(-60);
+  const [audioAnalyzer, setAudioAnalyzer] = useState<AnalyserNode | null>(null);
+  const [audioCleanup, setAudioCleanup] = useState<(() => void) | null>(null);
+  const [isProcessingRecording, setIsProcessingRecording] = useState(false);
+  // Used to force refresh of recordings list
+  const [refreshRecordingsTrigger, setRefreshRecordingsTrigger] = useState(0);
+
   // Fetch patient details and encounter data when dialog opens
   useEffect(() => {
     if (open) {
@@ -137,6 +171,224 @@ export function EncounterFormDialog({
     }
   }, [open, appointmentId]); // Removed patientName dependency to avoid double firing if it changes slightly, though strictly it should be there. 
   // Ideally just open/appointmentId triggers the reset/reload.
+
+  // Recording Implementation
+  const startRecording = (recorder: MediaRecorder) => {
+    console.log('Starting recording with MIME type:', recorder.mimeType);
+
+    setMediaRecorder(recorder);
+    setMediaStream(recorder.stream);
+    setIsRecording(true);
+    setIsPaused(false);
+    setRecordingDuration(0);
+    recordingChunksRef.current = []; // Reset chunks
+
+    // Set up audio analysis
+    const cleanup = setupAudioAnalysis(recorder.stream);
+    setAudioCleanup(() => cleanup);
+
+    // Handle recording data
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        recordingChunksRef.current.push(event.data);
+      }
+    };
+
+    recorder.start(1000); // Collect data every 1 second
+
+    // Start timer
+    const timer = setInterval(() => {
+      setRecordingDuration(prev => prev + 1);
+    }, 1000);
+    setRecordingTimer(timer);
+  };
+
+  const setupAudioAnalysis = (stream: MediaStream) => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const microphone = audioContext.createMediaStreamSource(stream);
+
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.3;
+      microphone.connect(analyser);
+
+      setAudioAnalyzer(analyser);
+
+      let animationId: number;
+      const monitorAudio = () => {
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteTimeDomainData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          const sample = (dataArray[i] - 128) / 128;
+          sum += sample * sample;
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+        const db = rms > 0 ? 20 * Math.log10(rms) : -60;
+        const normalizedDb = Math.max(-60, Math.min(0, db));
+
+        setAudioLevel(normalizedDb);
+        animationId = requestAnimationFrame(monitorAudio);
+      };
+
+      monitorAudio();
+
+      return () => {
+        if (animationId) cancelAnimationFrame(animationId);
+        if (audioContext.state !== 'closed') {
+          audioContext.close();
+        }
+      };
+    } catch (error) {
+      console.error('Error setting up audio analysis:', error);
+      return null;
+    }
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorder && isRecording && !isPaused) {
+      try {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.pause();
+        }
+        setIsPaused(true);
+        if (recordingTimer) {
+          clearInterval(recordingTimer);
+          setRecordingTimer(null);
+        }
+        toast.info("Recording paused");
+      } catch (error) {
+        console.error('Error pausing recording:', error);
+      }
+    }
+  };
+
+  const resumeRecording = async () => {
+    if (isRecording && isPaused && mediaRecorder) {
+      if (mediaRecorder.state === 'paused') {
+        mediaRecorder.resume();
+        setIsPaused(false);
+        const timer = setInterval(() => {
+          setRecordingDuration(prev => prev + 1);
+        }, 1000);
+        setRecordingTimer(timer);
+        toast.info("Recording resumed");
+      }
+    }
+  };
+
+  const stopRecording = async (): Promise<void> => {
+    return new Promise((resolve) => {
+      if (mediaRecorder && isRecording && !isProcessingRecording) {
+        setIsRecording(false);
+        setIsProcessingRecording(true);
+
+        const handleProcessing = async () => {
+          // Open status dialog
+          setShowRecordingStatusDialog(true);
+          setRecordingStatusState('uploading');
+          setRecordingStatusMessage("Processing and uploading audio...");
+
+          // Allow a small buffer for any pending writes
+          await new Promise(r => setTimeout(r, 500));
+
+          const rawBlob = new Blob(recordingChunksRef.current, { type: 'audio/webm' });
+
+          if (rawBlob.size > 0 && appointmentId) {
+            try {
+              setRecordingStatusMessage("Optimizing audio file...");
+
+              // Fix WebM duration metadata
+              // recordingDuration is in seconds, library expects milliseconds
+              const finalBlob = await new Promise<Blob>((resolveBlob) => {
+                fixWebmDuration(rawBlob, recordingDuration * 1000, (fixedBlob) => {
+                  resolveBlob(fixedBlob);
+                });
+              });
+
+              setRecordingStatusMessage("Uploading to secure storage...");
+
+              const publicUrl = await uploadAudioRecording(finalBlob, appointmentId, patientName || "Patient");
+
+              if (publicUrl) {
+                await saveRecordingMetadata(appointmentId, publicUrl, recordingDuration, patientName);
+                // toast.success("Recording saved"); // Replaced by Dialog
+                setRecordingStatusState('success');
+                setRecordingStatusMessage("Recording saved successfully!");
+                setRefreshRecordingsTrigger(prev => prev + 1);
+
+                // Close after a short delay
+                setTimeout(() => {
+                  setShowRecordingStatusDialog(false);
+                }, 2000);
+              } else {
+                throw new Error("Upload returned no URL");
+              }
+            } catch (error) {
+              console.error('Error saving recording:', error);
+              // toast.error("Failed to save recording");
+              setRecordingStatusState('error');
+              setRecordingStatusMessage("Failed to save recording. Please try again.");
+            }
+          } else {
+            console.warn("No chunks captured:", recordingChunksRef.current.length);
+            setRecordingStatusState('error');
+            if (recordingChunksRef.current.length === 0) {
+              setRecordingStatusMessage("Recording too short or no audio detected.");
+            } else {
+              setRecordingStatusMessage("No recording data was captured.");
+            }
+          }
+
+          setIsProcessingRecording(false);
+          recordingChunksRef.current = [];
+          resolve();
+        };
+
+        mediaRecorder.onstop = () => {
+          handleProcessing();
+        };
+
+        mediaRecorder.stop();
+
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(track => track.stop());
+        }
+
+        // Just clear the cleanup function reference. 
+        // We rely on the Safe Cleanup check in setupAudioAnalysis or simple garbage collection.
+        // If we want to force close instantly we can call it, but safely.
+        if (audioCleanup) {
+          audioCleanup();
+          setAudioCleanup(null);
+        }
+
+        setIsPaused(false);
+        setMediaRecorder(null);
+        setMediaStream(null);
+        setAudioAnalyzer(null);
+        setShowRecordingControlDialog(false);
+        if (recordingTimer) {
+          clearInterval(recordingTimer);
+          setRecordingTimer(null);
+        }
+      } else {
+        resolve();
+      }
+    });
+  };
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (recordingTimer) clearInterval(recordingTimer);
+      if (mediaRecorder && isRecording) mediaRecorder.stop();
+      if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
+      if (audioCleanup) audioCleanup();
+    };
+  }, [recordingTimer, mediaRecorder, mediaStream, isRecording, audioCleanup]);
 
   const fetchConsultationData = async () => {
     try {
@@ -391,6 +643,11 @@ export function EncounterFormDialog({
   const handleSave = async () => {
     setSaving(true);
     try {
+      if (isRecording) {
+        // Stop recording and wait for it to save. The stopRecording function handles the UI feedback.
+        await stopRecording();
+      }
+
       console.log('🔍 Saving encounter data');
 
       const encounterData: any = {
@@ -560,7 +817,7 @@ export function EncounterFormDialog({
           console.error('Error updating appointment:', appointmentError);
         }
 
-        toast({
+        formToast({
           title: "Success",
           description: "Encounter form updated successfully",
         });
@@ -600,7 +857,7 @@ export function EncounterFormDialog({
           console.error('Error updating appointment:', appointmentError);
         }
 
-        toast({
+        formToast({
           title: "Success",
           description: "Encounter form saved successfully",
         });
@@ -615,7 +872,7 @@ export function EncounterFormDialog({
       }
     } catch (error) {
       console.error('Error saving encounter:', error);
-      toast({
+      formToast({
         title: "Error",
         description: "Failed to save encounter form",
         variant: "destructive",
@@ -630,7 +887,12 @@ export function EncounterFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col touch-manipulation p-0">
+      <DialogContent
+        className="max-w-5xl max-h-[90vh] flex flex-col touch-manipulation p-0"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center justify-between">
             <div>
@@ -641,15 +903,72 @@ export function EncounterFormDialog({
                 <p className="text-sm text-blue-600 mt-1">Read-only view • Click Edit to make changes</p>
               )}
             </div>
-            {showViewMode && (
-              <Button
-                onClick={() => setIsEditMode(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            )}
+            <div className="flex items-center gap-2 mr-8">
+              {(isRecording || isProcessingRecording) ? (
+                <div className="flex items-center gap-2 bg-red-50 px-3 py-1.5 rounded-full border border-red-200">
+                  <div className="flex items-center gap-2 mr-2 border-r border-red-200 pr-3">
+                    <span className={`relative flex h-3 w-3 ${isPaused ? '' : 'animate-pulse'}`}>
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 ${isPaused ? 'hidden' : ''}`}></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                    <span className="font-mono font-medium text-red-900 text-sm">
+                      {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+
+                  {isProcessingRecording ? (
+                    <div className="flex items-center gap-2 text-xs font-medium text-red-700">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Saving...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-red-700 hover:text-red-900 hover:bg-red-100 rounded-full"
+                        onClick={isPaused ? resumeRecording : pauseRecording}
+                        title={isPaused ? "Resume" : "Pause"}
+                      >
+                        {isPaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-red-700 hover:text-red-900 hover:bg-red-100 rounded-full"
+                        onClick={() => stopRecording()}
+                        title="Stop & Save"
+                      >
+                        <Square className="h-4 w-4 fill-current" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                !showViewMode && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRecordingConsentDialog(true)}
+                    className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800 flex items-center gap-2 rounded-full px-4 shadow-sm transition-all"
+                  >
+                    <span className="relative flex h-2 w-2 mr-1">
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    </span>
+                    <Mic className="h-3.5 w-3.5" />
+                    <span className="font-medium text-sm">Record Audio</span>
+                  </Button>
+                )
+              )}
+
+              {showViewMode && (
+                <Button
+                  onClick={() => setIsEditMode(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
@@ -3219,6 +3538,22 @@ export function EncounterFormDialog({
                     />
                   </div>
                 </div>
+
+                {/* Recordings Section */}
+                <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 pointer-events-auto">
+                  <h3 className="text-lg font-semibold mb-4 text-blue-900 flex items-center gap-2">
+                    <FileAudio className="h-5 w-5" />
+                    Recordings
+                  </h3>
+                  {appointmentId && (
+                    <RecordingsList
+                      key={refreshRecordingsTrigger}
+                      appointmentId={appointmentId}
+                      patientName={patientName || "Patient"}
+                      isReadOnly={!!showViewMode}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -3265,11 +3600,74 @@ export function EncounterFormDialog({
                 )}
               </div>
             </div>
+
+            <RecordingConsentDialog
+              isOpen={showRecordingConsentDialog}
+              onClose={() => setShowRecordingConsentDialog(false)}
+              onConsent={() => { }}
+              onRecordingStart={startRecording}
+              patientName={patientName || "Patient"}
+              mode="encounter"
+            />
           </>
-        )
-        }
-      </DialogContent >
-    </Dialog >
+        )}
+
+        <Dialog open={showRecordingStatusDialog} onOpenChange={setShowRecordingStatusDialog}>
+          <DialogContent className="max-w-[340px] p-6 rounded-3xl border-none shadow-2xl bg-white outline-none" hideCloseButton={true}>
+            <div className="flex flex-col items-center justify-center text-center">
+
+              {/* Uploading State */}
+              {recordingStatusState === 'uploading' && (
+                <div className="py-4 space-y-6 w-full">
+                  <div className="relative mx-auto w-16 h-16 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-blue-500/10 rounded-full animate-ping" />
+                    <div className="relative bg-white rounded-full p-3.5 shadow-lg ring-1 ring-black/5">
+                      <CloudUpload className="w-8 h-8 text-blue-600 animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-bold text-gray-900">Saving Recording...</h3>
+                    <p className="text-sm font-medium text-gray-500">Syncing audio to secure storage</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Success State */}
+              {recordingStatusState === 'success' && (
+                <div className="py-4 space-y-6 w-full">
+                  <div className="mx-auto w-16 h-16 bg-green-50 rounded-full flex items-center justify-center shadow-sm border border-green-100">
+                    <Check className="w-8 h-8 text-green-600" strokeWidth={3} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-bold text-gray-900">Saved Successfully!</h3>
+                    <p className="text-sm font-medium text-green-600">{recordingStatusMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Error State */}
+              {recordingStatusState === 'error' && (
+                <div className="py-4 space-y-4 w-full">
+                  <div className="mx-auto w-16 h-16 bg-red-50 rounded-full flex items-center justify-center border border-red-100">
+                    <XCircle className="w-8 h-8 text-red-600" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-bold text-gray-900">Save Failed</h3>
+                    <p className="text-sm font-medium text-red-500">{recordingStatusMessage}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowRecordingStatusDialog(false)}
+                    className="mt-2 rounded-full w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold h-11"
+                  >
+                    Close
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </DialogContent>
+    </Dialog>
   );
 }
-

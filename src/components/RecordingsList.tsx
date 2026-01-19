@@ -21,17 +21,25 @@ import {
 import { listRecordingsForAppointment, deleteRecording } from "@/lib/audioRecordingService";
 import { toast } from "sonner";
 
+import { RecordingPlayerDialog } from "@/components/RecordingPlayerDialog";
+
 interface RecordingsListProps {
   appointmentId: string;
   patientName?: string;
+  isReadOnly?: boolean;
+  type?: 'consultation' | 'encounter';
 }
 
-export function RecordingsList({ appointmentId, patientName }: RecordingsListProps) {
+export function RecordingsList({ appointmentId, patientName, isReadOnly = false, type = 'encounter' }: RecordingsListProps) {
   const [recordings, setRecordings] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [playingUrl, setPlayingUrl] = useState<string | null>(null);
-  const [audioElements, setAudioElements] = useState<Map<string, HTMLAudioElement>>(new Map());
   const [audioDurations, setAudioDurations] = useState<Map<string, number>>(new Map());
+
+  // Player Dialog State
+  const [showPlayerDialog, setShowPlayerDialog] = useState(false);
+  const [playingRecordingUrl, setPlayingRecordingUrl] = useState<string | null>(null);
+  const [playingRecordingTitle, setPlayingRecordingTitle] = useState<string>('');
+
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [recordingToDelete, setRecordingToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -43,13 +51,11 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
   const loadRecordings = async () => {
     try {
       setLoading(true);
-      const recordingUrls = await listRecordingsForAppointment(appointmentId);
+      const recordingUrls = await listRecordingsForAppointment(appointmentId, type);
       setRecordings(recordingUrls);
 
       // Load durations for each recording
-      console.log('Loading durations for recordings:', recordingUrls);
       recordingUrls.forEach(url => {
-        console.log('Loading duration for:', url);
         loadAudioDuration(url);
       });
     } catch (error) {
@@ -62,31 +68,19 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
 
   const loadAudioDuration = (url: string) => {
     const audio = new Audio();
-
-    // Set CORS mode to handle cross-origin requests
     audio.crossOrigin = 'anonymous';
 
-    audio.addEventListener('loadedmetadata', () => {
-      console.log('Audio metadata loaded for:', url, 'Duration:', audio.duration);
+    const onLoaded = () => {
       if (isFinite(audio.duration) && audio.duration > 0) {
         setAudioDurations(prev => new Map(prev.set(url, audio.duration)));
       }
-    });
+    };
 
-    audio.addEventListener('error', (e) => {
-      console.error('Error loading audio metadata for:', url, e);
-    });
-
-    audio.addEventListener('canplaythrough', () => {
-      console.log('Audio can play through:', url, 'Duration:', audio.duration);
-      if (isFinite(audio.duration) && audio.duration > 0) {
-        setAudioDurations(prev => new Map(prev.set(url, audio.duration)));
-      }
-    });
+    audio.addEventListener('loadedmetadata', onLoaded);
+    audio.addEventListener('canplaythrough', onLoaded); // Redundant backup
 
     // Set the source after setting up event listeners
     audio.src = url;
-    audio.load();
   };
 
   const formatDuration = (seconds: number) => {
@@ -145,59 +139,51 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
     }
   };
 
-  const togglePlayback = (url: string) => {
-    const currentAudio = audioElements.get(url);
-    
-    if (playingUrl === url && currentAudio) {
-      // Pause current recording
-      currentAudio.pause();
-      setPlayingUrl(null);
-    } else {
-      // Stop any currently playing audio
-      if (playingUrl) {
-        const playingAudio = audioElements.get(playingUrl);
-        if (playingAudio) {
-          playingAudio.pause();
-          playingAudio.currentTime = 0;
-        }
-      }
+  const [playingRecordingDuration, setPlayingRecordingDuration] = useState<number>(0);
 
-      // Create or get audio element
-      let audio = audioElements.get(url);
-      if (!audio) {
-        audio = new Audio(url);
-        audio.addEventListener('ended', () => setPlayingUrl(null));
-        audio.addEventListener('error', () => {
-          toast.error('Failed to play recording');
-          setPlayingUrl(null);
-        });
-        setAudioElements(prev => new Map(prev).set(url, audio!));
-      }
-
-      // Play the recording
-      audio.play()
-        .then(() => setPlayingUrl(url))
-        .catch(error => {
-          console.error('Error playing audio:', error);
-          toast.error('Failed to play recording');
-        });
-    }
+  const handlePlayRecording = (url: string) => {
+    const title = `Recording ${getRecordingDateTime(url)}`;
+    setPlayingRecordingUrl(url);
+    setPlayingRecordingTitle(title);
+    setPlayingRecordingDuration(audioDurations.get(url) || 0); // Get duration from map
+    setShowPlayerDialog(true);
   };
 
-  const downloadRecording = (url: string) => {
+  const downloadRecording = async (url: string) => {
     try {
+      toast.info("Preparing download...");
+
+      // Fetch the file as a blob to force download
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Network response was not ok");
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
       const link = document.createElement('a');
-      link.href = url;
+      link.href = blobUrl;
       // Create a filename based on the recording date/time
       const dateTime = getRecordingDateTime(url);
-      link.download = `Recording_${dateTime.replace(/[/:,\s]/g, '_')}.webm`;
+
+      // Determine extension from blob type or url
+      let extension = 'webm';
+      if (blob.type.includes('mp4')) extension = 'mp4';
+      else if (blob.type.includes('ogg')) extension = 'ogg';
+      else if (blob.type.includes('wav')) extension = 'wav';
+
+      link.download = `Recording_${dateTime.replace(/[/:,\s]/g, '_')}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast.success('Recording download started');
+
+      // Clean up
+      window.URL.revokeObjectURL(blobUrl);
+      toast.success('Recording downloaded');
     } catch (error) {
       console.error('Error downloading recording:', error);
       toast.error('Failed to download recording');
+      // Fallback
+      window.open(url, '_blank');
     }
   };
 
@@ -215,19 +201,10 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
       if (success) {
         setRecordings(prev => prev.filter(r => r !== recordingToDelete));
 
-        // Clean up audio element
-        const audio = audioElements.get(recordingToDelete);
-        if (audio) {
-          audio.pause();
-          setAudioElements(prev => {
-            const newMap = new Map(prev);
-            newMap.delete(recordingToDelete);
-            return newMap;
-          });
-        }
-
-        if (playingUrl === recordingToDelete) {
-          setPlayingUrl(null);
+        // Also close player if deleting currently playing
+        if (playingRecordingUrl === recordingToDelete) {
+          setShowPlayerDialog(false);
+          setPlayingRecordingUrl(null);
         }
 
         toast.success('Recording deleted successfully');
@@ -289,17 +266,11 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => togglePlayback(url)}
+                onClick={() => handlePlayRecording(url)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200"
               >
-                {playingUrl === url ? (
-                  <Pause className="h-4 w-4 text-blue-600" />
-                ) : (
-                  <Play className="h-4 w-4 text-blue-600" />
-                )}
-                <span className="text-sm font-medium text-gray-700">
-                  {playingUrl === url ? 'Pause' : 'Play'}
-                </span>
+                <Play className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-700">Play</span>
               </Button>
 
               {/* Recording Info */}
@@ -341,15 +312,17 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
               >
                 <Download className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDeleteRecording(url)}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                title="Delete recording"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {!isReadOnly && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteRecording(url)}
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                  title="Delete recording"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -360,6 +333,15 @@ export function RecordingsList({ appointmentId, patientName }: RecordingsListPro
   return (
     <>
       {recordingsContent}
+
+      {/* Detail Player Dialog */}
+      <RecordingPlayerDialog
+        isOpen={showPlayerDialog}
+        onClose={() => setShowPlayerDialog(false)}
+        audioUrl={playingRecordingUrl}
+        title={playingRecordingTitle}
+        duration={playingRecordingDuration}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

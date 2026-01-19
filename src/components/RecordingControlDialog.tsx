@@ -17,6 +17,7 @@ interface RecordingControlDialogProps {
   duration: number;
   audioLevel: number;
   patientName?: string;
+  isProcessing?: boolean;
 }
 
 export function RecordingControlDialog({
@@ -25,9 +26,10 @@ export function RecordingControlDialog({
   onStop,
   duration,
   audioLevel,
-  patientName = "Patient"
+  patientName = "Patient",
+  isProcessing = false
 }: RecordingControlDialogProps) {
-  
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -35,7 +37,9 @@ export function RecordingControlDialog({
   };
 
   const handleStop = () => {
+    if (isProcessing) return;
     onStop();
+    // Allow parent to handle closing
     onClose();
   };
 
@@ -105,11 +109,10 @@ export function RecordingControlDialog({
                 return (
                   <div
                     key={i}
-                    className={`w-2 rounded-t transition-all duration-75 ${
-                      isActive
+                    className={`w-2 rounded-t transition-all duration-75 ${isActive
                         ? `${getVolumeColor()} opacity-100`
                         : 'bg-gray-300 opacity-50'
-                    }`}
+                      }`}
                     style={{ height: `${height}px` }}
                   />
                 );
@@ -125,17 +128,25 @@ export function RecordingControlDialog({
             </div>
           </div>
 
-
-
           {/* Control Buttons */}
           <div className="flex justify-center">
             {/* Stop Button */}
             <Button
               onClick={handleStop}
-              className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 py-3"
+              className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 py-3 disabled:opacity-70 disabled:cursor-not-allowed"
+              disabled={isProcessing}
             >
-              <Square className="h-4 w-4" />
-              Stop & Save
+              {isProcessing ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Square className="h-4 w-4" />
+                  Stop & Save
+                </>
+              )}
             </Button>
           </div>
 

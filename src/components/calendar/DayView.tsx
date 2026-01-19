@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import { isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Clock, User, MapPin, MoreHorizontal, MoreVertical, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit, Trash2, ClipboardList, Calendar, FileEdit, Plus } from "lucide-react";
+import { Clock, User, MapPin, MoreHorizontal, MoreVertical, CheckCircle, XCircle, AlertCircle, Clock3, UserCheck, UserCircle, Heart, Smile, FileText, Edit, Trash2, ClipboardList, Calendar, FileEdit, Plus, History } from "lucide-react";
 import { supabase as supabaseClient } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -56,6 +56,7 @@ import { EncounterFormDialog } from "@/components/calendar/EncounterFormDialog";
 import { AppointmentSchedulerDialog } from "@/components/calendar/AppointmentSchedulerDialog";
 import { NewLabScriptForm } from "@/components/NewLabScriptForm";
 import { toast } from "@/components/ui/sonner";
+import { PatientAppointmentHistoryDialog } from "@/components/calendar/PatientAppointmentHistoryDialog";
 
 export interface Appointment {
   id: string;
@@ -236,6 +237,13 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     appointment: Appointment;
     open: boolean;
   } | null>(null);
+
+  // State for appointment history dialog
+  const [historyDialog, setHistoryDialog] = useState<{
+    open: boolean;
+    patientId?: string;
+    patientName: string;
+  }>({ open: false, patientName: "" });
 
   // Use a REF to store patient info - refs are NOT affected by React state updates or dialog handlers
   // This guarantees the patient info persists throughout the entire scheduling flow
@@ -696,6 +704,15 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     } catch (error) {
       console.error('Error searching for patient:', error);
     }
+  };
+
+  const handleViewAppointmentHistory = (appointment: Appointment) => {
+    setOpenContextMenuId(null);
+    setHistoryDialog({
+      open: true,
+      patientId: appointment.patientId,
+      patientName: appointment.patient
+    });
   };
 
   // Long-press handlers for appointment cards on touch devices
@@ -2781,86 +2798,85 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent className="w-56 touch-manipulation select-none" align="start" side="right">
                                       {appointment.statusCode !== 'RESCH' && (
-                                        <>
-                                          <DropdownMenuItem {...handleSafeMenuItemClick(() => handleEncounterForm(appointment))}>
-                                            <ClipboardList className="mr-2 h-4 w-4" />
-                                            {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem {...handleSafeMenuItemClick(() => handleAddNewLabScript(appointment))}>
-                                            <FileEdit className="mr-2 h-4 w-4" />
-                                            Add New Lab Script
-                                          </DropdownMenuItem>
-                                        </>
+                                        <DropdownMenuItem {...handleSafeMenuItemClick(() => handleEncounterForm(appointment))}>
+                                          <ClipboardList className="mr-2 h-4 w-4" />
+                                          {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
+                                        </DropdownMenuItem>
                                       )}
+                                      {appointment.statusCode !== 'RESCH' && (
+                                        <DropdownMenuItem {...handleSafeMenuItemClick(() => handleAddNewLabScript(appointment))}>
+                                          <FileEdit className="mr-2 h-4 w-4" />
+                                          Add New Lab Script
+                                        </DropdownMenuItem>
+                                      )}
+                                      {appointment.statusCode !== 'CMPLT' && <DropdownMenuSeparator />}
                                       {appointment.statusCode !== 'CMPLT' && (
-                                        <>
-                                          <DropdownMenuSeparator />
-                                          <DropdownMenuSub>
-                                            <DropdownMenuSubTrigger className="touch-manipulation select-none">
-                                              <CheckCircle className="mr-2 h-4 w-4" />
-                                              Change Status
-                                            </DropdownMenuSubTrigger>
-                                            <DropdownMenuSubContent className="touch-manipulation select-none">
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleCompleteAppointment(appointment))}>
-                                                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                                                Complete Appointment
-                                              </DropdownMenuItem>
-                                              <DropdownMenuSeparator />
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
-                                                <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
-                                                Not Confirmed
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
-                                                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                                                Appointment Confirmed
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
-                                                <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                                                Electronically Confirmed
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
-                                                <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
-                                                Emergency Patient
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
-                                                <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
-                                                Patient has Arrived
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
-                                                <UserCheck className="mr-2 h-4 w-4 text-indigo-600" />
-                                                Seated & Ready
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
-                                                <Clock3 className="mr-2 h-4 w-4 text-orange-500" />
-                                                Left Message 1
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
-                                                <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
-                                                Left Message 2
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
-                                                <UserCircle className="mr-2 h-4 w-4 text-purple-600" />
-                                                Multiple Appointments
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
-                                                <Calendar className="mr-2 h-4 w-4 text-blue-400" />
-                                                2 Week Check
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
-                                                <XCircle className="mr-2 h-4 w-4 text-red-500" />
-                                                No Show
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleReschedule(appointment))}>
-                                                <Clock className="mr-2 h-4 w-4 text-amber-600" />
-                                                Reschedule Appointment
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
-                                                <XCircle className="mr-2 h-4 w-4 text-red-600" />
-                                                Cancelled
-                                              </DropdownMenuItem>
-                                            </DropdownMenuSubContent>
-                                          </DropdownMenuSub>
-                                        </>
+                                        <DropdownMenuSub>
+                                          <DropdownMenuSubTrigger className="touch-manipulation select-none">
+                                            <CheckCircle className="mr-2 h-4 w-4" />
+                                            Change Status
+                                          </DropdownMenuSubTrigger>
+                                          <DropdownMenuSubContent className="touch-manipulation select-none">
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleCompleteAppointment(appointment))}>
+                                              <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                              Complete Appointment
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
+                                              <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
+                                              Not Confirmed
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
+                                              <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                              Appointment Confirmed
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
+                                              <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                              Electronically Confirmed
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
+                                              <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
+                                              Emergency Patient
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
+                                              <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
+                                              Patient has Arrived
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
+                                              <UserCheck className="mr-2 h-4 w-4 text-indigo-600" />
+                                              Seated & Ready
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
+                                              <Clock3 className="mr-2 h-4 w-4 text-orange-500" />
+                                              Left Message 1
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
+                                              <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
+                                              Left Message 2
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
+                                              <UserCircle className="mr-2 h-4 w-4 text-purple-600" />
+                                              Multiple Appointments
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
+                                              <Calendar className="mr-2 h-4 w-4 text-blue-400" />
+                                              2 Week Check
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
+                                              <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                                              No Show
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleReschedule(appointment))}>
+                                              <Clock className="mr-2 h-4 w-4 text-amber-600" />
+                                              Reschedule Appointment
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem {...handleSafeMenuItemClick(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
+                                              <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                                              Cancelled
+                                            </DropdownMenuItem>
+                                          </DropdownMenuSubContent>
+                                        </DropdownMenuSub>
+
                                       )}
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem {...handleSafeMenuItemClick(() => {
@@ -2884,6 +2900,10 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                                       })}>
                                         <Smile className="mr-2 h-4 w-4 text-orange-500" />
                                         Comfort Preference
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem {...handleSafeMenuItemClick(() => handleViewAppointmentHistory(appointment))}>
+                                        <History className="mr-2 h-4 w-4" />
+                                        Appointment History
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                       {appointment.statusCode !== 'CMPLT' && (
@@ -3146,88 +3166,87 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                         </ContextMenuTrigger>
                         <ContextMenuContent className="w-56 touch-manipulation select-none">
                           {appointment.statusCode !== 'RESCH' && (
-                            <>
-                              <ContextMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
-                                <ClipboardList className="mr-2 h-4 w-4" />
-                                {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
-                              </ContextMenuItem>
-                              <ContextMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
-                                <FileEdit className="mr-2 h-4 w-4" />
-                                Add New Lab Script
-                              </ContextMenuItem>
-                            </>
+                            <ContextMenuItem {...handleMenuItemAction(() => handleEncounterForm(appointment))}>
+                              <ClipboardList className="mr-2 h-4 w-4" />
+                              {appointmentEncounterStatus[appointment.id] ? 'View Encounter Form' : 'Encounter Form'}
+                            </ContextMenuItem>
                           )}
+                          {appointment.statusCode !== 'RESCH' && (
+                            <ContextMenuItem {...handleMenuItemAction(() => handleAddNewLabScript(appointment))}>
+                              <FileEdit className="mr-2 h-4 w-4" />
+                              Add New Lab Script
+                            </ContextMenuItem>
+                          )}
+                          {appointment.statusCode !== 'CMPLT' && <ContextMenuSeparator />}
                           {appointment.statusCode !== 'CMPLT' && (
-                            <>
-                              <ContextMenuSeparator />
-                              <ContextMenuSub>
-                                <ContextMenuSubTrigger className="touch-manipulation select-none" {...handleSubMenuTrigger()}>
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Change Status
-                                </ContextMenuSubTrigger>
-                                <ContextMenuSubContent className="touch-manipulation select-none">
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleCompleteAppointment(appointment))}>
-                                    <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                                    Complete Appointment
-                                  </ContextMenuItem>
-                                  <ContextMenuSeparator />
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
-                                    <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
-                                    Not Confirmed
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
-                                    <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                                    Appointment Confirmed
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
-                                    <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                                    Electronically Confirmed
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
-                                    <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
-                                    Emergency Patient
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
-                                    <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
-                                    Patient has Arrived
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
-                                    <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
-                                    Ready for Operatory
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
-                                    <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
-                                    Left 1st Message
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
-                                    <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
-                                    Left 2nd Message
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
-                                    <CheckCircle className="mr-2 h-4 w-4 text-indigo-600" />
-                                    Multi-Appointment
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
-                                    <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
-                                    2 Week Calls
-                                  </ContextMenuItem>
-                                  <ContextMenuSeparator />
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
-                                    <XCircle className="mr-2 h-4 w-4 text-red-700" />
-                                    No Show
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleReschedule(appointment))}>
-                                    <Clock className="mr-2 h-4 w-4 text-amber-600" />
-                                    Reschedule Appointment
-                                  </ContextMenuItem>
-                                  <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
-                                    <XCircle className="mr-2 h-4 w-4 text-slate-600" />
-                                    Cancel Appointment
-                                  </ContextMenuItem>
+                            <ContextMenuSub>
+                              <ContextMenuSubTrigger className="touch-manipulation select-none" {...handleSubMenuTrigger()}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Change Status
+                              </ContextMenuSubTrigger>
+                              <ContextMenuSubContent className="touch-manipulation select-none">
+                                <ContextMenuItem {...handleMenuItemAction(() => handleCompleteAppointment(appointment))}>
+                                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                  Complete Appointment
+                                </ContextMenuItem>
+                                <ContextMenuSeparator />
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '?????'))}>
+                                  <AlertCircle className="mr-2 h-4 w-4 text-gray-400" />
+                                  Not Confirmed
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'FIRM'))}>
+                                  <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                  Appointment Confirmed
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EFIRM'))}>
+                                  <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                  Electronically Confirmed
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'EMER'))}>
+                                  <AlertCircle className="mr-2 h-4 w-4 text-red-600" />
+                                  Emergency Patient
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'HERE'))}>
+                                  <UserCheck className="mr-2 h-4 w-4 text-blue-600" />
+                                  Patient has Arrived
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'READY'))}>
+                                  <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
+                                  Ready for Operatory
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM1'))}>
+                                  <Clock3 className="mr-2 h-4 w-4 text-yellow-600" />
+                                  Left 1st Message
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'LM2'))}>
+                                  <Clock3 className="mr-2 h-4 w-4 text-orange-600" />
+                                  Left 2nd Message
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'MULTI'))}>
+                                  <CheckCircle className="mr-2 h-4 w-4 text-indigo-600" />
+                                  Multi-Appointment
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, '2wk'))}>
+                                  <Clock3 className="mr-2 h-4 w-4 text-pink-600" />
+                                  2 Week Calls
+                                </ContextMenuItem>
+                                <ContextMenuSeparator />
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'NSHOW'))}>
+                                  <XCircle className="mr-2 h-4 w-4 text-red-700" />
+                                  No Show
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleReschedule(appointment))}>
+                                  <Clock className="mr-2 h-4 w-4 text-amber-600" />
+                                  Reschedule Appointment
+                                </ContextMenuItem>
+                                <ContextMenuItem {...handleMenuItemAction(() => handleStatusChangeFromMenu(appointment.id, 'CANCL'))}>
+                                  <XCircle className="mr-2 h-4 w-4 text-slate-600" />
+                                  Cancel Appointment
+                                </ContextMenuItem>
 
-                                </ContextMenuSubContent>
-                              </ContextMenuSub>
-                            </>
+                              </ContextMenuSubContent>
+                            </ContextMenuSub>
+
                           )}
                           <ContextMenuSeparator />
                           {appointment.type === 'consultation' ? (
@@ -3248,6 +3267,10 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                           <ContextMenuItem {...handleMenuItemAction(() => handleViewComfortPreference(appointment))}>
                             <Smile className="mr-2 h-4 w-4" />
                             View Comfort Preference
+                          </ContextMenuItem>
+                          <ContextMenuItem {...handleMenuItemAction(() => handleViewAppointmentHistory(appointment))}>
+                            <History className="mr-2 h-4 w-4" />
+                            Appointment History
                           </ContextMenuItem>
                           <ContextMenuSeparator />
                           {appointment.statusCode !== 'CMPLT' && (
@@ -3508,8 +3531,8 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
               })}
             </div>
           </div>
-        </div>
-      </div>
+        </div >
+      </div >
 
       {/* Only render dialogs when not in scheduler mode */}
       {
@@ -4078,6 +4101,15 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
               onClose={() => setLabScriptFormOpen(false)}
               onSubmit={handleLabScriptSubmit}
               initialPatientName={labScriptPatientName}
+            />
+
+            <PatientAppointmentHistoryDialog
+              open={historyDialog.open}
+              onOpenChange={(open) => setHistoryDialog(prev => ({ ...prev, open }))}
+              patientId={historyDialog.patientId}
+              patientName={historyDialog.patientName}
+              onFillEncounter={handleEncounterForm}
+              onViewDetails={onEdit}
             />
           </>
         )

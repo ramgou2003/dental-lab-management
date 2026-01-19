@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, MapPin, Heart, DollarSign, FileText, AlertCircle, CheckCircle, XCircle, Info, BarChart3, Plus, RefreshCw, Mic, FileAudio, Edit } from "lucide-react";
+import fixWebmDuration from "fix-webm-duration";
+import { ArrowLeft, Calendar, Clock, User, Phone, Mail, MapPin, Heart, DollarSign, FileText, AlertCircle, CheckCircle, XCircle, Info, BarChart3, Plus, RefreshCw, Mic, FileAudio, Edit, CloudUpload, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -61,7 +62,14 @@ const ConsultationSessionPage = () => {
   const [showNewPatientPacketDialog, setShowNewPatientPacketDialog] = useState(false);
   const [showConsultationFormDialog, setShowConsultationFormDialog] = useState(false);
   const [showConsultationPreviewDialog, setShowConsultationPreviewDialog] = useState(false);
+
   const [showEditAppointmentDialog, setShowEditAppointmentDialog] = useState(false);
+
+  // New Status UI State
+  const [showRecordingStatusDialog, setShowRecordingStatusDialog] = useState(false);
+  const [recordingStatusState, setRecordingStatusState] = useState<'uploading' | 'success' | 'error'>('uploading');
+  const [recordingStatusMessage, setRecordingStatusMessage] = useState("Saving recording...");
+
   const formRef = useRef<NewPatientPacketFormRef>(null);
 
   const tabs = [
@@ -471,38 +479,43 @@ const ConsultationSessionPage = () => {
   const stopRecording = () => {
     if (mediaRecorder && isRecording && !isProcessingRecording) {
       console.log('Stopping recording...');
-      console.log('Current chunks before stop:', recordingChunks.length);
-      console.log('MediaRecorder state:', mediaRecorder.state);
 
       // Prevent multiple calls to stopRecording
       setIsRecording(false);
       setIsProcessingRecording(true);
+      setShowRecordingControlDialog(false); // Close control dialog immediately
 
-      // Process and save the recording immediately with current chunks
       const processRecording = async () => {
-        console.log('Processing recording with chunks:', recordingChunks.length);
+        // Show status dialog
+        setShowRecordingStatusDialog(true);
+        setRecordingStatusState('uploading');
+        setRecordingStatusMessage("Processing recording data...");
 
-        // Give a small delay to ensure any final data is collected
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Combine all recording chunks into a single blob
-        const finalBlob = new Blob(recordingChunks, { type: 'audio/webm' });
-        console.log('Final recording blob size:', finalBlob.size);
-        console.log('Recording chunks details:', recordingChunks.map(chunk => chunk.size));
+        const rawBlob = new Blob(recordingChunks, { type: 'audio/webm' });
 
-        // Upload the recording to Supabase Storage
-        if (finalBlob.size > 0 && appointmentId) {
+        if (rawBlob.size > 0 && appointmentId) {
           try {
-            toast.info("Saving recording...");
+            setRecordingStatusMessage("Optimizing audio file...");
+
+            // Fix WebM duration
+            const finalBlob = await new Promise<Blob>((resolveBlob) => {
+              fixWebmDuration(rawBlob, recordingDuration * 1000, (fixedBlob) => {
+                resolveBlob(fixedBlob);
+              });
+            });
+
+            setRecordingStatusMessage("Uploading to secure storage...");
 
             const audioUrl = await uploadAudioRecording(
               finalBlob,
               appointmentId,
-              appointmentData?.patient_name
+              appointmentData?.patient_name,
+              'consultation'
             );
 
             if (audioUrl) {
-              // Save recording metadata to database
               await saveRecordingMetadata(
                 appointmentId,
                 audioUrl,
@@ -510,72 +523,57 @@ const ConsultationSessionPage = () => {
                 appointmentData?.patient_name
               );
 
-              console.log('Recording saved successfully:', audioUrl);
-              toast.success("Recording stopped and saved");
+              setRecordingStatusState('success');
+              setRecordingStatusMessage("Saved Successfully!");
+
+              // Refresh triggering
+              setRecordingChunks([]);
+
+              // Auto close success
+              setTimeout(() => {
+                setShowRecordingStatusDialog(false);
+              }, 2000);
+            } else {
+              throw new Error("Upload failed");
             }
           } catch (error) {
             console.error('Error saving recording:', error);
-            toast.error("Failed to save recording");
+            setRecordingStatusState('error');
+            setRecordingStatusMessage("Save Failed. Please try again.");
           }
         } else {
-          console.warn('No recording data to save or missing appointment ID');
-          console.warn('Blob size:', finalBlob.size, 'Appointment ID:', appointmentId);
-          console.warn('Chunks:', recordingChunks.length);
-          toast.warning("No recording data to save");
+          setRecordingStatusState('error');
+          setRecordingStatusMessage("No recording data captured.");
         }
 
-        // Reset processing state
         setIsProcessingRecording(false);
       };
 
-      // Set up a simple stop handler that doesn't duplicate the upload logic
       mediaRecorder.onstop = () => {
-        console.log('MediaRecorder stopped');
+        // Trigger processing when stop completes
+        setTimeout(processRecording, 300);
       };
 
-      // Request any remaining data before stopping
-      if (mediaRecorder.state === 'recording') {
-        mediaRecorder.requestData();
-        // Small delay to ensure data is collected
-        setTimeout(() => {
-          if (mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-          }
-        }, 100);
-      } else if (mediaRecorder.state === 'paused') {
-        mediaRecorder.stop();
-      }
-
-      // Stop all tracks to release the microphone
+      // Stop recorder and tracks
+      mediaRecorder.stop();
       if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
       }
 
-      // Clean up audio analysis
+      // Cleanup
       if (audioCleanup) {
         audioCleanup();
         setAudioCleanup(null);
       }
-
-      // Clean up state
       setIsPaused(false);
       setMediaRecorder(null);
       setMediaStream(null);
       setAudioAnalyzer(null);
       setAudioLevel(-60);
-      setShowRecordingControlDialog(false);
-
       if (recordingTimer) {
         clearInterval(recordingTimer);
         setRecordingTimer(null);
       }
-
-      // Process the recording after a short delay to ensure MediaRecorder has stopped
-      setTimeout(() => {
-        processRecording();
-        // Clear chunks after processing
-        setRecordingChunks([]);
-      }, 300);
     }
   };
 
@@ -681,34 +679,34 @@ const ConsultationSessionPage = () => {
             console.log('Trying consultation record lookup...');
 
             // Fallback: try to find consultation record by appointment_id or consultation_patient_id
-          console.log('Fetching consultation data for appointment:', appointmentData.id);
+            console.log('Fetching consultation data for appointment:', appointmentData.id);
 
-          // First try by appointment_id
-          let consultationRecord = null;
-          let consultationError = null;
+            // First try by appointment_id
+            let consultationRecord = null;
+            let consultationError = null;
 
-          const { data: consultationByAppointment, error: appointmentError } = await supabase
-            .from('consultations')
-            .select('*, new_patient_packets(*)')
-            .eq('appointment_id', appointmentData.id)
-            .maybeSingle();
-
-          if (!appointmentError && consultationByAppointment) {
-            consultationRecord = consultationByAppointment;
-          } else {
-            // If not found by appointment_id, try by consultation_patient_id
-            console.log('No consultation found by appointment_id, trying by consultation_patient_id:', consultationData.id);
-            const { data: consultationByPatient, error: patientError } = await supabase
+            const { data: consultationByAppointment, error: appointmentError } = await supabase
               .from('consultations')
               .select('*, new_patient_packets(*)')
-              .eq('consultation_patient_id', consultationData.id)
+              .eq('appointment_id', appointmentData.id)
               .maybeSingle();
 
-            if (!patientError && consultationByPatient) {
-              consultationRecord = consultationByPatient;
+            if (!appointmentError && consultationByAppointment) {
+              consultationRecord = consultationByAppointment;
+            } else {
+              // If not found by appointment_id, try by consultation_patient_id
+              console.log('No consultation found by appointment_id, trying by consultation_patient_id:', consultationData.id);
+              const { data: consultationByPatient, error: patientError } = await supabase
+                .from('consultations')
+                .select('*, new_patient_packets(*)')
+                .eq('consultation_patient_id', consultationData.id)
+                .maybeSingle();
+
+              if (!patientError && consultationByPatient) {
+                consultationRecord = consultationByPatient;
+              }
+              consultationError = patientError;
             }
-            consultationError = patientError;
-          }
 
             if (!consultationError && consultationRecord?.new_patient_packets) {
               console.log('Found patient packet via consultation record:', consultationRecord.new_patient_packets.id);
@@ -1247,11 +1245,10 @@ const ConsultationSessionPage = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${
-                      isActive
-                        ? `${tab.bgColor} ${tab.activeColor} shadow-sm border ${tab.borderColor}`
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                    }`}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${isActive
+                      ? `${tab.bgColor} ${tab.activeColor} shadow-sm border ${tab.borderColor}`
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
                   >
                     <Icon className="h-4 w-4" />
                     <span className="whitespace-nowrap">{tab.label}</span>
@@ -1309,13 +1306,12 @@ const ConsultationSessionPage = () => {
                   }
                 }}
                 disabled={!consultationDataLoaded}
-                className={`ml-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${
-                  !consultationDataLoaded
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : consultationCompleted
+                className={`ml-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2 ${!consultationDataLoaded
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : consultationCompleted
                     ? 'bg-green-600 hover:bg-green-700 text-white'
                     : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
+                  }`}
               >
                 {(() => {
                   console.log('🎨 Rendering button - consultationDataLoaded:', consultationDataLoaded, 'consultationCompleted:', consultationCompleted, 'packetId:', packetId);
@@ -1599,17 +1595,17 @@ const ConsultationSessionPage = () => {
 
                   {/* Empty State for Contact Information */}
                   {!appointmentData?.phone && !appointmentData?.personal_phone &&
-                   !appointmentData?.email && !appointmentData?.personal_email &&
-                   !appointmentData?.best_contact_time && !appointmentData?.phone_call_preference &&
-                   !appointmentData?.preferred_contact && (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="text-center">
-                        <Phone className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500 font-medium">No contact information</p>
-                        <p className="text-xs text-gray-400">Contact details will appear here</p>
+                    !appointmentData?.email && !appointmentData?.personal_email &&
+                    !appointmentData?.best_contact_time && !appointmentData?.phone_call_preference &&
+                    !appointmentData?.preferred_contact && (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-center">
+                          <Phone className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500 font-medium">No contact information</p>
+                          <p className="text-xs text-gray-400">Contact details will appear here</p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
 
                 {/* Medical & Dental Information Section */}
@@ -1716,49 +1712,49 @@ const ConsultationSessionPage = () => {
                       {/* Medical Information Section */}
                       {((appointmentData?.medical_conditions && appointmentData.medical_conditions.length > 0) ||
                         appointmentData?.has_medical_insurance) && (
-                        <div className="space-y-3 border-t border-gray-200 pt-4">
-                          <div className="flex items-center justify-center gap-2 mb-3">
-                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                              <Heart className="h-4 w-4 text-red-600" />
+                          <div className="space-y-3 border-t border-gray-200 pt-4">
+                            <div className="flex items-center justify-center gap-2 mb-3">
+                              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                <Heart className="h-4 w-4 text-red-600" />
+                              </div>
+                              <h4 className="text-lg font-semibold text-gray-900">Medical Information</h4>
                             </div>
-                            <h4 className="text-lg font-semibold text-gray-900">Medical Information</h4>
-                          </div>
 
-                          {appointmentData?.medical_conditions && appointmentData.medical_conditions.length > 0 && (
-                            <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                              <div className="flex items-start gap-3">
-                                <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  <AlertCircle className="h-3 w-3 text-red-600" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-red-900 mb-2">Medical Conditions</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {appointmentData.medical_conditions.map((condition: string, index: number) => (
-                                      <Badge key={index} variant="outline" className="bg-red-100 border-red-300 text-red-800 text-xs">
-                                        {condition}
-                                      </Badge>
-                                    ))}
+                            {appointmentData?.medical_conditions && appointmentData.medical_conditions.length > 0 && (
+                              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <AlertCircle className="h-3 w-3 text-red-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-red-900 mb-2">Medical Conditions</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {appointmentData.medical_conditions.map((condition: string, index: number) => (
+                                        <Badge key={index} variant="outline" className="bg-red-100 border-red-300 text-red-800 text-xs">
+                                          {condition}
+                                        </Badge>
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            )}
 
-                          {appointmentData?.has_medical_insurance && (
-                            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                              <div className="flex items-start gap-3">
-                                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                  <CheckCircle className="h-3 w-3 text-green-600" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-green-900 mb-1">Medical Insurance</p>
-                                  <p className="text-sm text-green-800 capitalize">{appointmentData.has_medical_insurance}</p>
+                            {appointmentData?.has_medical_insurance && (
+                              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <CheckCircle className="h-3 w-3 text-green-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-green-900 mb-1">Medical Insurance</p>
+                                    <p className="text-sm text-green-800 capitalize">{appointmentData.has_medical_insurance}</p>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                            )}
+                          </div>
+                        )}
                     </>
                   ) : (
                     <div className="flex items-center justify-center py-8">
@@ -1903,17 +1899,15 @@ const ConsultationSessionPage = () => {
                         )}
 
                         {appointmentData?.agree_to_terms !== undefined && (
-                          <div className={`p-4 rounded-lg border ${
-                            appointmentData.agree_to_terms
-                              ? 'bg-green-50 border-green-200'
-                              : 'bg-red-50 border-red-200'
-                          }`}>
+                          <div className={`p-4 rounded-lg border ${appointmentData.agree_to_terms
+                            ? 'bg-green-50 border-green-200'
+                            : 'bg-red-50 border-red-200'
+                            }`}>
                             <div className="flex items-start gap-3">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                                appointmentData.agree_to_terms
-                                  ? 'bg-green-100'
-                                  : 'bg-red-100'
-                              }`}>
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${appointmentData.agree_to_terms
+                                ? 'bg-green-100'
+                                : 'bg-red-100'
+                                }`}>
                                 {appointmentData.agree_to_terms ? (
                                   <CheckCircle className="h-3 w-3 text-green-600" />
                                 ) : (
@@ -1921,18 +1915,16 @@ const ConsultationSessionPage = () => {
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium mb-1 ${
-                                  appointmentData.agree_to_terms
-                                    ? 'text-green-900'
-                                    : 'text-red-900'
-                                }`}>
+                                <p className={`text-sm font-medium mb-1 ${appointmentData.agree_to_terms
+                                  ? 'text-green-900'
+                                  : 'text-red-900'
+                                  }`}>
                                   Terms Agreement
                                 </p>
-                                <p className={`text-sm ${
-                                  appointmentData.agree_to_terms
-                                    ? 'text-green-800'
-                                    : 'text-red-800'
-                                }`}>
+                                <p className={`text-sm ${appointmentData.agree_to_terms
+                                  ? 'text-green-800'
+                                  : 'text-red-800'
+                                  }`}>
                                   {appointmentData.agree_to_terms ? 'Agreed to terms' : 'Did not agree to terms'}
                                 </p>
                               </div>
@@ -1956,175 +1948,175 @@ const ConsultationSessionPage = () => {
 
             {/* Main Content Container */}
             <Card className="bg-white border border-gray-200 h-full flex flex-col overflow-hidden lg:col-span-4">
-                <CardContent className="flex-1 overflow-y-auto p-6 pb-8 scrollbar-modern">
-                  {/* New Patient Packet Tab */}
-                  {activeTab === "new-patient-packet" && (
-                    <div className="space-y-4">
-                      {/* Header */}
-                      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <FileText className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">New Patient Packet</h3>
-                            <p className="text-sm text-gray-500">
-                              {hasFilledPacket
-                                ? (isEditingPacket ? 'Editing patient packet information' : 'Filled patient packet information')
-                                : 'Preview and review patient information'
-                              }
-                            </p>
-                          </div>
+              <CardContent className="flex-1 overflow-y-auto p-6 pb-8 scrollbar-modern">
+                {/* New Patient Packet Tab */}
+                {activeTab === "new-patient-packet" && (
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <FileText className="h-5 w-5 text-blue-600" />
                         </div>
-                        <div className="flex items-center gap-3">
-                          {hasFilledPacket && !isEditingPacket && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setIsEditingPacket(true)}
-                              className="flex items-center gap-2"
-                            >
-                              <FileText className="h-4 w-4" />
-                              Edit
-                            </Button>
-                          )}
-                          {isEditingPacket && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setIsEditingPacket(false)}
-                                className="flex items-center gap-2"
-                              >
-                                <XCircle className="h-4 w-4" />
-                                Cancel
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  console.log('Update Form button clicked, calling submitForm...');
-                                  formRef.current?.submitForm();
-                                }}
-                                size="sm"
-                                className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                                Update Form
-                              </Button>
-                            </>
-                          )}
-                          <Badge className={hasFilledPacket
-                            ? (isEditingPacket ? "bg-orange-100 text-orange-800 border-orange-300" : "bg-green-100 text-green-800 border-green-300")
-                            : "bg-blue-100 text-blue-800 border-blue-300"
-                          }>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">New Patient Packet</h3>
+                          <p className="text-sm text-gray-500">
                             {hasFilledPacket
-                              ? (isEditingPacket ? 'Editing' : 'Filled')
-                              : 'Preview Mode'
+                              ? (isEditingPacket ? 'Editing patient packet information' : 'Filled patient packet information')
+                              : 'Preview and review patient information'
                             }
-                          </Badge>
+                          </p>
                         </div>
                       </div>
-
-                  {/* Loading State */}
-                  {loadingPacket && (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <div className="flex items-center gap-3">
+                        {hasFilledPacket && !isEditingPacket && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsEditingPacket(true)}
+                            className="flex items-center gap-2"
+                          >
+                            <FileText className="h-4 w-4" />
+                            Edit
+                          </Button>
+                        )}
+                        {isEditingPacket && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setIsEditingPacket(false)}
+                              className="flex items-center gap-2"
+                            >
+                              <XCircle className="h-4 w-4" />
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                console.log('Update Form button clicked, calling submitForm...');
+                                formRef.current?.submitForm();
+                              }}
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              Update Form
+                            </Button>
+                          </>
+                        )}
+                        <Badge className={hasFilledPacket
+                          ? (isEditingPacket ? "bg-orange-100 text-orange-800 border-orange-300" : "bg-green-100 text-green-800 border-green-300")
+                          : "bg-blue-100 text-blue-800 border-blue-300"
+                        }>
+                          {hasFilledPacket
+                            ? (isEditingPacket ? 'Editing' : 'Filled')
+                            : 'Preview Mode'
+                          }
+                        </Badge>
+                      </div>
                     </div>
-                  )}
 
-                  {/* Patient Packet Content */}
-                  {!loadingPacket && (
-                    <div className="w-full pb-8">
-                      {/* Direct consultation without patient packet - show empty state */}
-                      {isDirectConsultation && !hasFilledPacket && !isEditingPacket ? (
-                        <div className="bg-blue-50 border-2 border-dashed border-blue-200 rounded-lg p-12 text-center">
-                          <div className="flex flex-col items-center gap-4">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                              <FileText className="h-8 w-8 text-blue-600" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                No Patient Packet Available
-                              </h3>
-                              <p className="text-gray-600 mb-4 max-w-md">
-                                This is a direct consultation appointment. Complete the patient packet to collect comprehensive patient information for better consultation outcomes.
-                              </p>
-                              <div className="flex justify-center">
-                                <Button
-                                  onClick={handleCompletePatientInfo}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
-                                >
-                                  <Plus className="h-5 w-5" />
-                                  Add Patient Packet
-                                </Button>
+                    {/* Loading State */}
+                    {loadingPacket && (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      </div>
+                    )}
+
+                    {/* Patient Packet Content */}
+                    {!loadingPacket && (
+                      <div className="w-full pb-8">
+                        {/* Direct consultation without patient packet - show empty state */}
+                        {isDirectConsultation && !hasFilledPacket && !isEditingPacket ? (
+                          <div className="bg-blue-50 border-2 border-dashed border-blue-200 rounded-lg p-12 text-center">
+                            <div className="flex flex-col items-center gap-4">
+                              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                                <FileText className="h-8 w-8 text-blue-600" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                  No Patient Packet Available
+                                </h3>
+                                <p className="text-gray-600 mb-4 max-w-md">
+                                  This is a direct consultation appointment. Complete the patient packet to collect comprehensive patient information for better consultation outcomes.
+                                </p>
+                                <div className="flex justify-center">
+                                  <Button
+                                    onClick={handleCompletePatientInfo}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                                  >
+                                    <Plus className="h-5 w-5" />
+                                    Add Patient Packet
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ) : hasFilledPacket && patientPacketData && !isEditingPacket ? (
-                        // Show filled packet viewer (read-only)
-                        <FilledPatientPacketViewer
-                          formData={patientPacketData}
-                          submittedAt={patientPacketData.created_at || patientPacketData.submitted_at}
-                          onClose={() => {
-                            // Optional: Add functionality to close/minimize the viewer
-                          }}
-                        />
-                      ) : (
-                        // Show editable form (either for new packet or editing existing)
-                        <NewPatientPacketForm
-                          key={`consultation-form-${isEditingPacket ? 'edit' : 'new'}-${packetId || 'new'}`}
-                          ref={formRef}
-                          onSubmit={(formData: NewPatientFormData) => {
-                            // This inline form is only used for editing existing packets
-                            // New packets are created via the dialog
-                            if (hasFilledPacket && isEditingPacket) {
-                              handleUpdatePatientPacket(formData);
+                        ) : hasFilledPacket && patientPacketData && !isEditingPacket ? (
+                          // Show filled packet viewer (read-only)
+                          <FilledPatientPacketViewer
+                            formData={patientPacketData}
+                            submittedAt={patientPacketData.created_at || patientPacketData.submitted_at}
+                            onClose={() => {
+                              // Optional: Add functionality to close/minimize the viewer
+                            }}
+                          />
+                        ) : (
+                          // Show editable form (either for new packet or editing existing)
+                          <NewPatientPacketForm
+                            key={`consultation-form-${isEditingPacket ? 'edit' : 'new'}-${packetId || 'new'}`}
+                            ref={formRef}
+                            onSubmit={(formData: NewPatientFormData) => {
+                              // This inline form is only used for editing existing packets
+                              // New packets are created via the dialog
+                              if (hasFilledPacket && isEditingPacket) {
+                                handleUpdatePatientPacket(formData);
+                              }
+                            }}
+                            onCancel={() => {
+                              if (isEditingPacket) {
+                                setIsEditingPacket(false);
+                              } else {
+                                console.log('Form cancelled');
+                              }
+                            }}
+                            patientName={appointmentData?.patient_name || 'Unknown Patient'}
+                            patientDateOfBirth={
+                              isDirectConsultation && consultationPatientData?.date_of_birth
+                                ? consultationPatientData.date_of_birth
+                                : appointmentData?.date_of_birth || ''
                             }
-                          }}
-                          onCancel={() => {
-                            if (isEditingPacket) {
-                              setIsEditingPacket(false);
-                            } else {
-                              console.log('Form cancelled');
+                            patientGender={
+                              isDirectConsultation && consultationPatientData?.gender
+                                ? consultationPatientData.gender
+                                : appointmentData?.gender || ''
                             }
-                          }}
-                          patientName={appointmentData?.patient_name || 'Unknown Patient'}
-                          patientDateOfBirth={
-                            isDirectConsultation && consultationPatientData?.date_of_birth
-                              ? consultationPatientData.date_of_birth
-                              : appointmentData?.date_of_birth || ''
-                          }
-                          patientGender={
-                            isDirectConsultation && consultationPatientData?.gender
-                              ? consultationPatientData.gender
-                              : appointmentData?.gender || ''
-                          }
-                          showWelcomeHeader={false}
-                          initialData={isEditingPacket ? patientPacketData : undefined}
-                          submitButtonText={isEditingPacket ? 'Update Patient Packet' : 'Submit Patient Packet'}
-                        />
-                      )}
-                    </div>
-                  )}
-                    </div>
-                  )}
+                            showWelcomeHeader={false}
+                            initialData={isEditingPacket ? patientPacketData : undefined}
+                            submitButtonText={isEditingPacket ? 'Update Patient Packet' : 'Submit Patient Packet'}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                  {/* Summary Tab */}
-                  {activeTab === "summary" && (
-                    <div className="pb-8">
-                      <ErrorBoundary>
-                        <PatientSummaryAI
-                          patientData={patientPacketData}
-                          patientName={appointmentData?.patient_name || 'Unknown Patient'}
-                          patientPacketId={packetId || undefined}
-                        />
-                      </ErrorBoundary>
-                    </div>
-                  )}
+                {/* Summary Tab */}
+                {activeTab === "summary" && (
+                  <div className="pb-8">
+                    <ErrorBoundary>
+                      <PatientSummaryAI
+                        patientData={patientPacketData}
+                        patientName={appointmentData?.patient_name || 'Unknown Patient'}
+                        patientPacketId={packetId || undefined}
+                      />
+                    </ErrorBoundary>
+                  </div>
+                )}
 
 
-                </CardContent>
-              </Card>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -2160,156 +2152,156 @@ const ConsultationSessionPage = () => {
 
           <div className="p-6">
             {appointmentData && (
-            <NewPatientPacketForm
-              patientName={appointmentData.patient_name || 'Unknown Patient'}
-              patientDateOfBirth={
-                isDirectConsultation && consultationPatientData?.date_of_birth
-                  ? consultationPatientData.date_of_birth
-                  : appointmentData?.date_of_birth || ''
-              }
-              patientGender={
-                isDirectConsultation && consultationPatientData?.gender
-                  ? consultationPatientData.gender
-                  : appointmentData?.gender || ''
-              }
-              showWelcomeHeader={false}
-              submitButtonText="Save Patient Packet"
-              onCancel={() => setShowNewPatientPacketDialog(false)}
-              onSubmit={async (formData) => {
-                console.log('Patient packet submitted from consultation:', formData);
-
-                try {
-                  // Convert form data to database format
-                  const dbData = convertFormDataToDatabase(
-                    formData,
-                    null, // No existing patient ID for direct consultations
-                    consultationPatientData?.lead_id || null,
-                    'internal', // Use 'internal' as submission source for consultation sessions
-                    consultationPatientData?.id || null // Link to consultation patient
-                  );
-
-                  console.log('Attempting to save patient packet...');
-                  // Save the patient packet data to the database
-                  const { data: packetData, error: packetError } = await supabase
-                    .from('new_patient_packets')
-                    .insert([dbData])
-                    .select()
-                    .single();
-
-                  if (packetError) {
-                    console.error('Error saving patient packet:', packetError);
-                    throw packetError;
-                  }
-
-                  console.log('Patient packet saved successfully:', packetData);
-
-                  // Create or update consultation record to link with the patient packet
-                  // Note: This is a secondary operation and won't affect the main save success
-                  try {
-                    if (packetData?.id && appointmentData?.id) {
-                      console.log('Attempting to link consultation record...');
-                      // First check if consultation already exists for this appointment
-                      // Use maybeSingle() instead of single() to avoid errors when no record exists
-                      const { data: existingConsultation, error: fetchError } = await supabase
-                        .from('consultations')
-                        .select('id, patient_id')
-                        .eq('appointment_id', appointmentData.id)
-                        .maybeSingle();
-
-                      if (fetchError) {
-                        console.warn('Error fetching existing consultation:', fetchError);
-                      }
-
-                      if (existingConsultation) {
-                        // Update existing consultation with patient packet ID
-                        // Preserve patient_id if it exists (for active patients)
-                        const updateData: any = {
-                          new_patient_packet_id: packetData.id,
-                          patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
-                          updated_at: new Date().toISOString()
-                        };
-
-                        // Don't overwrite patient_id if it's already set (for active patients)
-                        // Only set it if it's null
-                        if (!existingConsultation.patient_id) {
-                          // For new/consultation patients, patient_id will be set when treatment is accepted
-                          console.log('Existing consultation found without patient_id - will be set when treatment is accepted');
-                        }
-
-                        const { error: updateError } = await supabase
-                          .from('consultations')
-                          .update(updateData)
-                          .eq('id', existingConsultation.id);
-
-                        if (updateError) {
-                          console.warn('Failed to update consultation record (non-critical):', updateError);
-                        } else {
-                          console.log('Successfully updated consultation with patient packet');
-                        }
-                      } else {
-                        // Create new consultation record only if one doesn't exist
-                        // This should only happen for new patients without a pre-created consultation
-                        console.log('No existing consultation found, creating new one...');
-                        const consultationData = {
-                          appointment_id: appointmentData.id,
-                          new_patient_packet_id: packetData.id,
-                          patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
-                          consultation_date: appointmentData.date || new Date().toISOString().split('T')[0],
-                          lead_id: consultationPatientData?.lead_id || null,
-                          consultation_status: 'draft'
-                        };
-
-                        const { error: insertError } = await supabase
-                          .from('consultations')
-                          .insert([consultationData]);
-
-                        if (insertError) {
-                          console.warn('Failed to create consultation record (non-critical):', insertError);
-                        } else {
-                          console.log('Successfully created consultation with patient packet');
-                        }
-                      }
-                    }
-                  } catch (consultationError) {
-                    console.warn('Non-critical error with consultation record:', consultationError);
-                    // Don't throw this error as it's not critical to the main save operation
-                  }
-
-                  // Update the consultation patient with the packet completion
-                  try {
-                    if (consultationPatientData?.id) {
-                      console.log('Updating consultation patient status...');
-                      await supabase
-                        .from('consultation_patients')
-                        .update({
-                          status: 'packet_completed'
-                        })
-                        .eq('id', consultationPatientData.id);
-                      console.log('Consultation patient status updated successfully');
-                    }
-                  } catch (statusError) {
-                    console.warn('Non-critical error updating consultation patient status:', statusError);
-                    // Don't throw this error as it's not critical to the main save operation
-                  }
-
-                  setPatientPacketData(formData);
-                  setHasFilledPacket(true);
-                  setIsEditingPacket(false);
-                  setPacketId(packetData.id);
-                  setShowNewPatientPacketDialog(false);
-
-                  // Refresh patient packet data to ensure connection is established
-                  await fetchPatientPacketData(appointmentData);
-
-                  console.log('✅ Direct consultation patient packet saved successfully - ALL OPERATIONS COMPLETED');
-                  toast.success('Patient packet saved successfully!');
-                } catch (error) {
-                  console.error('Error saving direct consultation patient packet:', error);
-                  toast.error('Failed to save patient packet. Please try again.');
+              <NewPatientPacketForm
+                patientName={appointmentData.patient_name || 'Unknown Patient'}
+                patientDateOfBirth={
+                  isDirectConsultation && consultationPatientData?.date_of_birth
+                    ? consultationPatientData.date_of_birth
+                    : appointmentData?.date_of_birth || ''
                 }
-              }}
-            />
-          )}
+                patientGender={
+                  isDirectConsultation && consultationPatientData?.gender
+                    ? consultationPatientData.gender
+                    : appointmentData?.gender || ''
+                }
+                showWelcomeHeader={false}
+                submitButtonText="Save Patient Packet"
+                onCancel={() => setShowNewPatientPacketDialog(false)}
+                onSubmit={async (formData) => {
+                  console.log('Patient packet submitted from consultation:', formData);
+
+                  try {
+                    // Convert form data to database format
+                    const dbData = convertFormDataToDatabase(
+                      formData,
+                      null, // No existing patient ID for direct consultations
+                      consultationPatientData?.lead_id || null,
+                      'internal', // Use 'internal' as submission source for consultation sessions
+                      consultationPatientData?.id || null // Link to consultation patient
+                    );
+
+                    console.log('Attempting to save patient packet...');
+                    // Save the patient packet data to the database
+                    const { data: packetData, error: packetError } = await supabase
+                      .from('new_patient_packets')
+                      .insert([dbData])
+                      .select()
+                      .single();
+
+                    if (packetError) {
+                      console.error('Error saving patient packet:', packetError);
+                      throw packetError;
+                    }
+
+                    console.log('Patient packet saved successfully:', packetData);
+
+                    // Create or update consultation record to link with the patient packet
+                    // Note: This is a secondary operation and won't affect the main save success
+                    try {
+                      if (packetData?.id && appointmentData?.id) {
+                        console.log('Attempting to link consultation record...');
+                        // First check if consultation already exists for this appointment
+                        // Use maybeSingle() instead of single() to avoid errors when no record exists
+                        const { data: existingConsultation, error: fetchError } = await supabase
+                          .from('consultations')
+                          .select('id, patient_id')
+                          .eq('appointment_id', appointmentData.id)
+                          .maybeSingle();
+
+                        if (fetchError) {
+                          console.warn('Error fetching existing consultation:', fetchError);
+                        }
+
+                        if (existingConsultation) {
+                          // Update existing consultation with patient packet ID
+                          // Preserve patient_id if it exists (for active patients)
+                          const updateData: any = {
+                            new_patient_packet_id: packetData.id,
+                            patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
+                            updated_at: new Date().toISOString()
+                          };
+
+                          // Don't overwrite patient_id if it's already set (for active patients)
+                          // Only set it if it's null
+                          if (!existingConsultation.patient_id) {
+                            // For new/consultation patients, patient_id will be set when treatment is accepted
+                            console.log('Existing consultation found without patient_id - will be set when treatment is accepted');
+                          }
+
+                          const { error: updateError } = await supabase
+                            .from('consultations')
+                            .update(updateData)
+                            .eq('id', existingConsultation.id);
+
+                          if (updateError) {
+                            console.warn('Failed to update consultation record (non-critical):', updateError);
+                          } else {
+                            console.log('Successfully updated consultation with patient packet');
+                          }
+                        } else {
+                          // Create new consultation record only if one doesn't exist
+                          // This should only happen for new patients without a pre-created consultation
+                          console.log('No existing consultation found, creating new one...');
+                          const consultationData = {
+                            appointment_id: appointmentData.id,
+                            new_patient_packet_id: packetData.id,
+                            patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
+                            consultation_date: appointmentData.date || new Date().toISOString().split('T')[0],
+                            lead_id: consultationPatientData?.lead_id || null,
+                            consultation_status: 'draft'
+                          };
+
+                          const { error: insertError } = await supabase
+                            .from('consultations')
+                            .insert([consultationData]);
+
+                          if (insertError) {
+                            console.warn('Failed to create consultation record (non-critical):', insertError);
+                          } else {
+                            console.log('Successfully created consultation with patient packet');
+                          }
+                        }
+                      }
+                    } catch (consultationError) {
+                      console.warn('Non-critical error with consultation record:', consultationError);
+                      // Don't throw this error as it's not critical to the main save operation
+                    }
+
+                    // Update the consultation patient with the packet completion
+                    try {
+                      if (consultationPatientData?.id) {
+                        console.log('Updating consultation patient status...');
+                        await supabase
+                          .from('consultation_patients')
+                          .update({
+                            status: 'packet_completed'
+                          })
+                          .eq('id', consultationPatientData.id);
+                        console.log('Consultation patient status updated successfully');
+                      }
+                    } catch (statusError) {
+                      console.warn('Non-critical error updating consultation patient status:', statusError);
+                      // Don't throw this error as it's not critical to the main save operation
+                    }
+
+                    setPatientPacketData(formData);
+                    setHasFilledPacket(true);
+                    setIsEditingPacket(false);
+                    setPacketId(packetData.id);
+                    setShowNewPatientPacketDialog(false);
+
+                    // Refresh patient packet data to ensure connection is established
+                    await fetchPatientPacketData(appointmentData);
+
+                    console.log('✅ Direct consultation patient packet saved successfully - ALL OPERATIONS COMPLETED');
+                    toast.success('Patient packet saved successfully!');
+                  } catch (error) {
+                    console.error('Error saving direct consultation patient packet:', error);
+                    toast.error('Failed to save patient packet. Please try again.');
+                  }
+                }}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -2344,17 +2336,85 @@ const ConsultationSessionPage = () => {
         }}
         onRecordingStart={startRecording}
         patientName={appointmentData?.patient_name}
+        mode="consultation"
       />
 
-      {/* Recording Control Dialog */}
+      {/* Recording Control Dialog (Active Recording Interface) */}
       <RecordingControlDialog
         isOpen={showRecordingControlDialog}
-        onClose={() => setShowRecordingControlDialog(false)}
+        onClose={() => {
+          // Do nothing on close request if recording, forcing user to use Stop
+          if (!isRecording) setShowRecordingControlDialog(false);
+        }}
         onStop={stopRecording}
         duration={recordingDuration}
         audioLevel={audioLevel}
         patientName={appointmentData?.patient_name}
+        isProcessing={isProcessingRecording}
       />
+
+      {/* Recording Status Dialog (Saving/Success/Error) */}
+      <Dialog open={showRecordingStatusDialog} onOpenChange={(open) => {
+        // Prevent accidental closing during upload
+        if (!open && recordingStatusState !== 'uploading') {
+          setShowRecordingStatusDialog(false);
+        }
+      }}>
+        <DialogContent
+          className="max-w-[340px] p-6 rounded-3xl border-none shadow-2xl bg-white outline-none"
+          hideCloseButton={true}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <div className="flex flex-col items-center text-center gap-4">
+            {recordingStatusState === 'uploading' && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-75"></div>
+                  <div className="relative bg-blue-50 p-4 rounded-full">
+                    <CloudUpload className="h-8 w-8 text-blue-600 animate-pulse" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Saving Recording...</h3>
+                  <p className="text-sm text-gray-500">{recordingStatusMessage}</p>
+                </div>
+              </>
+            )}
+
+            {recordingStatusState === 'success' && (
+              <>
+                <div className="bg-green-50 p-4 rounded-full">
+                  <Check className="h-8 w-8 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Saved Successfully!</h3>
+                  <p className="text-sm text-gray-500">Audio note has been optimized and stored.</p>
+                </div>
+              </>
+            )}
+
+            {recordingStatusState === 'error' && (
+              <>
+                <div className="bg-red-50 p-4 rounded-full">
+                  <XCircle className="h-8 w-8 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Save Failed</h3>
+                  <p className="text-sm text-gray-500">{recordingStatusMessage}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowRecordingStatusDialog(false)}
+                  className="mt-2"
+                >
+                  Close
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Recordings Preview Dialog */}
       <Dialog open={showRecordingsPreviewDialog} onOpenChange={setShowRecordingsPreviewDialog}>
@@ -2371,6 +2431,7 @@ const ConsultationSessionPage = () => {
               <RecordingsList
                 appointmentId={appointmentId}
                 patientName={appointmentData?.patient_name}
+                type="consultation"
               />
             ) : (
               <div className="text-center py-8 text-gray-500">

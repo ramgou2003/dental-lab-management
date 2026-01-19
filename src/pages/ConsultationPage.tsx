@@ -9,6 +9,8 @@ import { Calendar, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { AppointmentSchedulerDialog } from "@/components/calendar/AppointmentSchedulerDialog";
+import { ConsultationFilterDialog, ConsultationFilters } from "@/components/ConsultationFilterDialog";
+import { Filter } from "lucide-react";
 
 const ConsultationPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -17,7 +19,11 @@ const ConsultationPage: React.FC = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [treatmentStatusFilter, setTreatmentStatusFilter] = useState<string>("all");
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [filters, setFilters] = useState<ConsultationFilters>({
+    treatmentStatus: [],
+    appointmentStatus: []
+  });
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
   const [draftConsultationData, setDraftConsultationData] = useState<any>(null);
   const [initialFormDate, setInitialFormDate] = useState<Date | undefined>(undefined);
@@ -26,6 +32,25 @@ const ConsultationPage: React.FC = () => {
 
   const handleAddConsultation = () => {
     setIsAddDialogOpen(true);
+  };
+
+  const activeFilterCount = filters.treatmentStatus.length + filters.appointmentStatus.length;
+
+  const handleFilterClick = () => {
+    setShowFilterDialog(true);
+  };
+
+  const handleApplyFilters = (newFilters: ConsultationFilters) => {
+    setFilters(newFilters);
+    setShowFilterDialog(false);
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      treatmentStatus: [],
+      appointmentStatus: []
+    });
+    setShowFilterDialog(false);
   };
 
   const handleConsultationSuccess = () => {
@@ -62,6 +87,11 @@ const ConsultationPage: React.FC = () => {
             value: searchTerm,
             onChange: setSearchTerm
           }}
+          secondaryAction={activeTab === 'patients' ? {
+            label: activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filters",
+            icon: Filter,
+            onClick: handleFilterClick
+          } : undefined}
           action={{
             label: "Add Consultation",
             onClick: handleAddConsultation
@@ -131,53 +161,6 @@ const ConsultationPage: React.FC = () => {
               </Button>
             </div>
           )}
-
-          {/* Treatment Status Filters - Only show for patients tab */}
-          {activeTab === "patients" && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700 mr-2">Filter by Treatment Status:</span>
-              <Button
-                variant={treatmentStatusFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTreatmentStatusFilter("all")}
-                className="h-8 px-3 text-sm"
-              >
-                All
-              </Button>
-              <Button
-                variant={treatmentStatusFilter === "accepted" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTreatmentStatusFilter("accepted")}
-                className="h-8 px-3 text-sm bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-              >
-                Accepted
-              </Button>
-              <Button
-                variant={treatmentStatusFilter === "not_accepted" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTreatmentStatusFilter("not_accepted")}
-                className="h-8 px-3 text-sm bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-              >
-                Rejected
-              </Button>
-              <Button
-                variant={treatmentStatusFilter === "followup-required" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTreatmentStatusFilter("followup-required")}
-                className="h-8 px-3 text-sm bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200"
-              >
-                Follow-up Required
-              </Button>
-              <Button
-                variant={treatmentStatusFilter === "not_set" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTreatmentStatusFilter("not_set")}
-                className="h-8 px-3 text-sm bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
-              >
-                Not Set
-              </Button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -188,13 +171,22 @@ const ConsultationPage: React.FC = () => {
               searchTerm={searchTerm}
               showScheduledLeads={true}
               refreshTrigger={refreshTrigger}
-              treatmentStatusFilter={treatmentStatusFilter}
+              filters={filters}
             />
           ) : (
             <ConsultationTable searchTerm={searchTerm} selectedDate={selectedDate} showScheduledLeads={false} refreshTrigger={refreshTrigger} />
           )}
         </div>
       </div>
+
+      {/* Filter Dialog */}
+      <ConsultationFilterDialog
+        open={showFilterDialog}
+        onOpenChange={setShowFilterDialog}
+        currentFilters={filters}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
+      />
 
       {/* Add Consultation Dialog */}
       <AddConsultationDialog
@@ -241,7 +233,7 @@ const ConsultationPage: React.FC = () => {
           }));
         }}
       />
-    </div>
+    </div >
   );
 };
 
