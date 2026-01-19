@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import fixWebmDuration from "fix-webm-duration";
+import fixWebmDuration from "@/lib/fix-webm-duration";
 import { ArrowLeft, Calendar, Clock, User, Phone, Mail, MapPin, Heart, DollarSign, FileText, AlertCircle, CheckCircle, XCircle, Info, BarChart3, Plus, RefreshCw, Mic, FileAudio, Edit, CloudUpload, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

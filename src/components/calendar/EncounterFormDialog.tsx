@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import fixWebmDuration from "fix-webm-duration";
+import fixWebmDuration from "@/lib/fix-webm-duration";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
