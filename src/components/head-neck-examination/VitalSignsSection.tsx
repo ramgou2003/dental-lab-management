@@ -19,6 +19,44 @@ export const VitalSignsSection = ({ formData, setFormData, patientData }: VitalS
     }));
   };
 
+  const handleHeightComponentChange = (field: 'height_feet' | 'height_inches', value: string) => {
+    const ft = field === 'height_feet' ? parseFloat(value || "0") : parseFloat(formData.vital_signs?.height_feet || "0");
+    const inch = field === 'height_inches' ? parseFloat(value || "0") : parseFloat(formData.vital_signs?.height_inches || "0");
+
+    const totalHeight = (ft * 12) + inch;
+
+    setFormData((prev: any) => ({
+      ...prev,
+      vital_signs: {
+        ...prev.vital_signs,
+        [field]: value,
+        height: totalHeight.toString()
+      }
+    }));
+  };
+
+  // Backward compatibility: Populate feet/inches if only height exists
+  useEffect(() => {
+    const heightVal = parseFloat(formData.vital_signs?.height || "0");
+    const feetVal = formData.vital_signs?.height_feet;
+    const inchesVal = formData.vital_signs?.height_inches;
+
+    // Only set if height exists but feet/inches are undefined (empty strings correspond to user input so we respect them)
+    if (heightVal > 0 && feetVal === undefined && inchesVal === undefined) {
+      const f = Math.floor(heightVal / 12);
+      const i = Math.round((heightVal % 12) * 10) / 10;
+
+      setFormData((prev: any) => ({
+        ...prev,
+        vital_signs: {
+          ...prev.vital_signs,
+          height_feet: f.toString(),
+          height_inches: i.toString()
+        }
+      }));
+    }
+  }, [formData.vital_signs?.height, formData.vital_signs?.height_feet, formData.vital_signs?.height_inches]);
+
   useEffect(() => {
     const heightInInches = parseFloat(formData.vital_signs?.height || "0");
     const weightInPounds = parseFloat(formData.vital_signs?.weight || "0");
@@ -81,13 +119,32 @@ export const VitalSignsSection = ({ formData, setFormData, patientData }: VitalS
       <h3 className="text-lg font-semibold">Vital Signs</h3>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="height">Height (in)</Label>
-          <Input
-            id="height"
-            type="number"
-            value={formData.vital_signs?.height || ""}
-            onChange={(e) => updateVitalSigns("height", e.target.value)}
-          />
+          <Label>Height</Label>
+          <div className="flex gap-4">
+            <div className="flex-1 space-y-1">
+              <Input
+                id="height_feet"
+                type="number"
+                placeholder="ft"
+                min="0"
+                value={formData.vital_signs?.height_feet || ""}
+                onChange={(e) => handleHeightComponentChange("height_feet", e.target.value)}
+              />
+              <span className="text-xs text-muted-foreground ml-1">Feet</span>
+            </div>
+            <div className="flex-1 space-y-1">
+              <Input
+                id="height_inches"
+                type="number"
+                placeholder="in"
+                min="0"
+                max="11"
+                value={formData.vital_signs?.height_inches || ""}
+                onChange={(e) => handleHeightComponentChange("height_inches", e.target.value)}
+              />
+              <span className="text-xs text-muted-foreground ml-1">Inches</span>
+            </div>
+          </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="weight">Weight (lbs)</Label>

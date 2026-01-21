@@ -9,6 +9,7 @@ interface FormFooterNavProps {
   onPrevious: (e: React.MouseEvent) => void;
   onNext: (e: React.MouseEvent) => void;
   onSubmit: (e: React.FormEvent) => void;
+  isReadOnly?: boolean;
 }
 
 export const FormFooterNav = ({
@@ -18,6 +19,7 @@ export const FormFooterNav = ({
   onPrevious,
   onNext,
   onSubmit,
+  isReadOnly = false
 }: FormFooterNavProps) => {
   return (
     <div className="border-t border-gray-100 p-4 mt-auto">
@@ -35,15 +37,17 @@ export const FormFooterNav = ({
         </Button>
 
         {currentStep === totalSteps - 1 ? (
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={onSubmit}
-          >
-            {isSubmitting ? "Saving..." : "Save Examination"}
-          </Button>
+          !isReadOnly && (
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              size="sm"
+              className="flex items-center gap-1"
+              onClick={onSubmit}
+            >
+              {isSubmitting ? "Saving..." : "Submit Examination"}
+            </Button>
+          )
         ) : (
           <Button
             type="button"
@@ -52,7 +56,7 @@ export const FormFooterNav = ({
             size="sm"
             className="flex items-center gap-1"
           >
-            {isSubmitting ? "Saving..." : "Next"}
+            {isSubmitting && !isReadOnly ? "Saving..." : "Save and Next"}
             <ChevronRight className="w-4 h-4" />
           </Button>
         )}

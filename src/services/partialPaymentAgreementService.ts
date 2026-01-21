@@ -296,11 +296,11 @@ export function convertFormDataToDatabase(
   // Helper function to get value from either camelCase or snake_case
   const getValue = (camelCase: string, snakeCase: string, defaultValue: any = '') => {
     const value = formData[camelCase] !== undefined ? formData[camelCase] :
-                  formData[snakeCase] !== undefined ? formData[snakeCase] : defaultValue;
+      formData[snakeCase] !== undefined ? formData[snakeCase] : defaultValue;
 
     // Log important fields for debugging
     if (['firstName', 'first_name', 'paymentAmount', 'payment_amount', 'estimatedTotalCost', 'estimated_total_cost'].includes(camelCase) ||
-        ['firstName', 'first_name', 'paymentAmount', 'payment_amount', 'estimatedTotalCost', 'estimated_total_cost'].includes(snakeCase)) {
+      ['firstName', 'first_name', 'paymentAmount', 'payment_amount', 'estimatedTotalCost', 'estimated_total_cost'].includes(snakeCase)) {
       console.log(`🔍 getValue(${camelCase}, ${snakeCase}): ${value} (from ${formData[camelCase] !== undefined ? 'camelCase' : formData[snakeCase] !== undefined ? 'snakeCase' : 'default'})`);
     }
 

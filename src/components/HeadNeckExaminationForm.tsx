@@ -13,6 +13,8 @@ interface HeadNeckExaminationFormProps {
   onSuccess?: () => void;
   existingData?: any;
   patientData?: any;
+  isReadOnly?: boolean;
+  onClose?: () => void;
 }
 
 interface MaxillarySinusesEvaluation {
@@ -24,7 +26,9 @@ export const HeadNeckExaminationForm = ({
   patientId,
   onSuccess,
   existingData,
-  patientData
+  patientData,
+  isReadOnly = false,
+  onClose
 }: HeadNeckExaminationFormProps) => {
   const { currentStep, handleNext, handlePrevious, totalSteps, setCurrentStep } = useFormSteps();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,7 +55,7 @@ export const HeadNeckExaminationForm = ({
     },
     airway_evaluation: "",
     guideline_questions: {} as Json,
-    status: "draft" as const
+    status: "draft" as "draft" | "completed"
   });
 
   useEffect(() => {
@@ -112,66 +116,85 @@ export const HeadNeckExaminationForm = ({
     }
   }, [existingData, patientId]);
 
-  const saveFormData = async () => {
+  const saveFormData = async (overrides?: { status?: "draft" | "completed" }) => {
+    if (isReadOnly) return true;
     try {
-      console.log("Saving form data to database...", {
+      const currentData = {
         ...formData,
-        maxillary_sinuses_evaluation: formData.maxillary_sinuses_evaluation
+        ...overrides
+      };
+
+      console.log("Saving form data to database...", {
+        ...currentData,
+        maxillary_sinuses_evaluation: currentData.maxillary_sinuses_evaluation
       });
 
       // Prepare data for saving
       // Convert nested objects to JSON for storage if needed, though Supabase handles JSONB
       // The state structure matches the table structure we defined
       const dataToSave = {
-        patient_id: formData.patient_id,
-        vital_signs: formData.vital_signs,
-        medical_history: formData.medical_history,
-        chief_complaints: formData.chief_complaints,
-        extra_oral_examination: formData.extra_oral_examination,
-        intra_oral_examination: formData.intra_oral_examination,
-        dental_classification: formData.dental_classification,
-        skeletal_presentation: formData.skeletal_presentation,
-        functional_presentation: formData.functional_presentation,
-        clinical_observation: formData.clinical_observation,
-        tactile_observation: formData.tactile_observation,
-        radiographic_presentation: formData.radiographic_presentation,
-        tomography_data: formData.tomography_data,
-        evaluation_notes: formData.evaluation_notes,
-        maxillary_sinuses_evaluation: formData.maxillary_sinuses_evaluation,
-        airway_evaluation: formData.airway_evaluation,
-        guideline_questions: formData.guideline_questions,
-        status: formData.status
+        patient_id: currentData.patient_id,
+        vital_signs: currentData.vital_signs,
+        medical_history: currentData.medical_history,
+        chief_complaints: currentData.chief_complaints,
+        extra_oral_examination: currentData.extra_oral_examination,
+        intra_oral_examination: currentData.intra_oral_examination,
+        dental_classification: currentData.dental_classification,
+        skeletal_presentation: currentData.skeletal_presentation,
+        functional_presentation: currentData.functional_presentation,
+        clinical_observation: currentData.clinical_observation,
+        tactile_observation: currentData.tactile_observation,
+        radiographic_presentation: currentData.radiographic_presentation,
+        tomography_data: currentData.tomography_data,
+        evaluation_notes: currentData.evaluation_notes,
+        maxillary_sinuses_evaluation: currentData.maxillary_sinuses_evaluation,
+        airway_evaluation: currentData.airway_evaluation,
+        guideline_questions: currentData.guideline_questions,
+        status: currentData.status
       };
 
-      // Check if we already have a record for this patient
-      // For now, we'll assume one record per patient for simplicity, or we check if we have an ID
-      // If `existingData` had an ID, we should probably use it.
-      // But let's check based on patient_id first to see if a draft exists
+      // Check if we are updating an existing record (we have an ID)
+      // or creating a new one. We check formData.id (which might come from existingData or after first save)
 
-      const { data: existingRecord } = await supabase
-        .from('head_neck_examinations')
-        .select('id')
-        .eq('patient_id', patientId)
-        .maybeSingle();
+      const formId = (formData as any).id;
+      let performUpdate = false;
+
+      if (formId) {
+        performUpdate = true;
+      }
 
       let error;
+      let newId = formId;
 
-      if (existingRecord) {
+      if (performUpdate) {
         // Update existing record
         const { error: updateError } = await supabase
           .from('head_neck_examinations')
           .update(dataToSave)
-          .eq('id', existingRecord.id);
+          .eq('id', formId);
         error = updateError;
       } else {
         // Insert new record
-        const { error: insertError } = await supabase
+        const { data: insertedData, error: insertError } = await supabase
           .from('head_neck_examinations')
-          .insert(dataToSave);
+          .insert(dataToSave)
+          .select('id')
+          .single();
+
+        if (insertedData) {
+          newId = insertedData.id;
+          // Update local state with the new ID so subsequent auto-saves update this record
+          setFormData(prev => ({ ...prev, id: insertedData.id }));
+        }
         error = insertError;
       }
 
       if (error) throw error;
+
+      // Update local state status if it changed
+      if (overrides?.status) {
+        setFormData(prev => ({ ...prev, status: overrides.status! }));
+      }
 
       toast({
         title: "Success",
@@ -196,6 +219,7 @@ export const HeadNeckExaminationForm = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) return;
     console.log("Form submission triggered");
 
     if (currentStep !== totalSteps - 1) {
@@ -206,7 +230,7 @@ export const HeadNeckExaminationForm = ({
     setIsSubmitting(true);
 
     try {
-      const success = await saveFormData();
+      const success = await saveFormData({ status: "completed" });
       if (success && onSuccess) onSuccess();
     } finally {
       setIsSubmitting(false);
@@ -215,6 +239,12 @@ export const HeadNeckExaminationForm = ({
 
   const handleNextStep = async (e: React.MouseEvent) => {
     e.preventDefault();
+
+    if (isReadOnly) {
+      handleNext();
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -233,6 +263,11 @@ export const HeadNeckExaminationForm = ({
   };
 
   const handleStepChange = async (step: number) => {
+    if (isReadOnly) {
+      setCurrentStep(step);
+      return;
+    }
+
     const success = await saveFormData();
     if (success) {
       setCurrentStep(step);
@@ -247,16 +282,18 @@ export const HeadNeckExaminationForm = ({
         formData={formData}
         onStepChange={handleStepChange}
         completedSteps={completedSteps}
+        onClose={onClose}
       />
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-
-        <FormContent
-          currentStep={currentStep}
-          formData={formData}
-          setFormData={setFormData}
-          patientData={patientData}
-        />
+        <fieldset disabled={isReadOnly} className={`min-w-0 w-full border-0 p-0 m-0 ${isReadOnly ? 'pointer-events-none' : ''}`}>
+          <FormContent
+            currentStep={currentStep}
+            formData={formData}
+            setFormData={setFormData}
+            patientData={patientData}
+          />
+        </fieldset>
       </div>
 
       <FormFooterNav
@@ -266,6 +303,7 @@ export const HeadNeckExaminationForm = ({
         onPrevious={handlePreviousStep}
         onNext={handleNextStep}
         onSubmit={handleSubmit}
+        isReadOnly={isReadOnly}
       />
     </form>
   );

@@ -38,22 +38,36 @@ export const FormSteps = ({
       airway_image_url: formData?.airway_image_url
     };
 
-    console.log("Checking evaluation completion status:", evaluationData);
+
 
     // Check each field individually
     const hasValidData = Object.entries(evaluationData).some(([key, value]) => {
       if (!value) return false;
 
       if (key === 'maxillary_sinuses_evaluation') {
+        const checkSide = (sideData: any) => {
+          if (!sideData) return false;
+          if (Array.isArray(sideData)) return sideData.length > 0;
+          if (typeof sideData === 'string') {
+            try {
+              const parsed = JSON.parse(sideData);
+              return Array.isArray(parsed) && parsed.length > 0;
+            } catch {
+              return false;
+            }
+          }
+          return false;
+        };
+
         if (typeof value === 'object' && value !== null) {
           const parsed = value as any;
-          return (parsed.left?.length > 0 || parsed.right?.length > 0);
+          return checkSide(parsed.left) || checkSide(parsed.right);
         }
         try {
           const parsed = JSON.parse(value as string);
           return parsed &&
             typeof parsed === 'object' &&
-            (parsed.left?.length > 0 || parsed.right?.length > 0);
+            (checkSide(parsed.left) || checkSide(parsed.right));
         } catch {
           return false;
         }
@@ -79,24 +93,23 @@ export const FormSteps = ({
       return false;
     });
 
-    console.log("Evaluation has valid data:", hasValidData);
+
     return hasValidData;
   };
 
   // Helper function to determine step status
   const getStepStatus = (stepIndex: number): "completed" | "current" | "upcoming" => {
-    console.log("Checking status for step:", stepIndex, "Current step:", currentStep);
-    console.log("Completed steps:", completedSteps);
+
 
     // First check if the step is marked as completed
     if (completedSteps.includes(stepIndex)) {
-      console.log("Step is in completedSteps array");
+
       return "completed";
     }
 
     // Then check if it's the current step
     if (currentStep === stepIndex) {
-      console.log("Step is current step");
+
       return "current";
     }
 
@@ -107,47 +120,46 @@ export const FormSteps = ({
 
     // Check if the step has data filled
     const stepData = getStepData(stepIndex);
-    console.log("Step data:", stepData);
     if (stepData && hasFilledFields(stepData)) {
-      console.log("Step has filled data");
+
       return "completed";
     }
 
-    console.log("Step is upcoming");
+
     return "upcoming";
   };
 
   // Helper function to get data for a specific step
   const getStepData = (stepIndex: number) => {
-    console.log("Getting data for step:", stepIndex);
+
     switch (stepIndex) {
       case 0:
-        console.log("Vital signs data:", formData?.vital_signs);
+
         return formData?.vital_signs;
       case 1:
-        console.log("Medical history data:", formData?.medical_history);
+
         return formData?.medical_history;
       case 2:
-        console.log("Chief complaints data:", formData?.chief_complaints);
+
         return formData?.chief_complaints;
       case 3:
-        console.log("Extra oral data:", formData?.extra_oral_examination);
+
         return formData?.extra_oral_examination;
       case 4:
-        console.log("Intra oral data:", formData?.intra_oral_examination);
+
         return formData?.intra_oral_examination;
       case 5:
-        console.log("Dental classification data:", formData?.dental_classification);
+
         return formData?.dental_classification;
       case 6:
-        console.log("Functional presentation data:", formData?.functional_presentation);
+
         return formData?.functional_presentation;
       case 7:
         const combinedData = {
           tactile: formData?.tactile_observation,
           radiographic: formData?.radiographic_presentation
         };
-        console.log("Combined tactile & radiographic data:", combinedData);
+
         return combinedData;
       case 8:
         const evaluationData = {
@@ -156,10 +168,10 @@ export const FormSteps = ({
           airway_evaluation: formData?.airway_evaluation,
           airway_image_url: formData?.airway_image_url
         };
-        console.log("Evaluation data:", evaluationData);
+
         return evaluationData;
       case 9:
-        console.log("Guideline questions data:", formData?.guideline_questions);
+
         return formData?.guideline_questions;
       default: return null;
     }
@@ -208,6 +220,6 @@ export const FormSteps = ({
     }
   ];
 
-  console.log("Progress bar steps:", steps);
+
   return <ProgressBar steps={steps} onStepClick={onStepChange} activeStep={currentStep} />;
 };

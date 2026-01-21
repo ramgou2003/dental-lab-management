@@ -2342,10 +2342,7 @@ const ConsultationSessionPage = () => {
       {/* Recording Control Dialog (Active Recording Interface) */}
       <RecordingControlDialog
         isOpen={showRecordingControlDialog}
-        onClose={() => {
-          // Do nothing on close request if recording, forcing user to use Stop
-          if (!isRecording) setShowRecordingControlDialog(false);
-        }}
+        onClose={() => setShowRecordingControlDialog(false)}
         onStop={stopRecording}
         duration={recordingDuration}
         audioLevel={audioLevel}

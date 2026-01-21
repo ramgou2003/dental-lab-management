@@ -82,20 +82,20 @@ export const ChiefComplaintsSection = ({ formData, setFormData }: ChiefComplaint
           <div className="flex items-center space-x-2">
             <Input
               type="number"
-              value={formData.chief_complaints?.duration_months || ""}
-              onChange={(e) => handleDurationChange('months', e.target.value)}
-              className="w-20"
-            />
-            <Label>months</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Input
-              type="number"
               value={formData.chief_complaints?.duration_years || ""}
               onChange={(e) => handleDurationChange('years', e.target.value)}
               className="w-20"
             />
             <Label>years</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Input
+              type="number"
+              value={formData.chief_complaints?.duration_months || ""}
+              onChange={(e) => handleDurationChange('months', e.target.value)}
+              className="w-20"
+            />
+            <Label>months</Label>
           </div>
         </div>
       </div>

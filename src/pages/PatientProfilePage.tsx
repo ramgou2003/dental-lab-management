@@ -8492,7 +8492,7 @@ export function PatientProfilePage() {
                                           <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
                                             Completed
                                           </span>
-                                          <span className="text-xs text-gray-400">{sheet.collection_date ? new Date(sheet.collection_date).toLocaleDateString() : 'No date'}</span>
+                                          <span className="text-xs text-gray-400">{sheet.collection_date ? new Date(sheet.collection_date).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' }) : 'No date'}</span>
                                         </div>
                                         <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">
                                           {sheet.reasons_for_collection?.[0] || 'Data Collection'}
@@ -10807,6 +10807,9 @@ export function PatientProfilePage() {
                                 } else if (selectedAdminFormType === 'create-treatment-plan') {
                                   setShowTreatmentPlanForm(true);
                                 } else if (selectedAdminFormType === 'head-neck-examination') {
+                                  setSelectedHeadNeckExamForm(null);
+                                  setIsEditingHeadNeckExamForm(false);
+                                  setIsViewingHeadNeckExamForm(false);
                                   setShowHeadNeckExamForm(true);
                                 } else {
                                   // Handle other form types here
@@ -12683,11 +12686,13 @@ export function PatientProfilePage() {
                                       <span className="font-medium text-gray-700">
                                         {consultation.consultation_date
                                           ? new Date(consultation.consultation_date).toLocaleDateString('en-US', {
+                                            timeZone: 'UTC',
                                             year: 'numeric',
                                             month: 'short',
                                             day: 'numeric'
                                           })
                                           : new Date(consultation.created_at).toLocaleDateString('en-US', {
+                                            timeZone: 'UTC',
                                             year: 'numeric',
                                             month: 'short',
                                             day: 'numeric'
@@ -12790,6 +12795,7 @@ export function PatientProfilePage() {
                                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                     <span className="text-sm font-semibold text-gray-900">
                                       {new Date(sheet.collection_date).toLocaleDateString('en-US', {
+                                        timeZone: 'UTC',
                                         month: 'short',
                                         day: 'numeric',
                                         year: 'numeric'
@@ -20320,38 +20326,7 @@ export function PatientProfilePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Head and Neck Examination Form Dialog */}
-      <Dialog open={showHeadNeckExamForm} onOpenChange={setShowHeadNeckExamForm}>
-        <DialogContent className="max-w-6xl h-[90vh] p-0 flex flex-col overflow-hidden">
-          {patient && (
-            <HeadNeckExaminationForm
-              patientId={patient.id}
-              patientData={patient}
-              onSubmit={(formData) => {
-                console.log("Head and Neck Examination Form Data Submitted:", formData);
-                toast({
-                  title: "Success",
-                  description: "Head and Neck Examination saved successfully!",
-                });
-                setShowHeadNeckExamForm(false);
-                setSelectedAdminFormType("");
-              }}
-              onCancel={() => {
-                setShowHeadNeckExamForm(false);
-                setSelectedAdminFormType("");
-              }}
-              onSuccess={() => {
-                toast({
-                  title: "Success",
-                  description: "Head and Neck Examination saved successfully!",
-                });
-                setShowHeadNeckExamForm(false);
-                setSelectedAdminFormType("");
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+
 
       {/* New Patient Packet Preview Dialog */}
 
@@ -21326,18 +21301,21 @@ export function PatientProfilePage() {
           setSelectedAdminFormType("");
         }
       }}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-full">
-          <DialogHeader>
-            <DialogTitle>Head and Neck Examination Form</DialogTitle>
-            <DialogDescription>
-              Fill out or edit the head and neck examination form for the patient.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-6xl h-[90vh] p-0 flex flex-col overflow-hidden w-full">
+
           {patient && (
             <HeadNeckExaminationForm
               patientId={patient.id}
               patientData={patient}
               existingData={selectedHeadNeckExamForm}
+              isReadOnly={isViewingHeadNeckExamForm}
+              onClose={() => {
+                setShowHeadNeckExamForm(false);
+                setSelectedHeadNeckExamForm(null);
+                setIsEditingHeadNeckExamForm(false);
+                setIsViewingHeadNeckExamForm(false);
+                setSelectedAdminFormType("");
+              }}
               onSuccess={() => {
                 setShowHeadNeckExamForm(false);
                 fetchHeadNeckExamForms();

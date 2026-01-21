@@ -258,9 +258,9 @@ export function PartialPaymentAgreementForm({
 
     // Check if form has meaningful data (including address)
     const hasData = formData.firstName || formData.lastName || formData.paymentAmount ||
-                   formData.estimatedTotalCost || formData.selectedTreatments?.length ||
-                   formData.patientSignature || formData.email || formData.phone ||
-                   formData.address || formData.providerLicenseNumber;
+      formData.estimatedTotalCost || formData.selectedTreatments?.length ||
+      formData.patientSignature || formData.email || formData.phone ||
+      formData.address || formData.providerLicenseNumber;
 
     setHasFormData(hasData);
 
@@ -363,10 +363,10 @@ export function PartialPaymentAgreementForm({
       return;
     }
 
-    if (!formData.readAndUnderstood || !formData.understandRefundPolicy || 
-        !formData.understandFullPaymentRequired || !formData.agreeNoDisputes ||
-        !formData.understandOneYearValidity || !formData.understandNoCashPayments || 
-        !formData.enteringVoluntarily) {
+    if (!formData.readAndUnderstood || !formData.understandRefundPolicy ||
+      !formData.understandFullPaymentRequired || !formData.agreeNoDisputes ||
+      !formData.understandOneYearValidity || !formData.understandNoCashPayments ||
+      !formData.enteringVoluntarily) {
       toast.error('Please acknowledge all required items');
       return;
     }
@@ -470,11 +470,10 @@ export function PartialPaymentAgreementForm({
 
                   {/* Auto-save Status Indicator */}
                   {onAutoSave && !readOnly && (hasFormData || autoSaveStatus === 'error') && (
-                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
-                      autoSaveStatus === 'error'
-                        ? 'bg-red-50 text-red-700 border border-red-200'
-                        : 'bg-green-50 text-green-700 border border-green-200'
-                    }`}>
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${autoSaveStatus === 'error'
+                      ? 'bg-red-50 text-red-700 border border-red-200'
+                      : 'bg-green-50 text-green-700 border border-green-200'
+                      }`}>
                       {autoSaveStatus === 'error' ? (
                         <AlertTriangle className="h-3 w-3 text-red-600" />
                       ) : (
@@ -540,16 +539,11 @@ export function PartialPaymentAgreementForm({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="bg-yellow-50 border-2 border-yellow-400 p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="text-center">
                       <div className="text-2xl mb-1">💰</div>
                       <p className="font-semibold text-yellow-800">Minimum</p>
                       <p className="text-sm">$350/month</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">🎯</div>
-                      <p className="font-semibold text-yellow-800">Goal</p>
-                      <p className="text-sm">$3,200 minimum</p>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl mb-1">⏰</div>
@@ -682,7 +676,7 @@ export function PartialPaymentAgreementForm({
                         />
                       </div>
                       <div>
-                        <Label htmlFor="estimatedTotalCost">Estimated Total Treatment Cost ($)</Label>
+                        <Label htmlFor="estimatedTotalCost">Total down payment ($)</Label>
                         <Input
                           id="estimatedTotalCost"
                           type="number"
@@ -757,13 +751,11 @@ export function PartialPaymentAgreementForm({
                       {treatmentOptions.map((treatment, index) => (
                         <div key={index} className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                           <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                              readOnly ? 'cursor-default' : 'cursor-pointer'
-                            } transition-colors ${
-                              formData.selectedTreatments.includes(treatment)
+                            className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${readOnly ? 'cursor-default' : 'cursor-pointer'
+                              } transition-colors ${formData.selectedTreatments.includes(treatment)
                                 ? 'bg-blue-100'
                                 : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-blue-300' : ''}`
-                            }`}
+                              }`}
                             onClick={() => !readOnly && handleTreatmentChange(treatment, !formData.selectedTreatments.includes(treatment))}
                           >
                             {formData.selectedTreatments.includes(treatment) && (
@@ -815,7 +807,7 @@ export function PartialPaymentAgreementForm({
                       <span className="text-lg">💰</span>
                       <div>
                         <p className="font-semibold text-purple-800">Minimum Monthly Payment:</p>
-                        <p className="text-sm">$350 until $3,200 minimum reached</p>
+                        <p className="text-sm">$350 until ${formData.estimatedTotalCost ? parseFloat(formData.estimatedTotalCost).toLocaleString('en-US') : '3,200'} minimum reached</p>
                       </div>
                     </div>
                   </div>
@@ -867,13 +859,11 @@ export function PartialPaymentAgreementForm({
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          readOnly ? 'cursor-default' : 'cursor-pointer'
-                        } transition-colors ${
-                          formData.readAndUnderstood
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${readOnly ? 'cursor-default' : 'cursor-pointer'
+                          } transition-colors ${formData.readAndUnderstood
                             ? 'bg-green-100'
                             : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                        }`}
+                          }`}
                         onClick={() => !readOnly && handleInputChange('readAndUnderstood', !formData.readAndUnderstood)}
                       >
                         {formData.readAndUnderstood && (
@@ -892,13 +882,11 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          readOnly ? 'cursor-default' : 'cursor-pointer'
-                        } transition-colors ${
-                          formData.understandRefundPolicy
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${readOnly ? 'cursor-default' : 'cursor-pointer'
+                          } transition-colors ${formData.understandRefundPolicy
                             ? 'bg-green-100'
                             : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                        }`}
+                          }`}
                         onClick={() => !readOnly && handleInputChange('understandRefundPolicy', !formData.understandRefundPolicy)}
                       >
                         {formData.understandRefundPolicy && (
@@ -917,13 +905,11 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          readOnly ? 'cursor-default' : 'cursor-pointer'
-                        } transition-colors ${
-                          formData.understandFullPaymentRequired
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${readOnly ? 'cursor-default' : 'cursor-pointer'
+                          } transition-colors ${formData.understandFullPaymentRequired
                             ? 'bg-green-100'
                             : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                        }`}
+                          }`}
                         onClick={() => !readOnly && handleInputChange('understandFullPaymentRequired', !formData.understandFullPaymentRequired)}
                       >
                         {formData.understandFullPaymentRequired && (
@@ -942,13 +928,11 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          readOnly ? 'cursor-default' : 'cursor-pointer'
-                        } transition-colors ${
-                          formData.agreeNoDisputes
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${readOnly ? 'cursor-default' : 'cursor-pointer'
+                          } transition-colors ${formData.agreeNoDisputes
                             ? 'bg-green-100'
                             : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                        }`}
+                          }`}
                         onClick={() => !readOnly && handleInputChange('agreeNoDisputes', !formData.agreeNoDisputes)}
                       >
                         {formData.agreeNoDisputes && (
@@ -967,13 +951,11 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          readOnly ? 'cursor-default' : 'cursor-pointer'
-                        } transition-colors ${
-                          formData.understandOneYearValidity
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${readOnly ? 'cursor-default' : 'cursor-pointer'
+                          } transition-colors ${formData.understandOneYearValidity
                             ? 'bg-green-100'
                             : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                        }`}
+                          }`}
                         onClick={() => !readOnly && handleInputChange('understandOneYearValidity', !formData.understandOneYearValidity)}
                       >
                         {formData.understandOneYearValidity && (
@@ -992,13 +974,11 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          readOnly ? 'cursor-default' : 'cursor-pointer'
-                        } transition-colors ${
-                          formData.understandNoCashPayments
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${readOnly ? 'cursor-default' : 'cursor-pointer'
+                          } transition-colors ${formData.understandNoCashPayments
                             ? 'bg-green-100'
                             : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                        }`}
+                          }`}
                         onClick={() => !readOnly && handleInputChange('understandNoCashPayments', !formData.understandNoCashPayments)}
                       >
                         {formData.understandNoCashPayments && (
@@ -1017,13 +997,11 @@ export function PartialPaymentAgreementForm({
 
                     <div className="flex items-start space-x-3 p-3 bg-white rounded-lg">
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          readOnly ? 'cursor-default' : 'cursor-pointer'
-                        } transition-colors ${
-                          formData.enteringVoluntarily
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${readOnly ? 'cursor-default' : 'cursor-pointer'
+                          } transition-colors ${formData.enteringVoluntarily
                             ? 'bg-green-100'
                             : `border-2 border-gray-300 bg-white ${!readOnly ? 'hover:border-green-300' : ''}`
-                        }`}
+                          }`}
                         onClick={() => !readOnly && handleInputChange('enteringVoluntarily', !formData.enteringVoluntarily)}
                       >
                         {formData.enteringVoluntarily && (
