@@ -13,7 +13,7 @@ export interface ConsentFullArchFormData {
   created_by?: string;
   updated_by?: string;
   form_data?: any; // JSONB backup
-  
+
   // Patient & Interpreter Information
   primary_language?: string;
   other_language_text?: string;
@@ -21,7 +21,7 @@ export interface ConsentFullArchFormData {
   interpreter_name?: string;
   interpreter_credential?: string;
   patient_info_initials?: string;
-  
+
   // Treatment Description
   arch_type?: string;
   upper_jaw?: string;
@@ -292,79 +292,7 @@ export async function autoSaveConsentFullArchForm(
       console.log('✅ Consent Full Arch form auto-saved successfully:', data);
       return { data, error: null };
     } else {
-      // Check for existing forms for this patient first
-      if (patientId) {
-        // Check for any existing forms (both draft and submitted)
-        const { data: existingForms } = await supabase
-          .from('consent_forms')
-          .select('id, status')
-          .eq('patient_id', patientId)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (existingForms && existingForms.length > 0) {
-          // If we're submitting (status = 'completed'), always look for existing draft to update
-          if (formData.status === 'completed') {
-            const draftForm = existingForms.find(form => form.status === 'draft');
-            if (draftForm) {
-              console.log('📝 Submitting existing Consent Full Arch draft:', draftForm.id);
-              const { data, error } = await supabase
-                .from('consent_forms')
-                .update({
-                  ...dbData,
-                  status: 'completed',
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', draftForm.id)
-                .select()
-                .single();
-
-              if (error) {
-                console.error('❌ Error submitting existing Consent Full Arch draft:', error);
-                return { data: null, error };
-              }
-
-              console.log('✅ Consent Full Arch form submitted successfully:', data);
-              return { data, error: null };
-            }
-          }
-
-          // Look for existing draft to update for auto-save
-          const draftForm = existingForms.find(form => form.status === 'draft');
-          if (draftForm) {
-            // Update the existing draft instead of creating a new one
-            console.log('📝 Updating existing Consent Full Arch draft:', draftForm.id);
-            const { data, error } = await supabase
-              .from('consent_forms')
-              .update({
-                ...dbData,
-                status: formData.status || 'draft',
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', draftForm.id)
-              .select()
-              .single();
-
-            if (error) {
-              console.error('❌ Error updating existing Consent Full Arch draft:', error);
-              return { data: null, error };
-            }
-
-            console.log('✅ Consent Full Arch draft updated successfully:', data);
-            return { data, error: null };
-          }
-
-          // Check if there's already a completed form (only prevent new drafts, not submissions)
-          const completedForm = existingForms.find(form => form.status === 'completed');
-          if (completedForm && !formData.status) {
-            // Don't create new drafts if a completed form already exists (unless explicitly submitting)
-            console.log('⚠️ Completed form already exists, not creating new draft');
-            return { data: completedForm, error: null };
-          }
-        }
-      }
-
-      // Create new record only if no existing draft found
+      // Create new record
       dbData.status = 'draft';
       console.log('📝 Creating new Consent Full Arch form draft');
       const { data, error } = await supabase

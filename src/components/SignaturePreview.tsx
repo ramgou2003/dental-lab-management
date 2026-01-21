@@ -6,13 +6,14 @@ interface SignaturePreviewProps {
   signature: string;
   onEdit?: () => void;
   onClear?: () => void;
-  label: string;
+  label?: string;
   readOnly?: boolean;
+  className?: string;
 }
 
-export function SignaturePreview({ signature, onEdit, onClear, label, readOnly = false }: SignaturePreviewProps) {
+export function SignaturePreview({ signature, onEdit, onClear, label = "", readOnly = false, className }: SignaturePreviewProps) {
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${className || ''}`}>
       <div className="border border-gray-300 rounded-md p-3 bg-gray-50">
         {!readOnly && (
           <div className="flex justify-end items-center mb-2">
@@ -44,7 +45,7 @@ export function SignaturePreview({ signature, onEdit, onClear, label, readOnly =
             </div>
           </div>
         )}
-        
+
         <div className="bg-white border rounded p-2 min-h-[80px] flex items-center justify-center">
           {signature ? (
             <img

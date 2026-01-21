@@ -10781,6 +10781,10 @@ export function PatientProfilePage() {
                               disabled={!selectedAdminFormType}
                               onClick={() => {
                                 if (selectedAdminFormType === 'consent-full-arch') {
+                                  // Reset editing/viewing states for new form
+                                  setSelectedConsentForm(null);
+                                  setIsEditingConsentForm(false);
+                                  setIsViewingConsentForm(false);
                                   setShowConsentFullArchForm(true);
                                 } else if (selectedAdminFormType === 'financial-agreement') {
                                   setShowFinancialAgreementForm(true);
