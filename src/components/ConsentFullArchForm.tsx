@@ -1342,8 +1342,8 @@ export function ConsentFullArchForm({
                                   type="button"
                                   onClick={() => handleInputChange('surgeryType', 'surgery')}
                                   className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgery'
-                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                      : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
                                     }`}
                                 >
                                   Surgery
@@ -1352,8 +1352,8 @@ export function ConsentFullArchForm({
                                   type="button"
                                   onClick={() => handleInputChange('surgeryType', 'surgical_revision')}
                                   className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgical_revision'
-                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                      : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
                                     }`}
                                 >
                                   Surgical Revision
@@ -1554,6 +1554,35 @@ export function ConsentFullArchForm({
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-6">
+                            {/* Surgery Type */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-700">
+                                Surgery Type
+                              </Label>
+                              <div className="flex flex-wrap gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleInputChange('surgeryType', 'surgery')}
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgery'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  Surgery
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleInputChange('surgeryType', 'surgical_revision')}
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgical_revision'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  Surgical Revision
+                                </button>
+                              </div>
+                            </div>
+
                             {/* Treatment Type */}
                             <div className="space-y-2">
                               <Label htmlFor="lowerTreatmentType" className="text-sm font-medium text-gray-700">
@@ -1752,6 +1781,35 @@ export function ConsentFullArchForm({
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
+                            {/* Surgery Type - Shared for both arches */}
+                            <div className="space-y-2 mb-6 p-4 border-2 border-blue-200 rounded-lg bg-blue-50/20">
+                              <Label className="text-sm font-medium text-gray-700">
+                                Surgery Type
+                              </Label>
+                              <div className="flex flex-wrap gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleInputChange('surgeryType', 'surgery')}
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgery'
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  Surgery
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleInputChange('surgeryType', 'surgical_revision')}
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgical_revision'
+                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                      : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  Surgical Revision
+                                </button>
+                              </div>
+                            </div>
+
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                               {/* Upper Arch Column */}
                               <div className="space-y-6 p-4 border-2 border-blue-200 rounded-lg bg-blue-50/20">
