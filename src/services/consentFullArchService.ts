@@ -381,7 +381,8 @@ export function convertFormDataToDatabase(
 
     // Treatment Description
     arch_type: formData.archType || '',
-    surgery_type: formData.surgeryType || '',
+    upper_surgery_type: formData.upperSurgeryType || '',
+    lower_surgery_type: formData.lowerSurgeryType || '',
     upper_jaw: formData.upperJaw || '',
     lower_jaw: formData.lowerJaw || '',
 
@@ -598,7 +599,8 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
 
     // Treatment Description
     archType: dbData.arch_type || '',
-    surgeryType: dbData.surgery_type || '',
+    upperSurgeryType: dbData.upper_surgery_type || '',
+    lowerSurgeryType: dbData.lower_surgery_type || '',
     upperJaw: dbData.upper_jaw || '',
     lowerJaw: dbData.lower_jaw || '',
 

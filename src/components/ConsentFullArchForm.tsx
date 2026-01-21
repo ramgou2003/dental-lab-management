@@ -121,7 +121,8 @@ export function ConsentFullArchForm({
 
       // Treatment Description
       archType: initialData?.archType || "", // "upper", "lower", "dual"
-      surgeryType: initialData?.surgeryType || "", // "surgery", "surgical_revision"
+      upperSurgeryType: initialData?.upperSurgeryType || "", // "surgery", "surgical_revision"
+      lowerSurgeryType: initialData?.lowerSurgeryType || "", // "surgery", "surgical_revision"
       upperJaw: initialData?.upperJaw || "",
       lowerJaw: initialData?.lowerJaw || "",
 
@@ -458,7 +459,8 @@ export function ConsentFullArchForm({
         interpreterCredential: "",
         patientInfoInitials: "",
         archType: "",
-        surgeryType: "",
+        upperSurgeryType: "",
+        lowerSurgeryType: "",
         upperJaw: "",
         lowerJaw: "",
         upperTeethRegions: "",
@@ -1341,7 +1343,7 @@ export function ConsentFullArchForm({
                                 <button
                                   type="button"
                                   onClick={() => handleInputChange('surgeryType', 'surgery')}
-                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgery'
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.upperSurgeryType === 'surgery'
                                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                                     : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
                                     }`}
@@ -1351,7 +1353,7 @@ export function ConsentFullArchForm({
                                 <button
                                   type="button"
                                   onClick={() => handleInputChange('surgeryType', 'surgical_revision')}
-                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgical_revision'
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.upperSurgeryType === 'surgical_revision'
                                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                                     : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
                                     }`}
@@ -1563,7 +1565,7 @@ export function ConsentFullArchForm({
                                 <button
                                   type="button"
                                   onClick={() => handleInputChange('surgeryType', 'surgery')}
-                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgery'
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.lowerSurgeryType === 'surgery'
                                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                                     : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
                                     }`}
@@ -1573,7 +1575,7 @@ export function ConsentFullArchForm({
                                 <button
                                   type="button"
                                   onClick={() => handleInputChange('surgeryType', 'surgical_revision')}
-                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgical_revision'
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.lowerSurgeryType === 'surgical_revision'
                                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                                     : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
                                     }`}
@@ -1790,9 +1792,9 @@ export function ConsentFullArchForm({
                                 <button
                                   type="button"
                                   onClick={() => handleInputChange('surgeryType', 'surgery')}
-                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgery'
-                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                      : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.upperSurgeryType === 'surgery'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
                                     }`}
                                 >
                                   Surgery
@@ -1800,9 +1802,9 @@ export function ConsentFullArchForm({
                                 <button
                                   type="button"
                                   onClick={() => handleInputChange('surgeryType', 'surgical_revision')}
-                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.surgeryType === 'surgical_revision'
-                                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                      : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
+                                  className={`px-6 py-3 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all flex items-center gap-2 ${formData.upperSurgeryType === 'surgical_revision'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-gray-50'
                                     }`}
                                 >
                                   Surgical Revision
