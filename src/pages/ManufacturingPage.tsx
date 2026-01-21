@@ -24,8 +24,10 @@ import { InspectionDialog } from "@/components/InspectionDialog";
 import { ApplianceReceivedDialog } from "@/components/ApplianceReceivedDialog";
 import { ManufacturingFilterDialog, ManufacturingFilters } from "@/components/ManufacturingFilterDialog";
 import { MillingLocationManagement } from "@/components/MillingLocationManagement";
+import { useLabScriptConfig } from "@/hooks/useLabScriptConfig";
 
 export function ManufacturingPage() {
+  const { materials, shades } = useLabScriptConfig();
   const [activeFilter, setActiveFilter] = useState("new-script");
   const [showNewManufacturingForm, setShowNewManufacturingForm] = useState(false);
   const [showMillingDialog, setShowMillingDialog] = useState(false);
@@ -251,9 +253,35 @@ export function ManufacturingPage() {
     }
   };
 
-  const handleReprint = async (item: any) => {
+  const [showReprintDialog, setShowReprintDialog] = useState(false);
+  const [selectedReprintItem, setSelectedReprintItem] = useState<any>(null);
+  const [reprintForm, setReprintForm] = useState({
+    manufacturing_method: 'printing',
+    material: '',
+    shade: ''
+  });
+
+  const handleReprint = (item: any) => {
+    setSelectedReprintItem(item);
+    setReprintForm({
+      manufacturing_method: item.manufacturing_method || 'printing',
+      material: item.material || '',
+      shade: item.shade || ''
+    });
+    setShowReprintDialog(true);
+  };
+
+  const handleSubmitReprint = async () => {
+    if (!selectedReprintItem) return;
+
     try {
-      await reprintManufacturingItem(item.id);
+      await reprintManufacturingItem(selectedReprintItem.id, {
+        manufacturing_method: reprintForm.manufacturing_method,
+        material: reprintForm.material,
+        shade: reprintForm.shade
+      });
+      setShowReprintDialog(false);
+      setSelectedReprintItem(null);
     } catch (error) {
       toast.error('Failed to create reprint');
     }
@@ -1845,6 +1873,108 @@ export function ManufacturingPage() {
         open={showMillingLocationManagement}
         onOpenChange={setShowMillingLocationManagement}
       />
+
+
+      {/* Reprint Dialog */}
+      <Dialog open={showReprintDialog} onOpenChange={setShowReprintDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reprint Item</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Manufacturing Type</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReprintForm({ ...reprintForm, manufacturing_method: 'printing' })}
+                  className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 border flex items-center justify-center gap-2 ${reprintForm.manufacturing_method === 'printing'
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                    }`}
+                >
+                  <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${reprintForm.manufacturing_method === 'printing'
+                    ? "border-white"
+                    : "border-gray-400"
+                    }`}>
+                    {reprintForm.manufacturing_method === 'printing' && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+                    )}
+                  </div>
+                  Printing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReprintForm({ ...reprintForm, manufacturing_method: 'milling' })}
+                  className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 border flex items-center justify-center gap-2 ${reprintForm.manufacturing_method === 'milling'
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+                    }`}
+                >
+                  <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${reprintForm.manufacturing_method === 'milling'
+                    ? "border-white"
+                    : "border-gray-400"
+                    }`}>
+                    {reprintForm.manufacturing_method === 'milling' && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+                    )}
+                  </div>
+                  Milling
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Material</Label>
+                <Select
+                  value={reprintForm.material || undefined}
+                  onValueChange={(value) => setReprintForm({ ...reprintForm, material: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select material" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {materials.map((material) => (
+                      <SelectItem key={material.id} value={material.value}>
+                        {material.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Shade</Label>
+                <Select
+                  value={reprintForm.shade || undefined}
+                  onValueChange={(value) => setReprintForm({ ...reprintForm, shade: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select shade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {shades.map((shade) => (
+                      <SelectItem key={shade.id} value={shade.value}>
+                        {shade.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setShowReprintDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitReprint}>
+                Submit Reprint
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -394,7 +394,11 @@ export function useManufacturingItems() {
     }
   };
 
-  const reprintManufacturingItem = async (itemId: string) => {
+  const reprintManufacturingItem = async (itemId: string, options?: {
+    manufacturing_method?: string;
+    material?: string;
+    shade?: string;
+  }) => {
     try {
       // Fetch the current item from database to get all details
       const { data: currentItemData, error: fetchError } = await supabase
@@ -410,6 +414,10 @@ export function useManufacturingItems() {
         throw new Error('Manufacturing item not found');
       }
 
+      // Determine status based on the new manufacturing method (or existing if not provided)
+      const methodToUse = options?.manufacturing_method || currentItem.manufacturing_method;
+      const initialStatus = methodToUse === 'printing' ? 'pending-printing' : 'pending-milling';
+
       // Create new manufacturing item with same details for reprinting
       const { error: createError } = await supabase
         .from('manufacturing_items')
@@ -420,22 +428,22 @@ export function useManufacturingItems() {
           patient_name: currentItem.patient_name,
           upper_appliance_type: currentItem.upper_appliance_type,
           lower_appliance_type: currentItem.lower_appliance_type,
-          shade: currentItem.shade,
+          shade: options?.shade || currentItem.shade,
           screw: currentItem.screw,
-          material: currentItem.material,
+          material: options?.material || currentItem.material,
           arch_type: currentItem.arch_type,
           upper_appliance_number: currentItem.upper_appliance_number,
           lower_appliance_number: currentItem.lower_appliance_number,
           upper_nightguard_number: currentItem.upper_nightguard_number,
           lower_nightguard_number: currentItem.lower_nightguard_number,
           is_nightguard_needed: currentItem.is_nightguard_needed,
-          manufacturing_method: currentItem.manufacturing_method,
+          manufacturing_method: methodToUse,
           milling_location: currentItem.milling_location,
           gingiva_color: currentItem.gingiva_color,
           stained_and_glazed: currentItem.stained_and_glazed,
           cementation: currentItem.cementation,
           additional_notes: currentItem.additional_notes,
-          status: currentItem.manufacturing_method === 'printing' ? 'pending-printing' : 'pending-milling'
+          status: initialStatus
         });
 
       if (createError) {
