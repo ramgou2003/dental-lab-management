@@ -109,7 +109,8 @@ export function MultiSelect({
             </button>
           )}
         </div>
-      )}
+      )
+      }
 
       {/* Dropdown Options */}
       {isOpen && (
@@ -132,7 +133,7 @@ export function MultiSelect({
               </div>
             ))}
           </div>
-          
+
           {/* Footer Actions */}
           {safeValue.length > 0 && !disabled && (
             <div className="border-t border-gray-200 p-2">

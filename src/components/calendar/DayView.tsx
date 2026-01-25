@@ -222,6 +222,9 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
     appointmentId: string;
     patientId: string;
     patientName: string;
+    suggestedType?: string;
+    suggestedSubtype?: string;
+    suggestedDate?: string;
   } | null>(null);
   const [showNextAppointmentForm, setShowNextAppointmentForm] = useState(false);
   const [nextAppointmentType, setNextAppointmentType] = useState<string>('');
@@ -933,7 +936,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       // First, check if encounter form exists and is complete
       const { data: encounterData, error: encounterError } = await (supabaseClient as any)
         .from('encounters')
-        .select('id, form_status')
+        .select('id, form_status, suggested_next_appointment_type, suggested_next_appointment_subtype, suggested_next_appointment_date')
         .eq('appointment_id', appointment.id)
         .maybeSingle();
 
@@ -959,7 +962,10 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
         setNextAppointmentDialog({
           appointmentId: appointment.id,
           patientId: appointment.patientId,
-          patientName: appointment.patient
+          patientName: appointment.patient,
+          suggestedType: encounterData.suggested_next_appointment_type,
+          suggestedSubtype: encounterData.suggested_next_appointment_subtype,
+          suggestedDate: encounterData.suggested_next_appointment_date
         });
       }, 100);
     } catch (error) {
@@ -3731,6 +3737,46 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                       </p>
                     </div>
                   </div>
+
+                  {/* Suggested Appointment Info */}
+                  {nextAppointmentDialog?.suggestedType && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 space-y-2">
+                      <p className="text-xs text-blue-600 font-medium uppercase tracking-wide flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Suggested Next Appointment
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-xs text-blue-400 block">Type</span>
+                          <span className="text-sm font-semibold text-blue-900">
+                            {appointmentTypes.find(t => t.key === nextAppointmentDialog.suggestedType)?.label || nextAppointmentDialog.suggestedType}
+                          </span>
+                        </div>
+                        {nextAppointmentDialog.suggestedSubtype && (
+                          <div>
+                            <span className="text-xs text-blue-400 block">Detail</span>
+                            <span className="text-sm font-semibold text-blue-900">
+                              {getSubtypeLabel(nextAppointmentDialog.suggestedSubtype) || nextAppointmentDialog.suggestedSubtype}
+                            </span>
+                          </div>
+                        )}
+                        {nextAppointmentDialog.suggestedDate && (
+                          <div className="col-span-2 border-t border-blue-100 pt-1 mt-1">
+                            <span className="text-xs text-blue-400 block">Target Date</span>
+                            <span className="text-sm font-semibold text-blue-900">
+                              {(() => {
+                                const d = new Date(nextAppointmentDialog.suggestedDate);
+                                // Adjust specifically for display to avoid timezone shifts if it was stored as YYYY-MM-DD
+                                const userTimezoneOffset = d.getTimezoneOffset() * 60000;
+                                const adjustedDate = new Date(d.getTime() + userTimezoneOffset);
+                                return adjustedDate.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                              })()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </AlertDialogHeader>
 
                 <div className="flex flex-col gap-3">
@@ -3742,10 +3788,17 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                           patientName: nextAppointmentDialog.patientName,
                           currentApptId: nextAppointmentDialog.appointmentId
                         };
+
+                        // Pre-fill from suggestions if available
+                        setNextAppointmentType(nextAppointmentDialog.suggestedType || '');
+                        setNextAppointmentSubtype(nextAppointmentDialog.suggestedSubtype || '');
+                        setNextAppointmentDate(nextAppointmentDialog.suggestedDate || '');
+                      } else {
+                        setNextAppointmentType('');
+                        setNextAppointmentSubtype('');
+                        setNextAppointmentDate('');
                       }
-                      setNextAppointmentType('');
-                      setNextAppointmentSubtype('');
-                      setNextAppointmentDate('');
+
                       setNextAppointmentStartTime('');
                       setNextAppointmentEndTime('');
                       setShowNextAppointmentForm(true);

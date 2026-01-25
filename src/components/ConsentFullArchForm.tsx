@@ -326,7 +326,7 @@ export function ConsentFullArchForm({
 
   // Update form data when initialData changes
   useEffect(() => {
-    if (initialData && initialData.id) {
+    if (initialData) {
       console.log('🔄 Updating Consent Full Arch form data from initialData:', initialData);
 
       const today = new Date().toISOString().split('T')[0];
