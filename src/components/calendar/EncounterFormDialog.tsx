@@ -110,6 +110,64 @@ export function EncounterFormDialog({
   // Clinical notes
   const [clinicalNotes, setClinicalNotes] = useState<string>('');
 
+  // Suggested Next Appointment
+  const [suggestedNextApptType, setSuggestedNextApptType] = useState<string>('');
+  const [suggestedNextApptSubtype, setSuggestedNextApptSubtype] = useState<string>('');
+  const [suggestedNextApptDate, setSuggestedNextApptDate] = useState<string>('');
+
+  // Appointment Types and Subtypes
+  const appointmentTypes = [
+    { id: 'consultation', name: 'Consult' },
+    { id: 'follow-up', name: 'Follow Up' },
+    { id: 'data-collection', name: 'Data Collection' },
+    { id: 'Appliance-delivery', name: 'Appliance Delivery' },
+    { id: 'surgery', name: 'Surgery' },
+    { id: 'surgical-revision', name: 'Surgical Revision' },
+  ];
+
+  const subtypeOptions: Record<string, { value: string; label: string }[]> = {
+    'follow-up': [
+      { value: '7-day-followup', label: '7 Day Follow-up' },
+      { value: '30-day-followup', label: '30 Days Follow-up' },
+      { value: 'observation-followup', label: 'Follow-up for Observation' },
+      { value: '3-month-followup', label: '3 Months Follow Up' },
+      { value: '6-month-followup', label: '6 Months Follow Up' },
+      { value: '12-month-followup', label: '12 Months Follow Up' }
+    ],
+    'Appliance-delivery': [
+      { value: 'surgical-day-appliance', label: 'Surgical day appliance' },
+      { value: 'nightguard', label: 'Nightguard' },
+      { value: 'printed-try-in-delivery', label: 'Printed Try-in Delivery' },
+      { value: '82-day-appliance-delivery', label: '82 Days PTI Delivery' },
+      { value: '120-day-final-delivery', label: '120 Days Final Delivery' }
+    ],
+    'data-collection': [
+      { value: 'pre-surgery-data-collection', label: 'Pre-Surgery data collection' },
+      { value: 'data-collection-printed-try-in', label: 'Data collection for Printed-try-in' },
+      { value: '75-day-data-collection', label: '75 Days Data Collection for PTI' },
+      { value: 'final-data-collection', label: 'Final Data Collection' },
+      { value: 'administrative-documents', label: 'Administrative documents' }
+    ],
+    'surgery': [
+      { value: 'full-arch-fixed', label: 'Full Arch Fixed' },
+      { value: 'denture', label: 'Denture' },
+      { value: 'implant-removable-denture', label: 'Implant Removable Denture' },
+      { value: 'single-implant', label: 'Single Implant' },
+      { value: 'multiple-implants', label: 'Multiple Implants' },
+      { value: 'extraction', label: 'Extraction' },
+      { value: 'extraction-and-graft', label: 'Extraction and Graft' }
+    ],
+    'surgical-revision': [
+      { value: 'full-arch-fixed', label: 'Full Arch Fixed' },
+      { value: 'denture', label: 'Denture' },
+      { value: 'implant-removable-denture', label: 'Implant Removable Denture' },
+      { value: 'single-implant', label: 'Single Implant' },
+      { value: 'multiple-implants', label: 'Multiple Implants' },
+      { value: 'extraction', label: 'Extraction' },
+      { value: 'extraction-and-graft', label: 'Extraction and Graft' }
+    ]
+  };
+
   // New section: Pictures/data collected
   const [picturesDataCollected, setPicturesDataCollected] = useState<string>('');
   // Consultation specific Pictures/data collected
@@ -549,6 +607,11 @@ export function EncounterFormDialog({
 
         // Clinical notes
         setClinicalNotes(data.clinical_notes || '');
+        // Suggested Next Appointment
+        setSuggestedNextApptType(data.suggested_next_appointment_type || '');
+        setSuggestedNextApptSubtype(data.suggested_next_appointment_subtype || '');
+        setSuggestedNextApptDate(data.suggested_next_appointment_date || '');
+
         // Form status
         setFormStatus(data.form_status || 'draft');
       } else {
@@ -599,7 +662,11 @@ export function EncounterFormDialog({
         setPostHealingTissueScan('');
         setModjawData('');
         // Clinical notes
+        // Clinical notes
         setClinicalNotes('');
+        setSuggestedNextApptType('');
+        setSuggestedNextApptSubtype('');
+        setSuggestedNextApptDate('');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -661,7 +728,10 @@ export function EncounterFormDialog({
         smoker_consent_declined: smokerConsentDeclined,
         smoker_signature: smokerSignature,
         smoker_signature_date: smokerSignatureDate,
-        pictures_data_collected: picturesDataCollected
+        pictures_data_collected: picturesDataCollected,
+        suggested_next_appointment_type: suggestedNextApptType,
+        suggested_next_appointment_subtype: suggestedNextApptSubtype,
+        suggested_next_appointment_date: suggestedNextApptDate
       };
 
       // Add assessment/encounter details if NOT surgery and NOT consultation (where they aren't visible or needed)
@@ -3536,6 +3606,74 @@ export function EncounterFormDialog({
                       className={`w-full min-h-[120px] px-3 py-2 text-sm border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y ${showViewMode ? 'bg-gray-50' : 'bg-white'}`}
                       rows={5}
                     />
+                  </div>
+                </div>
+
+                {/* Suggested Next Appointment Section */}
+                <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                  <h3 className="text-lg font-semibold mb-4 text-blue-900">Suggested Next Appointment</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Appointment Type */}
+                    <div className="space-y-2">
+                      <Label htmlFor="suggested-type" className="text-sm font-medium text-blue-700">
+                        Appointment Type
+                      </Label>
+                      <Select
+                        value={suggestedNextApptType}
+                        onValueChange={(value) => {
+                          setSuggestedNextApptType(value);
+                          setSuggestedNextApptSubtype(''); // Reset subtype when type changes
+                        }}
+                      >
+                        <SelectTrigger id="suggested-type" className="bg-white border-blue-200">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {appointmentTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.id}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Appointment Subtype */}
+                    <div className="space-y-2">
+                      <Label htmlFor="suggested-subtype" className="text-sm font-medium text-blue-700">
+                        Appointment Subtype
+                      </Label>
+                      <Select
+                        value={suggestedNextApptSubtype}
+                        onValueChange={setSuggestedNextApptSubtype}
+                        disabled={!suggestedNextApptType || !subtypeOptions[suggestedNextApptType]}
+                      >
+                        <SelectTrigger id="suggested-subtype" className="bg-white border-blue-200">
+                          <SelectValue placeholder="Select subtype" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {suggestedNextApptType && subtypeOptions[suggestedNextApptType]?.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Suggested Date */}
+                    <div className="space-y-2">
+                      <Label htmlFor="suggested-date" className="text-sm font-medium text-blue-700">
+                        Suggested Date
+                      </Label>
+                      <Input
+                        id="suggested-date"
+                        type="date"
+                        value={suggestedNextApptDate}
+                        onChange={(e) => setSuggestedNextApptDate(e.target.value)}
+                        className="bg-white border-blue-200"
+                      />
+                    </div>
                   </div>
                 </div>
 
