@@ -26,7 +26,61 @@ export interface ConsentFullArchFormData {
   arch_type?: string;
   upper_jaw?: string;
   lower_jaw?: string;
+  upper_surgery_type?: string;
+  lower_surgery_type?: string;
   treatment_description_initials?: string;
+
+  // Upper Arch Treatment Details
+  upper_teeth_regions?: string;
+  upper_implants?: string;
+  upper_treatment_type?: string;
+  upper_same_day_load?: string;
+
+  // Lower Arch Treatment Details
+  lower_teeth_regions?: string;
+  lower_implants?: string;
+  lower_treatment_type?: string;
+  lower_same_day_load?: string;
+
+  // Upper Arch Graft Material
+  upper_graft_allograft?: boolean;
+  upper_graft_xenograft?: boolean;
+  upper_graft_autograft?: boolean;
+  upper_graft_prf?: boolean;
+  upper_graft_none?: boolean;
+
+  // Upper Arch Prosthesis
+  upper_prosthesis_zirconia?: boolean;
+  upper_prosthesis_overdenture?: boolean;
+  upper_prosthesis_none?: boolean;
+
+  // Lower Arch Graft Material
+  lower_graft_allograft?: boolean;
+  lower_graft_xenograft?: boolean;
+  lower_graft_autograft?: boolean;
+  lower_graft_prf?: boolean;
+  lower_graft_none?: boolean;
+
+  // Lower Arch Prosthesis
+  lower_prosthesis_zirconia?: boolean;
+  lower_prosthesis_overdenture?: boolean;
+  lower_prosthesis_none?: boolean;
+
+  // Sedation Plan
+  sedation_local_only?: boolean;
+  sedation_nitrous?: boolean;
+  sedation_iv_conscious?: boolean;
+  sedation_general_hospital?: boolean;
+
+  // ASA
+  asa_physical_status?: string;
+
+  // Alternatives
+  alternatives_no_treatment_initials?: string;
+  alternatives_conventional_dentures_initials?: string;
+  alternatives_segmented_extraction_initials?: string;
+  alternatives_removable_overdentures_initials?: string;
+  alternatives_zygomatic_implants_initials?: string;
 
   // Material Risks
   risks_understood?: boolean;
@@ -41,6 +95,17 @@ export interface ConsentFullArchFormData {
   iv_sedation_fee?: string;
   iv_sedation_covered?: string;
 
+  // New Financial Fields
+  lateral_window_sinus_lift_fee?: string;
+  lateral_window_sinus_lift_covered?: string;
+  lateral_window_sinus_lift_count?: string;
+  biopsy_fee?: string;
+  biopsy_covered?: string;
+  biopsy_count?: string;
+  remote_anchorage_fee?: string;
+  remote_anchorage_covered?: string;
+  remote_anchorage_count?: string;
+
   // Planned Drugs (boolean flags)
   midazolam?: boolean;
   fentanyl?: boolean;
@@ -53,6 +118,8 @@ export interface ConsentFullArchFormData {
   valium?: boolean;
   clindamycin?: boolean;
   lidocaine?: boolean;
+  marcaine?: boolean;
+  carbocaine?: boolean;
 
   // Financial Disclosure
   surgical_extractions_count?: string;
@@ -401,20 +468,24 @@ export function convertFormDataToDatabase(
     upper_graft_xenograft: formData.upperGraftMaterial?.xenograft ?? false,
     upper_graft_autograft: formData.upperGraftMaterial?.autograft ?? false,
     upper_graft_prf: formData.upperGraftMaterial?.prf ?? false,
+    upper_graft_none: formData.upperGraftMaterial?.none ?? false,
 
     // Upper Arch Prosthesis
     upper_prosthesis_zirconia: formData.upperProsthesis?.zirconia ?? false,
     upper_prosthesis_overdenture: formData.upperProsthesis?.overdenture ?? false,
+    upper_prosthesis_none: formData.upperProsthesis?.none ?? false,
 
     // Lower Arch Graft Material
     lower_graft_allograft: formData.lowerGraftMaterial?.allograft ?? false,
     lower_graft_xenograft: formData.lowerGraftMaterial?.xenograft ?? false,
     lower_graft_autograft: formData.lowerGraftMaterial?.autograft ?? false,
     lower_graft_prf: formData.lowerGraftMaterial?.prf ?? false,
+    lower_graft_none: formData.lowerGraftMaterial?.none ?? false,
 
     // Lower Arch Prosthesis
     lower_prosthesis_zirconia: formData.lowerProsthesis?.zirconia ?? false,
     lower_prosthesis_overdenture: formData.lowerProsthesis?.overdenture ?? false,
+    lower_prosthesis_none: formData.lowerProsthesis?.none ?? false,
 
     // Sedation Plan
     sedation_local_only: formData.sedationPlan?.localOnly ?? false,
@@ -454,6 +525,8 @@ export function convertFormDataToDatabase(
     valium: formData.plannedDrugs?.valium ?? formData.valium ?? false,
     clindamycin: formData.plannedDrugs?.clindamycin ?? formData.clindamycin ?? false,
     lidocaine: formData.plannedDrugs?.lidocaine ?? formData.lidocaine ?? false,
+    marcaine: formData.plannedDrugs?.marcaine ?? formData.marcaine ?? false,
+    carbocaine: formData.plannedDrugs?.carbocaine ?? formData.carbocaine ?? false,
 
     // Alternatives Initials
     alternatives_no_treatment_initials: formData.alternativesInitials?.noTreatment || '',
@@ -471,6 +544,15 @@ export function convertFormDataToDatabase(
     endosteal_implants_covered: formData.implantFixtures?.covered || '',
     zirconia_bridge_fee: formData.zirconiabridge?.fee || '',
     zirconia_bridge_covered: formData.zirconiabridge?.covered || '',
+    lateral_window_sinus_lift_fee: formData.lateralWindowSinusLift?.fee || '',
+    lateral_window_sinus_lift_covered: formData.lateralWindowSinusLift?.covered || '',
+    lateral_window_sinus_lift_count: formData.lateralWindowSinusLift?.count || '',
+    biopsy_fee: formData.biopsy?.fee || '',
+    biopsy_covered: formData.biopsy?.covered || '',
+    biopsy_count: formData.biopsy?.count || '',
+    remote_anchorage_fee: formData.remoteAnchorage?.fee || '',
+    remote_anchorage_covered: formData.remoteAnchorage?.covered || '',
+    remote_anchorage_count: formData.remoteAnchorage?.count || '',
     financial_initials: formData.financialInitials || '',
 
     // Photo/Video Authorization
@@ -601,12 +683,14 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     lowerJaw: dbData.lower_jaw || '',
 
     // Upper Arch Treatment Details
+    upperSurgeryType: dbData.upper_surgery_type || dbData.form_data?.upperSurgeryType || '',
     upperTeethRegions: dbData.upper_teeth_regions || '',
     upperImplants: dbData.upper_implants || '',
     upperTreatmentType: dbData.upper_treatment_type || '',
     upperSameDayLoad: dbData.upper_same_day_load || '',
 
     // Lower Arch Treatment Details
+    lowerSurgeryType: dbData.lower_surgery_type || dbData.form_data?.lowerSurgeryType || '',
     lowerTeethRegions: dbData.lower_teeth_regions || '',
     lowerImplants: dbData.lower_implants || '',
     lowerTreatmentType: dbData.lower_treatment_type || '',
@@ -617,13 +701,15 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
       allograft: dbData.upper_graft_allograft ?? false,
       xenograft: dbData.upper_graft_xenograft ?? false,
       autograft: dbData.upper_graft_autograft ?? false,
-      prf: dbData.upper_graft_prf ?? false
+      prf: dbData.upper_graft_prf ?? false,
+      none: dbData.upper_graft_none ?? false
     },
 
     // Upper Arch Prosthesis (as object)
     upperProsthesis: {
       zirconia: dbData.upper_prosthesis_zirconia ?? false,
-      overdenture: dbData.upper_prosthesis_overdenture ?? false
+      overdenture: dbData.upper_prosthesis_overdenture ?? false,
+      none: dbData.upper_prosthesis_none ?? false
     },
 
     // Lower Arch Graft Material (as object)
@@ -631,13 +717,15 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
       allograft: dbData.lower_graft_allograft ?? false,
       xenograft: dbData.lower_graft_xenograft ?? false,
       autograft: dbData.lower_graft_autograft ?? false,
-      prf: dbData.lower_graft_prf ?? false
+      prf: dbData.lower_graft_prf ?? false,
+      none: dbData.lower_graft_none ?? false
     },
 
     // Lower Arch Prosthesis (as object)
     lowerProsthesis: {
       zirconia: dbData.lower_prosthesis_zirconia ?? false,
-      overdenture: dbData.lower_prosthesis_overdenture ?? false
+      overdenture: dbData.lower_prosthesis_overdenture ?? false,
+      none: dbData.lower_prosthesis_none ?? false
     },
 
     // Sedation Plan (as object)
@@ -681,7 +769,9 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
       acetaminophen: dbData.acetaminophen ?? false,
       valium: dbData.valium ?? false,
       clindamycin: dbData.clindamycin ?? false,
-      lidocaine: dbData.lidocaine ?? false
+      lidocaine: dbData.lidocaine ?? false,
+      marcaine: dbData.marcaine ?? false,
+      carbocaine: dbData.carbocaine ?? false
     },
 
     // Financial Disclosure
@@ -698,6 +788,21 @@ export function convertDatabaseToFormData(dbData: ConsentFullArchFormData): any 
     zirconiabridge: {
       fee: dbData.zirconia_bridge_fee || '',
       covered: dbData.zirconia_bridge_covered || ''
+    },
+    lateralWindowSinusLift: {
+      fee: dbData.lateral_window_sinus_lift_fee || "",
+      covered: dbData.lateral_window_sinus_lift_covered || "",
+      count: dbData.lateral_window_sinus_lift_count || ""
+    },
+    biopsy: {
+      fee: dbData.biopsy_fee || "",
+      covered: dbData.biopsy_covered || "",
+      count: dbData.biopsy_count || ""
+    },
+    remoteAnchorage: {
+      fee: dbData.remote_anchorage_fee || "",
+      covered: dbData.remote_anchorage_covered || "",
+      count: dbData.remote_anchorage_count || ""
     },
     financialInitials: dbData.financial_initials || '',
 

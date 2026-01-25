@@ -36,7 +36,8 @@ export function ConsentFullArchDialog({
   const [lastSavedTime, setLastSavedTime] = useState('');
   const [savedFormId, setSavedFormId] = useState<string | undefined>(undefined);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [patientChartNumber, setPatientChartNumber] = useState<string>('');
+  // State for additional patient details
+  const [patientDetails, setPatientDetails] = useState<{ chartNumber: string, email: string, phone: string }>({ chartNumber: '', email: '', phone: '' });
 
   // Refs for auto-save queue handling to prevent duplicates
   const isSavingRef = useRef(false);
@@ -48,37 +49,38 @@ export function ConsentFullArchDialog({
     savedFormIdRef.current = savedFormId;
   }, [savedFormId]);
 
-  // Fetch patient chart number when dialog opens
+  // Fetch patient details when dialog opens
   useEffect(() => {
-    const fetchPatientChartNumber = async () => {
+    const fetchPatientDetails = async () => {
       if (!isOpen || !patientId) return;
 
       try {
-        console.log('📋 Fetching patient chart number for:', patientId);
+        console.log('📋 Fetching patient details for:', patientId);
         const { data, error } = await supabase
           .from('patients')
-          .select('chart_number')
+          .select('chart_number, email, phone')
           .eq('id', patientId)
           .single();
 
         if (error) {
-          console.error('❌ Error fetching patient chart number:', error);
+          console.error('❌ Error fetching patient details:', error);
           return;
         }
 
-        if (data && (data as any).chart_number) {
-          console.log('✅ Found patient chart number:', (data as any).chart_number);
-          setPatientChartNumber((data as any).chart_number);
-        } else {
-          console.log('📋 No chart number found for patient');
-          setPatientChartNumber('');
+        if (data) {
+          console.log('✅ Found patient details:', data);
+          setPatientDetails({
+            chartNumber: (data as any).chart_number || '',
+            email: (data as any).email || '',
+            phone: (data as any).phone || ''
+          });
         }
       } catch (error) {
-        console.error('💥 Unexpected error fetching patient chart number:', error);
+        console.error('💥 Unexpected error fetching patient details:', error);
       }
     };
 
-    fetchPatientChartNumber();
+    fetchPatientDetails();
   }, [isOpen, patientId]);
 
   // Sync savedFormId when initialData changes (only if we don't have a saved ID yet or if changing records)
@@ -242,30 +244,50 @@ export function ConsentFullArchDialog({
   useEffect(() => {
     if (initialData) {
       // Check if data needs conversion from database format
+      let converted;
       if (initialData.patient_name && !initialData.patientName) {
-        const converted = convertDatabaseToFormData(initialData);
-        // Add patient chart number if available and not already set
-        if (patientChartNumber && !converted.chartNumber) {
-          converted.chartNumber = patientChartNumber;
-        }
-        setConvertedInitialData(converted);
+        converted = convertDatabaseToFormData(initialData);
       } else {
-        // Add patient chart number if available and not already set
-        const dataWithChartNumber = { ...initialData };
-        if (patientChartNumber && !dataWithChartNumber.chartNumber) {
-          dataWithChartNumber.chartNumber = patientChartNumber;
-        }
-        setConvertedInitialData(dataWithChartNumber);
+        converted = { ...initialData };
       }
+
+      // Add patient details if available and not already set
+      if (patientDetails.chartNumber && !converted.chartNumber) {
+        converted.chartNumber = patientDetails.chartNumber;
+      }
+      if (patientDetails.email && !converted.hipaaEmail) {
+        converted.hipaaEmail = patientDetails.email;
+      }
+      if (patientDetails.phone && !converted.hipaaPhone) {
+        converted.hipaaPhone = patientDetails.phone;
+      }
+
+      setConvertedInitialData(converted);
     } else {
-      // No initial data, but we might have a patient chart number
-      if (patientChartNumber) {
-        setConvertedInitialData({ chartNumber: patientChartNumber });
+      // No initial data, but we might have patient details
+      const newForm: any = {};
+      let hasUpdates = false;
+
+      if (patientDetails.chartNumber) {
+        newForm.chartNumber = patientDetails.chartNumber;
+        hasUpdates = true;
+      }
+      if (patientDetails.email) {
+        newForm.hipaaEmail = patientDetails.email;
+        hasUpdates = true;
+      }
+      if (patientDetails.phone) {
+        newForm.hipaaPhone = patientDetails.phone;
+        hasUpdates = true;
+      }
+
+      if (hasUpdates) {
+        setConvertedInitialData(newForm);
       } else {
         setConvertedInitialData(null);
       }
     }
-  }, [initialData, patientChartNumber]);
+  }, [initialData, patientDetails]);
 
   // Reset state ONLY when dialog opens/closes
   useEffect(() => {
@@ -291,7 +313,7 @@ export function ConsentFullArchDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden p-0">
         <ConsentFullArchForm
           onSubmit={handleFormSubmit}
           onCancel={handleCancel}

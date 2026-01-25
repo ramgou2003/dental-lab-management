@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SignatureDialog } from "@/components/SignatureDialog";
@@ -32,6 +33,21 @@ interface ConsentFullArchFormProps {
   setAutoSaveMessage?: (message: string) => void;
 }
 
+const TREATMENT_OPTIONS = [
+  "FULL ARCH FIXED",
+  "DENTURE",
+  "IMPLANT REMOVABLE DENTURE",
+  "SINGLE IMPLANT",
+  "MULTIPLE IMPLANTS",
+  "EXTRACTION",
+  "EXTRACTION AND GRAFT",
+  "GRAFT",
+  "LATERAL WINDOW SINUS LIFT",
+  "BIOPSY",
+  "SOFT TISSUE BIOPSY",
+  "HARD TISSUE BIOPSY"
+];
+
 export function ConsentFullArchForm({
   onSubmit,
   onCancel,
@@ -49,59 +65,7 @@ export function ConsentFullArchForm({
 }: ConsentFullArchFormProps) {
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Step configuration for progress indicator
-  const steps = [
-    { id: "overview", label: "Overview", index: 1 },
-    { id: "patient-info", label: "Patient Info", index: 2 },
-    { id: "treatment", label: "Treatment", index: 3 },
-    { id: "risks", label: "Risks", index: 4 },
-    { id: "sedation", label: "Sedation", index: 5 },
-    { id: "financial", label: "Financial", index: 6 },
-    { id: "media", label: "Media", index: 7 },
-    { id: "opioid", label: "Opioid", index: 8 },
-    { id: "final", label: "Final", index: 9 }
-  ];
 
-  const getCurrentStepIndex = () => {
-    const currentStep = steps.find(step => step.id === activeTab);
-    return currentStep ? currentStep.index : 1;
-  };
-
-  const isStepCompleted = (stepId: string) => {
-    const stepIndex = steps.find(step => step.id === stepId)?.index || 0;
-    return stepIndex < getCurrentStepIndex();
-  };
-
-  // Scroll to top helper function
-  const scrollToTop = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: 0, behavior: 'auto' });
-    }
-  };
-
-  // Navigation functions
-  const getCurrentArrayIndex = () => {
-    return steps.findIndex(step => step.id === activeTab);
-  };
-
-  const goToNextStep = () => {
-    const currentIndex = getCurrentArrayIndex();
-    if (currentIndex < steps.length - 1) {
-      setActiveTab(steps[currentIndex + 1].id);
-      scrollToTop();
-    }
-  };
-
-  const goToPreviousStep = () => {
-    const currentIndex = getCurrentArrayIndex();
-    if (currentIndex > 0) {
-      setActiveTab(steps[currentIndex - 1].id);
-      scrollToTop();
-    }
-  };
-
-  const isFirstStep = getCurrentArrayIndex() === 0;
-  const isLastStep = getCurrentArrayIndex() === steps.length - 1;
   const [formData, setFormData] = useState(() => {
     // The initialData comes from the service already converted to camelCase
     const today = new Date().toISOString().split('T')[0];
@@ -125,12 +89,14 @@ export function ConsentFullArchForm({
       lowerJaw: initialData?.lowerJaw || "",
 
       // Upper Arch Treatment Details
+      upperSurgeryType: initialData?.upperSurgeryType || "",
       upperTeethRegions: initialData?.upperTeethRegions || "",
       upperImplants: initialData?.upperImplants || "",
       upperTreatmentType: initialData?.upperTreatmentType || "",
       upperSameDayLoad: initialData?.upperSameDayLoad || "",
 
       // Lower Arch Treatment Details
+      lowerSurgeryType: initialData?.lowerSurgeryType || "",
       lowerTeethRegions: initialData?.lowerTeethRegions || "",
       lowerImplants: initialData?.lowerImplants || "",
       lowerTreatmentType: initialData?.lowerTreatmentType || "",
@@ -181,21 +147,25 @@ export function ConsentFullArchForm({
         allograft: false,
         xenograft: false,
         autograft: false,
-        prf: false
+        prf: false,
+        none: false
       },
       upperProsthesis: initialData?.upperProsthesis || {
         zirconia: false,
-        overdenture: false
+        overdenture: false,
+        none: false
       },
       lowerGraftMaterial: initialData?.lowerGraftMaterial || {
         allograft: false,
         xenograft: false,
         autograft: false,
-        prf: false
+        prf: false,
+        none: false
       },
       lowerProsthesis: initialData?.lowerProsthesis || {
         zirconia: false,
-        overdenture: false
+        overdenture: false,
+        none: false
       },
       alternativesInitials: initialData?.alternativesInitials || {
         noTreatment: "",
@@ -221,6 +191,21 @@ export function ConsentFullArchForm({
       ivSedation: {
         fee: initialData?.ivSedation?.fee || "",
         covered: initialData?.ivSedation?.covered || ""
+      },
+      lateralWindowSinusLift: {
+        fee: initialData?.lateralWindowSinusLift?.fee || "",
+        covered: initialData?.lateralWindowSinusLift?.covered || "",
+        count: initialData?.lateralWindowSinusLift?.count || ""
+      },
+      biopsy: {
+        fee: initialData?.biopsy?.fee || "",
+        covered: initialData?.biopsy?.covered || "",
+        count: initialData?.biopsy?.count || ""
+      },
+      remoteAnchorage: {
+        fee: initialData?.remoteAnchorage?.fee || "",
+        covered: initialData?.remoteAnchorage?.covered || "",
+        count: initialData?.remoteAnchorage?.count || ""
       },
 
       // Missing properties from lint errors
@@ -264,6 +249,81 @@ export function ConsentFullArchForm({
   const [hasFormData, setHasFormData] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
 
+  // Step configuration for progress indicator
+  const baseSteps = [
+    { id: "overview", label: "Overview" },
+    { id: "patient-info", label: "Patient Info" },
+    { id: "treatment", label: "Treatment" },
+    { id: "risks", label: "Risks" },
+    { id: "sedation", label: "Sedation" },
+    { id: "financial", label: "Financial" },
+    { id: "media", label: "Media" },
+    { id: "opioid", label: "Opioid" },
+    { id: "final", label: "Final" }
+  ];
+
+  const steps = baseSteps
+    .filter(step => {
+      if (step.id !== "sedation") return true;
+
+      // Only hide sedation step if Local Anesthesia is selected AND it's the only one selected
+      const isLocalOnly = formData.sedationPlan.localOnly;
+      const hasOtherSedation = formData.sedationPlan.nitrous ||
+        formData.sedationPlan.ivConscious ||
+        formData.sedationPlan.generalHospital;
+
+      // If local is selected but others are also selected, show the step
+      if (isLocalOnly && hasOtherSedation) return true;
+
+      // If local is selected and no others, hide the step
+      if (isLocalOnly && !hasOtherSedation) return false;
+
+      // Default: show step (e.g. nothing selected or other options selected without local)
+      return true;
+    })
+    .map((step, index) => ({ ...step, index: index + 1 }));
+
+  const getCurrentStepIndex = () => {
+    const currentStep = steps.find(step => step.id === activeTab);
+    return currentStep ? currentStep.index : 1;
+  };
+
+  const isStepCompleted = (stepId: string) => {
+    const stepIndex = steps.find(step => step.id === stepId)?.index || 0;
+    return stepIndex < getCurrentStepIndex();
+  };
+
+  // Scroll to top helper function
+  const scrollToTop = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  };
+
+  // Navigation functions
+  const getCurrentArrayIndex = () => {
+    return steps.findIndex(step => step.id === activeTab);
+  };
+
+  const goToNextStep = () => {
+    const currentIndex = getCurrentArrayIndex();
+    if (currentIndex < steps.length - 1) {
+      setActiveTab(steps[currentIndex + 1].id);
+      scrollToTop();
+    }
+  };
+
+  const goToPreviousStep = () => {
+    const currentIndex = getCurrentArrayIndex();
+    if (currentIndex > 0) {
+      setActiveTab(steps[currentIndex - 1].id);
+      scrollToTop();
+    }
+  };
+
+  const isFirstStep = getCurrentArrayIndex() === 0;
+  const isLastStep = getCurrentArrayIndex() === steps.length - 1;
+
   // Update form data when initialData changes
   useEffect(() => {
     if (initialData && initialData.id) {
@@ -291,12 +351,14 @@ export function ConsentFullArchForm({
         lowerJaw: initialData.lowerJaw || prev.lowerJaw || "",
 
         // Upper Arch Treatment Details
+        upperSurgeryType: initialData.upperSurgeryType || prev.upperSurgeryType || "",
         upperTeethRegions: initialData.upperTeethRegions || prev.upperTeethRegions || "",
         upperImplants: initialData.upperImplants || prev.upperImplants || "",
         upperTreatmentType: initialData.upperTreatmentType || prev.upperTreatmentType || "",
         upperSameDayLoad: initialData.upperSameDayLoad || prev.upperSameDayLoad || "",
 
         // Lower Arch Treatment Details
+        lowerSurgeryType: initialData.lowerSurgeryType || prev.lowerSurgeryType || "",
         lowerTeethRegions: initialData.lowerTeethRegions || prev.lowerTeethRegions || "",
         lowerImplants: initialData.lowerImplants || prev.lowerImplants || "",
         lowerTreatmentType: initialData.lowerTreatmentType || prev.lowerTreatmentType || "",
@@ -372,13 +434,15 @@ export function ConsentFullArchForm({
           allograft: false,
           xenograft: false,
           autograft: false,
-          prf: false
+          prf: false,
+          none: false
         },
 
         // Nested Objects - Upper Arch Prosthesis
         upperProsthesis: initialData.upperProsthesis || prev.upperProsthesis || {
           zirconia: false,
-          overdenture: false
+          overdenture: false,
+          none: false
         },
 
         // Nested Objects - Lower Arch Graft Material
@@ -386,13 +450,15 @@ export function ConsentFullArchForm({
           allograft: false,
           xenograft: false,
           autograft: false,
-          prf: false
+          prf: false,
+          none: false
         },
 
         // Nested Objects - Lower Arch Prosthesis
         lowerProsthesis: initialData.lowerProsthesis || prev.lowerProsthesis || {
           zirconia: false,
-          overdenture: false
+          overdenture: false,
+          none: false
         },
 
         // Nested Objects - Sedation Plan
@@ -459,10 +525,12 @@ export function ConsentFullArchForm({
         archType: "",
         upperJaw: "",
         lowerJaw: "",
+        upperSurgeryType: "",
         upperTeethRegions: "",
         upperImplants: "",
         upperTreatmentType: "",
         upperSameDayLoad: "",
+        lowerSurgeryType: "",
         lowerTeethRegions: "",
         lowerImplants: "",
         lowerTreatmentType: "",
@@ -530,6 +598,9 @@ export function ConsentFullArchForm({
         implantFixtures: { count: "", fee: "", covered: "" },
         zirconiabridge: { fee: "", covered: "" },
         ivSedation: { fee: "", covered: "" },
+        lateralWindowSinusLift: { fee: "", covered: "", count: "" },
+        biopsy: { fee: "", covered: "", count: "" },
+        remoteAnchorage: { fee: "", covered: "", count: "" },
         risksUnderstood: false,
         materialRisksInitials: "",
         escortName: "",
@@ -586,9 +657,11 @@ export function ConsentFullArchForm({
       patientName: formData.patientName,
       archType: formData.archType,
       patientJaw: formData.upperJaw + formData.lowerJaw,
+      surgeryTypes: formData.upperSurgeryType + formData.lowerSurgeryType,
+      treatmentTypes: formData.upperTreatmentType + formData.lowerTreatmentType,
       signatures: formData.patientSignature + formData.surgeonSignature + formData.witnessSignature,
       initials: formData.patientInfoInitials + formData.treatmentDescriptionInitials + formData.materialRisksInitials + formData.sedationInitials + formData.financialInitials + formData.photoVideoInitials + formData.opioidInitials + formData.finalInitials,
-      checkboxes: JSON.stringify(formData.plannedDrugs) + JSON.stringify(formData.sedationPlan) + JSON.stringify(formData.upperGraftMaterial) + JSON.stringify(formData.lowerGraftMaterial),
+      checkboxes: JSON.stringify(formData.plannedDrugs) + JSON.stringify(formData.sedationPlan) + JSON.stringify(formData.upperGraftMaterial) + JSON.stringify(formData.lowerGraftMaterial) + JSON.stringify(formData.upperProsthesis) + JSON.stringify(formData.lowerProsthesis),
       dates: formData.date + formData.patientSignatureDate + formData.surgeonDate + formData.witnessSignatureDate,
       times: formData.consentTime + formData.patientSignatureTime,
       info: formData.escortName + formData.escortPhone + formData.otherLanguageText + formData.interpreterName + formData.interpreterCredential + formData.surgeonName + formData.witnessName
@@ -692,6 +765,22 @@ export function ConsentFullArchForm({
       fee: initialData?.ivSedation?.fee || "",
       covered: initialData?.ivSedation?.covered || ""
     },
+    lateralWindowSinusLift: {
+      fee: initialData?.lateralWindowSinusLift?.fee || "",
+      covered: initialData?.lateralWindowSinusLift?.covered || "",
+      count: initialData?.lateralWindowSinusLift?.count || ""
+    },
+    biopsy: {
+      fee: initialData?.biopsy?.fee || "",
+      covered: initialData?.biopsy?.covered || "",
+      count: initialData?.biopsy?.count || ""
+    },
+    remoteAnchorage: {
+      fee: initialData?.remoteAnchorage?.fee || "",
+      covered: initialData?.remoteAnchorage?.covered || "",
+      count: initialData?.remoteAnchorage?.count || ""
+    },
+
     financialInitials: initialData?.financialInitials || "",
 
     // Photo/Video Authorization
@@ -792,7 +881,12 @@ export function ConsentFullArchForm({
   const toggleSedation = (key: 'localOnly' | 'nitrous' | 'ivConscious' | 'generalHospital') => {
     setFormData(prev => ({
       ...prev,
-      sedationPlan: { ...(prev.sedationPlan as any), [key]: !(prev.sedationPlan as any)[key] }
+      sedationPlan: {
+        localOnly: key === 'localOnly',
+        nitrous: key === 'nitrous',
+        ivConscious: key === 'ivConscious',
+        generalHospital: key === 'generalHospital'
+      }
     }));
   };
 
@@ -955,7 +1049,7 @@ export function ConsentFullArchForm({
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           {/* Scrollable Content Area */}
-          <div ref={scrollRef} className="flex-1 overflow-auto px-6 scrollbar-sleek">
+          <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto px-6 scrollbar-sleek">
             {/* Overview Tab */}
             {activeTab === "overview" && (
               <div className="space-y-6 w-full">
@@ -1330,28 +1424,44 @@ export function ConsentFullArchForm({
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-6">
+                            {/* Surgery Type */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-700">Surgery Type</Label>
+                              <div className="flex gap-4">
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, upperSurgeryType: 'Surgery' }))}
+                                  className={`px-6 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperSurgeryType === 'Surgery'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                >
+                                  Surgery
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, upperSurgeryType: 'Surgical revision' }))}
+                                  className={`px-6 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperSurgeryType === 'Surgical revision'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                >
+                                  Surgical revision
+                                </button>
+                              </div>
+                            </div>
+
                             {/* Treatment Type */}
                             <div className="space-y-2">
                               <Label htmlFor="upperTreatmentType" className="text-sm font-medium text-gray-700">
                                 Treatment Type
                               </Label>
-                              <Select
-                                value={formData.upperTreatmentType}
-                                onValueChange={(value) => setFormData(prev => ({ ...prev, upperTreatmentType: value }))}
-                              >
-                                <SelectTrigger className="h-10">
-                                  <SelectValue placeholder="Select treatment type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="FULL ARCH FIXED">FULL ARCH FIXED</SelectItem>
-                                  <SelectItem value="DENTURE">DENTURE</SelectItem>
-                                  <SelectItem value="IMPLANT REMOVABLE DENTURE">IMPLANT REMOVABLE DENTURE</SelectItem>
-                                  <SelectItem value="SINGLE IMPLANT">SINGLE IMPLANT</SelectItem>
-                                  <SelectItem value="MULTIPLE IMPLANTS">MULTIPLE IMPLANTS</SelectItem>
-                                  <SelectItem value="EXTRACTION">EXTRACTION</SelectItem>
-                                  <SelectItem value="EXTRACTION AND GRAFT">EXTRACTION AND GRAFT</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <MultiSelect
+                                options={TREATMENT_OPTIONS}
+                                value={formData.upperTreatmentType ? formData.upperTreatmentType.split(',').filter(Boolean) : []}
+                                onChange={(value) => setFormData(prev => ({ ...prev, upperTreatmentType: value.join(',') }))}
+                                placeholder="Select treatment types"
+                              />
                             </div>
 
                             {/* Teeth/Regions and Implants */}
@@ -1446,6 +1556,19 @@ export function ConsentFullArchForm({
                                 >
                                   PRF
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    upperGraftMaterial: { ...prev.upperGraftMaterial, none: !prev.upperGraftMaterial.none }
+                                  }))}
+                                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperGraftMaterial.none
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                >
+                                  No Graft
+                                </button>
                               </div>
                             </div>
 
@@ -1457,7 +1580,7 @@ export function ConsentFullArchForm({
                                   type="button"
                                   onClick={() => setFormData(prev => ({
                                     ...prev,
-                                    upperProsthesis: { ...prev.upperProsthesis, zirconia: !prev.upperProsthesis.zirconia }
+                                    upperProsthesis: { zirconia: !prev.upperProsthesis.zirconia, overdenture: false, none: false }
                                   }))}
                                   className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperProsthesis.zirconia
                                     ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -1470,7 +1593,7 @@ export function ConsentFullArchForm({
                                   type="button"
                                   onClick={() => setFormData(prev => ({
                                     ...prev,
-                                    upperProsthesis: { ...prev.upperProsthesis, overdenture: !prev.upperProsthesis.overdenture }
+                                    upperProsthesis: { overdenture: !prev.upperProsthesis.overdenture, zirconia: false, none: false }
                                   }))}
                                   className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperProsthesis.overdenture
                                     ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -1479,35 +1602,50 @@ export function ConsentFullArchForm({
                                 >
                                   Removable Overdenture
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    upperProsthesis: { none: !prev.upperProsthesis.none, zirconia: false, overdenture: false }
+                                  }))}
+                                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperProsthesis.none
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                >
+                                  No Prosthesis
+                                </button>
                               </div>
                             </div>
 
                             {/* Same-day Load */}
-                            <div className="flex items-center gap-4">
-                              <Label className="text-sm font-medium text-gray-700 w-32">Same-day Load:</Label>
-                              <div className="flex gap-4">
-                                <button
-                                  type="button"
-                                  onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'yes' }))}
-                                  className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${formData.upperSameDayLoad === 'yes'
-                                    ? 'border-green-500 bg-green-50 text-green-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                >
-                                  Yes
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'no' }))}
-                                  className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${formData.upperSameDayLoad === 'no'
-                                    ? 'border-red-500 bg-red-50 text-red-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                >
-                                  No
-                                </button>
+                            {!formData.upperProsthesis.none && (
+                              <div className="flex items-center gap-4">
+                                <Label className="text-sm font-medium text-gray-700 w-32">Same-day Load:</Label>
+                                <div className="flex gap-4">
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'yes' }))}
+                                    className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${formData.upperSameDayLoad === 'yes'
+                                      ? 'border-green-500 bg-green-50 text-green-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                      }`}
+                                  >
+                                    Yes
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'no' }))}
+                                    className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${formData.upperSameDayLoad === 'no'
+                                      ? 'border-red-500 bg-red-50 text-red-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                      }`}
+                                  >
+                                    No
+                                  </button>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -1523,28 +1661,44 @@ export function ConsentFullArchForm({
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-6">
+                            {/* Surgery Type */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-700">Surgery Type</Label>
+                              <div className="flex gap-4">
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, lowerSurgeryType: 'Surgery' }))}
+                                  className={`px-6 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerSurgeryType === 'Surgery'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                >
+                                  Surgery
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, lowerSurgeryType: 'Surgical revision' }))}
+                                  className={`px-6 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerSurgeryType === 'Surgical revision'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                >
+                                  Surgical revision
+                                </button>
+                              </div>
+                            </div>
+
                             {/* Treatment Type */}
                             <div className="space-y-2">
                               <Label htmlFor="lowerTreatmentType" className="text-sm font-medium text-gray-700">
                                 Treatment Type
                               </Label>
-                              <Select
-                                value={formData.lowerTreatmentType}
-                                onValueChange={(value) => setFormData(prev => ({ ...prev, lowerTreatmentType: value }))}
-                              >
-                                <SelectTrigger className="h-10">
-                                  <SelectValue placeholder="Select treatment type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="FULL ARCH FIXED">FULL ARCH FIXED</SelectItem>
-                                  <SelectItem value="DENTURE">DENTURE</SelectItem>
-                                  <SelectItem value="IMPLANT REMOVABLE DENTURE">IMPLANT REMOVABLE DENTURE</SelectItem>
-                                  <SelectItem value="SINGLE IMPLANT">SINGLE IMPLANT</SelectItem>
-                                  <SelectItem value="MULTIPLE IMPLANTS">MULTIPLE IMPLANTS</SelectItem>
-                                  <SelectItem value="EXTRACTION">EXTRACTION</SelectItem>
-                                  <SelectItem value="EXTRACTION AND GRAFT">EXTRACTION AND GRAFT</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <MultiSelect
+                                options={TREATMENT_OPTIONS}
+                                value={formData.lowerTreatmentType ? formData.lowerTreatmentType.split(',').filter(Boolean) : []}
+                                onChange={(value) => setFormData(prev => ({ ...prev, lowerTreatmentType: value.join(',') }))}
+                                placeholder="Select treatment types"
+                              />
                             </div>
 
                             {/* Teeth/Regions and Implants */}
@@ -1638,6 +1792,19 @@ export function ConsentFullArchForm({
                                 >
                                   PRF
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    lowerGraftMaterial: { ...prev.lowerGraftMaterial, none: !prev.lowerGraftMaterial.none }
+                                  }))}
+                                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerGraftMaterial.none
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                >
+                                  No Graft
+                                </button>
                               </div>
                             </div>
 
@@ -1649,7 +1816,7 @@ export function ConsentFullArchForm({
                                   type="button"
                                   onClick={() => setFormData(prev => ({
                                     ...prev,
-                                    lowerProsthesis: { ...prev.lowerProsthesis, zirconia: !prev.lowerProsthesis.zirconia }
+                                    lowerProsthesis: { zirconia: !prev.lowerProsthesis.zirconia, overdenture: false, none: false }
                                   }))}
                                   className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerProsthesis.zirconia
                                     ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -1662,7 +1829,7 @@ export function ConsentFullArchForm({
                                   type="button"
                                   onClick={() => setFormData(prev => ({
                                     ...prev,
-                                    lowerProsthesis: { ...prev.lowerProsthesis, overdenture: !prev.lowerProsthesis.overdenture }
+                                    lowerProsthesis: { overdenture: !prev.lowerProsthesis.overdenture, zirconia: false, none: false }
                                   }))}
                                   className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerProsthesis.overdenture
                                     ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -1671,35 +1838,50 @@ export function ConsentFullArchForm({
                                 >
                                   Removable Overdenture
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    lowerProsthesis: { none: !prev.lowerProsthesis.none, zirconia: false, overdenture: false }
+                                  }))}
+                                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerProsthesis.none
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                    }`}
+                                >
+                                  No Prosthesis
+                                </button>
                               </div>
                             </div>
 
                             {/* Same-day Load */}
-                            <div className="flex items-center gap-4">
-                              <Label className="text-sm font-medium text-gray-700 w-32">Same-day Load:</Label>
-                              <div className="flex gap-4">
-                                <button
-                                  type="button"
-                                  onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'yes' }))}
-                                  className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${formData.lowerSameDayLoad === 'yes'
-                                    ? 'border-green-500 bg-green-50 text-green-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                >
-                                  Yes
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'no' }))}
-                                  className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${formData.lowerSameDayLoad === 'no'
-                                    ? 'border-red-500 bg-red-50 text-red-700'
-                                    : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                    }`}
-                                >
-                                  No
-                                </button>
+                            {!formData.lowerProsthesis.none && (
+                              <div className="flex items-center gap-4">
+                                <Label className="text-sm font-medium text-gray-700 w-32">Same-day Load:</Label>
+                                <div className="flex gap-4">
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'yes' }))}
+                                    className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${formData.lowerSameDayLoad === 'yes'
+                                      ? 'border-green-500 bg-green-50 text-green-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                      }`}
+                                  >
+                                    Yes
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'no' }))}
+                                    className={`px-6 py-3 rounded-lg border text-base font-medium transition-all ${formData.lowerSameDayLoad === 'no'
+                                      ? 'border-red-500 bg-red-50 text-red-700'
+                                      : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                      }`}
+                                  >
+                                    No
+                                  </button>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -1731,28 +1913,44 @@ export function ConsentFullArchForm({
                                   <h4 className="font-semibold text-blue-800">Upper Arch</h4>
                                 </div>
 
+                                {/* Surgery Type */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium text-gray-700">Surgery Type</Label>
+                                  <div className="flex gap-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({ ...prev, upperSurgeryType: 'Surgery' }))}
+                                      className={`px-6 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperSurgeryType === 'Surgery'
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                        }`}
+                                    >
+                                      Surgery
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({ ...prev, upperSurgeryType: 'Surgical revision' }))}
+                                      className={`px-6 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperSurgeryType === 'Surgical revision'
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                        }`}
+                                    >
+                                      Surgical revision
+                                    </button>
+                                  </div>
+                                </div>
+
                                 {/* Upper Treatment Type */}
                                 <div className="space-y-2">
                                   <Label htmlFor="upperTreatmentType" className="text-sm font-medium text-gray-700">
                                     Treatment Type
                                   </Label>
-                                  <Select
-                                    value={formData.upperTreatmentType}
-                                    onValueChange={(value) => setFormData(prev => ({ ...prev, upperTreatmentType: value }))}
-                                  >
-                                    <SelectTrigger className="h-10">
-                                      <SelectValue placeholder="Select treatment type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="FULL ARCH FIXED">FULL ARCH FIXED</SelectItem>
-                                      <SelectItem value="DENTURE">DENTURE</SelectItem>
-                                      <SelectItem value="IMPLANT REMOVABLE DENTURE">IMPLANT REMOVABLE DENTURE</SelectItem>
-                                      <SelectItem value="SINGLE IMPLANT">SINGLE IMPLANT</SelectItem>
-                                      <SelectItem value="MULTIPLE IMPLANTS">MULTIPLE IMPLANTS</SelectItem>
-                                      <SelectItem value="EXTRACTION">EXTRACTION</SelectItem>
-                                      <SelectItem value="EXTRACTION AND GRAFT">EXTRACTION AND GRAFT</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                  <MultiSelect
+                                    options={TREATMENT_OPTIONS}
+                                    value={formData.upperTreatmentType ? formData.upperTreatmentType.split(',').filter(Boolean) : []}
+                                    onChange={(value) => setFormData(prev => ({ ...prev, upperTreatmentType: value.join(',') }))}
+                                    placeholder="Select treatment types"
+                                  />
                                 </div>
 
                                 {/* Upper Teeth/Regions and Implants */}
@@ -1847,6 +2045,19 @@ export function ConsentFullArchForm({
                                     >
                                       PRF
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({
+                                        ...prev,
+                                        upperGraftMaterial: { ...prev.upperGraftMaterial, none: !prev.upperGraftMaterial.none }
+                                      }))}
+                                      className={`px-2 py-1 rounded border text-xs font-medium transition-all ${formData.upperGraftMaterial.none
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                        }`}
+                                    >
+                                      No Graft
+                                    </button>
                                   </div>
                                 </div>
 
@@ -1858,7 +2069,7 @@ export function ConsentFullArchForm({
                                       type="button"
                                       onClick={() => setFormData(prev => ({
                                         ...prev,
-                                        upperProsthesis: { ...prev.upperProsthesis, zirconia: !prev.upperProsthesis.zirconia }
+                                        upperProsthesis: { zirconia: !prev.upperProsthesis.zirconia, overdenture: false, none: false }
                                       }))}
                                       className={`px-2 py-1 rounded border text-xs font-medium transition-all ${formData.upperProsthesis.zirconia
                                         ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -1871,7 +2082,7 @@ export function ConsentFullArchForm({
                                       type="button"
                                       onClick={() => setFormData(prev => ({
                                         ...prev,
-                                        upperProsthesis: { ...prev.upperProsthesis, overdenture: !prev.upperProsthesis.overdenture }
+                                        upperProsthesis: { overdenture: !prev.upperProsthesis.overdenture, zirconia: false, none: false }
                                       }))}
                                       className={`px-2 py-1 rounded border text-xs font-medium transition-all ${formData.upperProsthesis.overdenture
                                         ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -1880,35 +2091,50 @@ export function ConsentFullArchForm({
                                     >
                                       Removable Overdenture
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({
+                                        ...prev,
+                                        upperProsthesis: { none: !prev.upperProsthesis.none, zirconia: false, overdenture: false }
+                                      }))}
+                                      className={`px-2 py-1 rounded border text-xs font-medium transition-all ${formData.upperProsthesis.none
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                        }`}
+                                    >
+                                      No Prosthesis
+                                    </button>
                                   </div>
                                 </div>
 
                                 {/* Upper Same-day Load */}
-                                <div className="space-y-2">
-                                  <Label className="text-sm font-medium text-gray-700">Same-day Load:</Label>
-                                  <div className="flex gap-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'yes' }))}
-                                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperSameDayLoad === 'yes'
-                                        ? 'border-green-500 bg-green-50 text-green-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                        }`}
-                                    >
-                                      Yes
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'no' }))}
-                                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperSameDayLoad === 'no'
-                                        ? 'border-red-500 bg-red-50 text-red-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                        }`}
-                                    >
-                                      No
-                                    </button>
+                                {!formData.upperProsthesis.none && (
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-gray-700">Same-day Load:</Label>
+                                    <div className="flex gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'yes' }))}
+                                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperSameDayLoad === 'yes'
+                                          ? 'border-green-500 bg-green-50 text-green-700'
+                                          : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                          }`}
+                                      >
+                                        Yes
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, upperSameDayLoad: 'no' }))}
+                                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.upperSameDayLoad === 'no'
+                                          ? 'border-red-500 bg-red-50 text-red-700'
+                                          : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                          }`}
+                                      >
+                                        No
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
 
                               {/* Lower Arch Column */}
@@ -1920,28 +2146,44 @@ export function ConsentFullArchForm({
                                   <h4 className="font-semibold text-blue-800">Lower Arch</h4>
                                 </div>
 
+                                {/* Surgery Type */}
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium text-gray-700">Surgery Type</Label>
+                                  <div className="flex gap-4">
+                                    <button
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({ ...prev, lowerSurgeryType: 'Surgery' }))}
+                                      className={`px-6 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerSurgeryType === 'Surgery'
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                        }`}
+                                    >
+                                      Surgery
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({ ...prev, lowerSurgeryType: 'Surgical revision' }))}
+                                      className={`px-6 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerSurgeryType === 'Surgical revision'
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                        }`}
+                                    >
+                                      Surgical revision
+                                    </button>
+                                  </div>
+                                </div>
+
                                 {/* Lower Treatment Type */}
                                 <div className="space-y-2">
                                   <Label htmlFor="lowerTreatmentType" className="text-sm font-medium text-gray-700">
                                     Treatment Type
                                   </Label>
-                                  <Select
-                                    value={formData.lowerTreatmentType}
-                                    onValueChange={(value) => setFormData(prev => ({ ...prev, lowerTreatmentType: value }))}
-                                  >
-                                    <SelectTrigger className="h-10">
-                                      <SelectValue placeholder="Select treatment type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="FULL ARCH FIXED">FULL ARCH FIXED</SelectItem>
-                                      <SelectItem value="DENTURE">DENTURE</SelectItem>
-                                      <SelectItem value="IMPLANT REMOVABLE DENTURE">IMPLANT REMOVABLE DENTURE</SelectItem>
-                                      <SelectItem value="SINGLE IMPLANT">SINGLE IMPLANT</SelectItem>
-                                      <SelectItem value="MULTIPLE IMPLANTS">MULTIPLE IMPLANTS</SelectItem>
-                                      <SelectItem value="EXTRACTION">EXTRACTION</SelectItem>
-                                      <SelectItem value="EXTRACTION AND GRAFT">EXTRACTION AND GRAFT</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                  <MultiSelect
+                                    options={TREATMENT_OPTIONS}
+                                    value={formData.lowerTreatmentType ? formData.lowerTreatmentType.split(',').filter(Boolean) : []}
+                                    onChange={(value) => setFormData(prev => ({ ...prev, lowerTreatmentType: value.join(',') }))}
+                                    placeholder="Select treatment types"
+                                  />
                                 </div>
 
                                 {/* Lower Teeth/Regions and Implants */}
@@ -2035,6 +2277,19 @@ export function ConsentFullArchForm({
                                     >
                                       PRF
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({
+                                        ...prev,
+                                        lowerGraftMaterial: { ...prev.lowerGraftMaterial, none: !prev.lowerGraftMaterial.none }
+                                      }))}
+                                      className={`px-2 py-1 rounded border text-xs font-medium transition-all ${formData.lowerGraftMaterial.none
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                        }`}
+                                    >
+                                      No Graft
+                                    </button>
                                   </div>
                                 </div>
 
@@ -2046,7 +2301,7 @@ export function ConsentFullArchForm({
                                       type="button"
                                       onClick={() => setFormData(prev => ({
                                         ...prev,
-                                        lowerProsthesis: { ...prev.lowerProsthesis, zirconia: !prev.lowerProsthesis.zirconia }
+                                        lowerProsthesis: { zirconia: !prev.lowerProsthesis.zirconia, overdenture: false, none: false }
                                       }))}
                                       className={`px-2 py-1 rounded border text-xs font-medium transition-all ${formData.lowerProsthesis.zirconia
                                         ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -2059,7 +2314,7 @@ export function ConsentFullArchForm({
                                       type="button"
                                       onClick={() => setFormData(prev => ({
                                         ...prev,
-                                        lowerProsthesis: { ...prev.lowerProsthesis, overdenture: !prev.lowerProsthesis.overdenture }
+                                        lowerProsthesis: { overdenture: !prev.lowerProsthesis.overdenture, zirconia: false, none: false }
                                       }))}
                                       className={`px-2 py-1 rounded border text-xs font-medium transition-all ${formData.lowerProsthesis.overdenture
                                         ? 'border-purple-500 bg-purple-50 text-purple-700'
@@ -2068,35 +2323,50 @@ export function ConsentFullArchForm({
                                     >
                                       Removable Overdenture
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setFormData(prev => ({
+                                        ...prev,
+                                        lowerProsthesis: { none: !prev.lowerProsthesis.none, zirconia: false, overdenture: false }
+                                      }))}
+                                      className={`px-2 py-1 rounded border text-xs font-medium transition-all ${formData.lowerProsthesis.none
+                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                        }`}
+                                    >
+                                      No Prosthesis
+                                    </button>
                                   </div>
                                 </div>
 
                                 {/* Lower Same-day Load */}
-                                <div className="space-y-2">
-                                  <Label className="text-sm font-medium text-gray-700">Same-day Load:</Label>
-                                  <div className="flex gap-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'yes' }))}
-                                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerSameDayLoad === 'yes'
-                                        ? 'border-green-500 bg-green-50 text-green-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                        }`}
-                                    >
-                                      Yes
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'no' }))}
-                                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerSameDayLoad === 'no'
-                                        ? 'border-red-500 bg-red-50 text-red-700'
-                                        : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                        }`}
-                                    >
-                                      No
-                                    </button>
+                                {!formData.lowerProsthesis.none && (
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-gray-700">Same-day Load:</Label>
+                                    <div className="flex gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'yes' }))}
+                                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerSameDayLoad === 'yes'
+                                          ? 'border-green-500 bg-green-50 text-green-700'
+                                          : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                          }`}
+                                      >
+                                        Yes
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, lowerSameDayLoad: 'no' }))}
+                                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.lowerSameDayLoad === 'no'
+                                          ? 'border-red-500 bg-red-50 text-red-700'
+                                          : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                                          }`}
+                                      >
+                                        No
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             </div>
                           </CardContent>
@@ -2105,79 +2375,24 @@ export function ConsentFullArchForm({
                     </div>
 
                     {/* Sedation Plan */}
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-semibold">Sedation Plan:</Label>
-                        <div className="flex flex-wrap gap-3 mt-2">
-                          <div>
-                            <button
-                              type="button"
-                              aria-pressed={formData.sedationPlan.localOnly}
-                              onClick={() => toggleSedation('localOnly')}
-                              className={`px-3 py-2 rounded border text-sm transition-all ${formData.sedationPlan.localOnly
-                                ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
-                                : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                            >
-                              Local only
-                            </button>
-                          </div>
-                          <div>
-                            <button
-                              type="button"
-                              aria-pressed={formData.sedationPlan.nitrous}
-                              onClick={() => toggleSedation('nitrous')}
-                              className={`px-3 py-2 rounded border text-sm transition-all ${formData.sedationPlan.nitrous
-                                ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
-                                : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                            >
-                              Nitrous
-                            </button>
-                          </div>
-                          <div>
-                            <button
-                              type="button"
-                              aria-pressed={formData.sedationPlan.ivConscious}
-                              onClick={() => toggleSedation('ivConscious')}
-                              className={`px-3 py-2 rounded border text-sm transition-all ${formData.sedationPlan.ivConscious
-                                ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
-                                : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                            >
-                              IV conscious
-                            </button>
-                          </div>
-                          <div>
-                            <button
-                              type="button"
-                              aria-pressed={formData.sedationPlan.generalHospital}
-                              onClick={() => toggleSedation('generalHospital')}
-                              className={`px-3 py-2 rounded border text-sm transition-all ${formData.sedationPlan.generalHospital
-                                ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
-                                : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
-                                }`}
-                            >
-                              General (hospital)
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
+                    <div className="space-y-6">
                       <div>
                         <Label className="text-sm font-semibold">ASA Physical Status:</Label>
-                        <div className="flex gap-3 mt-2">
+                        <div className="flex gap-3 mt-2 w-full lg:w-1/2">
                           {['I', 'II', 'III', 'IV'].map((status) => (
                             <button
                               key={status}
                               type="button"
                               aria-pressed={formData.asaPhysicalStatus === status}
                               onClick={() => handleInputChange('asaPhysicalStatus', status)}
-                              className={`px-3 py-2 rounded border text-sm transition-all ${formData.asaPhysicalStatus === status
+                              className={`relative flex-1 flex items-center justify-center px-3 py-2 rounded border text-sm transition-all ${formData.asaPhysicalStatus === status
                                 ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
                                 : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                                 }`}
                             >
+                              {formData.asaPhysicalStatus === status && (
+                                <CheckCircle className="absolute left-2 h-3.5 w-3.5 text-blue-600" />
+                              )}
                               {status}
                             </button>
                           ))}
@@ -2185,21 +2400,83 @@ export function ConsentFullArchForm({
                       </div>
 
                       <div>
+                        <Label className="text-sm font-semibold">Sedation Plan:</Label>
+                        <div className="flex flex-nowrap gap-3 mt-2 w-full overflow-x-auto">
+                          <button
+                            type="button"
+                            aria-pressed={formData.sedationPlan.localOnly}
+                            onClick={() => toggleSedation('localOnly')}
+                            className={`relative flex-1 flex items-center justify-center whitespace-nowrap px-3 py-2 rounded border text-sm transition-all ${formData.sedationPlan.localOnly
+                              ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                          >
+                            {formData.sedationPlan.localOnly && (
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-teal-600" />
+                            )}
+                            Local anesthesia
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={formData.sedationPlan.nitrous}
+                            onClick={() => toggleSedation('nitrous')}
+                            className={`relative flex-1 flex items-center justify-center whitespace-nowrap px-3 py-2 rounded border text-sm transition-all ${formData.sedationPlan.nitrous
+                              ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                          >
+                            {formData.sedationPlan.nitrous && (
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-teal-600" />
+                            )}
+                            Nitrous
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={formData.sedationPlan.ivConscious}
+                            onClick={() => toggleSedation('ivConscious')}
+                            className={`relative flex-1 flex items-center justify-center whitespace-nowrap px-3 py-2 rounded border text-sm transition-all ${formData.sedationPlan.ivConscious
+                              ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                          >
+                            {formData.sedationPlan.ivConscious && (
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-teal-600" />
+                            )}
+                            IV conscious
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={formData.sedationPlan.generalHospital}
+                            onClick={() => toggleSedation('generalHospital')}
+                            className={`relative flex-1 flex items-center justify-center whitespace-nowrap px-3 py-2 rounded border text-sm transition-all ${formData.sedationPlan.generalHospital
+                              ? 'border-teal-500 bg-teal-50 text-teal-700 font-medium'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                          >
+                            {formData.sedationPlan.generalHospital && (
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-teal-600" />
+                            )}
+                            General (hospital)
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
                         <Label className="text-sm font-semibold mb-3 block">Planned Drugs:</Label>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                           <button
                             type="button"
                             onClick={() => setFormData(prev => ({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, midazolam: !prev.plannedDrugs.midazolam }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.midazolam
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.midazolam
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.midazolam && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Midazolam
                           </button>
@@ -2209,13 +2486,13 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, fentanyl: !prev.plannedDrugs.fentanyl }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.fentanyl
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.fentanyl
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.fentanyl && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Fentanyl
                           </button>
@@ -2225,13 +2502,13 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, ketamine: !prev.plannedDrugs.ketamine }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.ketamine
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.ketamine
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.ketamine && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Ketamine
                           </button>
@@ -2241,13 +2518,13 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, dexamethasone: !prev.plannedDrugs.dexamethasone }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.dexamethasone
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.dexamethasone
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.dexamethasone && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Dexamethasone
                           </button>
@@ -2257,13 +2534,13 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, versed: !prev.plannedDrugs.versed }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.versed
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.versed
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.versed && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Versed
                           </button>
@@ -2273,13 +2550,13 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, ketorolac: !prev.plannedDrugs.ketorolac }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.ketorolac
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.ketorolac
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.ketorolac && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Ketorolac
                           </button>
@@ -2289,13 +2566,13 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, benadryl: !prev.plannedDrugs.benadryl }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.benadryl
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.benadryl
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.benadryl && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Benadryl
                           </button>
@@ -2305,13 +2582,13 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, acetaminophen: !prev.plannedDrugs.acetaminophen }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.acetaminophen
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.acetaminophen
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.acetaminophen && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Acetaminophen
                           </button>
@@ -2321,13 +2598,13 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, valium: !prev.plannedDrugs.valium }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.valium
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.valium
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.valium && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Valium
                           </button>
@@ -2337,13 +2614,13 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, clindamycin: !prev.plannedDrugs.clindamycin }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.clindamycin
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.clindamycin
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.clindamycin && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Clindamycin
                           </button>
@@ -2353,15 +2630,47 @@ export function ConsentFullArchForm({
                               ...prev,
                               plannedDrugs: { ...prev.plannedDrugs, lidocaine: !prev.plannedDrugs.lidocaine }
                             }))}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.lidocaine
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.lidocaine
                               ? 'border-blue-500 bg-blue-50 text-blue-700'
                               : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
                               }`}
                           >
                             {formData.plannedDrugs.lidocaine && (
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
                             )}
                             Lidocaine
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              plannedDrugs: { ...prev.plannedDrugs, marcaine: !prev.plannedDrugs.marcaine }
+                            }))}
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.marcaine
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                          >
+                            {formData.plannedDrugs.marcaine && (
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
+                            )}
+                            Marcaine
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              plannedDrugs: { ...prev.plannedDrugs, carbocaine: !prev.plannedDrugs.carbocaine }
+                            }))}
+                            className={`relative flex items-center justify-center px-4 py-3 rounded-lg border text-sm font-medium transition-all ${formData.plannedDrugs.carbocaine
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-blue-300 bg-white text-gray-700 hover:border-blue-500'
+                              }`}
+                          >
+                            {formData.plannedDrugs.carbocaine && (
+                              <CheckCircle className="absolute left-3 h-4 w-4 text-blue-600" />
+                            )}
+                            Carbocaine
                           </button>
                         </div>
                       </div>
@@ -2450,18 +2759,29 @@ export function ConsentFullArchForm({
                   <CardContent className="space-y-6 w-full">
                     {/* Risk Cards Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {/* Early Implant Loss */}
-                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between">
-                              <h4 className="font-semibold text-gray-900 text-sm">Early implant loss (&lt; 1 yr)</h4>
-                              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">2–5%</span>
-                            </div>
-                            <p className="text-sm text-gray-600">may require removal & re-placement</p>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      {/* Early Implant Loss - Only shown for implant cases */}
+                      {(() => {
+                        const implantTreatments = ["FULL ARCH FIXED", "IMPLANT REMOVABLE DENTURE", "SINGLE IMPLANT", "MULTIPLE IMPLANTS"];
+                        const isImplantCase = (type: string) => {
+                          if (!type) return false;
+                          return implantTreatments.some(t => type.includes(t));
+                        };
+                        const showRisk = isImplantCase(formData.upperTreatmentType) || isImplantCase(formData.lowerTreatmentType);
+
+                        return showRisk ? (
+                          <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                            <CardContent className="p-4">
+                              <div className="space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <h4 className="font-semibold text-gray-900 text-sm">Early implant loss (&lt; 1 yr)</h4>
+                                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">2–5%</span>
+                                </div>
+                                <p className="text-sm text-gray-600">may require removal & re-placement</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ) : null;
+                      })()}
 
                       {/* Permanent Numbness */}
                       <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
@@ -2516,17 +2836,19 @@ export function ConsentFullArchForm({
                       </Card>
 
                       {/* IV-sedation Airway Compromise */}
-                      <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between">
-                              <h4 className="font-semibold text-gray-900 text-sm">IV-sedation airway compromise</h4>
-                              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">0.1–0.3%</span>
+                      {!formData.sedationPlan.localOnly && (
+                        <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                          <CardContent className="p-4">
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between">
+                                <h4 className="font-semibold text-gray-900 text-sm">IV-sedation airway compromise</h4>
+                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">0.1–0.3%</span>
+                              </div>
+                              <p className="text-sm text-gray-600">emergency airway equipment on site</p>
                             </div>
-                            <p className="text-sm text-gray-600">emergency airway equipment on site</p>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          </CardContent>
+                        </Card>
+                      )}
 
                       {/* Hospital Admission / Death */}
                       <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors lg:col-span-2">
@@ -3207,6 +3529,258 @@ export function ConsentFullArchForm({
                                           ivSedation: {
                                             ...prev.ivSedation,
                                             covered: prev.ivSedation.covered === 'no' ? '' : 'no'
+                                          }
+                                        }))}
+                                      >
+                                        No
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Lateral Window Sinus Lift */}
+                          <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                            <CardContent className="p-4">
+                              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                                <div className="md:col-span-1">
+                                  <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-900 text-sm">Lateral Window Sinus Lift</h4>
+                                  </div>
+                                </div>
+
+                                <div className="md:col-span-1">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-gray-600">Count</Label>
+                                    <Input
+                                      value={formData.lateralWindowSinusLift.count}
+                                      onChange={(e) => handleNestedInputChange('lateralWindowSinusLift', 'count', e.target.value)}
+                                      className="w-full h-8"
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="md:col-span-1">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-gray-600">Estimated Fee</Label>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-sm">$</span>
+                                      <Input
+                                        value={formData.lateralWindowSinusLift.fee}
+                                        onChange={(e) => handleNestedInputChange('lateralWindowSinusLift', 'fee', e.target.value)}
+                                        className="w-full h-8"
+                                        placeholder="0.00"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="md:col-span-2">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-gray-600">Covered by insurance?</Label>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        type="button"
+                                        variant={formData.lateralWindowSinusLift.covered === 'yes' ? 'default' : 'outline'}
+                                        size="sm"
+                                        className={`h-8 px-3 text-xs ${formData.lateralWindowSinusLift.covered === 'yes'
+                                          ? 'bg-green-600 hover:bg-green-700 border-green-600 text-white'
+                                          : 'border-green-300 text-green-700 hover:bg-green-50'
+                                          }`}
+                                        onClick={() => setFormData(prev => ({
+                                          ...prev,
+                                          lateralWindowSinusLift: {
+                                            ...prev.lateralWindowSinusLift,
+                                            covered: prev.lateralWindowSinusLift.covered === 'yes' ? '' : 'yes'
+                                          }
+                                        }))}
+                                      >
+                                        Yes
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant={formData.lateralWindowSinusLift.covered === 'no' ? 'default' : 'outline'}
+                                        size="sm"
+                                        className={`h-8 px-3 text-xs ${formData.lateralWindowSinusLift.covered === 'no'
+                                          ? 'bg-red-600 hover:bg-red-700 border-red-600 text-white'
+                                          : 'border-red-300 text-red-700 hover:bg-red-50'
+                                          }`}
+                                        onClick={() => setFormData(prev => ({
+                                          ...prev,
+                                          lateralWindowSinusLift: {
+                                            ...prev.lateralWindowSinusLift,
+                                            covered: prev.lateralWindowSinusLift.covered === 'no' ? '' : 'no'
+                                          }
+                                        }))}
+                                      >
+                                        No
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Biopsy */}
+                          <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                            <CardContent className="p-4">
+                              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                                <div className="md:col-span-1">
+                                  <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-900 text-sm">Biopsy</h4>
+                                  </div>
+                                </div>
+
+                                <div className="md:col-span-1">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-gray-600">Count</Label>
+                                    <Input
+                                      value={formData.biopsy.count}
+                                      onChange={(e) => handleNestedInputChange('biopsy', 'count', e.target.value)}
+                                      className="w-full h-8"
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="md:col-span-1">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-gray-600">Estimated Fee</Label>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-sm">$</span>
+                                      <Input
+                                        value={formData.biopsy.fee}
+                                        onChange={(e) => handleNestedInputChange('biopsy', 'fee', e.target.value)}
+                                        className="w-full h-8"
+                                        placeholder="0.00"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="md:col-span-2">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-gray-600">Covered by insurance?</Label>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        type="button"
+                                        variant={formData.biopsy.covered === 'yes' ? 'default' : 'outline'}
+                                        size="sm"
+                                        className={`h-8 px-3 text-xs ${formData.biopsy.covered === 'yes'
+                                          ? 'bg-green-600 hover:bg-green-700 border-green-600 text-white'
+                                          : 'border-green-300 text-green-700 hover:bg-green-50'
+                                          }`}
+                                        onClick={() => setFormData(prev => ({
+                                          ...prev,
+                                          biopsy: {
+                                            ...prev.biopsy,
+                                            covered: prev.biopsy.covered === 'yes' ? '' : 'yes'
+                                          }
+                                        }))}
+                                      >
+                                        Yes
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant={formData.biopsy.covered === 'no' ? 'default' : 'outline'}
+                                        size="sm"
+                                        className={`h-8 px-3 text-xs ${formData.biopsy.covered === 'no'
+                                          ? 'bg-red-600 hover:bg-red-700 border-red-600 text-white'
+                                          : 'border-red-300 text-red-700 hover:bg-red-50'
+                                          }`}
+                                        onClick={() => setFormData(prev => ({
+                                          ...prev,
+                                          biopsy: {
+                                            ...prev.biopsy,
+                                            covered: prev.biopsy.covered === 'no' ? '' : 'no'
+                                          }
+                                        }))}
+                                      >
+                                        No
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Remote Anchorage */}
+                          <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors">
+                            <CardContent className="p-4">
+                              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                                <div className="md:col-span-1">
+                                  <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-900 text-sm">Remote Anchorage</h4>
+                                  </div>
+                                </div>
+
+                                <div className="md:col-span-1">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-gray-600">Count</Label>
+                                    <Input
+                                      value={formData.remoteAnchorage.count}
+                                      onChange={(e) => handleNestedInputChange('remoteAnchorage', 'count', e.target.value)}
+                                      className="w-full h-8"
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="md:col-span-1">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-gray-600">Estimated Fee</Label>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-sm">$</span>
+                                      <Input
+                                        value={formData.remoteAnchorage.fee}
+                                        onChange={(e) => handleNestedInputChange('remoteAnchorage', 'fee', e.target.value)}
+                                        className="w-full h-8"
+                                        placeholder="0.00"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="md:col-span-2">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-gray-600">Covered by insurance?</Label>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        type="button"
+                                        variant={formData.remoteAnchorage.covered === 'yes' ? 'default' : 'outline'}
+                                        size="sm"
+                                        className={`h-8 px-3 text-xs ${formData.remoteAnchorage.covered === 'yes'
+                                          ? 'bg-green-600 hover:bg-green-700 border-green-600 text-white'
+                                          : 'border-green-300 text-green-700 hover:bg-green-50'
+                                          }`}
+                                        onClick={() => setFormData(prev => ({
+                                          ...prev,
+                                          remoteAnchorage: {
+                                            ...prev.remoteAnchorage,
+                                            covered: prev.remoteAnchorage.covered === 'yes' ? '' : 'yes'
+                                          }
+                                        }))}
+                                      >
+                                        Yes
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant={formData.remoteAnchorage.covered === 'no' ? 'default' : 'outline'}
+                                        size="sm"
+                                        className={`h-8 px-3 text-xs ${formData.remoteAnchorage.covered === 'no'
+                                          ? 'bg-red-600 hover:bg-red-700 border-red-600 text-white'
+                                          : 'border-red-300 text-red-700 hover:bg-red-50'
+                                          }`}
+                                        onClick={() => setFormData(prev => ({
+                                          ...prev,
+                                          remoteAnchorage: {
+                                            ...prev.remoteAnchorage,
+                                            covered: prev.remoteAnchorage.covered === 'no' ? '' : 'no'
                                           }
                                         }))}
                                       >
@@ -4275,7 +4849,7 @@ export function ConsentFullArchForm({
           </div>
 
           {/* Fixed Footer with Navigation */}
-          <div className="mt-auto sticky bottom-0 left-0 right-0 flex items-center justify-between border-t bg-white px-6 py-2">
+          <div className="mt-auto flex-shrink-0 flex items-center justify-between border-t bg-white px-6 py-2">
             <div className="flex items-center gap-3">
               <Button
                 type="button"
