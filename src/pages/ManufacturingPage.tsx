@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Factory, Clock, CheckCircle, AlertCircle, Calendar, Eye, Play, Square, RotateCcw, Edit, Search, FileText, User, Settings, Truck, Download, FlaskConical, ClipboardCheck, Filter, ArrowUpDown, ArrowUp, ArrowDown, MapPin, Package, Printer } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { useManufacturingItems } from "@/hooks/useManufacturingItems";
@@ -258,15 +259,34 @@ export function ManufacturingPage() {
   const [reprintForm, setReprintForm] = useState({
     manufacturing_method: 'printing',
     material: '',
-    shade: ''
+    shade: '',
+    reason: '',
+    otherReason: '',
+    selectedAppliances: [] as string[]
   });
 
   const handleReprint = (item: any) => {
     setSelectedReprintItem(item);
+
+    // Helper to find match in config options
+    const findMatch = (options: any[], value: string | null) => {
+      if (!value) return '';
+      const lowerVal = value.toLowerCase();
+      // Try to match by value or name
+      const match = options.find(o =>
+        (o.value && o.value.toLowerCase() === lowerVal) ||
+        (o.name && o.name.toLowerCase() === lowerVal)
+      );
+      return match ? match.value : value;
+    };
+
     setReprintForm({
       manufacturing_method: item.manufacturing_method || 'printing',
-      material: item.material || '',
-      shade: item.shade || ''
+      material: findMatch(materials, item.material),
+      shade: findMatch(shades, item.shade),
+      reason: '',
+      otherReason: '',
+      selectedAppliances: []
     });
     setShowReprintDialog(true);
   };
@@ -275,10 +295,24 @@ export function ManufacturingPage() {
     if (!selectedReprintItem) return;
 
     try {
+      const finalReason = reprintForm.reason === 'Others' ? reprintForm.otherReason : reprintForm.reason;
+
+      if (!finalReason) {
+        toast.error("Please provide a reason for the reprint");
+        return;
+      }
+
+      if (reprintForm.selectedAppliances.length === 0) {
+        toast.error("Please select at least one appliance to reprint");
+        return;
+      }
+
       await reprintManufacturingItem(selectedReprintItem.id, {
         manufacturing_method: reprintForm.manufacturing_method,
         material: reprintForm.material,
-        shade: reprintForm.shade
+        shade: reprintForm.shade,
+        reason: finalReason,
+        keep_appliances: reprintForm.selectedAppliances
       });
       setShowReprintDialog(false);
       setSelectedReprintItem(null);
@@ -1334,6 +1368,22 @@ export function ManufacturingPage() {
           <div className="p-6">
             {selectedViewItem && (
               <div className="space-y-6">
+                {/* Reprint Alert */}
+                {selectedViewItem.is_reprint && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-amber-800 mb-1">
+                      <RotateCcw className="h-5 w-5" />
+                      <h4 className="font-bold">Reprint Order</h4>
+                    </div>
+                    {selectedViewItem.reprint_reason && (
+                      <p className="text-amber-700 ml-7">
+                        <span className="font-semibold">Reason: </span>
+                        {selectedViewItem.reprint_reason}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Case Information */}
                 <div className="bg-gray-50 rounded-lg p-4 border">
                   <h4 className="font-medium text-gray-900 mb-3">Case Information</h4>
@@ -1924,6 +1974,146 @@ export function ManufacturingPage() {
               </div>
             </div>
 
+            {/* Appliance Selection - Tablet Friendly UI */}
+            <div className="space-y-3">
+              <Label>Reprint Appliance</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selectedReprintItem?.upper_appliance_type && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isSelected = reprintForm.selectedAppliances.includes('upper');
+                      setReprintForm(prev => ({
+                        ...prev,
+                        selectedAppliances: isSelected
+                          ? prev.selectedAppliances.filter(id => id !== 'upper')
+                          : [...prev.selectedAppliances, 'upper']
+                      }));
+                    }}
+                    className={`relative p-3 rounded-lg border-2 text-left transition-all duration-200 flex flex-col gap-1 ${reprintForm.selectedAppliances.includes('upper')
+                      ? "border-indigo-600 bg-indigo-50 text-indigo-900 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 text-gray-700"
+                      }`}
+                  >
+                    <div className="flex justify-between items-start w-full">
+                      <span className="text-sm font-semibold">Upper Arch</span>
+                      {reprintForm.selectedAppliances.includes('upper') && (
+                        <CheckCircle className="h-4 w-4 text-indigo-600" />
+                      )}
+                    </div>
+                    <div className="text-xs opacity-90 truncate w-full">
+                      {selectedReprintItem.upper_appliance_type}
+                    </div>
+                    {selectedReprintItem.upper_appliance_number && (
+                      <div className="text-xs font-mono text-indigo-600/80">
+                        #{selectedReprintItem.upper_appliance_number}
+                      </div>
+                    )}
+                  </button>
+                )}
+
+                {selectedReprintItem?.lower_appliance_type && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isSelected = reprintForm.selectedAppliances.includes('lower');
+                      setReprintForm(prev => ({
+                        ...prev,
+                        selectedAppliances: isSelected
+                          ? prev.selectedAppliances.filter(id => id !== 'lower')
+                          : [...prev.selectedAppliances, 'lower']
+                      }));
+                    }}
+                    className={`relative p-3 rounded-lg border-2 text-left transition-all duration-200 flex flex-col gap-1 ${reprintForm.selectedAppliances.includes('lower')
+                      ? "border-indigo-600 bg-indigo-50 text-indigo-900 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 text-gray-700"
+                      }`}
+                  >
+                    <div className="flex justify-between items-start w-full">
+                      <span className="text-sm font-semibold">Lower Arch</span>
+                      {reprintForm.selectedAppliances.includes('lower') && (
+                        <CheckCircle className="h-4 w-4 text-indigo-600" />
+                      )}
+                    </div>
+                    <div className="text-xs opacity-90 truncate w-full">
+                      {selectedReprintItem.lower_appliance_type}
+                    </div>
+                    {selectedReprintItem.lower_appliance_number && (
+                      <div className="text-xs font-mono text-indigo-600/80">
+                        #{selectedReprintItem.lower_appliance_number}
+                      </div>
+                    )}
+                  </button>
+                )}
+
+                {selectedReprintItem?.upper_nightguard_number && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isSelected = reprintForm.selectedAppliances.includes('upper_nightguard');
+                      setReprintForm(prev => ({
+                        ...prev,
+                        selectedAppliances: isSelected
+                          ? prev.selectedAppliances.filter(id => id !== 'upper_nightguard')
+                          : [...prev.selectedAppliances, 'upper_nightguard']
+                      }));
+                    }}
+                    className={`relative p-3 rounded-lg border-2 text-left transition-all duration-200 flex flex-col gap-1 ${reprintForm.selectedAppliances.includes('upper_nightguard')
+                      ? "border-indigo-600 bg-indigo-50 text-indigo-900 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 text-gray-700"
+                      }`}
+                  >
+                    <div className="flex justify-between items-start w-full">
+                      <span className="text-sm font-semibold">Upper Nightguard</span>
+                      {reprintForm.selectedAppliances.includes('upper_nightguard') && (
+                        <CheckCircle className="h-4 w-4 text-indigo-600" />
+                      )}
+                    </div>
+                    <div className="text-xs font-mono text-indigo-600/80 mt-1">
+                      #{selectedReprintItem.upper_nightguard_number}
+                    </div>
+                  </button>
+                )}
+
+                {selectedReprintItem?.lower_nightguard_number && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const isSelected = reprintForm.selectedAppliances.includes('lower_nightguard');
+                      setReprintForm(prev => ({
+                        ...prev,
+                        selectedAppliances: isSelected
+                          ? prev.selectedAppliances.filter(id => id !== 'lower_nightguard')
+                          : [...prev.selectedAppliances, 'lower_nightguard']
+                      }));
+                    }}
+                    className={`relative p-3 rounded-lg border-2 text-left transition-all duration-200 flex flex-col gap-1 ${reprintForm.selectedAppliances.includes('lower_nightguard')
+                      ? "border-indigo-600 bg-indigo-50 text-indigo-900 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 text-gray-700"
+                      }`}
+                  >
+                    <div className="flex justify-between items-start w-full">
+                      <span className="text-sm font-semibold">Lower Nightguard</span>
+                      {reprintForm.selectedAppliances.includes('lower_nightguard') && (
+                        <CheckCircle className="h-4 w-4 text-indigo-600" />
+                      )}
+                    </div>
+                    <div className="text-xs font-mono text-indigo-600/80 mt-1">
+                      #{selectedReprintItem.lower_nightguard_number}
+                    </div>
+                  </button>
+                )}
+
+                {/* Fallback msg if nothing to show */}
+                {!selectedReprintItem?.upper_appliance_type &&
+                  !selectedReprintItem?.lower_appliance_type &&
+                  !selectedReprintItem?.upper_nightguard_number &&
+                  !selectedReprintItem?.lower_nightguard_number && (
+                    <p className="text-sm text-gray-400 italic col-span-2 text-center py-2">No specific appliances found to select.</p>
+                  )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Material</Label>
@@ -1962,6 +2152,35 @@ export function ManufacturingPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Reason for Reprint</Label>
+                <Select
+                  value={reprintForm.reason}
+                  onValueChange={(value) => setReprintForm({ ...reprintForm, reason: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Fractured">Fractured</SelectItem>
+                    <SelectItem value="Shade Mismatch">Shade Mismatch</SelectItem>
+                    <SelectItem value="Others">Others</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {reprintForm.reason === 'Others' && (
+                <div className="space-y-2">
+                  <Label>Other Reason</Label>
+                  <Textarea
+                    value={reprintForm.otherReason}
+                    onChange={(e) => setReprintForm({ ...reprintForm, otherReason: e.target.value })}
+                    placeholder="Enter specific reason..."
+                    rows={3}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

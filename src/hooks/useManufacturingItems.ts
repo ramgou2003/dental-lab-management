@@ -40,6 +40,8 @@ export interface ManufacturingItem {
   received_at: string | null;
   received_by: string | null;
   received_by_name: string | null;
+  reprint_reason: string | null;
+  is_reprint: boolean | null;
   created_at: string;
   updated_at: string;
 }
@@ -398,6 +400,8 @@ export function useManufacturingItems() {
     manufacturing_method?: string;
     material?: string;
     shade?: string;
+    reason?: string;
+    keep_appliances?: string[];
   }) => {
     try {
       // Fetch the current item from database to get all details
@@ -418,6 +422,14 @@ export function useManufacturingItems() {
       const methodToUse = options?.manufacturing_method || currentItem.manufacturing_method;
       const initialStatus = methodToUse === 'printing' ? 'pending-printing' : 'pending-milling';
 
+      // Determine which appliances to keep
+      // If keep_appliances is not provided, keep everything (backward compatibility)
+      const keepAll = !options?.keep_appliances || options.keep_appliances.length === 0;
+      const keepUpper = keepAll || options.keep_appliances?.includes('upper');
+      const keepLower = keepAll || options.keep_appliances?.includes('lower');
+      const keepUpperNG = keepAll || options.keep_appliances?.includes('upper_nightguard');
+      const keepLowerNG = keepAll || options.keep_appliances?.includes('lower_nightguard');
+
       // Create new manufacturing item with same details for reprinting
       const { error: createError } = await supabase
         .from('manufacturing_items')
@@ -426,23 +438,25 @@ export function useManufacturingItems() {
           lab_script_id: currentItem.lab_script_id,
           patient_id: currentItem.patient_id,
           patient_name: currentItem.patient_name,
-          upper_appliance_type: currentItem.upper_appliance_type,
-          lower_appliance_type: currentItem.lower_appliance_type,
+          upper_appliance_type: keepUpper ? currentItem.upper_appliance_type : null,
+          lower_appliance_type: keepLower ? currentItem.lower_appliance_type : null,
           shade: options?.shade || currentItem.shade,
           screw: currentItem.screw,
           material: options?.material || currentItem.material,
-          arch_type: currentItem.arch_type,
-          upper_appliance_number: currentItem.upper_appliance_number,
-          lower_appliance_number: currentItem.lower_appliance_number,
-          upper_nightguard_number: currentItem.upper_nightguard_number,
-          lower_nightguard_number: currentItem.lower_nightguard_number,
-          is_nightguard_needed: currentItem.is_nightguard_needed,
+          arch_type: currentItem.arch_type, // Should we adjust arch type? If we only keep upper, is it still 'both'? Let's leave it for now or maybe "Single"? Leaving as is is safer for tracing.
+          upper_appliance_number: keepUpper ? currentItem.upper_appliance_number : null,
+          lower_appliance_number: keepLower ? currentItem.lower_appliance_number : null,
+          upper_nightguard_number: keepUpperNG ? currentItem.upper_nightguard_number : null,
+          lower_nightguard_number: keepLowerNG ? currentItem.lower_nightguard_number : null,
+          is_nightguard_needed: (keepUpperNG || keepLowerNG) && currentItem.is_nightguard_needed === 'yes' ? 'yes' : 'no',
           manufacturing_method: methodToUse,
           milling_location: currentItem.milling_location,
           gingiva_color: currentItem.gingiva_color,
           stained_and_glazed: currentItem.stained_and_glazed,
           cementation: currentItem.cementation,
-          additional_notes: currentItem.additional_notes,
+          additional_notes: options?.reason ? `Reprint Reason: ${options.reason}` : currentItem.additional_notes,
+          reprint_reason: options?.reason || null,
+          is_reprint: true,
           status: initialStatus
         });
 
