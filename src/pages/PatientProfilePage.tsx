@@ -112,7 +112,8 @@ import {
   GripVertical,
   Pill,
   Shield,
-  Smile
+  Smile,
+  Loader2
 } from "lucide-react";
 import { LabReportCardForm } from "@/components/LabReportCardForm";
 import { ViewLabReportCard } from "@/components/ViewLabReportCard";
@@ -1613,6 +1614,60 @@ export function PatientProfilePage() {
       console.error('Error fetching medical history:', error);
     } finally {
       setLoadingMedicalHistory(false);
+    }
+  };
+
+  const handleFetchEmergencyContact = async () => {
+    if (!patientId || patientPackets.length === 0) {
+      toast({
+        title: "No Packets Found",
+        description: "No patient packets available to fetch data from.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Find the latest completed packet
+    const latestPacket = patientPackets.find(p => p.form_status === 'completed');
+
+    if (!latestPacket) {
+      toast({
+        title: "No Completed Packet",
+        description: "No completed patient packet found to fetch emergency contact details.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const updateData = {
+        emergency_contact_name: latestPacket.emergency_contact_name,
+        emergency_contact_relationship: latestPacket.emergency_contact_relationship,
+        emergency_contact_phone: latestPacket.emergency_contact_phone,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('patients')
+        .update(updateData)
+        .eq('id', patientId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPatient(data);
+      toast({
+        title: "Success",
+        description: "Emergency contact details fetched and updated successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error fetching emergency contact:', error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch emergency contact: ${error.message}`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -5345,10 +5400,21 @@ export function PatientProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full bg-gray-50">
+      <div className="flex flex-col h-full bg-slate-50/50">
         <PageHeader title="Patient Profile" />
-        <div className="flex-1 p-6 flex items-center justify-center">
-          <p className="text-slate-600">Loading patient profile...</p>
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <div className="relative">
+            <div className="absolute inset-0 bg-blue-100 rounded-full blur-xl opacity-50 animate-pulse"></div>
+            <Loader2 className="h-10 w-10 animate-spin text-blue-600 relative z-10" />
+          </div>
+          <div className="mt-4 flex flex-col items-center">
+            <p className="text-sm font-medium text-slate-600 animate-pulse">
+              Loading patient profile
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              Fetching clinical records and documents...
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -5707,13 +5773,30 @@ export function PatientProfilePage() {
                               <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
                               <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">Emergency Contact</h4>
                             </div>
-                            <button
-                              onClick={() => setShowEditEmergencyContact(true)}
-                              className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
-                              title="Edit emergency contact"
-                            >
-                              <Pencil className="h-3.5 w-3.5 text-blue-600 hover:text-blue-700" />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={handleFetchEmergencyContact}
+                                      className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
+                                    >
+                                      <RefreshCw className="h-3.5 w-3.5 text-blue-600 hover:text-blue-700" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-[10px]">Fetch from New Patient Packet</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <button
+                                onClick={() => setShowEditEmergencyContact(true)}
+                                className="p-1 rounded-full hover:bg-blue-100 transition-colors duration-200"
+                                title="Edit emergency contact"
+                              >
+                                <Pencil className="h-3.5 w-3.5 text-blue-600 hover:text-blue-700" />
+                              </button>
+                            </div>
                           </div>
                           <div className="grid grid-cols-1 gap-2">
                             <div className="bg-white rounded-md p-2 border border-blue-200">
@@ -13288,7 +13371,10 @@ export function PatientProfilePage() {
               onSubmit={handleEditSubmit}
             />
           ) : (
-            <div>Loading patient data...</div>
+            <div className="flex flex-col items-center justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-2" />
+              <p className="text-sm text-slate-500">Loading patient data...</p>
+            </div>
           )}
         </DialogContent>
       </Dialog >
