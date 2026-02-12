@@ -10,9 +10,12 @@ export interface SurgicalRecallSheet {
   arch_type: 'upper' | 'lower' | 'dual';
   upper_surgery_type?: string;
   lower_surgery_type?: string;
+  is_graft_used?: boolean;
+  is_membrane_used?: boolean;
   status: 'draft' | 'completed';
   created_at: string;
   updated_at: string;
+  created_by?: string;
 }
 
 export interface SurgicalRecallImplant {
@@ -86,9 +89,19 @@ export const useSurgicalRecallSheets = (patientId?: string) => {
 
       if (implantsError) throw implantsError;
 
+      // Fetch grafts and membranes
+      const { data: graftsMembranes, error: gmError } = await supabase
+        .from('surgical_recall_grafts_membranes')
+        .select('*')
+        .eq('surgical_recall_sheet_id', sheetId)
+        .order('created_at', { ascending: true });
+
+      if (gmError) throw gmError;
+
       return {
         sheet,
-        implants: implants || []
+        implants: implants || [],
+        graftsMembranes: graftsMembranes || []
       };
     } catch (err) {
       console.error('Error fetching sheet with implants:', err);

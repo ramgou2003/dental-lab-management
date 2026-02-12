@@ -9,82 +9,79 @@ import { toast } from "sonner";
 import { NewPatientFormData } from "@/types/newPatientPacket";
 import { completePublicSubmission } from "@/services/publicPatientPacketService";
 
-interface Lead {
+interface ConsultationInfo {
   id: string;
-  name: string;
-  email: string;
-  phone: string;
-  personal_first_name?: string;
-  personal_last_name?: string;
-  personal_email?: string;
-  personal_phone?: string;
-  status: string;
+  patient_name: string;
 }
 
 const PublicPatientPacketPage = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const [lead, setLead] = useState<Lead | null>(null);
+  const [consultationInfo, setConsultationInfo] = useState<ConsultationInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submittedPatient, setSubmittedPatient] = useState<{first_name: string, last_name: string} | null>(null);
+  const [submittedPatient, setSubmittedPatient] = useState<{ first_name: string, last_name: string } | null>(null);
 
   useEffect(() => {
     if (token) {
-      fetchLeadByToken();
+      fetchConsultationByToken();
     } else {
       setError("Invalid or missing token");
       setLoading(false);
     }
   }, [token]);
 
-  const fetchLeadByToken = async () => {
+  const fetchConsultationByToken = async () => {
     try {
-      // First, try to find the lead by the token in a packet_tokens table
-      // For now, we'll decode the token to get the lead ID (simple base64 encoding)
-      const leadId = atob(token || '');
+      // Decode the token to get the consultation ID (simple base64 encoding)
+      const consultationId = atob(token || '');
 
       const { data, error } = await supabase
-        .from('new_patient_leads')
-        .select('*')
-        .eq('id', leadId)
-        .eq('status', 'scheduled') // Only allow scheduled leads
+        .from('consultations')
+        .select('id, patient_name, public_link, link_opened_at, new_patient_packet_id')
+        .eq('id', consultationId)
         .single();
 
       if (error || !data) {
-        console.error('Error fetching lead:', error);
-        setError("Lead not found or not eligible for packet submission");
+        console.error('Error fetching consultation:', error);
+        setError("Consultation not found or link is invalid");
         setLoading(false);
         return;
       }
 
-      // Check if there's already a submitted patient packet for this lead
-      try {
-        const { data: existingPackets, error: packetsError } = await supabase
-          .from('new_patient_packets')
-          .select('id, first_name, last_name, created_at')
-          .eq('lead_id', leadId);
+      // Check if there's already a submitted patient packet for this consultation
+      if (data.new_patient_packet_id) {
+        try {
+          const { data: existingPacket, error: packetError } = await supabase
+            .from('new_patient_packets')
+            .select('id, first_name, last_name')
+            .eq('id', data.new_patient_packet_id)
+            .single();
 
-        if (packetsError) {
-          console.error('Error checking existing packets:', packetsError);
+          if (!packetError && existingPacket) {
+            console.log('Found existing patient packet, showing thank you page');
+            setIsSubmitted(true);
+            setSubmittedPatient({
+              first_name: existingPacket.first_name,
+              last_name: existingPacket.last_name
+            });
+          }
+        } catch (err) {
+          console.error('Error checking for existing packets:', err);
           // Continue anyway, don't block the form
-        } else if (existingPackets && existingPackets.length > 0) {
-          console.log('Found existing patient packet, showing thank you page');
-          setIsSubmitted(true);
-          // Store the submitted patient info for the thank you page
-          const latestPacket = existingPackets[0];
-          setSubmittedPatient({
-            first_name: latestPacket.first_name,
-            last_name: latestPacket.last_name
-          });
         }
-      } catch (error) {
-        console.error('Error checking for existing packets:', error);
-        // Continue anyway, don't block the form
       }
 
-      setLead(data);
+      // Record that the link was opened (only if not already recorded)
+      if (!data.link_opened_at) {
+        await supabase
+          .from('consultations')
+          .update({ link_opened_at: new Date().toISOString() })
+          .eq('id', consultationId);
+      }
+
+      setConsultationInfo({ id: data.id, patient_name: data.patient_name });
       setLoading(false);
     } catch (error) {
       console.error('Error decoding token:', error);
@@ -94,33 +91,19 @@ const PublicPatientPacketPage = () => {
   };
 
   const handleFormSubmit = async (formData: NewPatientFormData) => {
-    if (!lead) return;
+    if (!consultationInfo) return;
 
     try {
-      console.log('Starting form submission for lead:', lead.id);
+      console.log('Starting form submission for consultation:', consultationInfo.id);
       console.log('Form data summary:', {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email
       });
 
-      // Test Supabase connection first
-      console.log('Testing Supabase connection...');
-      const { data: testData, error: testError } = await supabase
-        .from('new_patient_leads')
-        .select('id')
-        .limit(1);
-
-      if (testError) {
-        console.error('Supabase connection test failed:', testError);
-        toast.error('Database connection failed. Please try again.');
-        return;
-      }
-      console.log('Supabase connection test successful');
-
       // Save the patient packet data using our public service
       console.log('Calling completePublicSubmission service...');
-      const { success, data, error } = await completePublicSubmission(formData, lead.id);
+      const { success, data, error } = await completePublicSubmission(formData, consultationInfo.id);
 
       if (!success || error) {
         console.error('Error saving patient packet:', error);
@@ -154,7 +137,7 @@ const PublicPatientPacketPage = () => {
     );
   }
 
-  if (error || !lead) {
+  if (error || !consultationInfo) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center p-6">
         <Card className="w-full max-w-md text-center shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
@@ -205,7 +188,7 @@ const PublicPatientPacketPage = () => {
             {/* Thank You Message */}
             <div className="mb-8">
               <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Thank You{submittedPatient?.first_name ? `, ${submittedPatient.first_name}` : lead.personal_first_name ? `, ${lead.personal_first_name}` : ''}!
+                Thank You{submittedPatient?.first_name ? `, ${submittedPatient.first_name}` : ''}!
               </h1>
               <h2 className="text-xl font-semibold text-green-600 mb-6">
                 Your Patient Packet Has Been Successfully Submitted
@@ -232,9 +215,7 @@ const PublicPatientPacketPage = () => {
                     })}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <strong>Patient:</strong> {lead.personal_first_name && lead.personal_last_name
-                      ? `${lead.personal_first_name} ${lead.personal_last_name}`
-                      : lead.name}
+                    <strong>Patient:</strong> {consultationInfo.patient_name}
                   </p>
                 </div>
                 <div>
@@ -297,9 +278,7 @@ const PublicPatientPacketPage = () => {
         <NewPatientPacketForm
           onSubmit={handleFormSubmit}
           onCancel={handleCancel}
-          patientName={lead.personal_first_name && lead.personal_last_name
-            ? `${lead.personal_first_name} ${lead.personal_last_name}`
-            : lead.name}
+          patientName={consultationInfo.patient_name}
           patientDateOfBirth=""
           patientGender=""
           showWelcomeHeader={true}

@@ -308,6 +308,17 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
       throw new Error(`Failed to fetch patient packet data: ${packetError.message}`);
     }
 
+    // Get consultation patient data if available
+    let consultationPatientData = null;
+    if (consultation?.consultation_patient_id) {
+      const { data: cpData } = await supabase
+        .from('consultation_patients')
+        .select('*')
+        .eq('id', consultation.consultation_patient_id)
+        .single();
+      consultationPatientData = cpData;
+    }
+
     // Check if patient already exists in main table
     // Check both consultation.patient_id and packetData.patient_id (for active patients)
     let patientId = consultation?.patient_id || packetData.patient_id || null;
@@ -326,16 +337,6 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
       console.log('👤 Creating new patient in main table...');
 
       // Get patient data from packet (primary source) or consultation patient
-      let consultationPatientData = null;
-      if (consultation?.consultation_patient_id) {
-        const { data: cpData } = await supabase
-          .from('consultation_patients')
-          .select('*')
-          .eq('id', consultation.consultation_patient_id)
-          .single();
-        consultationPatientData = cpData;
-      }
-
       const firstName = packetData.first_name || consultationPatientData?.first_name || 'Unknown';
       const lastName = packetData.last_name || consultationPatientData?.last_name || 'Patient';
 
@@ -418,22 +419,32 @@ export async function movePatientToMainTable(patientPacketId?: string): Promise<
       }
 
       // Update consultation with patient_id
-      console.log('🔗 Updating consultation with patient ID...');
-      const { error: consultationUpdateError } = await supabase
+      console.log('🔗 Updating all related consultations with patient ID...');
+      const cpId = consultation?.consultation_patient_id;
+      let consultationUpdateQuery = supabase
         .from('consultations')
-        .update({ patient_id: patientId })
-        .eq('new_patient_packet_id', patientPacketId);
+        .update({ patient_id: patientId });
+
+      if (cpId && patientPacketId) {
+        consultationUpdateQuery = consultationUpdateQuery.or(`new_patient_packet_id.eq.${patientPacketId},consultation_patient_id.eq.${cpId}`);
+      } else if (patientPacketId) {
+        consultationUpdateQuery = consultationUpdateQuery.eq('new_patient_packet_id', patientPacketId);
+      } else if (cpId) {
+        consultationUpdateQuery = consultationUpdateQuery.eq('consultation_patient_id', cpId);
+      }
+
+      const { error: consultationUpdateError } = await consultationUpdateQuery;
 
       if (consultationUpdateError) {
-        console.error('❌ Error updating consultation with patient ID:', consultationUpdateError);
+        console.error('❌ Error updating consultations with patient ID:', consultationUpdateError);
         console.error('❌ Consultation update error details:', consultationUpdateError);
         // Don't throw error here as patient creation was successful, but log the issue
       } else {
-        console.log('✅ Successfully updated consultation with patient ID:', patientId);
+        console.log('✅ Successfully updated related consultations with patient ID:', patientId);
       }
 
       // Update appointment with patient_id if consultation has an appointment_id
-      if (consultation.appointment_id) {
+      if (consultation && consultation.appointment_id) {
         console.log('🔗 Updating appointment with patient ID...');
         const { error: appointmentUpdateError } = await supabase
           .from('appointments')
@@ -688,17 +699,32 @@ export async function movePatientToMainTableByAppointment(appointmentId: string,
       console.log('✅ Created new patient in main table:', patientId);
       console.log('👤 New patient data:', newPatient);
 
-      // Update consultation with patient_id
-      const { error: consultationUpdateError } = await supabase
+      // Update consultations with patient_id
+      console.log('🔗 Updating all related consultations with patient ID...');
+      const cpId = consultationPatientId || consultation.consultation_patient_id;
+      const packetId = consultation.new_patient_packet_id;
+
+      let consultationUpdateQuery = supabase
         .from('consultations')
-        .update({ patient_id: patientId })
-        .eq('appointment_id', appointmentId);
+        .update({ patient_id: patientId });
+
+      if (cpId && packetId) {
+        consultationUpdateQuery = consultationUpdateQuery.or(`consultation_patient_id.eq.${cpId},new_patient_packet_id.eq.${packetId},appointment_id.eq.${appointmentId}`);
+      } else if (cpId) {
+        consultationUpdateQuery = consultationUpdateQuery.or(`consultation_patient_id.eq.${cpId},appointment_id.eq.${appointmentId}`);
+      } else if (packetId) {
+        consultationUpdateQuery = consultationUpdateQuery.or(`new_patient_packet_id.eq.${packetId},appointment_id.eq.${appointmentId}`);
+      } else {
+        consultationUpdateQuery = consultationUpdateQuery.eq('appointment_id', appointmentId);
+      }
+
+      const { error: consultationUpdateError } = await consultationUpdateQuery;
 
       if (consultationUpdateError) {
-        console.error('❌ Error updating consultation with patient ID:', consultationUpdateError);
+        console.error('❌ Error updating consultations with patient ID:', consultationUpdateError);
         // Don't throw error here as patient creation was successful
       } else {
-        console.log('✅ Successfully updated consultation with patient ID:', patientId);
+        console.log('✅ Successfully updated related consultations with patient ID:', patientId);
       }
 
       // Update appointment with patient_id

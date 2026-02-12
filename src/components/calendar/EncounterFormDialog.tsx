@@ -676,6 +676,19 @@ export function EncounterFormDialog({
   // Format date for display
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
+
+    // Handle YYYY-MM-DD format explicitly to avoid timezone issues
+    if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      // Create date using local time components (setting to noon avoids DST issues)
+      const date = new Date(year, month - 1, day, 12, 0, 0);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',

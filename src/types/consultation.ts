@@ -65,6 +65,7 @@ export interface Consultation {
   created_at: string;
   updated_at: string;
   completed_at?: string;
+  treatment_plan?: any;
 }
 
 export interface ConsultationInsert {
@@ -125,6 +126,7 @@ export interface ConsultationInsert {
   // Status and Progress
   consultation_status?: 'draft' | 'in_progress' | 'completed' | 'cancelled' | 'scheduled';
   progress_step?: 1 | 2;
+  treatment_plan?: any;
 }
 
 export interface ConsultationUpdate {
@@ -166,6 +168,7 @@ export interface ConsultationUpdate {
   consultation_status?: 'draft' | 'in_progress' | 'completed' | 'cancelled' | 'scheduled';
   progress_step?: 1 | 2;
   completed_at?: string;
+  treatment_plan?: any;
 }
 
 // Form data interfaces for the consultation form steps

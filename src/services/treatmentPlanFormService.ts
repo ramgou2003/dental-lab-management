@@ -10,6 +10,7 @@ export interface TreatmentPlanFormData {
   procedures?: ProcedureData[];
   plan_date?: string;
   discount?: number;
+  notes?: string;
   form_status?: 'draft' | 'completed';
   created_by?: string;
   created_at?: string;
@@ -45,6 +46,8 @@ export interface TreatmentPlanFormDB {
   date_of_birth: string;
   treatments: any; // JSONB
   plan_date?: string;
+  discount?: number;
+  notes?: string;
   form_status: 'draft' | 'completed';
   created_by?: string;
   created_at: string;
@@ -91,6 +94,7 @@ export async function saveTreatmentPlanForm(
       procedures: formData.procedures || [],
       plan_date: formData.plan_date || new Date().toISOString().split('T')[0],
       discount: parseFloat(String(formData.discount || 0)),
+      notes: formData.notes || null,
       form_status: formData.form_status || 'draft',
       created_by: userId
     };
@@ -159,6 +163,7 @@ export async function updateTreatmentPlanForm(
       procedures: formData.procedures || [],
       plan_date: formData.plan_date,
       discount: parseFloat(String(formData.discount || 0)),
+      notes: formData.notes || null,
       form_status: formData.form_status || currentStatus || 'draft'
     };
 
@@ -241,6 +246,7 @@ export async function autoSaveTreatmentPlanForm(
       procedures: formData.procedures || [],
       plan_date: formData.plan_date,
       discount: parseFloat(String(formData.discount || 0)),
+      notes: formData.notes || null,
       form_status: finalStatus
     };
 

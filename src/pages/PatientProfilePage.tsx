@@ -4929,7 +4929,8 @@ export function PatientProfilePage() {
       // Restructure the data to match what the preview expects
       const viewData = {
         ...result.sheet,
-        surgical_recall_implants: result.implants
+        surgical_recall_implants: result.implants,
+        graftsMembranes: result.graftsMembranes
       };
 
       setSelectedSurgicalRecallSheet(viewData);
@@ -4953,7 +4954,8 @@ export function PatientProfilePage() {
       // Restructure the data to match what the form expects
       const editingData = {
         ...result.sheet,
-        surgical_recall_implants: result.implants
+        surgical_recall_implants: result.implants,
+        graftsMembranes: result.graftsMembranes
       };
 
       console.log('📝 Structured editing data:', editingData);
@@ -21200,6 +21202,7 @@ export function PatientProfilePage() {
                   procedures: selectedTreatmentPlanForm.procedures || [],
                   planDate: selectedTreatmentPlanForm.plan_date || '',
                   discount: selectedTreatmentPlanForm.discount || 0,
+                  notes: selectedTreatmentPlanForm.notes || '',
                   formStatus: selectedTreatmentPlanForm.form_status
                 };
               }
@@ -21222,6 +21225,7 @@ export function PatientProfilePage() {
                   procedures: formData.procedures || [],
                   plan_date: formData.planDate,
                   discount: formData.discount || 0,
+                  notes: formData.notes || null,
                   form_status: 'completed' as const
                 };
 

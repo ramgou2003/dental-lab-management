@@ -7,21 +7,20 @@ interface OrientationGuardProps {
 
 const OrientationGuard: React.FC<OrientationGuardProps> = ({ children }) => {
   const [isPortrait, setIsPortrait] = useState(false);
+  const [pathname, setPathname] = useState(window.location.pathname);
+
+  // Define public paths that should be in portrait mode
+  const isPublicPath =
+    pathname === '/patientpacket/new' ||
+    pathname === '/new-patient' ||
+    pathname.startsWith('/patient-packet/');
 
   useEffect(() => {
     const checkOrientation = () => {
       // Check if the device is in portrait mode
-      // Use both window dimensions and screen orientation API for better detection
       const isCurrentlyPortrait = window.innerHeight > window.innerWidth;
-
-      // Additional check using screen orientation API if available
-      let screenOrientationPortrait = false;
-      if (screen.orientation) {
-        screenOrientationPortrait = screen.orientation.angle === 0 || screen.orientation.angle === 180;
-      }
-
-      // Use window dimensions as primary check, screen orientation as secondary
       setIsPortrait(isCurrentlyPortrait);
+      setPathname(window.location.pathname);
     };
 
     // Check orientation on mount
@@ -53,13 +52,31 @@ const OrientationGuard: React.FC<OrientationGuardProps> = ({ children }) => {
     };
   }, []);
 
-  if (isPortrait) {
+  // Update pathname on interval as a fallback since this is outside the router
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (window.location.pathname !== pathname) {
+        setPathname(window.location.pathname);
+      }
+    }, 500);
+    return () => clearInterval(intervalId);
+  }, [pathname]);
+
+  // Logic for blocking orientation
+  // Case 1: Private path + Portrait -> Force Landscape
+  // Public paths are allowed in both orientations
+  const shouldBlockPortrait = !isPublicPath && isPortrait;
+  const shouldBlockLandscape = false; // No longer blocking landscape for any path
+
+  if (shouldBlockPortrait || shouldBlockLandscape) {
+    const targetOrientation = shouldBlockPortrait ? "landscape" : "portrait";
+
     return (
       <div className="orientation-guard fixed inset-0 bg-white z-50 flex items-center justify-center p-6">
         <div className="text-center max-w-md mx-auto">
           {/* Animated Phone Icon */}
           <div className="relative mb-8">
-            <div className="inline-block animate-gentle-bounce">
+            <div className={`inline-block animate-gentle-bounce ${shouldBlockLandscape ? 'rotate-90' : ''}`}>
               <Smartphone className="h-24 w-24 text-gray-400 mx-auto" />
             </div>
 
@@ -76,16 +93,25 @@ const OrientationGuard: React.FC<OrientationGuardProps> = ({ children }) => {
 
           {/* Description */}
           <p className="text-gray-600 mb-6 leading-relaxed">
-            This application is optimized for landscape mode. 
-            Please rotate your tablet to landscape orientation for the best experience.
+            {isPublicPath ? (
+              <>
+                This form is optimized for portrait mode.
+                Please rotate your device to portrait orientation for the best experience.
+              </>
+            ) : (
+              <>
+                This application is optimized for landscape mode.
+                Please rotate your tablet to landscape orientation for the best experience.
+              </>
+            )}
           </p>
 
           {/* Visual Rotation Indicator */}
           <div className="flex items-center justify-center space-x-4 mb-8">
-            {/* Portrait Device (Current) */}
+            {/* Current Device (Wrong orientation) */}
             <div className="flex flex-col items-center">
-              <div className="w-12 h-16 border-2 border-gray-300 rounded-lg bg-gray-100 relative">
-                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-400 rounded-full"></div>
+              <div className={`${shouldBlockPortrait ? 'w-12 h-16' : 'w-16 h-12'} border-2 border-gray-300 rounded-lg bg-gray-100 relative`}>
+                <div className={`absolute ${shouldBlockPortrait ? 'bottom-1 left-1/2 -translate-x-1/2' : 'right-1 top-1/2 -translate-y-1/2'} w-2 h-2 bg-gray-400 rounded-full`}></div>
               </div>
               <span className="text-xs text-gray-500 mt-2">Current</span>
             </div>
@@ -93,10 +119,10 @@ const OrientationGuard: React.FC<OrientationGuardProps> = ({ children }) => {
             {/* Arrow */}
             <RotateCcw className="h-6 w-6 text-blue-600 animate-pulse" />
 
-            {/* Landscape Device (Target) */}
+            {/* Target Device (Correct orientation) */}
             <div className="flex flex-col items-center">
-              <div className="w-16 h-12 border-2 border-blue-600 rounded-lg bg-blue-50 relative">
-                <div className="absolute right-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-blue-600 rounded-full"></div>
+              <div className={`${shouldBlockLandscape ? 'w-12 h-16' : 'w-16 h-12'} border-2 border-blue-600 rounded-lg bg-blue-50 relative`}>
+                <div className={`absolute ${shouldBlockLandscape ? 'bottom-1 left-1/2 -translate-x-1/2' : 'right-1 top-1/2 -translate-y-1/2'} w-2 h-2 bg-blue-600 rounded-full`}></div>
               </div>
               <span className="text-xs text-blue-600 mt-2 font-medium">Rotate to this</span>
             </div>
@@ -110,10 +136,8 @@ const OrientationGuard: React.FC<OrientationGuardProps> = ({ children }) => {
                 alt="NYDI Logo"
                 className="w-10 h-10 object-contain"
                 onError={(e) => {
-                  // Fallback to SVG if PNG doesn't exist
                   e.currentTarget.src = "/logo-icon.svg";
                   e.currentTarget.onerror = () => {
-                    // Final fallback to placeholder icon
                     e.currentTarget.style.display = 'none';
                     const fallback = e.currentTarget.nextElementSibling as HTMLElement;
                     if (fallback && fallback.classList.contains('fallback-icon')) {
@@ -134,7 +158,7 @@ const OrientationGuard: React.FC<OrientationGuardProps> = ({ children }) => {
 
           {/* Instruction Text */}
           <div className="mt-6 text-sm text-gray-500">
-            <p>💡 Tip: Lock your screen rotation after rotating to landscape mode</p>
+            <p>💡 Tip: Lock your screen rotation after rotating to {targetOrientation} mode</p>
           </div>
         </div>
 

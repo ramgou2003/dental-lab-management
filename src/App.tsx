@@ -31,6 +31,8 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { UserManagementPage } from "./pages/UserManagementPage";
 import { ContactAdminPage } from "./pages/ContactAdminPage";
 import PublicPatientPacketPage from "./pages/PublicPatientPacketPage";
+import PublicNewPatientPacketPage from "./pages/PublicNewPatientPacketPage";
+import { UnmappedPatientPacketsPage } from "./pages/UnmappedPatientPacketsPage";
 import { UserManagementAccessDenied } from "./components/ui/AccessDenied";
 import NotFound from "./pages/NotFound";
 
@@ -153,14 +155,24 @@ const App = () => {
                     />
                   )}
                   {isFeatureEnabled('publicPatientPacket') && (
-                    <Route
-                      path="/patient-packet/:token"
-                      element={
-                        <AuthGuard requireAuth={false}>
-                          <PublicPatientPacketPage />
-                        </AuthGuard>
-                      }
-                    />
+                    <>
+                      <Route
+                        path="/patient-packet/:token"
+                        element={
+                          <AuthGuard requireAuth={false}>
+                            <PublicPatientPacketPage />
+                          </AuthGuard>
+                        }
+                      />
+                      <Route
+                        path="/patientpacket/new"
+                        element={
+                          <AuthGuard requireAuth={false}>
+                            <PublicNewPatientPacketPage />
+                          </AuthGuard>
+                        }
+                      />
+                    </>
                   )}
 
                   {/* Protected routes */}
@@ -243,6 +255,14 @@ const App = () => {
                           element={
                             <PermissionGuard permission="consultation.read">
                               <ConsultationPage />
+                            </PermissionGuard>
+                          }
+                        />
+                        <Route
+                          path="consultation/unmapped-packets"
+                          element={
+                            <PermissionGuard permission="consultation.read">
+                              <UnmappedPatientPacketsPage />
                             </PermissionGuard>
                           }
                         />

@@ -55,40 +55,41 @@ export function SignatureDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl w-full max-h-[90vh] overflow-y-auto sm:max-w-2xl md:max-w-3xl lg:max-w-4xl">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl w-[95vw] md:w-full max-h-[95vh] flex flex-col p-0 overflow-hidden sm:max-w-2xl md:max-w-3xl lg:max-w-4xl sm:p-6">
+        <DialogHeader className="p-4 pb-0 sm:p-0">
           <div className="flex items-center justify-between mr-8">
             <DialogTitle>{title}</DialogTitle>
           </div>
           <DialogDescription>
-            Please draw your signature in the area below. Use your mouse or touch screen.
+            Please draw your signature below. Use your finger or a stylus.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 flex justify-center">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-0 sm:py-4">
+          <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-3 sm:p-6 flex justify-center">
             <SignaturePad
               value={tempSignature}
               onSignatureChange={setTempSignature}
               placeholder="Draw your signature here"
               width={600}
-              height={200}
+              height={250}
             />
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="p-4 pt-0 gap-2 sm:p-0 sm:gap-0">
           <Button
             type="button"
             variant="outline"
             onClick={() => handleOpenChange(false)}
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
           <Button
             type="button"
             onClick={handleSave}
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
             disabled={!tempSignature}
           >
             <Save className="h-4 w-4" />

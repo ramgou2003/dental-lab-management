@@ -79,8 +79,8 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
     // Section 1: Patient Identification & Contacts
     firstName: patientName.split(' ')[0] || "",
     lastName: patientName.split(' ').slice(1).join(' ') || "",
-    gender: patientGender as 'male' | 'female' | 'prefer-not-to-answer' || 'prefer-not-to-answer',
-    dateOfBirth: patientDateOfBirth ? new Date(patientDateOfBirth) : new Date(),
+    gender: (patientGender || '') as any,
+    dateOfBirth: patientDateOfBirth ? new Date(patientDateOfBirth) : undefined as any,
     height: {
       feet: "",
       inches: ""
@@ -588,8 +588,8 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
       // Section 1: Patient Identification & Contacts
       firstName: patientName.split(' ')[0] || "",
       lastName: patientName.split(' ').slice(1).join(' ') || "",
-      gender: patientGender as 'male' | 'female' | 'prefer-not-to-answer' || 'prefer-not-to-answer',
-      dateOfBirth: patientDateOfBirth ? new Date(patientDateOfBirth) : new Date(),
+      gender: (patientGender || '') as any,
+      dateOfBirth: patientDateOfBirth ? new Date(patientDateOfBirth) : undefined as any,
       height: {
         feet: "",
         inches: ""
@@ -780,15 +780,14 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
               <div className="flex items-center gap-3">
                 {/* Auto-save Status Indicator */}
                 {onAutoSave && (
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                    autoSaveStatus === 'saving'
-                      ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                      : autoSaveStatus === 'saved'
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${autoSaveStatus === 'saving'
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : autoSaveStatus === 'saved'
                       ? 'bg-green-100 text-green-700 border border-green-200'
                       : autoSaveStatus === 'error'
-                      ? 'bg-red-100 text-red-700 border border-red-200'
-                      : 'bg-gray-100 text-gray-600 border border-gray-200'
-                  }`}>
+                        ? 'bg-red-100 text-red-700 border border-red-200'
+                        : 'bg-gray-100 text-gray-600 border border-gray-200'
+                    }`}>
                     {autoSaveStatus === 'saving' && (
                       <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
                     )}
@@ -814,7 +813,7 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
               </div>
             </div>
           </div>
-          
+
           <Progress value={progressPercentage} className="mb-4" />
 
           {/* Section Navigation */}
@@ -828,13 +827,12 @@ export const NewPatientPacketForm = forwardRef<NewPatientPacketFormRef, NewPatie
                 <button
                   key={section.id}
                   onClick={() => handleSectionClick(section.id)}
-                  className={`p-3 rounded-lg border-2 transition-all duration-200 ${
-                    isActive
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                      : isCompleted
+                  className={`p-3 rounded-lg border-2 transition-all duration-200 ${isActive
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : isCompleted
                       ? 'border-green-200 bg-green-50 text-green-700 hover:border-green-300'
                       : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300'
-                  }`}
+                    }`}
                   title={section.title}
                 >
                   {isCompleted ? (

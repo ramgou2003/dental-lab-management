@@ -23,25 +23,24 @@ const publicSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
  */
 export async function savePublicPatientPacket(
   formData: NewPatientFormData,
-  leadId: string
+  consultationId: string
 ): Promise<{ data: NewPatientPacketDB | null; error: any }> {
   try {
     console.log('Starting public patient packet submission...');
-    console.log('Lead ID:', leadId);
+    console.log('Consultation ID:', consultationId);
     console.log('Form data summary:', {
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email
     });
 
-    // Convert form data to database format
-    const dbData = convertFormDataToDatabase(formData, undefined, leadId, 'public');
-    
+    // Convert form data to database format (no lead_id, no patient_id)
+    const dbData = convertFormDataToDatabase(formData, undefined, undefined, 'public');
+
     console.log('Converted database data:', {
       first_name: dbData.first_name,
       last_name: dbData.last_name,
       email: dbData.email,
-      lead_id: dbData.lead_id,
       submission_source: dbData.submission_source
     });
 
@@ -83,7 +82,7 @@ export async function addLeadComment(
 ): Promise<{ success: boolean; error: any }> {
   try {
     console.log('Adding comment to lead:', leadId);
-    
+
     const { error } = await publicSupabase
       .from('lead_comments')
       .insert({
@@ -111,31 +110,81 @@ export async function addLeadComment(
 }
 
 /**
- * Complete public patient packet submission with comment
+ * Save a standalone public patient packet (not linked to any consultation)
+ * Used by the common public link /patientpacket/new
+ */
+export async function saveStandalonePublicPacket(
+  formData: NewPatientFormData
+): Promise<{ success: boolean; data: NewPatientPacketDB | null; error: any }> {
+  try {
+    console.log('Starting standalone public patient packet submission...');
+    console.log('Form data summary:', {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      dob: formData.dateOfBirth
+    });
+
+    // Convert form data to database format (no patient_id, no lead_id, no consultation)
+    const dbData = convertFormDataToDatabase(formData, undefined, undefined, 'public');
+
+    console.log('Converted database data for standalone submission:', {
+      first_name: dbData.first_name,
+      last_name: dbData.last_name,
+      email: dbData.email,
+      submission_source: dbData.submission_source
+    });
+
+    // Insert the data
+    const { data: packetData, error } = await publicSupabase
+      .from('new_patient_packets')
+      .insert(dbData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error inserting standalone patient packet:', error);
+      return { success: false, data: null, error };
+    }
+
+    console.log('Standalone patient packet saved successfully:', packetData);
+
+    return { success: true, data: packetData, error: null };
+
+  } catch (error) {
+    console.error('Unexpected error in saveStandalonePublicPacket:', error);
+    return { success: false, data: null, error };
+  }
+}
+
+/**
+ * Complete public patient packet submission and link to consultation
  */
 export async function completePublicSubmission(
   formData: NewPatientFormData,
-  leadId: string
+  consultationId: string
 ): Promise<{ success: boolean; data: NewPatientPacketDB | null; error: any }> {
   try {
     // Save the patient packet
-    const { data, error } = await savePublicPatientPacket(formData, leadId);
-    
+    const { data, error } = await savePublicPatientPacket(formData, consultationId);
+
     if (error) {
       return { success: false, data: null, error };
     }
 
-    // Add comment to lead
-    const patientName = `${formData.firstName} ${formData.lastName}`;
-    const { success: commentSuccess, error: commentError } = await addLeadComment(
-      leadId, 
-      patientName, 
-      data?.id
-    );
+    // Link the packet to the consultation by updating new_patient_packet_id
+    if (data?.id) {
+      const { error: updateError } = await publicSupabase
+        .from('consultations')
+        .update({ new_patient_packet_id: data.id })
+        .eq('id', consultationId);
 
-    if (!commentSuccess) {
-      console.warn('Patient packet saved but comment failed:', commentError);
-      // Don't fail the whole submission for comment error
+      if (updateError) {
+        console.warn('Packet saved but failed to link to consultation:', updateError);
+        // Don't fail the whole submission for this
+      } else {
+        console.log('Successfully linked packet to consultation:', consultationId);
+      }
     }
 
     return { success: true, data, error: null };

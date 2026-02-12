@@ -170,7 +170,7 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
         followup_date: formData.followupDate ? new Date(formData.followupDate).toISOString() : null,
         followup_reason: formData.followupReason || null,
         treatment_plan_approved: formData.treatmentDecision === 'accepted' ? true :
-                               formData.treatmentDecision === 'not-accepted' ? false : null,
+          formData.treatmentDecision === 'not-accepted' ? false : null,
         follow_up_required: formData.treatmentDecision === 'followup-required',
         consultation_status: formData.treatmentDecision ? 'completed' : 'scheduled',
         progress_step: Math.max(existingData?.progress_step || 0, 2),
@@ -179,6 +179,7 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
         ...(existingData && {
           clinical_assessment: existingData.clinical_assessment,
           treatment_recommendations: existingData.treatment_recommendations,
+          treatment_plan: existingData.treatment_plan,
           additional_information: existingData.additional_information
         })
       };
@@ -398,7 +399,7 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
       </Card>
 
       {/* Financial Information - Show for all treatment decisions except empty */}
-      {formData.treatmentDecision && formData.treatmentDecision !== '' && (
+      {formData.treatmentDecision && (
         <>
           {/* Treatment Cost */}
           <Card>
@@ -441,11 +442,10 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
                     type="button"
                     variant={formData.financingOptions.yesApproved ? "default" : "outline"}
                     onClick={() => handleFinancingOptionChange('yesApproved')}
-                    className={`px-4 py-3 h-auto text-left justify-start ${
-                      formData.financingOptions.yesApproved
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'border-green-300 text-green-600 hover:bg-green-50'
-                    }`}
+                    className={`px-4 py-3 h-auto text-left justify-start ${formData.financingOptions.yesApproved
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'border-green-300 text-green-600 hover:bg-green-50'
+                      }`}
                   >
                     Yes, Approved
                   </Button>
@@ -453,11 +453,10 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
                     type="button"
                     variant={formData.financingOptions.noNotApproved ? "default" : "outline"}
                     onClick={() => handleFinancingOptionChange('noNotApproved')}
-                    className={`px-4 py-3 h-auto text-left justify-start ${
-                      formData.financingOptions.noNotApproved
-                        ? 'bg-red-600 hover:bg-red-700 text-white'
-                        : 'border-red-300 text-red-600 hover:bg-red-50'
-                    }`}
+                    className={`px-4 py-3 h-auto text-left justify-start ${formData.financingOptions.noNotApproved
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'border-red-300 text-red-600 hover:bg-red-50'
+                      }`}
                   >
                     No, Not Approved
                   </Button>
@@ -465,11 +464,10 @@ export const FinancialOutcomeForm = React.forwardRef<FinancialOutcomeFormRef, Fi
                     type="button"
                     variant={formData.financingOptions.didNotApply ? "default" : "outline"}
                     onClick={() => handleFinancingOptionChange('didNotApply')}
-                    className={`px-4 py-3 h-auto text-left justify-start ${
-                      formData.financingOptions.didNotApply
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : 'border-blue-300 text-blue-600 hover:bg-blue-50'
-                    }`}
+                    className={`px-4 py-3 h-auto text-left justify-start ${formData.financingOptions.didNotApply
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'border-blue-300 text-blue-600 hover:bg-blue-50'
+                      }`}
                   >
                     Did Not Apply
                   </Button>

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Trash2, Edit3 } from 'lucide-react';
 
@@ -24,50 +24,7 @@ export function SignaturePad({
   const [allStrokes, setAllStrokes] = useState<{ x: number; y: number }[][]>([]);
   const [currentStroke, setCurrentStroke] = useState<{ x: number; y: number }[]>([]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Get device pixel ratio for high DPI displays
-    const devicePixelRatio = window.devicePixelRatio || 1;
-
-    // Set canvas size with high resolution
-    canvas.width = width * devicePixelRatio;
-    canvas.height = height * devicePixelRatio;
-
-    // Scale the canvas back down using CSS
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-
-    // Scale the drawing context so everything draws at the higher resolution
-    ctx.scale(devicePixelRatio, devicePixelRatio);
-
-    // Set drawing styles for smooth curves
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-
-    // Clear canvas and add placeholder
-    clearCanvas();
-
-    // Load existing signature if provided
-    if (value) {
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, width, height);
-        setHasSignature(true);
-      };
-      img.src = value;
-    }
-  }, [width, height, value]);
-
-  const clearCanvas = () => {
+  const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -99,7 +56,46 @@ export function SignaturePad({
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-  };
+  }, [width, height, hasSignature, placeholder]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Get device pixel ratio for high DPI displays
+    const devicePixelRatio = window.devicePixelRatio || 1;
+
+    // Set canvas size with high resolution
+    canvas.width = width * devicePixelRatio;
+    canvas.height = height * devicePixelRatio;
+
+    // Scale the drawing context so everything draws at the higher resolution
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+
+    // Set drawing styles for smooth curves
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Clear canvas and add placeholder
+    clearCanvas();
+
+    // Load existing signature if provided
+    if (value) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, width, height);
+        setHasSignature(true);
+      };
+      img.src = value;
+    }
+  }, [width, height, value, clearCanvas]);
 
   const getEventPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
@@ -258,8 +254,12 @@ export function SignaturePad({
       <div className="relative">
         <canvas
           ref={canvasRef}
-          className="border border-gray-300 rounded-xl cursor-crosshair touch-none w-full"
-          style={{ maxWidth: `${width}px`, height: `${height}px` }}
+          className="border border-gray-300 rounded-xl cursor-crosshair touch-none w-full bg-white"
+          style={{
+            maxWidth: `${width}px`,
+            height: 'auto',
+            aspectRatio: `${width}/${height}`
+          }}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}

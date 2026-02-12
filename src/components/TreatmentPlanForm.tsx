@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -825,6 +826,8 @@ export function TreatmentPlanForm({
                     </div>
                   )}
 
+
+
                   {/* Treatment Summary */}
                   <Card className="bg-blue-50 border-blue-200">
                     <CardContent className="pt-4">
@@ -851,12 +854,12 @@ export function TreatmentPlanForm({
                               }, 0);
                               return total + treatmentTotal;
                             }, 0) +
-                            ((formData.procedures && Array.isArray(formData.procedures)) ? formData.procedures.reduce((total, proc) => {
-                              const costType = proc.cost_type || 'dental';
-                              const unitPrice = parseFloat(costType === 'medical' ? proc.medical_cost || 0 : proc.dental_cost || 0);
-                              const quantity = proc.quantity || 1;
-                              return total + (unitPrice * quantity);
-                            }, 0) : 0);
+                              ((formData.procedures && Array.isArray(formData.procedures)) ? formData.procedures.reduce((total, proc) => {
+                                const costType = proc.cost_type || 'dental';
+                                const unitPrice = parseFloat(costType === 'medical' ? proc.medical_cost || 0 : proc.dental_cost || 0);
+                                const quantity = proc.quantity || 1;
+                                return total + (unitPrice * quantity);
+                              }, 0) : 0);
 
                             const discount = parseFloat(formData.discount || 0);
                             const finalTotal = Math.max(0, subtotal - discount);
@@ -901,6 +904,26 @@ export function TreatmentPlanForm({
                   </Card>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Notes Card */}
+          <Card className="border-2 border-amber-100">
+            <CardHeader className="bg-amber-50 pb-4">
+              <CardTitle className="text-lg font-semibold text-amber-800 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <Textarea
+                id="plan-notes"
+                value={formData.notes || ""}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Add any relevant notes for this treatment plan..."
+                disabled={readOnly}
+                className="min-h-[100px] resize-y bg-white"
+              />
             </CardContent>
           </Card>
         </form>

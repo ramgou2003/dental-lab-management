@@ -51,7 +51,7 @@ export function FinancialAgreementForm({
     timeOfExecution: new Date().toTimeString().slice(0, 5),
 
     // Accepted Treatment
-    acceptedTreatments: [] as Array<{service: string, fee: string, cdtCode: string, cptCode: string, initials: string}>,
+    acceptedTreatments: [] as Array<{ service: string, fee: string, cdtCode: string, cptCode: string, initials: string }>,
     totalCostOfTreatment: "",
 
     // Payment & Balance Terms
@@ -103,6 +103,9 @@ export function FinancialAgreementForm({
     { service: "Implant-Supported Denture (Upper)", cdtCode: "D6054", cptCode: "21299" },
     { service: "Fixed Implant Bridge (Lower)", cdtCode: "D6055", cptCode: "21299" },
     { service: "Fixed Implant Bridge (Upper)", cdtCode: "D6056", cptCode: "21299" },
+    { service: "Surgical Revision", cdtCode: "D7999", cptCode: "41899" },
+    { service: "Sinus Lift", cdtCode: "D7951", cptCode: "21210" },
+    { service: "Remote anchorage", cdtCode: "D6010", cptCode: "21248" },
   ];
 
   // Auto-sync patient data when it changes
@@ -359,11 +362,10 @@ export function FinancialAgreementForm({
 
           {/* Auto-save Status Indicator */}
           {onAutoSave && !readOnly && (hasFormData || autoSaveStatus === 'error') && (
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${
-              autoSaveStatus === 'error'
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 shadow-sm animate-in fade-in slide-in-from-right-2 ${autoSaveStatus === 'error'
                 ? 'bg-red-50 text-red-700 border border-red-200'
                 : 'bg-green-50 text-green-700 border border-green-200'
-            }`}>
+              }`}>
               {autoSaveStatus === 'error' ? (
                 <AlertCircle className="h-3 w-3 text-red-600" />
               ) : (
@@ -780,11 +782,11 @@ export function FinancialAgreementForm({
                 <Label htmlFor="paymentAmount" className="text-sm font-semibold">
                   Payment Amount ({
                     formData.remainingPaymentPlan === 'monthly' ? 'per month' :
-                    formData.remainingPaymentPlan === 'twice-a-month' ? 'twice a month' :
-                    formData.remainingPaymentPlan === 'twice-a-month-by-pay-cycle' ? 'twice a month by pay cycle' :
-                    formData.remainingPaymentPlan === 'weekly' ? 'per week' :
-                    formData.remainingPaymentPlan === 'twice-a-year' ? 'twice a year' :
-                    'per payment'
+                      formData.remainingPaymentPlan === 'twice-a-month' ? 'twice a month' :
+                        formData.remainingPaymentPlan === 'twice-a-month-by-pay-cycle' ? 'twice a month by pay cycle' :
+                          formData.remainingPaymentPlan === 'weekly' ? 'per week' :
+                            formData.remainingPaymentPlan === 'twice-a-year' ? 'twice a year' :
+                              'per payment'
                   })
                 </Label>
                 <div className="relative">

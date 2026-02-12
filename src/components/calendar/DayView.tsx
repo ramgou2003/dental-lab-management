@@ -234,6 +234,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
   const [nextAppointmentEndTime, setNextAppointmentEndTime] = useState<string>('');
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
   const [schedulingNextAppointment, setSchedulingNextAppointment] = useState(false);
+  const [nextAppointmentNotes, setNextAppointmentNotes] = useState<string>('');
 
   // State for reschedule dialog
   const [rescheduleDialog, setRescheduleDialog] = useState<{
@@ -1138,7 +1139,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
 
     console.log('Creating appointment with ref values:', { patientId, patientName, currentApptId });
 
-    if (!patientId || !patientName || !currentApptId) {
+    if (!patientName || !currentApptId) {
       console.log('Patient info is missing from ref:', nextAppointmentPatientRef.current);
       toast.error('Patient information is missing. Please try again.');
       return;
@@ -1193,7 +1194,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       const { data: newAppointment, error: createError } = await (supabaseClient as any)
         .from('appointments')
         .insert({
-          patient_id: patientId,
+          patient_id: patientId || null,
           patient_name: patientName,
           title: appointmentTitle,
           date: nextAppointmentDate,
@@ -1203,7 +1204,8 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
           subtype: nextAppointmentSubtype || null,
           status: 'Not Confirmed',
           status_code: '?????',
-          assigned_user_id: nextAppointmentAssignedUserId || null
+          assigned_user_id: nextAppointmentAssignedUserId || null,
+          notes: nextAppointmentNotes || null
         })
         .select()
         .single();
@@ -1217,23 +1219,182 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       }
 
       // If next appointment type is 'consultation', create a consultation record
-      if (nextAppointmentType === 'consultation') {
+      console.log('Checking if consultation record is needed. Type:', nextAppointmentType);
+
+      if (nextAppointmentType.toLowerCase() === 'consultation') {
         console.log('Creating linked consultation record for:', newAppointment.id);
-        const { error: consultationError } = await (supabaseClient as any)
+
+        let packetIdToLink = null;
+        let consultationPatientIdToLink = null;
+
+        try {
+          // 1. Try to get from previous consultation linked to this appointment
+          const { data: prevConsultation } = await (supabaseClient as any)
+            .from('consultations')
+            .select('new_patient_packet_id, consultation_patient_id')
+            .eq('appointment_id', currentApptId)
+            .maybeSingle();
+
+          if (prevConsultation) {
+            if (prevConsultation.new_patient_packet_id) {
+              packetIdToLink = prevConsultation.new_patient_packet_id;
+              console.log('Found previous packet ID to link:', packetIdToLink);
+            }
+            if (prevConsultation.consultation_patient_id) {
+              consultationPatientIdToLink = prevConsultation.consultation_patient_id;
+              console.log('Found previous consultation_patient_id to link:', consultationPatientIdToLink);
+            }
+          }
+
+          if (!packetIdToLink) {
+            console.log('No previous packet ID found to link from appointment:', currentApptId);
+
+            // 2. Fallback: Try to find packet by patient_id if available
+            if (patientId && !packetIdToLink) {
+              console.log('Attempting to find packet by patient_id:', patientId);
+              const { data: packetByPatient, error: packetError } = await (supabaseClient as any)
+                .from('new_patient_packets')
+                .select('id')
+                .eq('patient_id', patientId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (!packetError && packetByPatient) {
+                packetIdToLink = packetByPatient.id;
+                console.log('Found packet ID via patient_id lookup:', packetIdToLink);
+              }
+            }
+
+            // 3. Fallback: Try to find packet by Name
+            if (!packetIdToLink && patientName) {
+              console.log('Attempting to find packet by name:', patientName);
+              const nameParts = patientName.trim().split(' ');
+              if (nameParts.length >= 1) {
+                const firstName = nameParts[0];
+                const lastName = nameParts.slice(1).join(' ');
+
+                let query = (supabaseClient as any)
+                  .from('new_patient_packets')
+                  .select('id')
+                  .ilike('first_name', `${firstName.replace(/'/g, "''")}`)
+                  .order('created_at', { ascending: false })
+                  .limit(1);
+
+                if (lastName) {
+                  query = query.ilike('last_name', `${lastName.replace(/'/g, "''")}%`);
+                }
+
+                const { data: packetByName, error: nameError } = await query.maybeSingle();
+
+                if (!nameError && packetByName) {
+                  packetIdToLink = packetByName.id;
+                  console.log('Found packet ID via Name lookup:', packetIdToLink);
+                }
+              }
+            }
+          }
+
+          // 4. Ensure we have a Consultation Patient ID
+          // If not found from previous consult, try to match by patient_id or name
+          if (!consultationPatientIdToLink) {
+            console.log('No consultation_patient_id from prev consult, searching...');
+            // Try by patient_id
+            if (patientId) {
+              const { data: existingCp } = await (supabaseClient as any)
+                .from('consultation_patients')
+                .select('id')
+                .eq('patient_id', patientId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (existingCp) {
+                consultationPatientIdToLink = existingCp.id;
+                console.log('Found existing consultation_patient by patient_id:', consultationPatientIdToLink);
+              }
+            }
+
+            // Try by Name if needed
+            if (!consultationPatientIdToLink && patientName) {
+              const nameParts = patientName.trim().split(' ');
+              const firstName = nameParts[0];
+              const lastName = nameParts.slice(1).join(' ');
+
+              const { data: existingCpByName } = await (supabaseClient as any)
+                .from('consultation_patients')
+                .select('id')
+                .ilike('first_name', firstName)
+                .ilike('last_name', lastName)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (existingCpByName) {
+                consultationPatientIdToLink = existingCpByName.id;
+                console.log('Found existing consultation_patient by Name:', consultationPatientIdToLink);
+              }
+            }
+
+            // 5. If STILL not found, Create NEW Consultation Patient
+            if (!consultationPatientIdToLink) {
+              console.log('Creating NEW consultation_patients record for:', patientName);
+              const firstName = patientName.split(' ')[0];
+              const lastName = patientName.split(' ').slice(1).join(' ') || '';
+
+              const { data: newCp, error: cpError } = await (supabaseClient as any)
+                .from('consultation_patients')
+                .insert({
+                  patient_id: patientId || null,
+                  first_name: firstName,
+                  last_name: lastName,
+                  new_patient_packet_id: packetIdToLink,
+                  status: 'scheduled',
+                  appointment_id: newAppointment.id, // Initial appointment link
+                  consultation_date: nextAppointmentDate,
+                  consultation_time: nextAppointmentStartTime,
+                  assigned_user_id: nextAppointmentAssignedUserId || null
+                })
+                .select('id')
+                .single();
+
+              if (cpError) {
+                console.error('Error creating consultation_patients record:', cpError);
+              } else if (newCp) {
+                consultationPatientIdToLink = newCp.id;
+                console.log('Created new consultation_patients record:', consultationPatientIdToLink);
+              }
+            }
+          }
+
+        } catch (err) {
+          console.error('Error fetching/resolving consultation details:', err);
+        }
+
+        // 6. Create the Consultation Record
+        console.log('Inserting consultation record with status: draft');
+        const { data: newConsultation, error: consultationError } = await (supabaseClient as any)
           .from('consultations')
           .insert({
             appointment_id: newAppointment.id,
-            patient_id: patientId,
+            patient_id: patientId || null,
             patient_name: patientName,
-            consultation_status: 'scheduled',
-            consultation_date: nextAppointmentDate
-          });
+            consultation_status: 'draft',
+            consultation_date: nextAppointmentDate,
+            new_patient_packet_id: packetIdToLink,
+            consultation_patient_id: consultationPatientIdToLink
+          })
+          .select()
+          .single();
 
         if (consultationError) {
-          console.error('Error creating consultation record:', consultationError);
-          // Don't fail the whole operation, just log/toast
-          toast.error('Appointment created but failed to initialize consultation record');
+          console.error('CRITICAL: Error creating consultation record:', consultationError);
+          toast.error('Appointment created but failed to initialize consultation record: ' + (consultationError.message || 'Check console for details'));
+        } else if (newConsultation) {
+          console.log('Consultation record created successfully ID:', newConsultation.id);
         }
+      } else {
+        console.log('Not creating consultation record because type is:', nextAppointmentType);
       }
 
       toast.success('Appointment completed and next appointment scheduled');
@@ -1254,6 +1415,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
       setNextAppointmentStartTime('');
       setNextAppointmentEndTime('');
       setNextAppointmentAssignedUserId('');
+      setNextAppointmentNotes('');
       // Reset the ref
       nextAppointmentPatientRef.current = { patientId: '', patientName: '', currentApptId: '' };
 
@@ -3868,6 +4030,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                 setNextAppointmentDialog(null);
                 setNextAppointmentStartTime('');
                 setNextAppointmentEndTime('');
+                setNextAppointmentNotes('');
               }
             }}>
               <AlertDialogContent className="touch-manipulation max-w-2xl">
@@ -4066,6 +4229,21 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                       )}
                     </div>
                   </div>
+
+                  {/* Notes */}
+                  <div className="space-y-2 mt-4 pt-4 border-t">
+                    <Label htmlFor="next-appointment-notes" className="text-sm font-medium text-blue-700">
+                      Notes
+                    </Label>
+                    <textarea
+                      id="next-appointment-notes"
+                      value={nextAppointmentNotes}
+                      onChange={(e) => setNextAppointmentNotes(e.target.value)}
+                      placeholder="Add any additional notes for this appointment..."
+                      className="w-full px-3 py-2 border border-blue-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                      rows={3}
+                    />
+                  </div>
                 </div>
 
                 <AlertDialogFooter>
@@ -4076,6 +4254,7 @@ export const DayView = forwardRef<DayViewHandle, DayViewProps>(({ date, appointm
                       setNextAppointmentDialog(null);
                       setNextAppointmentStartTime('');
                       setNextAppointmentEndTime('');
+                      setNextAppointmentNotes('');
                     }}
                     className="touch-manipulation"
                   >

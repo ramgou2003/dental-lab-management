@@ -1,12 +1,13 @@
-import { DialogTitle, Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { DialogTitle, Dialog, DialogContent, DialogHeader, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Activity, User, Calendar, Check, Plus, Camera, X, Eye, Crop, RotateCcw, Move, ZoomIn, ZoomOut, RotateCw, Edit, Trash2 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { saveSurgicalRecallSheet, updateSurgicalRecallSheet, SavedImplant, uploadImage, deleteImage, listStorageFiles, checkFileExists, testDeleteSpecificFiles, deleteSurgicalRecallSheet, testDeleteSurgicalRecallSheet } from "@/lib/surgicalRecallService";
+import { saveSurgicalRecallSheet, updateSurgicalRecallSheet, SavedImplant, SavedGraftMembrane, uploadImage, deleteImage, listStorageFiles, checkFileExists, testDeleteSpecificFiles, deleteSurgicalRecallSheet, testDeleteSurgicalRecallSheet } from "@/lib/surgicalRecallService";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SurgicalRecallSheetFormProps {
   patientId: string;
@@ -35,12 +36,26 @@ export function SurgicalRecallSheetForm({
     } : null
   });
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUserId(user.id);
+    };
+    getUser();
+  }, []);
+
   const [formData, setFormData] = useState({
     patient_name: patientName,
     surgery_date: editingSheet?.surgery_date || new Date().toISOString().split('T')[0],
     arch_type: editingSheet?.arch_type || '',
     upper_surgery_type: editingSheet?.upper_surgery_type || '',
     lower_surgery_type: editingSheet?.lower_surgery_type || '',
+    is_graft_used: editingSheet?.is_graft_used || false, // Default to false if not set
+    graft_type: editingSheet?.graft_type || '',
+    is_membrane_used: editingSheet?.is_membrane_used || false, // Default to false if not set
+    membrane_type: editingSheet?.membrane_type || '',
     upper_implant_count: editingSheet?.upper_implant_count || '',
     upper_implant_positions: editingSheet?.upper_implant_positions || '',
     upper_implant_brand: editingSheet?.upper_implant_brand || '',
@@ -61,6 +76,20 @@ export function SurgicalRecallSheetForm({
   const [editingImplant, setEditingImplant] = useState<SavedImplant | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [implantToDelete, setImplantToDelete] = useState<SavedImplant | null>(null);
+  const [showGraftDialog, setShowGraftDialog] = useState(false);
+  const [showMembraneDialog, setShowMembraneDialog] = useState(false);
+  const [editingGraft, setEditingGraft] = useState<SavedGraftMembrane | null>(null);
+  const [editingMembrane, setEditingMembrane] = useState<SavedGraftMembrane | null>(null);
+  const [graftData, setGraftData] = useState({
+    type: '',
+    file: null as File | null,
+    previewUrl: null as string | null
+  });
+  const [membraneData, setMembraneData] = useState({
+    type: '',
+    file: null as File | null,
+    previewUrl: null as string | null
+  });
   const [implantData, setImplantData] = useState({
     position: '',
     mua_brand: '',
@@ -76,19 +105,27 @@ export function SurgicalRecallSheetForm({
   // File input refs for custom capture buttons
   const implantPictureInputRef = useRef<HTMLInputElement>(null);
   const muaPictureInputRef = useRef<HTMLInputElement>(null);
+  const graftPictureInputRef = useRef<HTMLInputElement>(null);
+  const membranePictureInputRef = useRef<HTMLInputElement>(null);
+
+  // Graft and Membrane file state
+  const [graftFile, setGraftFile] = useState<File | null>(null);
+  const [membraneFile, setMembraneFile] = useState<File | null>(null);
+  const [graftPreviewUrl, setGraftPreviewUrl] = useState<string | null>(editingSheet?.graft_picture_url || null);
+  const [membranePreviewUrl, setMembranePreviewUrl] = useState<string | null>(editingSheet?.membrane_picture_url || null);
 
   // Image preview state
   const [previewImage, setPreviewImage] = useState<{
     url: string;
     name: string;
-    type: 'implant' | 'mua';
+    type: 'implant' | 'mua' | 'graft' | 'membrane';
   } | null>(null);
 
   // Sticker image preview state
   const [stickerPreview, setStickerPreview] = useState<{
     url: string;
     title: string;
-    type: 'implant' | 'mua';
+    type: 'implant' | 'mua' | 'graft' | 'membrane';
   } | null>(null);
 
   // Store preview URLs to avoid recreating them on each render
@@ -103,6 +140,9 @@ export function SurgicalRecallSheetForm({
     upper: [],
     lower: []
   });
+
+  // Store saved grafts and membranes
+  const [savedGraftsMembranes, setSavedGraftsMembranes] = useState<SavedGraftMembrane[]>([]);
 
   // Loading state for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -136,6 +176,10 @@ export function SurgicalRecallSheetForm({
         arch_type: editingSheet.arch_type || '',
         upper_surgery_type: editingSheet.upper_surgery_type || '',
         lower_surgery_type: editingSheet.lower_surgery_type || '',
+        is_graft_used: editingSheet.is_graft_used || false,
+        graft_type: editingSheet.graft_type || '',
+        is_membrane_used: editingSheet.is_membrane_used || false,
+        membrane_type: editingSheet.membrane_type || '',
         upper_implant_count: editingSheet.upper_implant_count || '',
         upper_implant_positions: editingSheet.upper_implant_positions || '',
         upper_implant_brand: editingSheet.upper_implant_brand || '',
@@ -187,6 +231,18 @@ export function SurgicalRecallSheetForm({
 
         console.log('📋 Loaded implants:', { upper: upperImplants.length, lower: lowerImplants.length });
       }
+
+      // Load existing grafts and membranes
+      if (editingSheet.surgical_recall_grafts_membranes) {
+        const gmItems: SavedGraftMembrane[] = editingSheet.surgical_recall_grafts_membranes.map((gm: any) => ({
+          id: gm.id,
+          type: gm.type,
+          brand_type: gm.brand_type,
+          picture_url: gm.picture_url
+        }));
+        setSavedGraftsMembranes(gmItems);
+        console.log('📋 Loaded grafts/membranes:', gmItems.length);
+      }
     } else {
       // Reset form when not editing
       setFormData({
@@ -195,6 +251,10 @@ export function SurgicalRecallSheetForm({
         arch_type: '',
         upper_surgery_type: '',
         lower_surgery_type: '',
+        is_graft_used: false,
+        graft_type: '',
+        is_membrane_used: false,
+        membrane_type: '',
         upper_implant_count: '',
         upper_implant_positions: '',
         upper_implant_brand: '',
@@ -207,6 +267,7 @@ export function SurgicalRecallSheetForm({
         lower_implant_size: '',
         lower_complications: '',
         lower_notes: '',
+
       });
 
       setSavedImplants({
@@ -235,21 +296,25 @@ export function SurgicalRecallSheetForm({
   const cropContainerRef = useRef<HTMLDivElement>(null);
 
   // Calculate total steps and step names based on arch type
+  const graftUsed = formData.is_graft_used || formData.is_membrane_used;
+
   const getTotalSteps = () => {
-    if (!formData.arch_type) return 1; // Only Basic Info
-    if (formData.arch_type === 'dual') return 3; // Basic Info + Upper Implants + Lower Implants
-    return 2; // Basic Info + Single arch (Upper or Lower Implants)
+    if (!formData.arch_type) return 1;
+    let baseSteps = formData.arch_type === 'dual' ? 3 : 2; // Basic Info + Implant(s)
+    if (graftUsed) baseSteps += 1;
+    return baseSteps;
   };
 
   const getStepName = (stepNumber: number) => {
     if (stepNumber === 1) return 'Basic Info';
-    if (formData.arch_type === 'dual') {
-      if (stepNumber === 2) return 'Upper Implants';
+
+    if (graftUsed) {
+      if (stepNumber === 2) return 'Graft & Membrane';
+      if (stepNumber === 3) return formData.arch_type === 'lower' ? 'Lower Implants' : 'Upper Implants';
+      if (stepNumber === 4) return 'Lower Implants';
+    } else {
+      if (stepNumber === 2) return formData.arch_type === 'lower' ? 'Lower Implants' : 'Upper Implants';
       if (stepNumber === 3) return 'Lower Implants';
-    } else if (formData.arch_type === 'upper') {
-      if (stepNumber === 2) return 'Upper Implants';
-    } else if (formData.arch_type === 'lower') {
-      if (stepNumber === 2) return 'Lower Implants';
     }
     return '';
   };
@@ -273,25 +338,29 @@ export function SurgicalRecallSheetForm({
   };
 
   const isStep2Complete = () => {
-    // For now, we'll consider step 2 complete if arch type is selected
-    // Later you can add specific validation for implant fields
-    return formData.arch_type !== '';
+    // Graft and Membrane step is complete if at least one entry exists for used options
+    if (formData.is_graft_used && savedGraftsMembranes.filter(i => i.type === 'graft').length === 0) return false;
+    if (formData.is_membrane_used && savedGraftsMembranes.filter(i => i.type === 'membrane').length === 0) return false;
+    return true;
   };
 
   const isStep3Complete = () => {
-    // For dual arch, step 3 is for lower implants
-    // For now, we'll consider it complete if we're on dual arch
-    return formData.arch_type === 'dual';
+    return true;
+  };
+
+  const isStep4Complete = () => {
+    return true;
   };
 
   const isStepComplete = (stepNumber: number) => {
     if (stepNumber === 1) return isStep1Complete();
     if (stepNumber === 2) return isStep2Complete();
     if (stepNumber === 3) return isStep3Complete();
+    if (stepNumber === 4) return isStep4Complete();
     return false;
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -300,6 +369,134 @@ export function SurgicalRecallSheetForm({
     // Reset to step 1 if arch type changes
     if (field === 'arch_type') {
       setCurrentStep(1);
+    }
+  };
+
+  const handleOpenGraftDialog = () => {
+    setEditingGraft(null);
+    setGraftData({
+      type: '',
+      file: null,
+      previewUrl: null
+    });
+    setShowGraftDialog(true);
+  };
+
+  const handleEditGraft = (graft: SavedGraftMembrane) => {
+    setEditingGraft(graft);
+    setGraftData({
+      type: graft.brand_type || '',
+      file: graft.file || null,
+      previewUrl: graft.picture_url || null
+    });
+    setShowGraftDialog(true);
+  };
+
+  const handleSaveGraft = () => {
+    if (!graftData.type || !graftData.previewUrl) {
+      toast.error("Type and picture are required");
+      return;
+    }
+
+    if (editingGraft) {
+      setSavedGraftsMembranes(prev => prev.map(item =>
+        item.id === editingGraft.id ? {
+          ...item,
+          brand_type: graftData.type,
+          file: graftData.file,
+          picture_url: graftData.previewUrl
+        } : item
+      ));
+      toast.success("Graft updated");
+    } else {
+      const newGraft: SavedGraftMembrane = {
+        id: Date.now().toString(),
+        type: 'graft',
+        brand_type: graftData.type,
+        file: graftData.file,
+        picture_url: graftData.previewUrl
+      };
+      setSavedGraftsMembranes(prev => [...prev, newGraft]);
+      toast.success("Graft added");
+    }
+    setShowGraftDialog(false);
+    setGraftData({ type: '', file: null, previewUrl: null });
+    setEditingGraft(null);
+  };
+
+  const handleOpenMembraneDialog = () => {
+    setEditingMembrane(null);
+    setMembraneData({
+      type: '',
+      file: null,
+      previewUrl: null
+    });
+    setShowMembraneDialog(true);
+  };
+
+  const handleEditMembrane = (membrane: SavedGraftMembrane) => {
+    setEditingMembrane(membrane);
+    setMembraneData({
+      type: membrane.brand_type || '',
+      file: membrane.file || null,
+      previewUrl: membrane.picture_url || null
+    });
+    setShowMembraneDialog(true);
+  };
+
+  const handleSaveMembrane = () => {
+    if (!membraneData.type || !membraneData.previewUrl) {
+      toast.error("Type and picture are required");
+      return;
+    }
+
+    if (editingMembrane) {
+      setSavedGraftsMembranes(prev => prev.map(item =>
+        item.id === editingMembrane.id ? {
+          ...item,
+          brand_type: membraneData.type,
+          file: membraneData.file,
+          picture_url: membraneData.previewUrl
+        } : item
+      ));
+      toast.success("Membrane updated");
+    } else {
+      const newMembrane: SavedGraftMembrane = {
+        id: Date.now().toString(),
+        type: 'membrane',
+        brand_type: membraneData.type,
+        file: membraneData.file,
+        picture_url: membraneData.previewUrl
+      };
+      setSavedGraftsMembranes(prev => [...prev, newMembrane]);
+      toast.success("Membrane added");
+    }
+    setShowMembraneDialog(false);
+    setMembraneData({ type: '', file: null, previewUrl: null });
+    setEditingMembrane(null);
+  };
+
+  const handleGraftFileChange = (file: File | null) => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setGraftData(prev => ({ ...prev, file, previewUrl: url }));
+      setPreviewImage({
+        url,
+        name: file.name,
+        type: 'graft'
+      });
+    }
+  };
+
+  const handleMembraneFileChange = (file: File | null) => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setMembraneData(prev => ({ ...prev, file, previewUrl: url }));
+      setPreviewImage({
+        url,
+        name: file.name,
+        type: 'membrane'
+      });
     }
   };
 
@@ -330,7 +527,10 @@ export function SurgicalRecallSheetForm({
         arch_type: formData.arch_type as 'upper' | 'lower' | 'dual',
         upper_surgery_type: formData.upper_surgery_type || undefined,
         lower_surgery_type: formData.lower_surgery_type || undefined,
-        status: 'completed' as const
+        status: 'completed' as const,
+        is_graft_used: formData.is_graft_used,
+        is_membrane_used: formData.is_membrane_used,
+        created_by: currentUserId || undefined
       };
 
       // ✅ Upload images for all implants that have File objects
@@ -395,8 +595,8 @@ export function SurgicalRecallSheetForm({
 
       // Save to database with processed implants
       const result = editingSheet
-        ? await updateSurgicalRecallSheet(editingSheet.id, sheetData, processedImplants)
-        : await saveSurgicalRecallSheet(sheetData, processedImplants);
+        ? await updateSurgicalRecallSheet(editingSheet.id, sheetData, processedImplants, savedGraftsMembranes)
+        : await saveSurgicalRecallSheet(sheetData, processedImplants, savedGraftsMembranes);
 
       if (result.success) {
         toast.success(
@@ -543,8 +743,12 @@ export function SurgicalRecallSheetForm({
   };
 
   // Handle sticker image preview
-  const handleStickerPreview = (url: string, implant: SavedImplant, type: 'implant' | 'mua') => {
-    const title = `${type === 'implant' ? 'Implant' : 'MUA'} Sticker - Tooth ${implant.position}`;
+  const handleStickerPreview = (e: React.MouseEvent, url: string, implant: SavedImplant, type: 'implant' | 'mua' | 'graft' | 'membrane') => {
+    e.preventDefault();
+    e.stopPropagation();
+    const title = type === 'graft' ? 'Graft Sticker' :
+      type === 'membrane' ? 'Membrane Sticker' :
+        `${type === 'implant' ? 'Implant' : 'MUA'} Sticker - Tooth ${implant.position}`;
     setStickerPreview({
       url,
       title,
@@ -598,7 +802,11 @@ export function SurgicalRecallSheetForm({
 
   const closePreview = () => {
     if (previewImage) {
-      URL.revokeObjectURL(previewImage.url);
+      // For implant/mua: revoke the preview dialog URL (separate from implantPreviewUrl/muaPreviewUrl)
+      // For graft/membrane: do NOT revoke - the same URL is used in graftData.previewUrl/membraneData.previewUrl for card display
+      if (previewImage.type === 'implant' || previewImage.type === 'mua') {
+        URL.revokeObjectURL(previewImage.url);
+      }
       setPreviewImage(null);
     }
     resetCropState();
@@ -786,23 +994,33 @@ export function SurgicalRecallSheetForm({
         // Create new URL for the cropped image
         const newUrl = URL.createObjectURL(blob);
 
-        // Update the implant data with the cropped file
-        setImplantData(prev => ({
-          ...prev,
-          [previewImage.type === 'implant' ? 'implant_picture' : 'mua_picture']: croppedFile
-        }));
+        // Update the appropriate state based on type
+        if (previewImage.type === 'implant' || previewImage.type === 'mua') {
+          setImplantData(prev => ({
+            ...prev,
+            [previewImage.type === 'implant' ? 'implant_picture' : 'mua_picture']: croppedFile
+          }));
 
-        // Update the appropriate preview URL
-        if (previewImage.type === 'implant') {
-          if (implantPreviewUrl) {
-            URL.revokeObjectURL(implantPreviewUrl);
+          // Update the appropriate preview URL
+          if (previewImage.type === 'implant') {
+            if (implantPreviewUrl) URL.revokeObjectURL(implantPreviewUrl);
+            setImplantPreviewUrl(newUrl);
+          } else {
+            if (muaPreviewUrl) URL.revokeObjectURL(muaPreviewUrl);
+            setMuaPreviewUrl(newUrl);
           }
-          setImplantPreviewUrl(newUrl);
-        } else {
-          if (muaPreviewUrl) {
-            URL.revokeObjectURL(muaPreviewUrl);
-          }
-          setMuaPreviewUrl(newUrl);
+        } else if (previewImage.type === 'graft') {
+          setGraftData(prev => ({
+            ...prev,
+            file: croppedFile,
+            previewUrl: newUrl
+          }));
+        } else if (previewImage.type === 'membrane') {
+          setMembraneData(prev => ({
+            ...prev,
+            file: croppedFile,
+            previewUrl: newUrl
+          }));
         }
 
         // Update preview dialog
@@ -932,13 +1150,12 @@ export function SurgicalRecallSheetForm({
             <div className={`h-1 w-full rounded-full ${currentStep === 1 ? 'bg-blue-600' : currentStep > 1 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
           </div>
 
-          {/* Step 2: Dynamic based on arch type */}
-          {formData.arch_type && (
+          {/* Step 2: Graft & Membrane - ONLY IF USED */}
+          {formData.arch_type && graftUsed && (
             <div className="flex flex-col items-center flex-1">
               <div className="flex items-center gap-2 pb-2">
                 <div className={`text-sm font-medium ${currentStep === 2 ? 'text-blue-600' : currentStep > 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-                  {formData.arch_type === 'upper' ? 'Upper Implants' :
-                    formData.arch_type === 'lower' ? 'Lower Implants' : 'Upper Implants'}
+                  Graft & Membrane
                 </div>
                 {isStep2Complete() && currentStep > 2 && (
                   <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
@@ -950,20 +1167,38 @@ export function SurgicalRecallSheetForm({
             </div>
           )}
 
-          {/* Step 3: Lower Implants - Only for dual arch */}
-          {formData.arch_type === 'dual' && (
+          {/* Step 3: Upper Implants or Lower Implants (if single arch) */}
+          {formData.arch_type && (
             <div className="flex flex-col items-center flex-1">
               <div className="flex items-center gap-2 pb-2">
-                <div className={`text-sm font-medium ${currentStep === 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-                  Lower Implants
+                <div className={`text-sm font-medium ${currentStep === (graftUsed ? 3 : 2) ? 'text-blue-600' : currentStep > (graftUsed ? 3 : 2) ? 'text-blue-600' : 'text-gray-400'}`}>
+                  {formData.arch_type === 'upper' ? 'Upper Implants' :
+                    formData.arch_type === 'lower' ? 'Lower Implants' : 'Upper Implants'}
                 </div>
-                {isStep3Complete() && currentStep > 3 && (
+                {isStep3Complete() && currentStep > (graftUsed ? 3 : 2) && (
                   <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
                     <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
                   </div>
                 )}
               </div>
-              <div className={`h-1 w-full rounded-full ${currentStep === 3 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+              <div className={`h-1 w-full rounded-full ${currentStep === (graftUsed ? 3 : 2) ? 'bg-blue-600' : currentStep > (graftUsed ? 3 : 2) ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            </div>
+          )}
+
+          {/* Step 4: Lower Implants - Only for dual arch */}
+          {formData.arch_type === 'dual' && (
+            <div className="flex flex-col items-center flex-1">
+              <div className="flex items-center gap-2 pb-2">
+                <div className={`text-sm font-medium ${currentStep === (graftUsed ? 4 : 3) ? 'text-blue-600' : 'text-gray-400'}`}>
+                  Lower Implants
+                </div>
+                {isStep4Complete() && currentStep > (graftUsed ? 4 : 3) && (
+                  <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                    <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                  </div>
+                )}
+              </div>
+              <div className={`h-1 w-full rounded-full ${currentStep === (graftUsed ? 4 : 3) ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
             </div>
           )}
         </div>
@@ -1069,9 +1304,9 @@ export function SurgicalRecallSheetForm({
                   </div>
                 </div>
 
-                {/* Surgery Type */}
+                {/* Surgery Type - MOVED TO TOP (AFTER ARCH TYPE) */}
                 {formData.arch_type && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pt-6 mt-2 border-t border-gray-200">
                     {/* For dual arch - show upper and lower side by side */}
                     {formData.arch_type === 'dual' && (
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1197,522 +1432,744 @@ export function SurgicalRecallSheetForm({
                     )}
                   </div>
                 )}
+
+                {/* Additional Procedures Section - ALWAYS VISIBLE */}
+                <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-blue-600" />
+                    Additional Procedures
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium">Is Graft Used?</Label>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleInputChange('is_graft_used', true)}
+                          className={`flex-1 px-4 py-2 rounded-lg border transition-all shadow-sm font-medium ${formData.is_graft_used === true
+                            ? 'bg-blue-50 border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInputChange('is_graft_used', false)}
+                          className={`flex-1 px-4 py-2 rounded-lg border transition-all shadow-sm font-medium ${formData.is_graft_used === false
+                            ? 'bg-blue-50 border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          No
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium">Is Membrane Used?</Label>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleInputChange('is_membrane_used', true)}
+                          className={`flex-1 px-4 py-2 rounded-lg border transition-all shadow-sm font-medium ${formData.is_membrane_used === true
+                            ? 'bg-blue-50 border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInputChange('is_membrane_used', false)}
+                          className={`flex-1 px-4 py-2 rounded-lg border transition-all shadow-sm font-medium ${formData.is_membrane_used === false
+                            ? 'bg-blue-50 border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          No
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+
               </div>
             )}
 
-            {/* Step 2: Upper Implants (for upper or dual) */}
-            {currentStep === 2 && (formData.arch_type === 'upper' || formData.arch_type === 'dual') && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-blue-600" />
-                      Upper Implants
-                    </h3>
-                    <Button
-                      type="button"
-                      onClick={() => handleAddImplant('upper')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Implant
-                    </Button>
-                  </div>
-                  <div className="min-h-[300px]">
-                    {savedImplants.upper.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center text-gray-500">
-                          <p>Click "Add Implant" to add upper implant details...</p>
+            {/* Step 2: Graft & Membrane Details */}
+            {currentStep === 2 && graftUsed && (
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-10 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Graft Details Section */}
+                  {formData.is_graft_used && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <Activity className="h-5 w-5 text-blue-500" />
+                          Graft Details
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={handleOpenGraftDialog}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-semibold shadow-sm transition-all"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Graft
+                        </button>
+                      </div>
+
+                      {savedGraftsMembranes.filter(item => item.type === 'graft').length === 0 ? (
+                        <div className="p-8 border-2 border-dashed border-gray-100 rounded-xl bg-gray-50/30 flex flex-col items-center justify-center gap-2">
+                          <p className="text-sm text-gray-500 font-medium font-outfit">No graft details added yet</p>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                        {savedImplants.upper.map((implant) => (
-                          <div key={implant.id} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-                            {/* Header with Position and Actions */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                  {implant.position}
+                      ) : (
+                        <div className="grid grid-cols-1 gap-4">
+                          {savedGraftsMembranes.filter(item => item.type === 'graft').map((graft) => (
+                            <div key={graft.id} className="bg-white border border-blue-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                              <div className="p-4 flex items-start gap-4">
+                                <div className="flex-1 space-y-3">
+                                  <div>
+                                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Brand/Type</p>
+                                    <p className="text-gray-900 font-semibold">{graft.brand_type || 'No type specified'}</p>
+                                  </div>
+                                  {graft.picture_url && (
+                                    <div>
+                                      <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">Sticker Preview</p>
+                                      <div className="relative group w-32 h-20 border border-gray-200 rounded-lg overflow-hidden bg-white shadow-inner">
+                                        <img
+                                          src={graft.picture_url}
+                                          alt="Graft sticker"
+                                          className="w-full h-full object-contain cursor-pointer"
+                                          onClick={(e) => handleStickerPreview(e, graft.picture_url!, { position: 'Graft' } as any, 'graft')}
+                                        />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                          <Eye className="h-5 w-5 text-white" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                <div>
-                                  <h4 className="font-bold text-blue-900 text-sm">Tooth {implant.position}</h4>
-                                  <p className="text-xs text-blue-700">
-                                    {implant.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditImplant(implant)}
-                                  className="text-blue-600 hover:text-blue-800 p-1.5 rounded-lg hover:bg-blue-200 transition-colors"
-                                  title="Edit implant"
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteImplant(implant)}
-                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-100 transition-colors"
-                                  title="Delete implant"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Implant Details */}
-                            <div className="space-y-2 mb-3">
-                              {implant.implant_subtype && (
-                                <div className="bg-white/70 rounded-lg px-2 py-1">
-                                  <p className="text-xs font-medium text-blue-800">Series: {implant.implant_subtype}</p>
-                                </div>
-                              )}
-                              {implant.implant_size && (
-                                <div className="bg-white/70 rounded-lg px-2 py-1">
-                                  <p className="text-xs font-medium text-blue-800">Size: {implant.implant_size}</p>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Images Grid */}
-                            <div className="grid grid-cols-2 gap-2 mb-3">
-                              {/* Implant Image */}
-                              <div>
-                                <p className="text-xs font-bold text-blue-800 mb-1">Implant</p>
-                                {(implant.implant_picture || implant.implant_picture_url) ? (
-                                  <div
-                                    className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
-                                    onClick={() => {
-                                      const url = implant.implant_picture
-                                        ? URL.createObjectURL(implant.implant_picture)
-                                        : implant.implant_picture_url;
-                                      if (url) handleStickerPreview(url, implant, 'implant');
-                                    }}
-                                    title="Click to view full size"
+                                <div className="flex flex-col gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditGraft(graft)}
+                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                    title="Edit Graft"
                                   >
-                                    <img
-                                      src={
-                                        implant.implant_picture
-                                          ? URL.createObjectURL(implant.implant_picture)
-                                          : implant.implant_picture_url
-                                      }
-                                      alt="Implant sticker"
-                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                      onError={(e) => {
-                                        console.log('Implant image failed to load');
-                                        if (implant.implant_picture_url && implant.implant_picture) {
-                                          e.currentTarget.src = implant.implant_picture_url;
-                                        }
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                    <Camera className="h-4 w-4 text-blue-400" />
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* MUA Image */}
-                              <div>
-                                <p className="text-xs font-bold text-blue-800 mb-1">MUA</p>
-                                {(implant.mua_picture || implant.mua_picture_url) ? (
-                                  <div
-                                    className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
-                                    onClick={() => {
-                                      const url = implant.mua_picture
-                                        ? URL.createObjectURL(implant.mua_picture)
-                                        : implant.mua_picture_url;
-                                      if (url) handleStickerPreview(url, implant, 'mua');
-                                    }}
-                                    title="Click to view full size"
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSavedGraftsMembranes(prev => prev.filter(item => item.id !== graft.id))}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                                    title="Remove Graft"
                                   >
-                                    <img
-                                      src={
-                                        implant.mua_picture
-                                          ? URL.createObjectURL(implant.mua_picture)
-                                          : implant.mua_picture_url
-                                      }
-                                      alt="MUA sticker"
-                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                    <Camera className="h-4 w-4 text-blue-400" />
-                                  </div>
-                                )}
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                            {/* MUA Details */}
-                            {(implant.mua_brand || implant.mua_size) && (
-                              <div className="bg-white/70 rounded-lg p-2 border border-blue-200">
-                                <p className="text-xs font-bold text-blue-800 mb-1">MUA Details</p>
-                                {implant.mua_brand && (
-                                  <p className="text-xs text-blue-700">
-                                    {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
-                                  </p>
-                                )}
-                                {implant.mua_size && (
-                                  <p className="text-xs text-blue-700">Size: {implant.mua_size}</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                  {/* Membrane Details Section */}
+                  {formData.is_membrane_used && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <Activity className="h-5 w-5 text-indigo-500" />
+                          Membrane Details
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={handleOpenMembraneDialog}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-sm font-semibold shadow-sm transition-all"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Membrane
+                        </button>
                       </div>
-                    )}
-                  </div>
+
+                      {savedGraftsMembranes.filter(item => item.type === 'membrane').length === 0 ? (
+                        <div className="p-8 border-2 border-dashed border-gray-100 rounded-xl bg-gray-50/30 flex flex-col items-center justify-center gap-2">
+                          <p className="text-sm text-gray-500 font-medium font-outfit">No membrane details added yet</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-4">
+                          {savedGraftsMembranes.filter(item => item.type === 'membrane').map((membrane) => (
+                            <div key={membrane.id} className="bg-white border border-indigo-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+                              <div className="p-4 flex items-start gap-4">
+                                <div className="flex-1 space-y-3">
+                                  <div>
+                                    <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">Brand/Type</p>
+                                    <p className="text-gray-900 font-semibold">{membrane.brand_type || 'No type specified'}</p>
+                                  </div>
+                                  {membrane.picture_url && (
+                                    <div>
+                                      <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-2">Sticker Preview</p>
+                                      <div className="relative group w-32 h-20 border border-gray-200 rounded-lg overflow-hidden bg-white shadow-inner">
+                                        <img
+                                          src={membrane.picture_url}
+                                          alt="Membrane sticker"
+                                          className="w-full h-full object-contain cursor-pointer"
+                                          onClick={(e) => handleStickerPreview(e, membrane.picture_url!, { position: 'Membrane' } as any, 'membrane')}
+                                        />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                          <Eye className="h-5 w-5 text-white" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditMembrane(membrane)}
+                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                                    title="Edit Membrane"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSavedGraftsMembranes(prev => prev.filter(item => item.id !== membrane.id))}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                                    title="Remove Membrane"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
+
+            {
+              currentStep === (graftUsed ? 3 : 2) && (formData.arch_type === 'upper' || formData.arch_type === 'dual') && (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-blue-600" />
+                        Upper Implants
+                      </h3>
+                      <Button
+                        type="button"
+                        onClick={() => handleAddImplant('upper')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Implant
+                      </Button>
+                    </div>
+                    <div className="min-h-[300px]">
+                      {savedImplants.upper.length === 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center text-gray-500">
+                            <p>Click "Add Implant" to add upper implant details...</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                          {savedImplants.upper.map((implant) => (
+                            <div key={implant.id} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
+                              {/* Header with Position and Actions */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                    {implant.position}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-blue-900 text-sm">Tooth {implant.position}</h4>
+                                    <p className="text-xs text-blue-700">
+                                      {implant.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditImplant(implant)}
+                                    className="text-blue-600 hover:text-blue-800 p-1.5 rounded-lg hover:bg-blue-200 transition-colors"
+                                    title="Edit implant"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteImplant(implant)}
+                                    className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-100 transition-colors"
+                                    title="Delete implant"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Implant Details */}
+                              <div className="space-y-2 mb-3">
+                                {implant.implant_subtype && (
+                                  <div className="bg-white/70 rounded-lg px-2 py-1">
+                                    <p className="text-xs font-medium text-blue-800">Series: {implant.implant_subtype}</p>
+                                  </div>
+                                )}
+                                {implant.implant_size && (
+                                  <div className="bg-white/70 rounded-lg px-2 py-1">
+                                    <p className="text-xs font-medium text-blue-800">Size: {implant.implant_size}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Images Grid */}
+                              <div className="grid grid-cols-2 gap-2 mb-3">
+                                {/* Implant Image */}
+                                <div>
+                                  <p className="text-xs font-bold text-blue-800 mb-1">Implant</p>
+                                  {(implant.implant_picture || implant.implant_picture_url) ? (
+                                    <div
+                                      className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
+                                      onClick={(e) => {
+                                        const url = implant.implant_picture
+                                          ? URL.createObjectURL(implant.implant_picture)
+                                          : implant.implant_picture_url;
+                                        if (url) handleStickerPreview(e, url, implant, 'implant');
+                                      }}
+                                      title="Click to view full size"
+                                    >
+                                      <img
+                                        src={
+                                          implant.implant_picture
+                                            ? URL.createObjectURL(implant.implant_picture)
+                                            : implant.implant_picture_url
+                                        }
+                                        alt="Implant sticker"
+                                        className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                        onError={(e) => {
+                                          console.log('Implant image failed to load');
+                                          if (implant.implant_picture_url && implant.implant_picture) {
+                                            e.currentTarget.src = implant.implant_picture_url;
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                      <Camera className="h-4 w-4 text-blue-400" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* MUA Image */}
+                                <div>
+                                  <p className="text-xs font-bold text-blue-800 mb-1">MUA</p>
+                                  {(implant.mua_picture || implant.mua_picture_url) ? (
+                                    <div
+                                      className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
+                                      onClick={(e) => {
+                                        const url = implant.mua_picture
+                                          ? URL.createObjectURL(implant.mua_picture)
+                                          : implant.mua_picture_url;
+                                        if (url) handleStickerPreview(e, url, implant, 'mua');
+                                      }}
+                                      title="Click to view full size"
+                                    >
+                                      <img
+                                        src={
+                                          implant.mua_picture
+                                            ? URL.createObjectURL(implant.mua_picture)
+                                            : implant.mua_picture_url
+                                        }
+                                        alt="MUA sticker"
+                                        className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                      <Camera className="h-4 w-4 text-blue-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* MUA Details */}
+                              {(implant.mua_brand || implant.mua_size) && (
+                                <div className="bg-white/70 rounded-lg p-2 border border-blue-200">
+                                  <p className="text-xs font-bold text-blue-800 mb-1">MUA Details</p>
+                                  {implant.mua_brand && (
+                                    <p className="text-xs text-blue-700">
+                                      {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
+                                    </p>
+                                  )}
+                                  {implant.mua_size && (
+                                    <p className="text-xs text-blue-700">Size: {implant.mua_size}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            }
 
             {/* Step 2: Lower Implants (for lower only) */}
-            {currentStep === 2 && formData.arch_type === 'lower' && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-blue-600" />
-                      Lower Implants
-                    </h3>
-                    <Button
-                      type="button"
-                      onClick={() => handleAddImplant('lower')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Implant
-                    </Button>
-                  </div>
-                  <div className="min-h-[300px]">
-                    {savedImplants.lower.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center text-gray-500">
-                          <p>Click "Add Implant" to add lower implant details...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                        {savedImplants.lower.map((implant) => (
-                          <div key={implant.id} className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-                            {/* Header with Position and Actions */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                  {implant.position}
-                                </div>
-                                <div>
-                                  <h4 className="font-bold text-green-900 text-sm">Tooth {implant.position}</h4>
-                                  <p className="text-xs text-green-700">
-                                    {implant.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditImplant(implant)}
-                                  className="text-green-600 hover:text-green-800 p-1.5 rounded-lg hover:bg-green-200 transition-colors"
-                                  title="Edit implant"
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteImplant(implant)}
-                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-100 transition-colors"
-                                  title="Delete implant"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Implant Details */}
-                            <div className="space-y-2 mb-3">
-                              {implant.implant_subtype && (
-                                <div className="bg-white/70 rounded-lg px-2 py-1">
-                                  <p className="text-xs font-medium text-green-800">Series: {implant.implant_subtype}</p>
-                                </div>
-                              )}
-                              {implant.implant_size && (
-                                <div className="bg-white/70 rounded-lg px-2 py-1">
-                                  <p className="text-xs font-medium text-green-800">Size: {implant.implant_size}</p>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Images Grid */}
-                            <div className="grid grid-cols-2 gap-2 mb-3">
-                              {/* Implant Image */}
-                              <div>
-                                <p className="text-xs font-bold text-green-800 mb-1">Implant</p>
-                                {(implant.implant_picture || implant.implant_picture_url) ? (
-                                  <div
-                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
-                                    onClick={() => {
-                                      const url = implant.implant_picture
-                                        ? URL.createObjectURL(implant.implant_picture)
-                                        : implant.implant_picture_url;
-                                      if (url) handleStickerPreview(url, implant, 'implant');
-                                    }}
-                                    title="Click to view full size"
-                                  >
-                                    <img
-                                      src={
-                                        implant.implant_picture
-                                          ? URL.createObjectURL(implant.implant_picture)
-                                          : implant.implant_picture_url
-                                      }
-                                      alt="Implant sticker"
-                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                      onError={(e) => {
-                                        console.log('Implant image failed to load');
-                                        if (implant.implant_picture_url && implant.implant_picture) {
-                                          e.currentTarget.src = implant.implant_picture_url;
-                                        }
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                    <Camera className="h-4 w-4 text-green-400" />
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* MUA Image */}
-                              <div>
-                                <p className="text-xs font-bold text-green-800 mb-1">MUA</p>
-                                {(implant.mua_picture || implant.mua_picture_url) ? (
-                                  <div
-                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
-                                    onClick={() => {
-                                      const url = implant.mua_picture
-                                        ? URL.createObjectURL(implant.mua_picture)
-                                        : implant.mua_picture_url;
-                                      if (url) handleStickerPreview(url, implant, 'mua');
-                                    }}
-                                    title="Click to view full size"
-                                  >
-                                    <img
-                                      src={
-                                        implant.mua_picture
-                                          ? URL.createObjectURL(implant.mua_picture)
-                                          : implant.mua_picture_url
-                                      }
-                                      alt="MUA sticker"
-                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                    <Camera className="h-4 w-4 text-green-400" />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* MUA Details */}
-                            {(implant.mua_brand || implant.mua_size) && (
-                              <div className="bg-white/70 rounded-lg p-2 border border-green-200">
-                                <p className="text-xs font-bold text-green-800 mb-1">MUA Details</p>
-                                {implant.mua_brand && (
-                                  <p className="text-xs text-green-700">
-                                    {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
-                                  </p>
-                                )}
-                                {implant.mua_size && (
-                                  <p className="text-xs text-green-700">Size: {implant.mua_size}</p>
-                                )}
-                              </div>
-                            )}
+            {
+              currentStep === (graftUsed ? 3 : 2) && formData.arch_type === 'lower' && (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-blue-600" />
+                        Lower Implants
+                      </h3>
+                      <Button
+                        type="button"
+                        onClick={() => handleAddImplant('lower')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Implant
+                      </Button>
+                    </div>
+                    <div className="min-h-[300px]">
+                      {savedImplants.lower.length === 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center text-gray-500">
+                            <p>Click "Add Implant" to add lower implant details...</p>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                          {savedImplants.lower.map((implant) => (
+                            <div key={implant.id} className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
+                              {/* Header with Position and Actions */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                    {implant.position}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-green-900 text-sm">Tooth {implant.position}</h4>
+                                    <p className="text-xs text-green-700">
+                                      {implant.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditImplant(implant)}
+                                    className="text-green-600 hover:text-green-800 p-1.5 rounded-lg hover:bg-green-200 transition-colors"
+                                    title="Edit implant"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteImplant(implant)}
+                                    className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-100 transition-colors"
+                                    title="Delete implant"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Implant Details */}
+                              <div className="space-y-2 mb-3">
+                                {implant.implant_subtype && (
+                                  <div className="bg-white/70 rounded-lg px-2 py-1">
+                                    <p className="text-xs font-medium text-green-800">Series: {implant.implant_subtype}</p>
+                                  </div>
+                                )}
+                                {implant.implant_size && (
+                                  <div className="bg-white/70 rounded-lg px-2 py-1">
+                                    <p className="text-xs font-medium text-green-800">Size: {implant.implant_size}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Images Grid */}
+                              <div className="grid grid-cols-2 gap-2 mb-3">
+                                {/* Implant Image */}
+                                <div>
+                                  <p className="text-xs font-bold text-green-800 mb-1">Implant</p>
+                                  {(implant.implant_picture || implant.implant_picture_url) ? (
+                                    <div
+                                      className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                      onClick={(e) => {
+                                        const url = implant.implant_picture
+                                          ? URL.createObjectURL(implant.implant_picture)
+                                          : implant.implant_picture_url;
+                                        if (url) handleStickerPreview(e, url, implant, 'implant');
+                                      }}
+                                      title="Click to view full size"
+                                    >
+                                      <img
+                                        src={
+                                          implant.implant_picture
+                                            ? URL.createObjectURL(implant.implant_picture)
+                                            : implant.implant_picture_url
+                                        }
+                                        alt="Implant sticker"
+                                        className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                        onError={(e) => {
+                                          console.log('Implant image failed to load');
+                                          if (implant.implant_picture_url && implant.implant_picture) {
+                                            e.currentTarget.src = implant.implant_picture_url;
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                      <Camera className="h-4 w-4 text-green-400" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* MUA Image */}
+                                <div>
+                                  <p className="text-xs font-bold text-green-800 mb-1">MUA</p>
+                                  {(implant.mua_picture || implant.mua_picture_url) ? (
+                                    <div
+                                      className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                      onClick={(e) => {
+                                        const url = implant.mua_picture
+                                          ? URL.createObjectURL(implant.mua_picture)
+                                          : implant.mua_picture_url;
+                                        if (url) handleStickerPreview(e, url, implant, 'mua');
+                                      }}
+                                      title="Click to view full size"
+                                    >
+                                      <img
+                                        src={
+                                          implant.mua_picture
+                                            ? URL.createObjectURL(implant.mua_picture)
+                                            : implant.mua_picture_url
+                                        }
+                                        alt="MUA sticker"
+                                        className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                      <Camera className="h-4 w-4 text-green-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* MUA Details */}
+                              {(implant.mua_brand || implant.mua_size) && (
+                                <div className="bg-white/70 rounded-lg p-2 border border-green-200">
+                                  <p className="text-xs font-bold text-green-800 mb-1">MUA Details</p>
+                                  {implant.mua_brand && (
+                                    <p className="text-xs text-green-700">
+                                      {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
+                                    </p>
+                                  )}
+                                  {implant.mua_size && (
+                                    <p className="text-xs text-green-700">Size: {implant.mua_size}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )
+            }
 
             {/* Step 3: Lower Implants (for dual only) */}
-            {currentStep === 3 && formData.arch_type === 'dual' && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-blue-600" />
-                      Lower Implants
-                    </h3>
-                    <Button
-                      type="button"
-                      onClick={() => handleAddImplant('lower')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Implant
-                    </Button>
-                  </div>
-                  <div className="min-h-[300px]">
-                    {savedImplants.lower.length === 0 ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center text-gray-500">
-                          <p>Click "Add Implant" to add lower implant details...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                        {savedImplants.lower.map((implant) => (
-                          <div key={implant.id} className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-                            {/* Header with Position and Actions */}
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                  {implant.position}
-                                </div>
-                                <div>
-                                  <h4 className="font-bold text-green-900 text-sm">Tooth {implant.position}</h4>
-                                  <p className="text-xs text-green-700">
-                                    {implant.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditImplant(implant)}
-                                  className="text-green-600 hover:text-green-800 p-1.5 rounded-lg hover:bg-green-200 transition-colors"
-                                  title="Edit implant"
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteImplant(implant)}
-                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-100 transition-colors"
-                                  title="Delete implant"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Implant Details */}
-                            <div className="space-y-2 mb-3">
-                              {implant.implant_subtype && (
-                                <div className="bg-white/70 rounded-lg px-2 py-1">
-                                  <p className="text-xs font-medium text-green-800">Series: {implant.implant_subtype}</p>
-                                </div>
-                              )}
-                              {implant.implant_size && (
-                                <div className="bg-white/70 rounded-lg px-2 py-1">
-                                  <p className="text-xs font-medium text-green-800">Size: {implant.implant_size}</p>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Images Grid */}
-                            <div className="grid grid-cols-2 gap-2 mb-3">
-                              {/* Implant Image */}
-                              <div>
-                                <p className="text-xs font-bold text-green-800 mb-1">Implant</p>
-                                {(implant.implant_picture || implant.implant_picture_url) ? (
-                                  <div
-                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
-                                    onClick={() => {
-                                      const url = implant.implant_picture
-                                        ? URL.createObjectURL(implant.implant_picture)
-                                        : implant.implant_picture_url;
-                                      if (url) handleStickerPreview(url, implant, 'implant');
-                                    }}
-                                    title="Click to view full size"
-                                  >
-                                    <img
-                                      src={
-                                        implant.implant_picture
-                                          ? URL.createObjectURL(implant.implant_picture)
-                                          : implant.implant_picture_url
-                                      }
-                                      alt="Implant sticker"
-                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                      onError={(e) => {
-                                        console.log('Implant image failed to load');
-                                        if (implant.implant_picture_url && implant.implant_picture) {
-                                          e.currentTarget.src = implant.implant_picture_url;
-                                        }
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                    <Camera className="h-4 w-4 text-green-400" />
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* MUA Image */}
-                              <div>
-                                <p className="text-xs font-bold text-green-800 mb-1">MUA</p>
-                                {(implant.mua_picture || implant.mua_picture_url) ? (
-                                  <div
-                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
-                                    onClick={() => {
-                                      const url = implant.mua_picture
-                                        ? URL.createObjectURL(implant.mua_picture)
-                                        : implant.mua_picture_url;
-                                      if (url) handleStickerPreview(url, implant, 'mua');
-                                    }}
-                                    title="Click to view full size"
-                                  >
-                                    <img
-                                      src={
-                                        implant.mua_picture
-                                          ? URL.createObjectURL(implant.mua_picture)
-                                          : implant.mua_picture_url
-                                      }
-                                      alt="MUA sticker"
-                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                    <Camera className="h-4 w-4 text-green-400" />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* MUA Details */}
-                            {(implant.mua_brand || implant.mua_size) && (
-                              <div className="bg-white/70 rounded-lg p-2 border border-green-200">
-                                <p className="text-xs font-bold text-green-800 mb-1">MUA Details</p>
-                                {implant.mua_brand && (
-                                  <p className="text-xs text-green-700">
-                                    {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
-                                  </p>
-                                )}
-                                {implant.mua_size && (
-                                  <p className="text-xs text-green-700">Size: {implant.mua_size}</p>
-                                )}
-                              </div>
-                            )}
+            {
+              currentStep === (graftUsed ? 4 : 3) && formData.arch_type === 'dual' && (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-blue-600" />
+                        Lower Implants
+                      </h3>
+                      <Button
+                        type="button"
+                        onClick={() => handleAddImplant('lower')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Implant
+                      </Button>
+                    </div>
+                    <div className="min-h-[300px]">
+                      {savedImplants.lower.length === 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center text-gray-500">
+                            <p>Click "Add Implant" to add lower implant details...</p>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                          {savedImplants.lower.map((implant) => (
+                            <div key={implant.id} className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
+                              {/* Header with Position and Actions */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                    {implant.position}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-green-900 text-sm">Tooth {implant.position}</h4>
+                                    <p className="text-xs text-green-700">
+                                      {implant.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditImplant(implant)}
+                                    className="text-green-600 hover:text-green-800 p-1.5 rounded-lg hover:bg-green-200 transition-colors"
+                                    title="Edit implant"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteImplant(implant)}
+                                    className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-100 transition-colors"
+                                    title="Delete implant"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Implant Details */}
+                              <div className="space-y-2 mb-3">
+                                {implant.implant_subtype && (
+                                  <div className="bg-white/70 rounded-lg px-2 py-1">
+                                    <p className="text-xs font-medium text-green-800">Series: {implant.implant_subtype}</p>
+                                  </div>
+                                )}
+                                {implant.implant_size && (
+                                  <div className="bg-white/70 rounded-lg px-2 py-1">
+                                    <p className="text-xs font-medium text-green-800">Size: {implant.implant_size}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Images Grid */}
+                              <div className="grid grid-cols-2 gap-2 mb-3">
+                                {/* Implant Image */}
+                                <div>
+                                  <p className="text-xs font-bold text-green-800 mb-1">Implant</p>
+                                  {(implant.implant_picture || implant.implant_picture_url) ? (
+                                    <div
+                                      className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                      onClick={(e) => {
+                                        const url = implant.implant_picture
+                                          ? URL.createObjectURL(implant.implant_picture)
+                                          : implant.implant_picture_url;
+                                        if (url) handleStickerPreview(e, url, implant, 'implant');
+                                      }}
+                                      title="Click to view full size"
+                                    >
+                                      <img
+                                        src={
+                                          implant.implant_picture
+                                            ? URL.createObjectURL(implant.implant_picture)
+                                            : implant.implant_picture_url
+                                        }
+                                        alt="Implant sticker"
+                                        className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                        onError={(e) => {
+                                          console.log('Implant image failed to load');
+                                          if (implant.implant_picture_url && implant.implant_picture) {
+                                            e.currentTarget.src = implant.implant_picture_url;
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                      <Camera className="h-4 w-4 text-green-400" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* MUA Image */}
+                                <div>
+                                  <p className="text-xs font-bold text-green-800 mb-1">MUA</p>
+                                  {(implant.mua_picture || implant.mua_picture_url) ? (
+                                    <div
+                                      className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                      onClick={(e) => {
+                                        const url = implant.mua_picture
+                                          ? URL.createObjectURL(implant.mua_picture)
+                                          : implant.mua_picture_url;
+                                        if (url) handleStickerPreview(e, url, implant, 'mua');
+                                      }}
+                                      title="Click to view full size"
+                                    >
+                                      <img
+                                        src={
+                                          implant.mua_picture
+                                            ? URL.createObjectURL(implant.mua_picture)
+                                            : implant.mua_picture_url
+                                        }
+                                        alt="MUA sticker"
+                                        className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                      <Camera className="h-4 w-4 text-green-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* MUA Details */}
+                              {(implant.mua_brand || implant.mua_size) && (
+                                <div className="bg-white/70 rounded-lg p-2 border border-green-200">
+                                  <p className="text-xs font-bold text-green-800 mb-1">MUA Details</p>
+                                  {implant.mua_brand && (
+                                    <p className="text-xs text-green-700">
+                                      {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
+                                    </p>
+                                  )}
+                                  {implant.mua_size && (
+                                    <p className="text-xs text-green-700">Size: {implant.mua_size}</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )
+            }
+
+          </div >
 
           {/* Form Actions - exactly like IV sedation footer */}
-          <div className="flex-shrink-0 flex justify-between items-center px-6 py-4 border-t bg-gray-50">
+          < div className="flex-shrink-0 flex justify-between items-center px-6 py-4 border-t bg-gray-50" >
             <Button
               type="button"
               variant="outline"
@@ -1737,12 +2194,12 @@ export function SurgicalRecallSheetForm({
                 : 'Next'
               }
             </Button>
-          </div>
-        </form>
-      </div>
+          </div >
+        </form >
+      </div >
 
       {/* Add Implant Dialog */}
-      <Dialog open={showImplantDialog} onOpenChange={setShowImplantDialog}>
+      < Dialog open={showImplantDialog} onOpenChange={setShowImplantDialog} >
         <DialogContent
           className="max-w-2xl max-h-[75vh] overflow-y-auto"
           onInteractOutside={(e) => e.preventDefault()}
@@ -2310,15 +2767,253 @@ export function SurgicalRecallSheetForm({
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
+
+      < Dialog open={showGraftDialog} onOpenChange={setShowGraftDialog} >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-blue-600" />
+              {editingGraft ? 'Edit Graft Details' : 'Add Graft Details'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="graft_dialog_type">Graft Type <span className="text-red-500">*</span></Label>
+              <Input
+                id="graft_dialog_type"
+                placeholder="Enter graft type/brand"
+                value={graftData.type}
+                onChange={(e) => setGraftData(prev => ({ ...prev, type: e.target.value }))}
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Graft Sticker Picture <span className="text-red-500">*</span></Label>
+              <div className="space-y-3">
+                {/* Hidden file input */}
+                <input
+                  ref={graftPictureInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleGraftFileChange(e.target.files?.[0] || null);
+                  }}
+                />
+
+                {/* Custom capture button with image preview */}
+                {!graftData.file && !graftData.previewUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => graftPictureInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-transparent border-2 border-dashed border-blue-400 hover:border-blue-600 hover:bg-blue-50/20 transition-colors rounded-lg text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <Camera className="h-5 w-5" />
+                    Capture Graft Sticker
+                  </button>
+                ) : (
+                  <div className="w-full border-2 border-green-400 rounded-lg overflow-hidden bg-white">
+                    {/* Image Preview */}
+                    <div className="w-full bg-gray-50 flex items-center justify-center p-2">
+                      <img
+                        src={graftData.previewUrl || ''}
+                        alt="Graft sticker preview"
+                        className="w-full h-auto max-h-32 object-contain rounded"
+                      />
+                    </div>
+
+                    {/* Controls */}
+                    <div className="p-3 bg-green-50 border-t border-green-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-green-700 font-medium">
+                            ✓ {graftData.file ? 'Captured Successfully' : 'Existing Image'}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {graftData.file
+                              ? `Size: ${(graftData.file.size / 1024).toFixed(1)} KB`
+                              : 'From storage'
+                            }
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (graftData.previewUrl) {
+                                setPreviewImage({
+                                  url: graftData.previewUrl,
+                                  name: graftData.file?.name || 'graft-sticker',
+                                  type: 'graft'
+                                });
+                              }
+                            }}
+                            className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md transition-colors"
+                          >
+                            <Eye className="h-3 w-3" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => graftPictureInputRef.current?.click()}
+                            className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
+                          >
+                            <Camera className="h-3 w-3" />
+                            Retake
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setShowGraftDialog(false)}>Cancel</Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={handleSaveGraft}
+              disabled={!graftData.type || !graftData.previewUrl}
+            >
+              {editingGraft ? 'Update Graft' : 'Save Graft'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog >
+
+      {/* Membrane Dialog */}
+      < Dialog open={showMembraneDialog} onOpenChange={setShowMembraneDialog} >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-indigo-600" />
+              {editingMembrane ? 'Edit Membrane Details' : 'Add Membrane Details'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="membrane_dialog_type">Membrane Type <span className="text-red-500">*</span></Label>
+              <Input
+                id="membrane_dialog_type"
+                placeholder="Enter membrane type/brand"
+                value={membraneData.type}
+                onChange={(e) => setMembraneData(prev => ({ ...prev, type: e.target.value }))}
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Membrane Sticker Picture <span className="text-red-500">*</span></Label>
+              <div className="space-y-3">
+                {/* Hidden file input */}
+                <input
+                  ref={membranePictureInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleMembraneFileChange(e.target.files?.[0] || null);
+                  }}
+                />
+
+                {/* Custom capture button with image preview */}
+                {!membraneData.file && !membraneData.previewUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => membranePictureInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-transparent border-2 border-dashed border-blue-400 hover:border-blue-600 hover:bg-blue-50/20 transition-colors rounded-lg text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <Camera className="h-5 w-5" />
+                    Capture Membrane Sticker
+                  </button>
+                ) : (
+                  <div className="w-full border-2 border-green-400 rounded-lg overflow-hidden bg-white">
+                    {/* Image Preview */}
+                    <div className="w-full bg-gray-50 flex items-center justify-center p-2">
+                      <img
+                        src={membraneData.previewUrl || ''}
+                        alt="Membrane sticker preview"
+                        className="w-full h-auto max-h-32 object-contain rounded"
+                      />
+                    </div>
+
+                    {/* Controls */}
+                    <div className="p-3 bg-green-50 border-t border-green-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-green-700 font-medium">
+                            ✓ {membraneData.file ? 'Captured Successfully' : 'Existing Image'}
+                          </p>
+                          <p className="text-xs text-green-600">
+                            {membraneData.file
+                              ? `Size: ${(membraneData.file.size / 1024).toFixed(1)} KB`
+                              : 'From storage'
+                            }
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (membraneData.previewUrl) {
+                                setPreviewImage({
+                                  url: membraneData.previewUrl,
+                                  name: membraneData.file?.name || 'membrane-sticker',
+                                  type: 'membrane'
+                                });
+                              }
+                            }}
+                            className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md transition-colors"
+                          >
+                            <Eye className="h-3 w-3" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => membranePictureInputRef.current?.click()}
+                            className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md transition-colors"
+                          >
+                            <Camera className="h-3 w-3" />
+                            Retake
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setShowMembraneDialog(false)}>Cancel</Button>
+            <Button
+              className="bg-indigo-600 hover:bg-blue-700 text-white"
+              onClick={handleSaveMembrane}
+              disabled={!membraneData.type || !membraneData.previewUrl}
+            >
+              {editingMembrane ? 'Update Membrane' : 'Save Membrane'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog >
 
       {/* Image Preview Dialog */}
-      <Dialog open={!!previewImage} onOpenChange={closePreview}>
+      < Dialog open={!!previewImage
+      } onOpenChange={closePreview} >
         <DialogContent className="max-w-fit max-h-[95vh] overflow-hidden flex flex-col p-0">
           {/* Simple Header */}
           <div className="p-4 border-b bg-white">
             <h2 className="text-lg font-semibold text-gray-900">
-              {previewImage?.type === 'implant' ? 'Implant Sticker' : 'MUA Sticker'} Preview
+              {previewImage?.type === 'implant' ? 'Implant Sticker' : previewImage?.type === 'mua' ? 'MUA Sticker' : previewImage?.type === 'graft' ? 'Graft Sticker' : 'Membrane Sticker'} Preview
             </h2>
           </div>
 
@@ -2496,10 +3191,10 @@ export function SurgicalRecallSheetForm({
             </>
           )}
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      < Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm} >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -2549,16 +3244,19 @@ export function SurgicalRecallSheetForm({
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Sticker Preview Dialog */}
-      <Dialog open={!!stickerPreview} onOpenChange={closeStickerPreview}>
+      < Dialog open={!!stickerPreview} onOpenChange={closeStickerPreview} >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5 text-blue-600" />
               {stickerPreview?.title}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Preview of {stickerPreview?.title}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
@@ -2586,7 +3284,7 @@ export function SurgicalRecallSheetForm({
             </Button>
           </div>
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+    </div >
   );
 }

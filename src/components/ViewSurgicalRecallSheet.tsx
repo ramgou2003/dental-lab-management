@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -29,7 +29,7 @@ export const ViewSurgicalRecallSheet: React.FC<ViewSurgicalRecallSheetProps> = (
   const [stickerPreview, setStickerPreview] = useState<{
     url: string;
     title: string;
-    type: 'implant' | 'mua';
+    type: 'implant' | 'mua' | 'graft' | 'membrane';
   } | null>(null);
 
   if (!sheetData) return null;
@@ -37,6 +37,24 @@ export const ViewSurgicalRecallSheet: React.FC<ViewSurgicalRecallSheetProps> = (
   // Handle different data structures
   const sheet = sheetData.sheet || sheetData;
   const implants = sheetData.implants || sheetData.surgical_recall_implants || [];
+
+  // Robust extraction of grafts/membranes
+  const graftsMembranes =
+    sheetData.graftsMembranes ||
+    sheetData.surgical_recall_grafts_membranes ||
+    sheet.graftsMembranes ||
+    sheet.surgical_recall_grafts_membranes ||
+    [];
+
+  console.log('🔍 ViewSurgicalRecallSheet Debug:', {
+    sheetId: sheet?.id,
+    hasGraftsMembranes: graftsMembranes.length > 0,
+    count: graftsMembranes.length,
+    data: graftsMembranes
+  });
+
+  const grafts = Array.isArray(graftsMembranes) ? graftsMembranes.filter((gm: any) => gm.type === 'graft') : [];
+  const membranes = Array.isArray(graftsMembranes) ? graftsMembranes.filter((gm: any) => gm.type === 'membrane') : [];
 
   if (!sheet) return null;
 
@@ -57,7 +75,9 @@ export const ViewSurgicalRecallSheet: React.FC<ViewSurgicalRecallSheetProps> = (
   const lowerImplants = (implants || []).filter((implant: any) => implant?.arch_type === 'lower');
 
   // Handle sticker image preview
-  const handleStickerPreview = (url: string, implant: any, type: 'implant' | 'mua') => {
+  const handleStickerPreview = (e: React.MouseEvent, url: string, implant: any, type: 'implant' | 'mua') => {
+    e.preventDefault();
+    e.stopPropagation();
     const title = `${type === 'implant' ? 'Implant' : 'MUA'} Sticker - Tooth ${implant.position}`;
     setStickerPreview({
       url,
@@ -71,342 +91,484 @@ export const ViewSurgicalRecallSheet: React.FC<ViewSurgicalRecallSheetProps> = (
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden p-0">
-        <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3 border-b">
-          <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
-            <FileText className="h-6 w-6 text-blue-600" />
-            Surgical Recall Sheet Preview
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent
+          className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden p-0"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-3 border-b">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-gray-900">
+              <FileText className="h-6 w-6 text-blue-600" />
+              Surgical Recall Sheet Preview
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Preview of surgical recall sheet
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-8">
-            {/* Patient Information - Compact */}
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-1.5 bg-blue-600 rounded-md">
-                  <User className="h-4 w-4 text-white" />
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-8">
+              {/* Patient Information - Compact */}
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 bg-blue-600 rounded-md">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-blue-900">Patient Information</h3>
                 </div>
-                <h3 className="text-lg font-bold text-blue-900">Patient Information</h3>
-              </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-white rounded-md p-3 border border-blue-200">
-                  <div className="text-xs font-medium text-blue-600 mb-1">Patient</div>
-                  <div className="text-sm font-semibold text-gray-900 truncate">{sheet?.patient_name || 'N/A'}</div>
-                </div>
-                <div className="bg-white rounded-md p-3 border border-blue-200">
-                  <div className="text-xs font-medium text-blue-600 mb-1">Surgery Date</div>
-                  <div className="text-sm font-semibold text-gray-900">{sheet?.surgery_date ? formatDate(sheet.surgery_date) : 'N/A'}</div>
-                </div>
-                <div className="bg-white rounded-md p-3 border border-blue-200">
-                  <div className="text-xs font-medium text-blue-600 mb-1">Arch Type</div>
-                  <div className="text-sm font-semibold text-gray-900 capitalize">{sheet?.arch_type || 'N/A'}</div>
-                </div>
-                <div className="bg-white rounded-md p-3 border border-blue-200">
-                  <div className="text-xs font-medium text-blue-600 mb-1">Status</div>
-                  <div className={`text-sm font-semibold ${
-                    sheet?.status === 'completed' ? 'text-green-600' : 'text-orange-600'
-                  }`}>
-                    {formatFieldValue(sheet?.status)}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-white rounded-md p-3 border border-blue-200">
+                    <div className="text-xs font-medium text-blue-600 mb-1">Patient</div>
+                    <div className="text-sm font-semibold text-gray-900 truncate">{sheet?.patient_name || 'N/A'}</div>
+                  </div>
+                  <div className="bg-white rounded-md p-3 border border-blue-200">
+                    <div className="text-xs font-medium text-blue-600 mb-1">Surgery Date</div>
+                    <div className="text-sm font-semibold text-gray-900">{sheet?.surgery_date ? formatDate(sheet.surgery_date) : 'N/A'}</div>
+                  </div>
+                  <div className="bg-white rounded-md p-3 border border-blue-200">
+                    <div className="text-xs font-medium text-blue-600 mb-1">Arch Type</div>
+                    <div className="text-sm font-semibold text-gray-900 capitalize">{sheet?.arch_type || 'N/A'}</div>
+                  </div>
+                  <div className="bg-white rounded-md p-3 border border-blue-200">
+                    <div className="text-xs font-medium text-blue-600 mb-1">Status</div>
+                    <div className={`text-sm font-semibold ${sheet?.status === 'completed' ? 'text-green-600' : 'text-orange-600'
+                      }`}>
+                      {formatFieldValue(sheet?.status)}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Surgery Information */}
-            {(sheet?.upper_surgery_type || sheet?.lower_surgery_type) && (
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200 shadow-lg">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-green-600 rounded-lg">
-                    <Activity className="h-6 w-6 text-white" />
+              {/* Surgery Information */}
+              {(sheet?.upper_surgery_type || sheet?.lower_surgery_type || sheet?.is_graft_used !== undefined || sheet?.is_membrane_used !== undefined) && (
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-green-600 rounded-lg">
+                      <Activity className="h-6 w-6 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-green-900">Surgery Information</h3>
                   </div>
-                  <h3 className="text-xl font-bold text-green-900">Surgery Information</h3>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {sheet?.upper_surgery_type && (
-                    <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
-                      <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Upper Surgery Type</div>
-                      <div className="text-sm font-semibold text-gray-900">{formatFieldValue(sheet.upper_surgery_type)}</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {sheet?.upper_surgery_type && (
+                      <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                        <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Upper Surgery Type</div>
+                        <div className="text-sm font-semibold text-gray-900">{formatFieldValue(sheet.upper_surgery_type)}</div>
+                      </div>
+                    )}
+                    {sheet?.lower_surgery_type && (
+                      <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                        <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Lower Surgery Type</div>
+                        <div className="text-sm font-semibold text-gray-900">{formatFieldValue(sheet.lower_surgery_type)}</div>
+                      </div>
+                    )}
+                    {sheet?.is_graft_used !== undefined && (
+                      <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                        <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Is Graft Used?</div>
+                        <div className="text-sm font-semibold text-gray-900">{sheet.is_graft_used ? 'Yes' : 'No'}</div>
+                      </div>
+                    )}
+                    {sheet?.is_membrane_used !== undefined && (
+                      <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
+                        <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Is Membrane Used?</div>
+                        <div className="text-sm font-semibold text-gray-900">{sheet.is_membrane_used ? 'Yes' : 'No'}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Grafts & Membranes */}
+              {graftsMembranes.length > 0 && (
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-200 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-purple-600 rounded-lg">
+                      <Activity className="h-6 w-6 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-purple-900">Grafts & Membranes ({graftsMembranes.length})</h3>
+                  </div>
+
+                  {/* Grafts */}
+                  {grafts.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                        Grafts ({grafts.length})
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {grafts.map((graft: any) => (
+                          <div key={graft.id} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center">
+                                <Activity className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-blue-900 text-sm">Graft</h4>
+                                <p className="text-xs text-blue-700">{graft.brand_type || 'No Type'}</p>
+                              </div>
+                            </div>
+
+                            {/* Graft Image */}
+                            <div>
+                              <p className="text-xs font-bold text-blue-800 mb-1">Sticker</p>
+                              {graft.picture_url ? (
+                                <div
+                                  className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setStickerPreview({
+                                      url: graft.picture_url,
+                                      title: `Graft Sticker - ${graft.brand_type}`,
+                                      type: 'graft'
+                                    });
+                                  }}
+                                  title="Click to view full size"
+                                >
+                                  <img
+                                    src={graft.picture_url}
+                                    alt="Graft sticker"
+                                    className="w-full h-24 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                  <Camera className="h-4 w-4 text-blue-400" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  {sheet?.lower_surgery_type && (
-                    <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm">
-                      <div className="text-xs font-medium text-green-600 uppercase tracking-wide mb-1">Lower Surgery Type</div>
-                      <div className="text-sm font-semibold text-gray-900">{formatFieldValue(sheet.lower_surgery_type)}</div>
+
+                  {/* Membranes */}
+                  {membranes.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-indigo-800 mb-4 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-indigo-600 rounded-full"></div>
+                        Membranes ({membranes.length})
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {membranes.map((membrane: any) => (
+                          <div key={membrane.id} className="bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center">
+                                <Activity className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-indigo-900 text-sm">Membrane</h4>
+                                <p className="text-xs text-indigo-700">{membrane.brand_type || 'No Type'}</p>
+                              </div>
+                            </div>
+
+                            {/* Membrane Image */}
+                            <div>
+                              <p className="text-xs font-bold text-indigo-800 mb-1">Sticker</p>
+                              {membrane.picture_url ? (
+                                <div
+                                  className="border-2 border-indigo-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all duration-200"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setStickerPreview({
+                                      url: membrane.picture_url,
+                                      title: `Membrane Sticker - ${membrane.brand_type}`,
+                                      type: 'membrane'
+                                    });
+                                  }}
+                                  title="Click to view full size"
+                                >
+                                  <img
+                                    src={membrane.picture_url}
+                                    alt="Membrane sticker"
+                                    className="w-full h-24 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="border-2 border-dashed border-indigo-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                  <Camera className="h-4 w-4 text-indigo-400" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Implants Information */}
-            {(implants || []).length > 0 && (
+              {/* Implants Information */}
+              {(implants || []).length > 0 && (
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-gray-600 rounded-lg">
+                      <Activity className="h-6 w-6 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">Implants & Components ({(implants || []).length})</h3>
+                  </div>
+
+                  {/* Upper Implants */}
+                  {upperImplants.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                        Upper Arch ({upperImplants.length} implants)
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {upperImplants.map((implant: any) => (
+                          <div key={implant?.id || Math.random()} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200">
+                            {/* Header with Position */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                {implant?.position || '?'}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-blue-900 text-sm">Tooth {implant?.position || '?'}</h4>
+                                <p className="text-xs text-blue-700">
+                                  {implant?.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Implant Details */}
+                            <div className="space-y-2 mb-3">
+                              {implant?.implant_subtype && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-blue-800">Series: {implant.implant_subtype}</p>
+                                </div>
+                              )}
+                              {implant?.implant_size && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-blue-800">Size: {implant.implant_size}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Images Grid */}
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                              {/* Implant Image */}
+                              <div>
+                                <p className="text-xs font-bold text-blue-800 mb-1">Implant</p>
+                                {implant?.implant_picture_url ? (
+                                  <div
+                                    className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
+                                    onClick={(e) => handleStickerPreview(e, implant.implant_picture_url, implant, 'implant')}
+                                    title="Click to view full size"
+                                  >
+                                    <img
+                                      src={implant.implant_picture_url}
+                                      alt="Implant sticker"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-blue-400" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* MUA Image */}
+                              <div>
+                                <p className="text-xs font-bold text-blue-800 mb-1">MUA</p>
+                                {implant?.mua_picture_url ? (
+                                  <div
+                                    className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
+                                    onClick={(e) => handleStickerPreview(e, implant.mua_picture_url, implant, 'mua')}
+                                    title="Click to view full size"
+                                  >
+                                    <img
+                                      src={implant.mua_picture_url}
+                                      alt="MUA sticker"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-blue-400" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* MUA Details */}
+                            {(implant?.mua_brand || implant?.mua_size) && (
+                              <div className="bg-white/70 rounded-lg p-2 border border-blue-200">
+                                <p className="text-xs font-bold text-blue-800 mb-1">MUA Details</p>
+                                {implant?.mua_brand && (
+                                  <p className="text-xs text-blue-700">
+                                    {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
+                                  </p>
+                                )}
+                                {implant?.mua_size && (
+                                  <p className="text-xs text-blue-700">Size: {implant.mua_size}</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lower Implants */}
+                  {lowerImplants.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                        Lower Arch ({lowerImplants.length} implants)
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {lowerImplants.map((implant: any) => (
+                          <div key={implant?.id || Math.random()} className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200">
+                            {/* Header with Position */}
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                {implant?.position || '?'}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-green-900 text-sm">Tooth {implant?.position || '?'}</h4>
+                                <p className="text-xs text-green-700">
+                                  {implant?.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Implant Details */}
+                            <div className="space-y-2 mb-3">
+                              {implant?.implant_subtype && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-green-800">Series: {implant.implant_subtype}</p>
+                                </div>
+                              )}
+                              {implant?.implant_size && (
+                                <div className="bg-white/70 rounded-lg px-2 py-1">
+                                  <p className="text-xs font-medium text-green-800">Size: {implant.implant_size}</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Images Grid */}
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                              {/* Implant Image */}
+                              <div>
+                                <p className="text-xs font-bold text-green-800 mb-1">Implant</p>
+                                {implant?.implant_picture_url ? (
+                                  <div
+                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                    onClick={(e) => handleStickerPreview(e, implant.implant_picture_url, implant, 'implant')}
+                                    title="Click to view full size"
+                                  >
+                                    <img
+                                      src={implant.implant_picture_url}
+                                      alt="Implant sticker"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-green-400" />
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* MUA Image */}
+                              <div>
+                                <p className="text-xs font-bold text-green-800 mb-1">MUA</p>
+                                {implant?.mua_picture_url ? (
+                                  <div
+                                    className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
+                                    onClick={(e) => handleStickerPreview(e, implant.mua_picture_url, implant, 'mua')}
+                                    title="Click to view full size"
+                                  >
+                                    <img
+                                      src={implant.mua_picture_url}
+                                      alt="MUA sticker"
+                                      className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
+                                    <Camera className="h-4 w-4 text-green-400" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* MUA Details */}
+                            {(implant?.mua_brand || implant?.mua_size) && (
+                              <div className="bg-white/70 rounded-lg p-2 border border-green-200">
+                                <p className="text-xs font-bold text-green-800 mb-1">MUA Details</p>
+                                {implant?.mua_brand && (
+                                  <p className="text-xs text-green-700">
+                                    {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
+                                  </p>
+                                )}
+                                {implant?.mua_size && (
+                                  <p className="text-xs text-green-700">Size: {implant.mua_size}</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Report Summary */}
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 shadow-lg">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-gray-600 rounded-lg">
-                    <Activity className="h-6 w-6 text-white" />
+                    <CheckCircle className="h-6 w-6 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900">Implants & Components ({(implants || []).length})</h3>
+                  <h3 className="text-xl font-bold text-gray-900">Report Summary</h3>
                 </div>
 
-                {/* Upper Implants */}
-                {upperImplants.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                      Upper Arch ({upperImplants.length} implants)
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {upperImplants.map((implant: any) => (
-                        <div key={implant?.id || Math.random()} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200">
-                          {/* Header with Position */}
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                              {implant?.position || '?'}
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-blue-900 text-sm">Tooth {implant?.position || '?'}</h4>
-                              <p className="text-xs text-blue-700">
-                                {implant?.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Implant Details */}
-                          <div className="space-y-2 mb-3">
-                            {implant?.implant_subtype && (
-                              <div className="bg-white/70 rounded-lg px-2 py-1">
-                                <p className="text-xs font-medium text-blue-800">Series: {implant.implant_subtype}</p>
-                              </div>
-                            )}
-                            {implant?.implant_size && (
-                              <div className="bg-white/70 rounded-lg px-2 py-1">
-                                <p className="text-xs font-medium text-blue-800">Size: {implant.implant_size}</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Images Grid */}
-                          <div className="grid grid-cols-2 gap-2 mb-3">
-                            {/* Implant Image */}
-                            <div>
-                              <p className="text-xs font-bold text-blue-800 mb-1">Implant</p>
-                              {implant?.implant_picture_url ? (
-                                <div
-                                  className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
-                                  onClick={() => handleStickerPreview(implant.implant_picture_url, implant, 'implant')}
-                                  title="Click to view full size"
-                                >
-                                  <img
-                                    src={implant.implant_picture_url}
-                                    alt="Implant sticker"
-                                    className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                  <Camera className="h-4 w-4 text-blue-400" />
-                                </div>
-                              )}
-                            </div>
-
-                            {/* MUA Image */}
-                            <div>
-                              <p className="text-xs font-bold text-blue-800 mb-1">MUA</p>
-                              {implant?.mua_picture_url ? (
-                                <div
-                                  className="border-2 border-blue-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
-                                  onClick={() => handleStickerPreview(implant.mua_picture_url, implant, 'mua')}
-                                  title="Click to view full size"
-                                >
-                                  <img
-                                    src={implant.mua_picture_url}
-                                    alt="MUA sticker"
-                                    className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="border-2 border-dashed border-blue-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                  <Camera className="h-4 w-4 text-blue-400" />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* MUA Details */}
-                          {(implant?.mua_brand || implant?.mua_size) && (
-                            <div className="bg-white/70 rounded-lg p-2 border border-blue-200">
-                              <p className="text-xs font-bold text-blue-800 mb-1">MUA Details</p>
-                              {implant?.mua_brand && (
-                                <p className="text-xs text-blue-700">
-                                  {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
-                                </p>
-                              )}
-                              {implant?.mua_size && (
-                                <p className="text-xs text-blue-700">Size: {implant.mua_size}</p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                    <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Report Status</div>
+                    <div className={`text-sm font-semibold ${sheet?.status === 'completed' ? 'text-green-600' : 'text-orange-600'
+                      }`}>
+                      {formatFieldValue(sheet?.status)}
                     </div>
                   </div>
-                )}
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                    <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Created Date</div>
+                    <div className="text-sm font-semibold text-gray-900">{sheet?.created_at ? formatDate(sheet.created_at) : 'N/A'}</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                    <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Total Implants</div>
+                    <div className="text-sm font-semibold text-gray-900">{(implants || []).length} implants</div>
+                  </div>
+                </div>
 
-                {/* Lower Implants */}
-                {lowerImplants.length > 0 && (
-                  <div>
-                    <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                      Lower Arch ({lowerImplants.length} implants)
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {lowerImplants.map((implant: any) => (
-                        <div key={implant?.id || Math.random()} className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-200">
-                          {/* Header with Position */}
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                              {implant?.position || '?'}
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-green-900 text-sm">Tooth {implant?.position || '?'}</h4>
-                              <p className="text-xs text-green-700">
-                                {implant?.implant_brand ? implant.implant_brand.toUpperCase() : 'No Brand'}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Implant Details */}
-                          <div className="space-y-2 mb-3">
-                            {implant?.implant_subtype && (
-                              <div className="bg-white/70 rounded-lg px-2 py-1">
-                                <p className="text-xs font-medium text-green-800">Series: {implant.implant_subtype}</p>
-                              </div>
-                            )}
-                            {implant?.implant_size && (
-                              <div className="bg-white/70 rounded-lg px-2 py-1">
-                                <p className="text-xs font-medium text-green-800">Size: {implant.implant_size}</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Images Grid */}
-                          <div className="grid grid-cols-2 gap-2 mb-3">
-                            {/* Implant Image */}
-                            <div>
-                              <p className="text-xs font-bold text-green-800 mb-1">Implant</p>
-                              {implant?.implant_picture_url ? (
-                                <div
-                                  className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
-                                  onClick={() => handleStickerPreview(implant.implant_picture_url, implant, 'implant')}
-                                  title="Click to view full size"
-                                >
-                                  <img
-                                    src={implant.implant_picture_url}
-                                    alt="Implant sticker"
-                                    className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                  <Camera className="h-4 w-4 text-green-400" />
-                                </div>
-                              )}
-                            </div>
-
-                            {/* MUA Image */}
-                            <div>
-                              <p className="text-xs font-bold text-green-800 mb-1">MUA</p>
-                              {implant?.mua_picture_url ? (
-                                <div
-                                  className="border-2 border-green-300 rounded-lg overflow-hidden bg-white shadow-sm cursor-pointer hover:border-green-500 hover:shadow-md transition-all duration-200"
-                                  onClick={() => handleStickerPreview(implant.mua_picture_url, implant, 'mua')}
-                                  title="Click to view full size"
-                                >
-                                  <img
-                                    src={implant.mua_picture_url}
-                                    alt="MUA sticker"
-                                    className="w-full h-16 object-contain p-1 hover:scale-105 transition-transform duration-200"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="border-2 border-dashed border-green-300 rounded-lg h-16 flex items-center justify-center bg-white/50">
-                                  <Camera className="h-4 w-4 text-green-400" />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* MUA Details */}
-                          {(implant?.mua_brand || implant?.mua_size) && (
-                            <div className="bg-white/70 rounded-lg p-2 border border-green-200">
-                              <p className="text-xs font-bold text-green-800 mb-1">MUA Details</p>
-                              {implant?.mua_brand && (
-                                <p className="text-xs text-green-700">
-                                  {implant.mua_brand && implant.mua_subtype ? `${implant.mua_brand} - ${implant.mua_subtype}` : implant.mua_brand}
-                                </p>
-                              )}
-                              {implant?.mua_size && (
-                                <p className="text-xs text-green-700">Size: {implant.mua_size}</p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                {sheet?.updated_at && sheet?.created_at && sheet.updated_at !== sheet.created_at && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-xs font-medium text-blue-600 mb-1">Last Updated</div>
+                    <div className="text-sm text-blue-800">{formatDate(sheet.updated_at)}</div>
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Report Summary */}
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 shadow-lg">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-gray-600 rounded-lg">
-                  <CheckCircle className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">Report Summary</h3>
+              {/* Actions */}
+              <div className="flex justify-end pt-4 border-t border-gray-200">
+                <Button onClick={onClose} className="bg-gray-600 hover:bg-gray-700 text-white">
+                  Close Preview
+                </Button>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                  <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Report Status</div>
-                  <div className={`text-sm font-semibold ${
-                    sheet?.status === 'completed' ? 'text-green-600' : 'text-orange-600'
-                  }`}>
-                    {formatFieldValue(sheet?.status)}
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                  <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Created Date</div>
-                  <div className="text-sm font-semibold text-gray-900">{sheet?.created_at ? formatDate(sheet.created_at) : 'N/A'}</div>
-                </div>
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-                  <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">Total Implants</div>
-                  <div className="text-sm font-semibold text-gray-900">{(implants || []).length} implants</div>
-                </div>
-              </div>
-
-              {sheet?.updated_at && sheet?.created_at && sheet.updated_at !== sheet.created_at && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="text-xs font-medium text-blue-600 mb-1">Last Updated</div>
-                  <div className="text-sm text-blue-800">{formatDate(sheet.updated_at)}</div>
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-end pt-4 border-t border-gray-200">
-              <Button onClick={onClose} className="bg-gray-600 hover:bg-gray-700 text-white">
-                Close Preview
-              </Button>
             </div>
           </div>
-        </div>
-      </DialogContent>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Sticker Preview Dialog */}
       <Dialog open={!!stickerPreview} onOpenChange={closeStickerPreview}>
@@ -416,6 +578,9 @@ export const ViewSurgicalRecallSheet: React.FC<ViewSurgicalRecallSheetProps> = (
               <Eye className="h-5 w-5 text-blue-600" />
               {stickerPreview?.title}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Preview of {stickerPreview?.title}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
@@ -440,6 +605,6 @@ export const ViewSurgicalRecallSheet: React.FC<ViewSurgicalRecallSheetProps> = (
           </div>
         </DialogContent>
       </Dialog>
-    </Dialog>
+    </>
   );
 };

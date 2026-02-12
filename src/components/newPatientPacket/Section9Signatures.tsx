@@ -12,8 +12,8 @@ import { useState } from "react";
 
 interface Section9SignaturesProps {
   formData: NewPatientFormData;
-  onInputChange: (field: string, value: any) => void;
-  onNestedInputChange: (section: string, field: string, value: any) => void;
+  onInputChange: (field: string, value: unknown) => void;
+  onNestedInputChange: (section: string, field: string, value: unknown) => void;
 }
 
 export function Section9Signatures({ formData, onInputChange, onNestedInputChange }: Section9SignaturesProps) {
@@ -75,7 +75,7 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
   const isSignatureSectionComplete = allAttestationsChecked && hasPatientName && hasSignature && hasDate;
 
   // Format date for display with error handling
-  const formatDate = (date: Date | string | any) => {
+  const formatDate = (date: Date | string | unknown) => {
     try {
       let dateObj: Date;
 
@@ -292,7 +292,7 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
         <Alert className="border-orange-200 bg-orange-50">
           <AlertTriangle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
-            <strong>Attestation Required:</strong> Please review and check all attestation items to confirm 
+            <strong>Attestation Required:</strong> Please review and check all attestation items to confirm
             your agreement before signing.
           </AlertDescription>
         </Alert>
@@ -320,7 +320,7 @@ export function Section9Signatures({ formData, onInputChange, onNestedInputChang
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
-            <strong>Form Complete:</strong> Thank you for completing the New Patient Packet. Your information 
+            <strong>Form Complete:</strong> Thank you for completing the New Patient Packet. Your information
             has been recorded and will be reviewed by our clinical team before your appointment.
           </AlertDescription>
         </Alert>

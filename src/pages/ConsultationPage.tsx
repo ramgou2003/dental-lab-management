@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ConsultationTable } from "@/components/ConsultationTable";
@@ -10,9 +11,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { AppointmentSchedulerDialog } from "@/components/calendar/AppointmentSchedulerDialog";
 import { ConsultationFilterDialog, ConsultationFilters } from "@/components/ConsultationFilterDialog";
-import { Filter } from "lucide-react";
+import { Filter, FileText } from "lucide-react";
 
 const ConsultationPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("consultations");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -91,7 +93,11 @@ const ConsultationPage: React.FC = () => {
             label: activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filters",
             icon: Filter,
             onClick: handleFilterClick
-          } : undefined}
+          } : {
+            label: "Unmapped Packets",
+            icon: FileText,
+            onClick: () => navigate('/consultation/unmapped-packets')
+          }}
           action={{
             label: "Add Consultation",
             onClick: handleAddConsultation

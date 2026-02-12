@@ -8,6 +8,7 @@ import { Eye, Calendar, Clock, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppointments } from "@/hooks/useAppointments";
 import { PatientConsultationsDialog } from "@/components/PatientConsultationsDialog";
+import { PatientPacketDialog } from "@/components/PatientPacketDialog";
 
 interface ConsultationAppointment {
   id: string;
@@ -31,6 +32,8 @@ interface ConsultationAppointment {
   last_name: string | null;
   // Consultation status from consultations table
   consultation_status?: string | null;
+  public_link?: string | null;
+  assigned_user?: { full_name: string } | null;
 }
 
 interface ConsultationPatient {
@@ -236,6 +239,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
       const appointmentIds = (appointmentsData || []).map(apt => apt.id);
       let consultationPatientsMap = new Map();
       let consultationStatusMap = new Map();
+      let consultationLeadMap = new Map();
 
       if (appointmentIds.length > 0) {
         // Get consultation records for these appointments
@@ -245,10 +249,37 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
           .in('appointment_id', appointmentIds);
 
         if (!consultationError && consultationsData) {
+          // Fetch consultation_patients to get lead_ids
+          const cpIds: string[] = consultationsData
+            .map((c: any) => c.consultation_patient_id)
+            .filter((id: any) => id);
+
+          let cpLeadMap = new Map();
+          if (cpIds.length > 0) {
+            const { data: cpData } = await supabase
+              .from('consultation_patients')
+              .select('id, lead_id')
+              .in('id', cpIds);
+
+            if (cpData) {
+              cpData.forEach((cp: any) => {
+                if (cp.lead_id) cpLeadMap.set(cp.id, cp.lead_id);
+              });
+            }
+          }
+
           consultationsData.forEach(consultation => {
             // Use the consultation record ID as the "Consultation ID" for display
             consultationPatientsMap.set(consultation.appointment_id, consultation.id);
             consultationStatusMap.set(consultation.appointment_id, consultation.consultation_status);
+
+            // Extract lead_id if available via consultation_patient
+            if (consultation.consultation_patient_id) {
+              const leadId = cpLeadMap.get(consultation.consultation_patient_id);
+              if (leadId) {
+                consultationLeadMap.set(consultation.appointment_id, leadId);
+              }
+            }
           });
         }
       }
@@ -261,32 +292,37 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
             phone: null,
             email: null,
             first_name: null,
-            last_name: null
+            last_name: null,
+            public_link: null
           };
 
-          // If patient_id is null, this is likely a lead appointment
-          if (!appointment.patient_id && appointment.notes) {
-            // Extract lead ID from notes if available
+          // Determine Lead ID first: Try linking map, then fallback to notes
+          let leadId = consultationLeadMap.get(appointment.id);
+
+          if (!leadId && !appointment.patient_id && appointment.notes) {
             const leadIdMatch = appointment.notes.match(/Lead ID: ([a-f0-9-]+)/);
             if (leadIdMatch) {
-              const leadId = leadIdMatch[1];
+              leadId = leadIdMatch[1];
+            }
+          }
 
-              // Fetch lead information
-              const { data: leadData, error: leadError } = await supabase
-                .from('new_patient_leads')
-                .select('id, first_name, last_name, personal_first_name, personal_last_name, phone, personal_phone, email, personal_email')
-                .eq('id', leadId)
-                .single();
+          if (leadId) {
+            // Fetch lead information
+            const { data: leadData, error: leadError } = await supabase
+              .from('new_patient_leads')
+              .select('id, first_name, last_name, personal_first_name, personal_last_name, phone, personal_phone, email, personal_email, public_link')
+              .eq('id', leadId)
+              .single();
 
-              if (!leadError && leadData) {
-                leadInfo = {
-                  lead_id: leadData.id,
-                  phone: leadData.phone || leadData.personal_phone,
-                  email: leadData.email || leadData.personal_email,
-                  first_name: leadData.first_name || leadData.personal_first_name,
-                  last_name: leadData.last_name || leadData.personal_last_name
-                };
-              }
+            if (!leadError && leadData) {
+              leadInfo = {
+                lead_id: leadData.id,
+                phone: leadData.phone || leadData.personal_phone,
+                email: leadData.email || leadData.personal_email,
+                first_name: leadData.first_name || leadData.personal_first_name,
+                last_name: leadData.last_name || leadData.personal_last_name,
+                public_link: leadData.public_link
+              };
             }
           } else if (appointment.patient_id) {
             // For existing patients, get their contact info
@@ -302,7 +338,8 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                 phone: patientData.phone,
                 email: patientData.email,
                 first_name: patientData.first_name,
-                last_name: patientData.last_name
+                last_name: patientData.last_name,
+                public_link: null
               };
             }
           }
@@ -321,6 +358,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
             appointment_notes: appointment.notes,
             created_at: appointment.created_at,
             consultation_status: consultationStatusMap.get(appointment.id) || null,
+            assigned_user: appointment.assigned_user,
             ...leadInfo
           };
         })
@@ -687,7 +725,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
             ) : (
               showScheduledLeads ? (
                 // Render consultation patients
-                filteredAppointments.map((patient: ConsultationPatient, index) => (
+                (filteredAppointments as ConsultationPatient[]).map((patient, index) => (
                   <tr key={`${patient.id}-${index}`} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap relative">
                       <div className="flex items-center">
@@ -786,7 +824,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                 ))
               ) : (
                 // Render consultation appointments
-                filteredAppointments.map((appointment: ConsultationAppointment, index) => (
+                (filteredAppointments as ConsultationAppointment[]).map((appointment, index) => (
                   <tr key={`${appointment.id}-${index}`} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap relative">
                       <div className="flex items-center">
@@ -862,7 +900,7 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
-                      <div className="flex justify-center">
+                      <div className="flex justify-center items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -874,6 +912,14 @@ export function ConsultationTable({ searchTerm, selectedDate, showScheduledLeads
                           <Play className="h-3 w-3" />
                           Start Consultation
                         </Button>
+                        {appointment.lead_id && (
+                          <PatientPacketDialog
+                            leadId={appointment.lead_id}
+                            leadName={getDisplayName(appointment)}
+                            existingLink={appointment.public_link || undefined}
+                            onLinkGenerated={() => fetchConsultationAppointments()}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>

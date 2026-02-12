@@ -226,7 +226,7 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
               </Label>
               <Input
                 id="bmi"
-                value={formData.bmi !== undefined ? formData.bmi.toString() : ''}
+                value={formData.bmi != null ? formData.bmi.toString() : ''}
                 readOnly
                 className="bg-gray-50"
                 placeholder="Auto-calculated"
@@ -431,22 +431,20 @@ export function Section1PatientInfo({ formData, onInputChange, onNestedInputChan
               <button
                 type="button"
                 onClick={() => onNestedInputChange('primaryCarePhysician', 'hasPCP', true)}
-                className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                  formData.primaryCarePhysician?.hasPCP === true
+                className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${formData.primaryCarePhysician?.hasPCP === true
                     ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
                     : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 Yes
               </button>
               <button
                 type="button"
                 onClick={() => onNestedInputChange('primaryCarePhysician', 'hasPCP', false)}
-                className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                  formData.primaryCarePhysician?.hasPCP === false
+                className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${formData.primaryCarePhysician?.hasPCP === false
                     ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
                     : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 No
               </button>

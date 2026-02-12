@@ -1,4 +1,4 @@
-import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, ChevronDown, GripVertical, Shield, UserPlus, Stethoscope, Microscope, Loader2 } from "lucide-react";
+import { House, Calendar, Users, FlaskConical, FileText, Package, Factory, Settings, LogOut, ChevronLeft, ChevronRight, ChevronDown, GripVertical, Shield, UserPlus, Stethoscope, Microscope, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -471,8 +471,18 @@ export function Sidebar({
       })}
     </nav>
 
-    {/* Footer */}
     <div className="p-4 border-t border-gray-100 space-y-1 px-[11px]">
+
+      <button
+        onClick={() => window.location.reload()}
+        className="flex items-center w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200"
+        title="Reload Page"
+      >
+        <RefreshCw className="h-5 w-5 flex-shrink-0" />
+        <span className={`ml-3 font-medium text-sm transition-all duration-300 ${collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+          Reload
+        </span>
+      </button>
 
       <button onClick={onToggleCollapse} className="flex items-center w-full text-left px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200" title={collapsed ? "Expand" : "Collapse"}>
         {collapsed ? <ChevronRight className="h-5 w-5 flex-shrink-0" /> : <ChevronLeft className="h-5 w-5 flex-shrink-0" />}

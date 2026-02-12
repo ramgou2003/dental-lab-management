@@ -8,6 +8,8 @@ export interface SurgicalRecallSheet {
   arch_type: 'upper' | 'lower' | 'dual';
   upper_surgery_type?: string;
   lower_surgery_type?: string;
+  is_graft_used?: boolean;
+  is_membrane_used?: boolean;
   status: 'draft' | 'completed';
   created_at?: string;
   updated_at?: string;
@@ -45,6 +47,14 @@ export interface SavedImplant {
   mua_picture?: File | undefined;      // ✅ Made explicitly optional for database saving
   mua_picture_url?: string;
   arch_type: 'upper' | 'lower';
+}
+
+export interface SavedGraftMembrane {
+  id: string;
+  type: 'graft' | 'membrane';
+  brand_type: string;
+  file?: File | null;
+  picture_url?: string | null;
 }
 
 // Manual test function to delete specific URLs
@@ -224,6 +234,10 @@ export async function deleteSurgicalRecallImages(sheetId: string): Promise<boole
       }
     });
 
+    // Add Graft and Membrane images
+    if (sheet.graft_picture_url) imageUrls.push(sheet.graft_picture_url);
+    if (sheet.membrane_picture_url) imageUrls.push(sheet.membrane_picture_url);
+
     console.log('🖼️ Found', imageUrls.length, 'images to delete:', imageUrls);
 
     // Delete all images
@@ -330,8 +344,8 @@ export async function deleteImage(imageUrl: string): Promise<boolean> {
       console.error('❌ Error deleting image from storage:', error);
       console.error('❌ Error details:', {
         message: error.message,
-        statusCode: error.statusCode,
-        error: error.error
+        statusCode: (error as any).statusCode,
+        error: (error as any).error
       });
       return false;
     }
@@ -398,8 +412,8 @@ export async function uploadImage(file: File, path: string): Promise<string | nu
       console.error('Supabase storage error:', error);
       console.error('Error details:', {
         message: error.message,
-        statusCode: error.statusCode,
-        error: error.error
+        statusCode: (error as any).statusCode,
+        error: (error as any).error
       });
       return null;
     }
@@ -422,7 +436,8 @@ export async function uploadImage(file: File, path: string): Promise<string | nu
 // Save surgical recall sheet
 export async function saveSurgicalRecallSheet(
   sheetData: Omit<SurgicalRecallSheet, 'id'>,
-  implants: SavedImplant[]
+  implants: SavedImplant[],
+  graftsMembranes?: SavedGraftMembrane[]
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     // First, save the main sheet
@@ -438,6 +453,30 @@ export async function saveSurgicalRecallSheet(
     }
 
     const sheetId = sheetResult.id;
+
+    // Handle Graft and Membrane array uploads if provided
+    if (graftsMembranes && graftsMembranes.length > 0) {
+      console.log('📤 Processing', graftsMembranes.length, 'grafts/membranes...');
+
+      const gmPromises = graftsMembranes.map(async (gm) => {
+        let pictureUrl = gm.picture_url;
+
+        if (gm.file instanceof File) {
+          pictureUrl = await uploadImage(gm.file, `${gm.type}/${sheetId}/${gm.id}`);
+        }
+
+        return supabase
+          .from('surgical_recall_grafts_membranes')
+          .insert({
+            surgical_recall_sheet_id: sheetId,
+            type: gm.type,
+            brand_type: gm.brand_type,
+            picture_url: pictureUrl
+          });
+      });
+
+      await Promise.all(gmPromises);
+    }
 
     // Process and save implants
     const implantPromises = implants.map(async (implant) => {
@@ -486,25 +525,25 @@ export async function saveSurgicalRecallSheet(
     const implantErrors = implantResults.filter(result => result.error);
     if (implantErrors.length > 0) {
       console.error('Error saving implants:', implantErrors);
-      return { 
-        success: false, 
-        error: `Failed to save ${implantErrors.length} implant(s)` 
+      return {
+        success: false,
+        error: `Failed to save ${implantErrors.length} implant(s)`
       };
     }
 
-    return { 
-      success: true, 
-      data: { 
-        sheet: sheetResult, 
-        implants: implantResults.map(r => r.data) 
-      } 
+    return {
+      success: true,
+      data: {
+        sheet: sheetResult,
+        implants: implantResults.map(r => r.data)
+      }
     };
 
   } catch (error) {
     console.error('Error in saveSurgicalRecallSheet:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
@@ -529,9 +568,9 @@ export async function getSurgicalRecallSheets(patientId: string) {
     return { success: true, data };
   } catch (error) {
     console.error('Error in getSurgicalRecallSheets:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
@@ -544,40 +583,33 @@ export async function deleteSurgicalRecallSheet(sheetId: string): Promise<{ succ
     // ✅ STEP 1: Get all image URLs BEFORE deleting anything from database
     console.log('📋 Step 1: Fetching sheet and implant data with image URLs...');
 
-    // First get the sheet info
-    const { data: sheet, error: fetchError } = await supabase
+    // ⚠️ CRITICAL: Get ALL implant and graft/membrane image URLs BEFORE any database deletion
+    // This must happen before cascade delete removes the records
+    const { data: sheetData, error: fetchError } = await supabase
       .from('surgical_recall_sheets')
-      .select('id, patient_name, surgery_date')
+      .select(`
+        id, patient_name, surgery_date,
+        surgical_recall_implants (id, position, implant_picture_url, mua_picture_url),
+        surgical_recall_grafts_membranes (id, picture_url, type)
+      `)
       .eq('id', sheetId)
       .single();
 
-    if (fetchError) {
-      console.error('❌ Error fetching sheet:', fetchError);
-      return { success: false, error: `Failed to fetch sheet: ${fetchError.message}` };
+    if (fetchError || !sheetData) {
+      console.error('❌ Error fetching sheet details for deletion:', fetchError);
+      return { success: false, error: `Failed to fetch sheet details: ${fetchError?.message || 'Sheet not found'}` };
     }
 
-    if (!sheet) {
-      console.error('❌ Sheet not found:', sheetId);
-      return { success: false, error: 'Sheet not found' };
-    }
-
-    // ⚠️ CRITICAL: Get ALL implant image URLs BEFORE any database deletion
-    // This must happen before cascade delete removes the implant records
-    const { data: implants, error: implantsError } = await supabase
-      .from('surgical_recall_implants')
-      .select('id, position, implant_picture_url, mua_picture_url')
-      .eq('surgical_recall_sheet_id', sheetId);
-
-    if (implantsError) {
-      console.error('❌ Error fetching implants:', implantsError);
-      return { success: false, error: `Failed to fetch implants: ${implantsError.message}` };
-    }
+    const sheet = sheetData as any;
+    const implants = sheet.surgical_recall_implants || [];
+    const graftsMembranes = sheet.surgical_recall_grafts_membranes || [];
 
     console.log('📋 Found sheet:', {
       id: sheet.id,
       patient: sheet.patient_name,
       date: sheet.surgery_date,
-      implantCount: implants?.length || 0
+      implantCount: implants.length,
+      gmCount: graftsMembranes.length
     });
 
     // ✅ STEP 2: Collect ALL image URLs that need to be deleted
@@ -604,6 +636,16 @@ export async function deleteSurgicalRecallSheet(sheetId: string): Promise<{ succ
       });
     } else {
       console.log('ℹ️ No implants found for this sheet');
+    }
+
+    // Add multiple Graft and Membrane images to deletion list
+    if (graftsMembranes && Array.isArray(graftsMembranes)) {
+      graftsMembranes.forEach((gm: any, index: number) => {
+        if (gm.picture_url) {
+          imageUrls.push(gm.picture_url);
+          console.log(`📸 Found ${gm.type} image:`, gm.picture_url);
+        }
+      });
     }
 
     console.log(`🖼️ Total images to delete: ${imageUrls.length}`);
@@ -692,13 +734,44 @@ export async function deleteSurgicalRecallSheet(sheetId: string): Promise<{ succ
 export async function updateSurgicalRecallSheet(
   sheetId: string,
   sheetData: Partial<SurgicalRecallSheet>,
-  implants?: SavedImplant[]
+  implants?: SavedImplant[],
+  graftsMembranes?: SavedGraftMembrane[]
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
+    let updates: Partial<SurgicalRecallSheet> = { ...sheetData };
+
+    // If graftsMembranes are provided, replace them
+    if (graftsMembranes) {
+      // Delete existing
+      await supabase
+        .from('surgical_recall_grafts_membranes')
+        .delete()
+        .eq('surgical_recall_sheet_id', sheetId);
+
+      // Upload and save new
+      const gmPromises = graftsMembranes.map(async (gm) => {
+        let pictureUrl = gm.picture_url;
+        if (gm.file instanceof File) {
+          pictureUrl = await uploadImage(gm.file, `${gm.type}/${sheetId}/${gm.id}`);
+        }
+
+        return supabase
+          .from('surgical_recall_grafts_membranes')
+          .insert({
+            surgical_recall_sheet_id: sheetId,
+            type: gm.type,
+            brand_type: gm.brand_type,
+            picture_url: pictureUrl
+          });
+      });
+
+      await Promise.all(gmPromises);
+    }
+
     // Update the main sheet
     const { data: sheetResult, error: sheetError } = await supabase
       .from('surgical_recall_sheets')
-      .update(sheetData)
+      .update(updates)
       .eq('id', sheetId)
       .select()
       .single();
@@ -720,8 +793,16 @@ export async function updateSurgicalRecallSheet(
       const implantPromises = implants.map(async (implant) => {
         // ✅ Images should already be uploaded and URLs provided
         // No need to upload again here to prevent duplicates
-        const implantPictureUrl = implant.implant_picture_url;
-        const muaPictureUrl = implant.mua_picture_url;
+        // UNLESS provided as File objects (e.g. new implants added during edit)
+        let implantPictureUrl = implant.implant_picture_url;
+        let muaPictureUrl = implant.mua_picture_url;
+
+        if (implant.implant_picture instanceof File) {
+          implantPictureUrl = await uploadImage(implant.implant_picture, `implants/${sheetId}`);
+        }
+        if (implant.mua_picture instanceof File) {
+          muaPictureUrl = await uploadImage(implant.mua_picture, `mua/${sheetId}`);
+        }
 
         console.log('💾 Saving implant to database:', {
           id: implant.id,
@@ -755,9 +836,9 @@ export async function updateSurgicalRecallSheet(
 
   } catch (error) {
     console.error('Error in updateSurgicalRecallSheet:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }

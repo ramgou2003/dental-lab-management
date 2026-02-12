@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import fixWebmDuration from "@/lib/fix-webm-duration";
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, MapPin, Heart, DollarSign, FileText, AlertCircle, CheckCircle, XCircle, Info, BarChart3, Plus, RefreshCw, Mic, FileAudio, Edit, CloudUpload, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, User, Phone, Mail, MapPin, Heart, DollarSign, FileText, AlertCircle, CheckCircle, XCircle, Info, BarChart3, Plus, RefreshCw, Mic, FileAudio, Edit, CloudUpload, Check, Loader2, Send, Copy, ExternalLink, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { NewPatientPacketForm, NewPatientPacketFormRef } from "@/components/NewPatientPacketForm";
 import { FilledPatientPacketViewer } from "@/components/FilledPatientPacketViewer";
+import { PatientPacketDetailsDialog } from "@/components/PatientPacketDetailsDialog";
 import { PatientSummaryAI } from "@/components/PatientSummaryAI";
 import { TreatmentForm } from "@/components/TreatmentForm";
 import { FinancialOutcomeForm } from "@/components/FinancialOutcomeForm";
@@ -23,8 +24,23 @@ import { LeadAppointmentScheduler } from "@/components/LeadAppointmentScheduler"
 import { NewPatientFormData } from "@/types/newPatientPacket";
 import { getPatientPacketsByLeadId, getPatientPacketsByPatientId, getPatientPacketsByConsultationPatientId, getPatientPacket, updatePatientPacket } from "@/services/patientPacketService";
 import { uploadAudioRecording, saveRecordingMetadata } from "@/lib/audioRecordingService";
-import { convertFormDataToDatabase } from "@/utils/patientPacketConverter";
+import { convertFormDataToDatabase, convertDatabaseToFormData } from "@/utils/patientPacketConverter";
 import { toast } from "sonner";
+
+// Helper to parse dates without time zone shifts for simple date strings (YYYY-MM-DD)
+const parseDateSafe = (dateStr: string | Date | null | undefined): Date | null => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+
+  // If it's a YYYY-MM-DD string, parse it using local time parts to avoid UTC shift
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? null : date;
+};
 
 const ConsultationSessionPage = () => {
   const { appointmentId } = useParams();
@@ -35,12 +51,14 @@ const ConsultationSessionPage = () => {
   const [loadingPacket, setLoadingPacket] = useState(false);
   const [isEditingPacket, setIsEditingPacket] = useState(false);
   const [packetId, setPacketId] = useState<string | null>(null);
+  const [packetDbSubmittedAt, setPacketDbSubmittedAt] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("new-patient-packet");
   const [consultationSection, setConsultationSection] = useState(1);
   const [isCompletingConsultation, setIsCompletingConsultation] = useState(false);
   const [showRecordingConsentDialog, setShowRecordingConsentDialog] = useState(false);
   const [showRecordingControlDialog, setShowRecordingControlDialog] = useState(false);
   const [showRecordingsPreviewDialog, setShowRecordingsPreviewDialog] = useState(false);
+  const [showPacketDetailsDialog, setShowPacketDetailsDialog] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
@@ -64,6 +82,130 @@ const ConsultationSessionPage = () => {
   const [showConsultationPreviewDialog, setShowConsultationPreviewDialog] = useState(false);
 
   const [showEditAppointmentDialog, setShowEditAppointmentDialog] = useState(false);
+  const [patientPacketLink, setPatientPacketLink] = useState<string>('');
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [packetLinkStatus, setPacketLinkStatus] = useState<'none' | 'sent' | 'opened' | 'submitted'>('none');
+  const [packetSubmittedAt, setPacketSubmittedAt] = useState<string>('');
+  const [linkOpenedAt, setLinkOpenedAt] = useState<string>('');
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [consultationRecordId, setConsultationRecordId] = useState<string | null>(null);
+
+  // Fetch existing public_link and packet status from consultations table
+  useEffect(() => {
+    const fetchExistingLinkAndStatus = async () => {
+      if (!consultationRecordId) return;
+      const { data: consultationData } = await supabase
+        .from('consultations')
+        .select('public_link, link_opened_at, new_patient_packet_id')
+        .eq('id', consultationRecordId)
+        .single();
+
+      if (consultationData?.public_link) {
+        setPatientPacketLink(consultationData.public_link);
+        setPacketLinkStatus('sent');
+
+        if (consultationData.link_opened_at) {
+          setPacketLinkStatus('opened');
+          setLinkOpenedAt(consultationData.link_opened_at);
+        }
+
+        if (consultationData.new_patient_packet_id) {
+          // Fetch submission time from the packet
+          const { data: packetData } = await supabase
+            .from('new_patient_packets')
+            .select('created_at')
+            .eq('id', consultationData.new_patient_packet_id)
+            .single();
+          setPacketLinkStatus('submitted');
+          if (packetData) setPacketSubmittedAt(packetData.created_at);
+        }
+      }
+    };
+    fetchExistingLinkAndStatus();
+  }, [consultationRecordId]);
+
+  const checkPacketStatus = async () => {
+    if (!consultationRecordId) return;
+    setIsCheckingStatus(true);
+    try {
+      const { data: consultationData } = await supabase
+        .from('consultations')
+        .select('link_opened_at, new_patient_packet_id')
+        .eq('id', consultationRecordId)
+        .single();
+
+      if (consultationData?.link_opened_at) {
+        setLinkOpenedAt(consultationData.link_opened_at);
+        if (packetLinkStatus === 'sent') {
+          setPacketLinkStatus('opened');
+        }
+      }
+
+      if (consultationData?.new_patient_packet_id) {
+        const { data: packetData } = await supabase
+          .from('new_patient_packets')
+          .select('created_at')
+          .eq('id', consultationData.new_patient_packet_id)
+          .single();
+        setPacketLinkStatus('submitted');
+        if (packetData) setPacketSubmittedAt(packetData.created_at);
+        toast.success('Patient has submitted their packet!');
+      } else if (consultationData?.link_opened_at) {
+        toast.info('Patient has opened the link but not submitted yet.');
+      } else {
+        toast.info('Patient has not opened the link yet.');
+      }
+    } catch (error) {
+      console.error('Error checking packet status:', error);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+
+  const generatePatientPacketLink = async () => {
+    if (!consultationRecordId) {
+      toast.error('No consultation record found');
+      return;
+    }
+    setIsGeneratingLink(true);
+    try {
+      const token = btoa(consultationRecordId);
+      const newLink = `${window.location.origin}/patient-packet/${token}`;
+
+      const { error: updateError } = await supabase
+        .from('consultations')
+        .update({ public_link: newLink })
+        .eq('id', consultationRecordId);
+
+      if (updateError) {
+        console.error('Error storing public link:', updateError);
+        toast.error('Failed to generate patient packet link');
+        return;
+      }
+
+      setPatientPacketLink(newLink);
+      setPacketLinkStatus('sent');
+      toast.success('Patient packet link generated!');
+    } catch (error) {
+      console.error('Error generating link:', error);
+      toast.error('Failed to generate link');
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const copyPatientPacketLink = async () => {
+    if (!patientPacketLink) return;
+    try {
+      await navigator.clipboard.writeText(patientPacketLink);
+      setLinkCopied(true);
+      toast.success('Link copied to clipboard!');
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      toast.error('Failed to copy link');
+    }
+  };
 
   // New Status UI State
   const [showRecordingStatusDialog, setShowRecordingStatusDialog] = useState(false);
@@ -75,8 +217,8 @@ const ConsultationSessionPage = () => {
   const tabs = [
     {
       id: "new-patient-packet",
-      label: "New Patient Packet",
-      icon: FileText,
+      label: hasFilledPacket ? "View Patient Packet Details" : "New Patient Packet",
+      icon: hasFilledPacket ? Info : FileText,
       color: "text-blue-600",
       activeColor: "text-blue-600",
       bgColor: "bg-blue-50",
@@ -607,13 +749,14 @@ const ConsultationSessionPage = () => {
       // Check if this appointment has a corresponding consultation record
       const { data: consultation, error: consultationError } = await supabase
         .from('consultations')
-        .select('consultation_patient_id, consultation_patients(*)')
+        .select('id, consultation_patient_id, consultation_patients(*)')
         .eq('appointment_id', appointmentId)
         .single();
 
       if (!consultationError && consultation?.consultation_patients) {
         setIsDirectConsultation(true);
         setConsultationPatientData(consultation.consultation_patients);
+        setConsultationRecordId(consultation.id);
         return consultation.consultation_patients;
       } else {
         setIsDirectConsultation(false);
@@ -638,24 +781,67 @@ const ConsultationSessionPage = () => {
         consultationPatientData: consultationPatientData?.id
       });
 
-      // First, try to find patient packet via consultation_patient_id
+      // 1. First priority: Check if the consultation record explicitly links to a packet
+      console.log('Fetching consultation data for appointment:', appointmentData.id);
+
+      let consultationRecord = null;
+
+      // Try by appointment_id first
+      const { data: consultationByAppointment, error: appointmentError } = await supabase
+        .from('consultations')
+        .select('*, new_patient_packets(*)')
+        .eq('appointment_id', appointmentData.id)
+        .maybeSingle();
+
+      if (!appointmentError && consultationByAppointment) {
+        consultationRecord = consultationByAppointment;
+      } else {
+        // Fallback: try by consultation_patient_id
+        const consultationData = consultationPatient || consultationPatientData;
+        if (consultationData?.id) {
+          console.log('No consultation found by appointment_id, trying by consultation_patient_id:', consultationData.id);
+          // We order by consultation_date desc to get the most recent one relevant to this patient context
+          const { data: consultationsByPatient, error: patientError } = await supabase
+            .from('consultations')
+            .select('*, new_patient_packets(*)')
+            .eq('consultation_patient_id', consultationData.id)
+            .order('consultation_date', { ascending: false })
+            .limit(1);
+
+          if (!patientError && consultationsByPatient && consultationsByPatient.length > 0) {
+            consultationRecord = consultationsByPatient[0];
+          }
+        }
+      }
+
+      if (consultationRecord?.new_patient_packets) {
+        console.log('Found explicitly linked patient packet via consultation:', consultationRecord.new_patient_packets.id);
+        // Often the joined data is incomplete if fields are huge, but let's assume it's fine. 
+        // If we need to be safe, we can re-fetch with getPatientPacket to ensure full data + conversion readiness.
+        // Actually, getPatientPacket does NOT do conversion, it returns DB format which is then converted by convertDatabaseToFormData.
+        // But let's use getPatientPacket to be consistent and ensure we have all fields.
+        const { data: fullPacketData, error: packetError } = await getPatientPacket(consultationRecord.new_patient_packets.id);
+        if (!packetError && fullPacketData) {
+          packetData = fullPacketData;
+          setPacketId(consultationRecord.new_patient_packets.id);
+        }
+      }
+
+      // 2. Second priority: Search by consultation_patient_id if not found above
       const consultationData = consultationPatient || consultationPatientData;
-      if (consultationData?.id) {
-        console.log('Fetching patient packet for consultation patient ID:', consultationData.id);
+      if (!packetData && consultationData?.id) {
+        console.log('No explicit link found, trying lookup by consultation_patient_id:', consultationData.id);
         const { data: packets, error: packetError } = await getPatientPacketsByConsultationPatientId(consultationData.id);
 
         if (!packetError && packets && packets.length > 0) {
-          console.log('Found patient packet via consultation_patient_id:', packets[0].id);
-          // Get the full packet data with proper conversion
+          console.log('Found patient packet via consultation_patient_id lookup:', packets[0].id);
           const { data: fullPacketData, error: packetError } = await getPatientPacket(packets[0].id);
           if (!packetError && fullPacketData) {
             packetData = fullPacketData;
             setPacketId(packets[0].id);
           }
         } else {
-          console.log('No patient packet found for consultation_patient_id, trying shared patient packet lookup...');
-
-          // Try to find shared patient packet by patient identity
+          console.log('No patient packet found by lookup, trying shared patient packet service...');
           try {
             const { getSharedPatientPacketForConsultation } = await import('@/services/sharedPatientPacketService');
             const { data: sharedPacket, error: sharedError } = await getSharedPatientPacketForConsultation(consultationData.id);
@@ -667,52 +853,9 @@ const ConsultationSessionPage = () => {
                 packetData = fullPacketData;
                 setPacketId(sharedPacket.id);
               }
-            } else {
-              console.log('No shared patient packet found, trying consultation record...');
             }
           } catch (error) {
             console.warn('Error finding shared patient packet:', error);
-            console.log('Falling back to consultation record lookup...');
-          }
-
-          if (!packetData) {
-            console.log('Trying consultation record lookup...');
-
-            // Fallback: try to find consultation record by appointment_id or consultation_patient_id
-            console.log('Fetching consultation data for appointment:', appointmentData.id);
-
-            // First try by appointment_id
-            let consultationRecord = null;
-            let consultationError = null;
-
-            const { data: consultationByAppointment, error: appointmentError } = await supabase
-              .from('consultations')
-              .select('*, new_patient_packets(*)')
-              .eq('appointment_id', appointmentData.id)
-              .maybeSingle();
-
-            if (!appointmentError && consultationByAppointment) {
-              consultationRecord = consultationByAppointment;
-            } else {
-              // If not found by appointment_id, try by consultation_patient_id
-              console.log('No consultation found by appointment_id, trying by consultation_patient_id:', consultationData.id);
-              const { data: consultationByPatient, error: patientError } = await supabase
-                .from('consultations')
-                .select('*, new_patient_packets(*)')
-                .eq('consultation_patient_id', consultationData.id)
-                .maybeSingle();
-
-              if (!patientError && consultationByPatient) {
-                consultationRecord = consultationByPatient;
-              }
-              consultationError = patientError;
-            }
-
-            if (!consultationError && consultationRecord?.new_patient_packets) {
-              console.log('Found patient packet via consultation record:', consultationRecord.new_patient_packets.id);
-              packetData = consultationRecord.new_patient_packets;
-              setPacketId(consultationRecord.new_patient_packets.id);
-            }
           }
         }
       }
@@ -774,7 +917,24 @@ const ConsultationSessionPage = () => {
       }
 
       if (packetData) {
-        setPatientPacketData(packetData);
+        // Handle both raw DB data and already converted form data
+        let convertedData: NewPatientFormData;
+
+        // Check if data is already converted (has firstName property)
+        if ('firstName' in packetData) {
+          console.log('📦 Data is already in form format (camelCase)');
+          convertedData = packetData as NewPatientFormData;
+        } else {
+          console.log('📦 Data is in DB format (snake_case), converting...');
+          // Convert DB format (snake_case) to form format (camelCase nested)
+          convertedData = convertDatabaseToFormData(packetData as any);
+        }
+
+        setPatientPacketData(convertedData);
+
+        // packetData might be either type, so access created_at carefully
+        const submittedAt = (packetData as any).created_at || (packetData as any).submitted_at || null;
+        setPacketDbSubmittedAt(submittedAt);
         setHasFilledPacket(true);
 
         // Check consultation data
@@ -972,11 +1132,12 @@ const ConsultationSessionPage = () => {
 
       // Get lead data for additional patient information
       let leadData = null;
-      if (patientData?.lead_id) {
+      // Cast to any to access potential lead_id that might exist in runtime but not in type
+      if ((patientData as any)?.lead_id) {
         const { data: lead, error: leadError } = await supabase
           .from('new_patient_leads')
           .select('*')
-          .eq('id', patientData.lead_id)
+          .eq('id', (patientData as any).lead_id)
           .single();
 
         if (!leadError) {
@@ -1009,50 +1170,50 @@ const ConsultationSessionPage = () => {
       // Prepare comprehensive consultation data with ALL available information
       const consultationData = {
         // Core identifiers
-        new_patient_lead_id: patientData?.lead_id || null,
+        new_patient_lead_id: (patientData as any)?.lead_id || null,
         new_patient_packet_id: packetId,
 
         // Patient basic information - prioritize packet data, then lead data, then appointment data
-        first_name: patientData?.first_name || leadData?.personal_first_name || appointmentData.patient_name?.split(' ')[0] || '',
-        last_name: patientData?.last_name || leadData?.personal_last_name || appointmentData.patient_name?.split(' ').slice(1).join(' ') || '',
-        patient_phone: patientData?.phone_cell || leadData?.personal_phone || appointmentData.patient_phone || null,
+        first_name: patientData?.firstName || leadData?.personal_first_name || appointmentData.patient_name?.split(' ')[0] || '',
+        last_name: patientData?.lastName || leadData?.personal_last_name || appointmentData.patient_name?.split(' ').slice(1).join(' ') || '',
+        patient_phone: patientData?.phone?.cell || leadData?.personal_phone || appointmentData.patient_phone || null,
         patient_email: patientData?.email || leadData?.personal_email || appointmentData.patient_email || null,
-        patient_date_of_birth: patientData?.date_of_birth || leadData?.date_of_birth || null,
+        patient_date_of_birth: patientData?.dateOfBirth || leadData?.date_of_birth || null,
         patient_gender: patientData?.gender || leadData?.gender || null,
 
         // Patient address - construct from packet data or use lead data
-        patient_address: patientData?.address_street && patientData?.address_city && patientData?.address_state ?
-          `${patientData.address_street}, ${patientData.address_city}, ${patientData.address_state} ${patientData.address_zip || ''}`.trim() :
+        patient_address: patientData?.address ?
+          `${patientData.address.street}, ${patientData.address.city}, ${patientData.address.state} ${patientData.address.zip}`.trim() :
           leadData?.address || null,
 
         // Emergency contact information
-        emergency_contact_name: patientData?.emergency_contact_name || null,
-        emergency_contact_phone: patientData?.emergency_contact_phone || null,
-        emergency_contact_relationship: patientData?.emergency_contact_relationship || null,
+        emergency_contact_name: patientData?.emergencyContact?.name || null,
+        emergency_contact_phone: patientData?.emergencyContact?.phone || null,
+        emergency_contact_relationship: patientData?.emergencyContact?.relationship || null,
 
         // Medical history from patient packet
         medical_conditions: {
-          critical_conditions: patientData?.critical_conditions || {},
-          system_specific: patientData?.system_specific || {},
-          additional_conditions: patientData?.additional_conditions || [],
-          recent_health_changes: patientData?.recent_health_changes || {}
+          critical_conditions: patientData?.criticalConditions || {},
+          system_specific: patientData?.systemSpecific || {},
+          additional_conditions: patientData?.additionalConditions || [],
+          recent_health_changes: patientData?.recentHealthChanges || {}
         },
         allergies: patientData?.allergies || {},
-        current_medications: patientData?.current_medications || {},
-        dental_status: patientData?.dental_status || {},
-        current_symptoms: patientData?.current_symptoms || {},
-        healing_issues: patientData?.healing_issues || {},
-        tobacco_use: patientData?.tobacco_use || {},
+        current_medications: patientData?.currentMedications || {},
+        dental_status: patientData?.dentalStatus || {},
+        current_symptoms: patientData?.currentSymptoms || {},
+        healing_issues: patientData?.healingIssues || {},
+        tobacco_use: patientData?.tobaccoUse || {},
 
         // Patient preferences from packet
         patient_preferences: {
-          anxiety_control: patientData?.anxiety_control || [],
-          pain_injection: patientData?.pain_injection || [],
+          anxiety_control: patientData?.anxietyControl || [],
+          pain_injection: patientData?.painInjection || [],
           communication: patientData?.communication || [],
-          sensory_sensitivities: patientData?.sensory_sensitivities || [],
-          physical_comfort: patientData?.physical_comfort || [],
-          service_preferences: patientData?.service_preferences || [],
-          other_concerns: patientData?.other_concerns || ''
+          sensory_sensitivities: patientData?.sensorySensitivities || [],
+          physical_comfort: patientData?.physicalComfort || [],
+          service_preferences: patientData?.servicePreferences || [],
+          other_concerns: patientData?.otherConcerns || ''
         },
 
         // Lead information
@@ -1062,10 +1223,10 @@ const ConsultationSessionPage = () => {
 
         // Insurance information
         insurance_info: {
-          has_medical_insurance: patientData?.has_medical_insurance || null,
-          pcp_name: patientData?.pcp_name || null,
-          pcp_practice: patientData?.pcp_practice || null,
-          pcp_phone: patientData?.pcp_phone || null
+          has_medical_insurance: (patientData as any)?.has_medical_insurance || null, // Not in type clearly
+          pcp_name: patientData?.primaryCarePhysician?.name || null,
+          pcp_practice: patientData?.primaryCarePhysician?.practice || null,
+          pcp_phone: patientData?.primaryCarePhysician?.phone || null
         },
 
         // Treatment section details (get from existing consultation or defaults)
@@ -1204,6 +1365,73 @@ const ConsultationSessionPage = () => {
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
+  // Merged Sidebar Data with robust fallback logic
+  const sidebarDisplay = {
+    phone: (hasFilledPacket && patientPacketData?.phone?.cell) ? patientPacketData.phone.cell : (hasFilledPacket && patientPacketData?.phone?.work) ? patientPacketData.phone.work : (appointmentData?.phone || appointmentData?.personal_phone),
+    email: (hasFilledPacket && patientPacketData?.email && patientPacketData.email.trim() !== '') ? patientPacketData.email : (appointmentData?.email || appointmentData?.personal_email),
+    addressLine1: (hasFilledPacket && patientPacketData?.address?.street && patientPacketData.address.street.trim() !== '') ? patientPacketData.address.street : (appointmentData?.address || appointmentData?.home_address || appointmentData?.street_address),
+    addressLine2: (hasFilledPacket && patientPacketData?.address?.city && patientPacketData.address.city.trim() !== '')
+      ? `${patientPacketData.address.city}, ${patientPacketData.address.state} ${patientPacketData.address.zip}`
+      : [appointmentData?.city, appointmentData?.state, appointmentData?.zip_code].filter(Boolean).join(', '),
+    dob: (hasFilledPacket && patientPacketData?.dateOfBirth) ? parseDateSafe(patientPacketData.dateOfBirth) : (appointmentData?.date_of_birth ? parseDateSafe(appointmentData.date_of_birth) : null),
+    gender: (hasFilledPacket && patientPacketData?.gender && patientPacketData.gender !== 'prefer-not-to-answer') ? patientPacketData.gender : appointmentData?.gender,
+    created: appointmentData?.created_at ? new Date(appointmentData.created_at) : null,
+    medicalConditions: (() => {
+      const list: string[] = [];
+      if (hasFilledPacket && patientPacketData?.criticalConditions) {
+        const cc = patientPacketData.criticalConditions;
+        if (cc.acidReflux) list.push("Acid Reflux");
+        if (cc.cancer?.has) list.push(`Cancer${cc.cancer.type ? ` (${cc.cancer.type})` : ''}`);
+        if (cc.depressionAnxiety) list.push("Depression/Anxiety");
+        if (cc.diabetes?.has) list.push(`Diabetes${cc.diabetes.type ? ` (Type ${cc.diabetes.type})` : ''}${cc.diabetes.a1cLevel ? ` (A1C: ${cc.diabetes.a1cLevel})` : ''}`);
+        if (cc.heartDisease) list.push("Heart Disease");
+        if (cc.highBloodPressure) list.push("High Blood Pressure");
+        if (cc.periodontalDisease) list.push("Periodontal Disease");
+        if (cc.substanceAbuse) list.push("Substance Abuse");
+        if (cc.other) list.push(cc.other);
+      }
+      if (hasFilledPacket && patientPacketData?.systemSpecific) {
+        const ss = patientPacketData.systemSpecific;
+        list.push(...(ss.respiratory || []));
+        list.push(...(ss.cardiovascular || []));
+        list.push(...(ss.gastrointestinal || []));
+        list.push(...(ss.neurological || []));
+        list.push(...(ss.endocrineRenal || []));
+      }
+      if (hasFilledPacket && patientPacketData?.additionalConditions) {
+        list.push(...patientPacketData.additionalConditions);
+      }
+      // Fallback
+      if (list.length === 0 && appointmentData?.medical_conditions) {
+        list.push(...appointmentData.medical_conditions);
+      }
+      return Array.from(new Set(list)); // Dedupe
+    })(),
+    allergies: (() => {
+      const list: string[] = [];
+      if (hasFilledPacket && patientPacketData?.allergies) {
+        const a = patientPacketData.allergies;
+        list.push(...(a.dentalRelated || []));
+        list.push(...(a.medications || []));
+        list.push(...(a.other || []));
+        if (a.food) list.push(`Food: ${a.food}`);
+      }
+      return list;
+    })(),
+    medications: (() => {
+      const list: string[] = [];
+      if (hasFilledPacket && patientPacketData?.currentMedications) {
+        const m = patientPacketData.currentMedications;
+        list.push(...(m.emergency || []));
+        list.push(...(m.boneOsteoporosis || []));
+        list.push(...(m.specialized || []));
+        // complete might be a long string, keep it as is
+        if (m.complete) list.push(m.complete);
+      }
+      return list;
+    })()
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1244,7 +1472,12 @@ const ConsultationSessionPage = () => {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      if (tab.id === 'new-patient-packet' && hasFilledPacket) {
+                        setShowPacketDetailsDialog(true);
+                      }
+                    }}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${isActive
                       ? `${tab.bgColor} ${tab.activeColor} shadow-sm border ${tab.borderColor}`
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -1452,66 +1685,40 @@ const ConsultationSessionPage = () => {
                       <h4 className="text-sm font-semibold text-gray-900">Contact Information</h4>
                     </div>
 
-                    {(appointmentData?.phone || appointmentData?.personal_phone) && (
+                    {sidebarDisplay.phone && (
                       <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                         <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <Phone className="h-4 w-4 text-green-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {appointmentData.phone || appointmentData.personal_phone}
+                            {sidebarDisplay.phone}
                           </p>
                           <p className="text-xs text-gray-500">Phone Number</p>
                         </div>
                       </div>
                     )}
 
-                    {(appointmentData?.email || appointmentData?.personal_email) && (
+                    {sidebarDisplay.email && (
                       <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <Mail className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {appointmentData.email || appointmentData.personal_email}
+                            {sidebarDisplay.email}
                           </p>
                           <p className="text-xs text-gray-500">Email Address</p>
                         </div>
                       </div>
                     )}
 
-                    {appointmentData?.best_contact_time && (
-                      <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Clock className="h-4 w-4 text-purple-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{appointmentData.best_contact_time}</p>
-                          <p className="text-xs text-gray-500">Best Contact Time</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {appointmentData?.phone_call_preference && (
-                      <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Phone className="h-4 w-4 text-indigo-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{appointmentData.phone_call_preference}</p>
-                          <p className="text-xs text-gray-500">Phone Call Preference</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {appointmentData?.preferred_contact && (
-                      <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                        <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Mail className="h-4 w-4 text-teal-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{appointmentData.preferred_contact}</p>
-                          <p className="text-xs text-gray-500">Preferred Contact Method</p>
+                    {!sidebarDisplay.phone && !sidebarDisplay.email && (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-center">
+                          <Phone className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500 font-medium">No contact information</p>
+                          <p className="text-xs text-gray-400">Contact details will appear here</p>
                         </div>
                       </div>
                     )}
@@ -1526,47 +1733,49 @@ const ConsultationSessionPage = () => {
                       <h4 className="text-sm font-semibold text-gray-900">Personal Details</h4>
                     </div>
 
-                    {appointmentData?.date_of_birth && (
+                    {sidebarDisplay.dob && (
                       <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <Calendar className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900">
-                            {new Date(appointmentData.date_of_birth).toLocaleDateString()}
+                            {sidebarDisplay.dob.toLocaleDateString()}
                           </p>
                           <p className="text-xs text-gray-500">Date of Birth</p>
                         </div>
                       </div>
                     )}
 
-                    {appointmentData?.gender && (
+                    {sidebarDisplay.gender && (
                       <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                         <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0">
                           <User className="h-4 w-4 text-pink-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 capitalize">{appointmentData.gender}</p>
+                          <p className="text-sm font-medium text-gray-900 capitalize">{sidebarDisplay.gender}</p>
                           <p className="text-xs text-gray-500">Gender</p>
                         </div>
                       </div>
                     )}
 
-                    <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Calendar className="h-4 w-4 text-gray-600" />
+                    {sidebarDisplay.created && (
+                      <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Calendar className="h-4 w-4 text-gray-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">
+                            {sidebarDisplay.created.toLocaleDateString()}
+                          </p>
+                          <p className="text-xs text-gray-500">Appointment Created</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {appointmentData?.created_at ? new Date(appointmentData.created_at).toLocaleDateString() : 'N/A'}
-                        </p>
-                        <p className="text-xs text-gray-500">Appointment Created</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Address Information */}
-                  {(appointmentData?.address || appointmentData?.home_address || appointmentData?.street_address) && (
+                  {sidebarDisplay.addressLine1 && (
                     <div className="space-y-3 border-t border-gray-200 pt-4">
                       <div className="flex items-center justify-center gap-2 mb-3">
                         <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
@@ -1580,11 +1789,11 @@ const ConsultationSessionPage = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900">
-                            {appointmentData.address || appointmentData.home_address || appointmentData.street_address}
+                            {sidebarDisplay.addressLine1}
                           </p>
-                          {(appointmentData.city || appointmentData.state || appointmentData.zip_code) && (
+                          {sidebarDisplay.addressLine2 && (
                             <p className="text-sm text-gray-700">
-                              {[appointmentData.city, appointmentData.state, appointmentData.zip_code].filter(Boolean).join(', ')}
+                              {sidebarDisplay.addressLine2}
                             </p>
                           )}
                           <p className="text-xs text-gray-500">Home Address</p>
@@ -1593,79 +1802,54 @@ const ConsultationSessionPage = () => {
                     </div>
                   )}
 
-                  {/* Empty State for Contact Information */}
-                  {!appointmentData?.phone && !appointmentData?.personal_phone &&
-                    !appointmentData?.email && !appointmentData?.personal_email &&
-                    !appointmentData?.best_contact_time && !appointmentData?.phone_call_preference &&
-                    !appointmentData?.preferred_contact && (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="text-center">
-                          <Phone className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500 font-medium">No contact information</p>
-                          <p className="text-xs text-gray-400">Contact details will appear here</p>
-                        </div>
-                      </div>
-                    )}
+
                 </div>
 
                 {/* Medical & Dental Information Section */}
                 <div className="space-y-4 border-t border-gray-200 pt-6">
-                  {(appointmentData?.reason_for_visit || appointmentData?.urgency ||
-                    (appointmentData?.dental_problems && appointmentData.dental_problems.length > 0) ||
-                    (appointmentData?.immediate_needs && appointmentData.immediate_needs.length > 0) ||
-                    appointmentData?.implant_type ||
-                    (appointmentData?.medical_conditions && appointmentData.medical_conditions.length > 0) ||
-                    appointmentData?.has_medical_insurance) ? (
+                  {(sidebarDisplay.medicalConditions.length > 0 || sidebarDisplay.allergies.length > 0 || sidebarDisplay.medications.length > 0 || appointmentData?.has_medical_insurance) ? (
                     <>
-                      {/* Dental Information Section */}
+                      {/* Medical Information Section */}
                       <div className="space-y-3">
-                        <div className="flex items-center justify-center gap-2 mb-4">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Heart className="h-4 w-4 text-blue-600" />
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                            <Heart className="h-4 w-4 text-red-600" />
                           </div>
-                          <h4 className="text-lg font-semibold text-gray-900">Dental Information</h4>
+                          <h4 className="text-lg font-semibold text-gray-900">Medical Information</h4>
                         </div>
 
-                        {appointmentData?.reason_for_visit && (
-                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                            <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <FileText className="h-3 w-3 text-blue-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-blue-900 mb-1">Reason for Visit</p>
-                                <p className="text-sm text-blue-800">{appointmentData.reason_for_visit}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {appointmentData?.urgency && (
+                        {sidebarDisplay.medicalConditions.length > 0 && (
                           <div className="p-4 bg-red-50 rounded-lg border border-red-200">
                             <div className="flex items-start gap-3">
                               <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                                 <AlertCircle className="h-3 w-3 text-red-600" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-red-900 mb-1">Urgency Level</p>
-                                <p className="text-sm text-red-800 capitalize">{appointmentData.urgency}</p>
+                                <p className="text-sm font-medium text-red-900 mb-2">Conditions & Medical Hx</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {sidebarDisplay.medicalConditions.map((condition: string, index: number) => (
+                                    <Badge key={index} variant="outline" className="bg-red-100 border-red-300 text-red-800 text-xs text-wrap text-left break-words whitespace-normal h-auto py-1">
+                                      {condition}
+                                    </Badge>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           </div>
                         )}
 
-                        {appointmentData?.dental_problems && appointmentData.dental_problems.length > 0 && (
+                        {sidebarDisplay.allergies.length > 0 && (
                           <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
                             <div className="flex items-start gap-3">
                               <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                                 <AlertCircle className="h-3 w-3 text-orange-600" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-orange-900 mb-2">Dental Problems</p>
+                                <p className="text-sm font-medium text-orange-900 mb-2">Allergies</p>
                                 <div className="flex flex-wrap gap-1">
-                                  {appointmentData.dental_problems.map((problem: string, index: number) => (
-                                    <Badge key={index} variant="outline" className="bg-orange-100 border-orange-300 text-orange-800 text-xs">
-                                      {problem}
+                                  {sidebarDisplay.allergies.map((allergy: string, index: number) => (
+                                    <Badge key={index} variant="outline" className="bg-orange-100 border-orange-300 text-orange-800 text-xs text-wrap text-left break-words whitespace-normal h-auto py-1">
+                                      {allergy}
                                     </Badge>
                                   ))}
                                 </div>
@@ -1674,19 +1858,20 @@ const ConsultationSessionPage = () => {
                           </div>
                         )}
 
-                        {appointmentData?.immediate_needs && appointmentData.immediate_needs.length > 0 && (
-                          <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                        {sidebarDisplay.medications.length > 0 && (
+                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                             <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <Clock className="h-3 w-3 text-yellow-600" />
+                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <FileText className="h-3 w-3 text-blue-600" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-yellow-900 mb-2">Immediate Needs</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {appointmentData.immediate_needs.map((need: string, index: number) => (
-                                    <Badge key={index} variant="outline" className="bg-yellow-100 border-yellow-300 text-yellow-800 text-xs">
-                                      {need}
-                                    </Badge>
+                                <p className="text-sm font-medium text-blue-900 mb-2">Current Medications</p>
+                                <div className="flex flex-col gap-1">
+                                  {sidebarDisplay.medications.map((med: string, index: number) => (
+                                    <div key={index} className="flex items-start gap-2">
+                                      <div className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
+                                      <p className="text-xs text-blue-800 break-words">{med}</p>
+                                    </div>
                                   ))}
                                 </div>
                               </div>
@@ -1694,67 +1879,20 @@ const ConsultationSessionPage = () => {
                           </div>
                         )}
 
-                        {appointmentData?.implant_type && (
-                          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                        {appointmentData?.has_medical_insurance && (
+                          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                             <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <Heart className="h-3 w-3 text-purple-600" />
+                              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <CheckCircle className="h-3 w-3 text-green-600" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-purple-900 mb-1">Implant Type</p>
-                                <p className="text-sm text-purple-800">{appointmentData.implant_type}</p>
+                                <p className="text-sm font-medium text-green-900 mb-1">Medical Insurance</p>
+                                <p className="text-sm text-green-800 capitalize">{appointmentData.has_medical_insurance}</p>
                               </div>
                             </div>
                           </div>
                         )}
                       </div>
-
-                      {/* Medical Information Section */}
-                      {((appointmentData?.medical_conditions && appointmentData.medical_conditions.length > 0) ||
-                        appointmentData?.has_medical_insurance) && (
-                          <div className="space-y-3 border-t border-gray-200 pt-4">
-                            <div className="flex items-center justify-center gap-2 mb-3">
-                              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                                <Heart className="h-4 w-4 text-red-600" />
-                              </div>
-                              <h4 className="text-lg font-semibold text-gray-900">Medical Information</h4>
-                            </div>
-
-                            {appointmentData?.medical_conditions && appointmentData.medical_conditions.length > 0 && (
-                              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                                <div className="flex items-start gap-3">
-                                  <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <AlertCircle className="h-3 w-3 text-red-600" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-red-900 mb-2">Medical Conditions</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {appointmentData.medical_conditions.map((condition: string, index: number) => (
-                                        <Badge key={index} variant="outline" className="bg-red-100 border-red-300 text-red-800 text-xs">
-                                          {condition}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {appointmentData?.has_medical_insurance && (
-                              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                                <div className="flex items-start gap-3">
-                                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <CheckCircle className="h-3 w-3 text-green-600" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-green-900 mb-1">Medical Insurance</p>
-                                    <p className="text-sm text-green-800 capitalize">{appointmentData.has_medical_insurance}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
                     </>
                   ) : (
                     <div className="flex items-center justify-center py-8">
@@ -1767,182 +1905,11 @@ const ConsultationSessionPage = () => {
                   )}
                 </div>
 
-                {/* Financial Information Section */}
-                <div className="space-y-4 border-t border-gray-200 pt-6">
-                  {(appointmentData?.use_financing || appointmentData?.credit_score ||
-                    (appointmentData?.barriers && appointmentData.barriers.length > 0) ||
-                    appointmentData?.need_loved_one_help) ? (
-                    <>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-center gap-2 mb-4">
-                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                          </div>
-                          <h4 className="text-lg font-semibold text-gray-900">Financial Information</h4>
-                        </div>
-
-                        {appointmentData?.use_financing && (
-                          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                            <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <DollarSign className="h-3 w-3 text-green-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-green-900 mb-1">Financing Interest</p>
-                                <p className="text-sm text-green-800 capitalize">{appointmentData.use_financing}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {appointmentData?.credit_score && (
-                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                            <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <CheckCircle className="h-3 w-3 text-blue-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-blue-900 mb-1">Credit Score Range</p>
-                                <p className="text-sm text-blue-800">{appointmentData.credit_score}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {appointmentData?.barriers && appointmentData.barriers.length > 0 && (
-                          <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                            <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <XCircle className="h-3 w-3 text-red-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-red-900 mb-2">Financial Barriers</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {appointmentData.barriers.map((barrier: string, index: number) => (
-                                    <Badge key={index} variant="outline" className="bg-red-100 border-red-300 text-red-800 text-xs">
-                                      {barrier}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {appointmentData?.need_loved_one_help && (
-                          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                            <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <User className="h-3 w-3 text-purple-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-purple-900 mb-1">Need Family Help</p>
-                                <p className="text-sm text-purple-800 capitalize">{appointmentData.need_loved_one_help}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="text-center">
-                        <DollarSign className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500 font-medium">No financial information</p>
-                        <p className="text-xs text-gray-400">Financial details will appear here</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
 
 
 
-                {/* Additional Information Section */}
-                <div className="space-y-4 border-t border-gray-200 pt-6">
-                  {(appointmentData?.hear_about_us || appointmentData?.additional_notes ||
-                    appointmentData?.agree_to_terms !== undefined) ? (
-                    <>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-center gap-2 mb-4">
-                          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                            <Info className="h-4 w-4 text-indigo-600" />
-                          </div>
-                          <h4 className="text-lg font-semibold text-gray-900">Additional Information</h4>
-                        </div>
 
-                        {appointmentData?.hear_about_us && (
-                          <div className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                            <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <Info className="h-3 w-3 text-indigo-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-indigo-900 mb-1">How They Heard About Us</p>
-                                <p className="text-sm text-indigo-800">{appointmentData.hear_about_us}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
 
-                        {appointmentData?.additional_notes && (
-                          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <FileText className="h-3 w-3 text-gray-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 mb-1">Additional Notes</p>
-                                <p className="text-sm text-gray-700">{appointmentData.additional_notes}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {appointmentData?.agree_to_terms !== undefined && (
-                          <div className={`p-4 rounded-lg border ${appointmentData.agree_to_terms
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-red-50 border-red-200'
-                            }`}>
-                            <div className="flex items-start gap-3">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${appointmentData.agree_to_terms
-                                ? 'bg-green-100'
-                                : 'bg-red-100'
-                                }`}>
-                                {appointmentData.agree_to_terms ? (
-                                  <CheckCircle className="h-3 w-3 text-green-600" />
-                                ) : (
-                                  <XCircle className="h-3 w-3 text-red-600" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-medium mb-1 ${appointmentData.agree_to_terms
-                                  ? 'text-green-900'
-                                  : 'text-red-900'
-                                  }`}>
-                                  Terms Agreement
-                                </p>
-                                <p className={`text-sm ${appointmentData.agree_to_terms
-                                  ? 'text-green-800'
-                                  : 'text-red-800'
-                                  }`}>
-                                  {appointmentData.agree_to_terms ? 'Agreed to terms' : 'Did not agree to terms'}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="text-center">
-                        <Info className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500 font-medium">No additional information</p>
-                        <p className="text-xs text-gray-400">Additional details will appear here</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
 
@@ -2040,14 +2007,144 @@ const ConsultationSessionPage = () => {
                                 <p className="text-gray-600 mb-4 max-w-md">
                                   This is a direct consultation appointment. Complete the patient packet to collect comprehensive patient information for better consultation outcomes.
                                 </p>
-                                <div className="flex justify-center">
-                                  <Button
-                                    onClick={handleCompletePatientInfo}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
-                                  >
-                                    <Plus className="h-5 w-5" />
-                                    Add Patient Packet
-                                  </Button>
+                                <div className="flex flex-col items-center gap-5">
+                                  {/* Action Buttons Row */}
+                                  <div className="flex justify-center items-center gap-3">
+                                    <Button
+                                      onClick={handleCompletePatientInfo}
+                                      className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                      Add Patient Packet
+                                    </Button>
+                                    {!patientPacketLink && (
+                                      <Button
+                                        onClick={generatePatientPacketLink}
+                                        disabled={isGeneratingLink}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                                      >
+                                        {isGeneratingLink ? (
+                                          <RefreshCw className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Send className="h-4 w-4" />
+                                        )}
+                                        Generate Patient Packet Link
+                                      </Button>
+                                    )}
+                                  </div>
+
+                                  {/* Generated Link Display */}
+                                  {patientPacketLink && (
+                                    <div className="w-full max-w-lg space-y-3">
+                                      <div className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+                                        <p className="text-sm font-mono break-all text-gray-700">{patientPacketLink}</p>
+                                      </div>
+                                      <div className="flex justify-center gap-2">
+                                        <Button
+                                          onClick={copyPatientPacketLink}
+                                          className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                                          size="sm"
+                                        >
+                                          {linkCopied ? (
+                                            <><Check className="h-4 w-4" /> Copied!</>
+                                          ) : (
+                                            <><Copy className="h-4 w-4" /> Copy Link</>
+                                          )}
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => window.open(patientPacketLink, '_blank')}
+                                          className="flex items-center gap-2"
+                                        >
+                                          <ExternalLink className="h-4 w-4" />
+                                          Open
+                                        </Button>
+                                      </div>
+
+                                      {/* Status Tracker */}
+                                      <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <p className="text-sm font-semibold text-gray-700">Packet Status</p>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={checkPacketStatus}
+                                            disabled={isCheckingStatus}
+                                            className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
+                                          >
+                                            <RefreshCw className={`h-3 w-3 mr-1 ${isCheckingStatus ? 'animate-spin' : ''}`} />
+                                            Refresh
+                                          </Button>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                          {/* Step 1: Link Sent */}
+                                          <div className="flex items-center gap-1.5">
+                                            <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                                              <Check className="h-3.5 w-3.5 text-white" />
+                                            </div>
+                                            <span className="text-xs font-medium text-green-700">Sent</span>
+                                          </div>
+
+                                          {/* Connector 1 */}
+                                          <div className={`flex-1 h-0.5 ${packetLinkStatus === 'opened' || packetLinkStatus === 'submitted' ? 'bg-green-400' : 'bg-gray-200'}`} />
+
+                                          {/* Step 2: Link Opened */}
+                                          <div className="flex items-center gap-1.5">
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${packetLinkStatus === 'opened' || packetLinkStatus === 'submitted'
+                                              ? 'bg-green-500'
+                                              : 'bg-gray-200'
+                                              }`}>
+                                              {packetLinkStatus === 'opened' || packetLinkStatus === 'submitted' ? (
+                                                <Check className="h-3.5 w-3.5 text-white" />
+                                              ) : (
+                                                <Clock className="h-3.5 w-3.5 text-gray-400" />
+                                              )}
+                                            </div>
+                                            <div>
+                                              <span className={`text-xs font-medium ${packetLinkStatus === 'opened' || packetLinkStatus === 'submitted' ? 'text-green-700' : 'text-gray-400'
+                                                }`}>
+                                                {packetLinkStatus === 'opened' || packetLinkStatus === 'submitted' ? 'Opened' : 'Not Opened'}
+                                              </span>
+                                              {linkOpenedAt && (
+                                                <p className="text-[10px] text-gray-500">
+                                                  {new Date(linkOpenedAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* Connector 2 */}
+                                          <div className={`flex-1 h-0.5 ${packetLinkStatus === 'submitted' ? 'bg-green-400' : 'bg-gray-200'}`} />
+
+                                          {/* Step 3: Submitted */}
+                                          <div className="flex items-center gap-1.5">
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${packetLinkStatus === 'submitted'
+                                              ? 'bg-green-500'
+                                              : 'bg-gray-200'
+                                              }`}>
+                                              {packetLinkStatus === 'submitted' ? (
+                                                <Check className="h-3.5 w-3.5 text-white" />
+                                              ) : (
+                                                <Clock className="h-3.5 w-3.5 text-gray-400" />
+                                              )}
+                                            </div>
+                                            <div>
+                                              <span className={`text-xs font-medium ${packetLinkStatus === 'submitted' ? 'text-green-700' : 'text-gray-400'
+                                                }`}>
+                                                {packetLinkStatus === 'submitted' ? 'Submitted' : 'Pending'}
+                                              </span>
+                                              {packetLinkStatus === 'submitted' && packetSubmittedAt && (
+                                                <p className="text-[10px] text-gray-500">
+                                                  {new Date(packetSubmittedAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -2056,7 +2153,7 @@ const ConsultationSessionPage = () => {
                           // Show filled packet viewer (read-only)
                           <FilledPatientPacketViewer
                             formData={patientPacketData}
-                            submittedAt={patientPacketData.created_at || patientPacketData.submitted_at}
+                            submittedAt={packetDbSubmittedAt || undefined}
                             onClose={() => {
                               // Optional: Add functionality to close/minimize the viewer
                             }}
@@ -2217,7 +2314,7 @@ const ConsultationSessionPage = () => {
                           // Preserve patient_id if it exists (for active patients)
                           const updateData: any = {
                             new_patient_packet_id: packetData.id,
-                            patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
+                            patient_name: `${formData.firstName} ${formData.lastName}`,
                             updated_at: new Date().toISOString()
                           };
 
@@ -2245,7 +2342,7 @@ const ConsultationSessionPage = () => {
                           const consultationData = {
                             appointment_id: appointmentData.id,
                             new_patient_packet_id: packetData.id,
-                            patient_name: `${formData.personalInformation.firstName} ${formData.personalInformation.lastName}`,
+                            patient_name: `${formData.firstName} ${formData.lastName}`,
                             consultation_date: appointmentData.date || new Date().toISOString().split('T')[0],
                             lead_id: consultationPatientData?.lead_id || null,
                             consultation_status: 'draft'
@@ -2457,7 +2554,7 @@ const ConsultationSessionPage = () => {
         <LeadAppointmentScheduler
           isOpen={showEditAppointmentDialog}
           onClose={() => setShowEditAppointmentDialog(false)}
-          onSuccess={handleAppointmentUpdate}
+          onAppointmentScheduled={handleAppointmentUpdate}
           leadId={appointmentData.lead_id || undefined}
           leadName={appointmentData.patient_name}
           existingAppointment={{
@@ -2470,6 +2567,17 @@ const ConsultationSessionPage = () => {
           }}
         />
       )}
+
+      {/* Patient Packet Details Dialog */}
+      <PatientPacketDetailsDialog
+        isOpen={showPacketDetailsDialog}
+        onClose={() => setShowPacketDetailsDialog(false)}
+        packetStatus={packetLinkStatus}
+        publicLink={patientPacketLink}
+        linkOpenedAt={linkOpenedAt}
+        submittedAt={packetDbSubmittedAt || undefined}
+        isDirectConsultation={!patientPacketLink}
+      />
     </div>
   );
 };

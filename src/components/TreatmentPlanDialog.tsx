@@ -80,6 +80,7 @@ export function TreatmentPlanDialog({
           procedures: formData.procedures || [],
           plan_date: formData.planDate,
           discount: formData.discount || 0,
+          notes: formData.notes || null,
           form_status: 'draft' as const
         };
 
